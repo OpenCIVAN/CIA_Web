@@ -8,8 +8,21 @@ import { getSceneObjects } from './scene.js';
 
 let axes = null;
 let axesPosition = null;
+let orientationWidget = null;  // Track the widget instance
 
 export function createOrientationMarker() {
+  // Clean up existing widget if it exists
+  if (orientationWidget) {
+    orientationWidget.setEnabled(false);
+    orientationWidget.delete();
+    orientationWidget = null;
+  }
+
+  // Clean up existing axes if they exist
+  if (axes) {
+    axes.delete();
+    axes = null;
+  }
   const { interactor } = getSceneObjects();
 
   // create axes
@@ -68,10 +81,27 @@ export function createOrientationMarker() {
   orientationWidget.setMaxPixelSize(300);
 }
 
+export function destroyOrientationMarker() {
+  if (orientationWidget) {
+    orientationWidget.setEnabled(false);
+    orientationWidget.delete();
+    orientationWidget = null;
+  }
+  
+  if (axes) {
+    axes.delete();
+    axes = null;
+  }
+}
+
 export function getAxes() {
   return axes;
 }
 
 export function getAxesPosition() {
   return axesPosition;
+}
+
+export function getOrientationWidget() {
+  return orientationWidget;
 }

@@ -64,7 +64,7 @@ export function initializeScene() {
 
   fullScreenRenderer.addController(controlPanel);
 
-  initializeViewHelpers(renderer, renderWindow, camera);
+  initializeViewHelpers(renderer, renderWindow, camera, interactor);
 
   return {
     fullScreenRenderer,

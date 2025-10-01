@@ -1,17 +1,25 @@
+import vtkInteractorStyleImage from '@kitware/vtk.js/Interaction/Style/InteractorStyleImage';
 import { logProgress } from "../ui/logging.js";
 
-let renderer, renderWindow, camera;
+let renderer, renderWindow, camera, interactor;
+let original3DInteractorStyle = null;
+let image2DInteractorStyle = null;
 
-export function initializeViewHelpers(rendererRef, renderWindowRef, cameraRef) {
+export function initializeViewHelpers(rendererRef, renderWindowRef, cameraRef, interactorRef) {
   renderer = rendererRef;
   renderWindow = renderWindowRef;
   camera = cameraRef;
+  interactor = interactorRef;
+
+    // Store the original 3D style
+  original3DInteractorStyle = interactor.getInteractorStyle();
+  
+  // Create 2D style (only create once)
+  image2DInteractorStyle = vtkInteractorStyleImage.newInstance();
 }
 
 export function setup2DView() {
   // Position camera to look down at the XY plane for 2D visualization
-  // const camera = renderer.getActiveCamera();
-
   // Get the bounds of the current data
   const bounds = renderer.computeVisiblePropBounds();
   const centerX = (bounds[0] + bounds[1]) / 2;
@@ -31,27 +39,11 @@ export function setup2DView() {
   camera.setParallelProjection(true);
   camera.setParallelScale(maxRange * 0.55);
 
-  // ----------------
-  // DO NOT TOUCH INTERACTOR CODE BELOW: it doesn't work
-  // ----------------
-
-  // Disable 3D interactions to keep it 2D
-  // const interactor = renderWindow.getInteractor();
-  // const interactorStyle = interactor.getInteractorStyle();
-
-  // // Store original interaction state
-  // if (!window.original3DInteractionState) {
-  //   window.original3DInteractionState = {
-  //     leftButtonAction: interactorStyle.getLeftButtonAction(),
-  //     middleButtonAction: interactorStyle.getMiddleButtonAction(),
-  //     rightButtonAction: interactorStyle.getRightButtonAction()
-  //   };
-  // }
-
-  // // Set 2D interaction style - only allow pan and zoom, no rotation
-  // interactorStyle.setLeftButtonAction('Pan');
-  // interactorStyle.setMiddleButtonAction('Zoom');
-  // interactorStyle.setRightButtonAction('Pan');
+  // Switch to 2D interactor style
+  if (interactor && image2DInteractorStyle) {
+    interactor.setInteractorStyle(image2DInteractorStyle);
+    logProgress('Switched to 2D interactor style (pan and zoom only)');
+  }
 
   // Force render
   renderWindow.render();
@@ -62,28 +54,14 @@ export function setup2DView() {
 }
 
 export function restore3DView() {
-  // const camera = renderer.getActiveCamera();
-  // const interactor = renderWindow.getInteractor();
-  // const interactorStyle = interactor.getInteractorStyle();
-
   // Restore perspective projection
   camera.setParallelProjection(false);
 
-  // ----------------
-  // DO NOT TOUCH INTERACTOR CODE BELOW: it doesn't work
-  // ----------------
-
-  // // Restore 3D interactions
-  // if (window.original3DInteractionState) {
-  //   interactorStyle.setLeftButtonAction(window.original3DInteractionState.leftButtonAction);
-  //   interactorStyle.setMiddleButtonAction(window.original3DInteractionState.middleButtonAction);
-  //   interactorStyle.setRightButtonAction(window.original3DInteractionState.rightButtonAction);
-  // } else {
-  //   // Default 3D interaction
-  //   interactorStyle.setLeftButtonAction('Rotate');
-  //   interactorStyle.setMiddleButtonAction('Zoom');
-  //   interactorStyle.setRightButtonAction('Pan');
-  // }
+  // Restore 3D interactor style
+  if (interactor && original3DInteractorStyle) {
+    interactor.setInteractorStyle(original3DInteractorStyle);
+    logProgress('Restored 3D interactor style (rotation enabled)');
+  }
 
   logProgress(
     "Restored 3D viewing mode (rotation enabled, perspective projection)"
