@@ -61,6 +61,7 @@ export function initializeScene() {
   mapper = vtkMapper.newInstance();
   actor = vtkActor.newInstance();
   actor.setMapper(mapper);
+  actor.setPickable(true);
 
   fullScreenRenderer.addController(controlPanel);
 
@@ -124,4 +125,12 @@ export function startVR() {
 
 export function stopVR() {
   XRHelper.stopXR();
+}
+
+export function getVTKRenderer() {
+  return renderer; // Your VTK.js renderer instance
+}
+
+export function getVTKRenderWindow() {
+  return renderWindow; // Your VTK.js render window instance
 }

@@ -7,6 +7,8 @@
 
 import { voiceChat } from './collaboration/voiceChat.js';
 import { getUserName, setupUserName } from './collaboration/userManagement.js';
+import { annotationRenderer } from "./core/annotationRenderer.js";
+import { addAnnotationControls } from "./ui/annotationControls.js";
 
 import {
   initializeLogging,
@@ -59,6 +61,15 @@ async function initializeApplication() {
   initializeScene();
   logProgress("3D scene initialized");
 
+    // Setup viewport interaction (must be before annotation renderer)
+  setupViewportInteraction();
+
+  // Initialize annotation renderer AFTER scene is ready
+  setTimeout(() => {
+    annotationRenderer.initialize();
+    logProgress("Annotation renderer initialized");
+  }, 500);
+
   // Setup file handling
   setupFileHandler();
   logProgress("File handler ready");
@@ -99,18 +110,41 @@ async function initializeApplication() {
 
 // Add cursor UI controls with delay to ensure table exists
   setTimeout(() => {
+    console.log('🔧 Starting to add controls...');
+    
     try {
+      console.log('Adding cursor controls...');
       addCursorControls();
       logProgress("Cursor controls added");
-      
+    } catch (error) {
+      console.error("Failed to add cursor controls:", error);
+    }
+    
+    try {
+      console.log('Adding voice chat controls...');
       addVoiceChatControls(roomName);
       logProgress("Voice chat controls added");
-
+    } catch (error) {
+      console.error("Failed to add voice chat controls:", error);
+    }
+    
+    try {
+      console.log('Adding text chat controls...');
       addTextChatControls();
       logProgress("Text chat controls added");
     } catch (error) {
-      console.warn("Could not add controls:", error);
+      console.error("Failed to add text chat controls:", error);
     }
+    
+    try {
+      console.log('Adding annotation controls...');
+      addAnnotationControls();
+      logProgress("Annotation controls added");
+    } catch (error) {
+      console.error("Failed to add annotation controls:", error);
+    }
+    
+    console.log('✅ Finished adding controls');
   }, 1000);
 
 
