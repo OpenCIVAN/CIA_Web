@@ -13,7 +13,7 @@ export function addVoiceChatControls(roomName) {
   const controlTable = document.querySelector("table");
 
   if (!controlTable) {
-    console.error('Control table not found');
+    console.error("Control table not found");
     return;
   }
 
@@ -38,7 +38,7 @@ export function addVoiceChatControls(roomName) {
   // Join/Leave Button Row
   const joinRow = document.createElement("tr");
   const joinCell = document.createElement("td");
-  
+
   const joinButton = document.createElement("button");
   joinButton.id = "voice-join-button";
   joinButton.textContent = "🎤 Join Voice Chat";
@@ -54,13 +54,13 @@ export function addVoiceChatControls(roomName) {
     font-weight: 600;
     transition: background 0.2s;
   `;
-  
+
   joinButton.addEventListener("mouseover", () => {
     if (!voiceChat.isConnected) {
       joinButton.style.background = "#45a049";
     }
   });
-  
+
   joinButton.addEventListener("mouseout", () => {
     if (!voiceChat.isConnected) {
       joinButton.style.background = "#4CAF50";
@@ -75,24 +75,26 @@ export function addVoiceChatControls(roomName) {
       joinButton.disabled = true;
       joinButton.textContent = "Connecting...";
       joinButton.style.background = "#999";
-      
+
       try {
         const userName = getUserName();
         logProgress(`Connecting to voice chat as ${userName}...`);
         await voiceChat.connect(currentRoomName, userName);
-        
+
         joinButton.textContent = "🔇 Leave Voice Chat";
         joinButton.style.background = "#f44336";
         joinButton.disabled = false;
-        
+
         logSuccess("✅ Voice chat connected!");
-        
+
         // Show mute button
         const muteButton = document.getElementById("voice-mute-button");
         if (muteButton) {
           muteButton.style.display = "block";
         }
-        
+
+        // Force update the status immediately
+        updateVoiceStatus();
       } catch (error) {
         logWarning("Failed to connect to voice chat: " + error.message);
         joinButton.textContent = "🎤 Join Voice Chat (Retry)";
@@ -104,13 +106,16 @@ export function addVoiceChatControls(roomName) {
       voiceChat.disconnect();
       joinButton.textContent = "🎤 Join Voice Chat";
       joinButton.style.background = "#4CAF50";
-      
+
       // Hide mute button
       const muteButton = document.getElementById("voice-mute-button");
       if (muteButton) {
         muteButton.style.display = "none";
       }
-      
+
+      // Force update the status immediately
+      updateVoiceStatus();
+
       logInfo("Left voice chat");
     }
   });
@@ -145,7 +150,7 @@ export function addVoiceChatControls(roomName) {
   const statusText = document.createElement("span");
   statusText.id = "voice-status-text";
   statusText.style.cssText = "font-size: 12px; color: #666; font-weight: 500;";
-  statusText.textContent = 'Not connected';
+  statusText.textContent = "Not connected";
 
   statusContainer.appendChild(statusIndicator);
   statusContainer.appendChild(statusText);
@@ -161,7 +166,7 @@ export function addVoiceChatControls(roomName) {
 
   const muteButton = document.createElement("button");
   muteButton.id = "voice-mute-button";
-  muteButton.textContent = '🔇 Mute';
+  muteButton.textContent = "🔇 Mute";
   muteButton.style.cssText = `
     flex: 1; 
     background: #f44336; 
@@ -183,11 +188,11 @@ export function addVoiceChatControls(roomName) {
 
     try {
       const isMuted = await voiceChat.toggleMute();
-      muteButton.textContent = isMuted ? '🎤 Unmute' : '🔇 Mute';
-      muteButton.style.background = isMuted ? '#4CAF50' : '#f44336';
-      logInfo(isMuted ? 'Microphone muted' : 'Microphone unmuted');
+      muteButton.textContent = isMuted ? "🎤 Unmute" : "🔇 Mute";
+      muteButton.style.background = isMuted ? "#4CAF50" : "#f44336";
+      logInfo(isMuted ? "Microphone muted" : "Microphone unmuted");
     } catch (error) {
-      logWarning('Failed to toggle mute: ' + error.message);
+      logWarning("Failed to toggle mute: " + error.message);
     }
   });
 
@@ -233,8 +238,8 @@ export function addVoiceChatControls(roomName) {
 
   // Add keyboard shortcut
   document.addEventListener("keydown", (e) => {
-    if (e.key === 'm' || e.key === 'M') {
-      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    if (e.key === "m" || e.key === "M") {
+      if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
         e.preventDefault();
         if (voiceChat.isConnected) {
           muteButton.click();
@@ -254,16 +259,18 @@ export function addVoiceChatControls(roomName) {
 function updateVoiceStatus() {
   const statusIndicator = document.getElementById("voice-status-indicator");
   const statusText = document.getElementById("voice-status-text");
-  
+
   if (statusIndicator && statusText) {
     const isConnected = voiceChat.isConnected;
-    statusIndicator.style.background = isConnected ? '#4CAF50' : '#999';
-    statusIndicator.style.boxShadow = isConnected ? `0 0 8px #4CAF50` : 'none';
-    statusText.textContent = isConnected ? 'Connected' : 'Not connected';
-    statusText.style.color = isConnected ? '#333' : '#666';
+    statusIndicator.style.background = isConnected ? "#4CAF50" : "#999";
+    statusIndicator.style.boxShadow = isConnected ? `0 0 8px #4CAF50` : "none";
+    statusText.textContent = isConnected ? "Connected" : "Not connected";
+    statusText.style.color = isConnected ? "#333" : "#666";
   }
 
-  const participantsListDiv = document.getElementById("voice-participants-list");
+  const participantsListDiv = document.getElementById(
+    "voice-participants-list"
+  );
   if (!participantsListDiv) return;
 
   if (!voiceChat.isConnected) {
@@ -296,7 +303,7 @@ function updateVoiceStatus() {
     width: 8px; 
     height: 8px; 
     border-radius: 50%;
-    background: ${voiceChat.isMuted ? '#999' : '#4CAF50'};
+    background: ${voiceChat.isMuted ? "#999" : "#4CAF50"};
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   `;
 
@@ -342,7 +349,8 @@ function updateVoiceStatus() {
   if (participants.length === 0) {
     const emptyMessage = document.createElement("div");
     emptyMessage.textContent = "No other participants";
-    emptyMessage.style.cssText = "color: #999; font-style: italic; margin-top: 4px;";
+    emptyMessage.style.cssText =
+      "color: #999; font-style: italic; margin-top: 4px;";
     participantsListDiv.appendChild(emptyMessage);
   }
 }

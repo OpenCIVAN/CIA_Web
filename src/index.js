@@ -30,6 +30,7 @@ import {
 } from "./ui/controls.js";
 import { addCursorControls } from "./ui/cursorControls.js";
 import { addVoiceChatControls } from "./ui/voiceChatControls.js";
+import { addTextChatControls } from "./ui/textChatControls.js";
 import { initializeCursorSystem } from "./collaboration/cursors.js";
 import { setupActorSync } from "./collaboration/actorSync.js";
 import { setupReductionSync } from "./collaboration/reductionSync.js";
@@ -102,8 +103,11 @@ async function initializeApplication() {
       addCursorControls();
       logProgress("Cursor controls added");
       
-      addVoiceChatControls(roomName);  // Pass roomName here!
+      addVoiceChatControls(roomName);
       logProgress("Voice chat controls added");
+
+      addTextChatControls();
+      logProgress("Text chat controls added");
     } catch (error) {
       console.warn("Could not add controls:", error);
     }
@@ -112,17 +116,6 @@ async function initializeApplication() {
 
   // Voice chat will connect when user clicks "Join Voice Chat" button
   logProgress("Voice chat ready - click 'Join Voice Chat' to connect");
-
-  // Adding click to connect voice chat directly on load is not user-friendly
-  // // Connect to voice chat AFTER user name is set
-  // try {
-  //   const userName = getUserName();
-  //   await voiceChat.connect(roomName, userName);
-  //   logProgress("✅ Voice chat connected");
-  // } catch (error) {
-  //   console.warn("Voice chat failed to connect:", error);
-  //   // Non-blocking - app continues without voice
-  // }
 
   logSuccess("Application initialized successfully!");
   logInfo("Available features:");

@@ -8,7 +8,12 @@ import {
 } from "../ui/logging.js";
 import { NETWORK_CONFIG } from "../config/constants.js";
 import { getSceneObjects } from "../core/scene.js";
-import { getUserId, getUserName, setupUserName, getUserColor } from "./userManagement.js";
+import {
+  getUserId,
+  getUserName,
+  setupUserName,
+  getUserColor,
+} from "./userManagement.js";
 
 // ----------------------------------------------------------------------------
 // Collaborative Cursor System
@@ -19,7 +24,6 @@ const activeCursors = new Map();
 let isLocalMouseMove = false;
 let lastMousePosition = { x: 0, y: 0, timestamp: 0 };
 let mouseMoveTimeout = null;
-
 
 // ----------------------------------------------------------------------------
 // Cursor Visual Elements
