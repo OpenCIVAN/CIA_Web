@@ -1,95 +1,69 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const { AccessToken } = require("livekit-server-sdk");
+const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
-app.post('/token', async (req, res) => {
+// ⚠️ WARNING: These are development-only credentials!
+// "devkey" and "secret" are LiveKit's default dev mode keys.
+// For production, use environment variables with real credentials:
+//   export LIVEKIT_API_KEY="your-real-key"
+//   export LIVEKIT_API_SECRET="your-real-secret"
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
+
+app.post("/token", async (req, res) => {
   try {
     const { roomName, userName } = req.body;
-    
+
     console.log(`🎫 Generating token for ${userName} in room ${roomName}`);
-    
-    // Try to import AccessToken
-    let AccessToken;
-    try {
-      const sdk = require('livekit-server-sdk');
-      console.log('   SDK loaded:', Object.keys(sdk));
-      AccessToken = sdk.AccessToken;
-      
-      if (!AccessToken) {
-        throw new Error('AccessToken not found in livekit-server-sdk');
-      }
-    } catch (importError) {
-      console.error('❌ Failed to import livekit-server-sdk:', importError.message);
-      return res.status(500).json({ 
-        error: 'Failed to load SDK',
-        details: importError.message 
-      });
-    }
-    
-    // Create access token
-    const at = new AccessToken('devkey', 'secret', {
+    console.log(`   Using API Key: ${LIVEKIT_API_KEY}`);
+
+    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: userName,
     });
-    
-    console.log('   AccessToken created');
-    
-    // Add grants
+
     at.addGrant({
       roomJoin: true,
       room: roomName,
       canPublish: true,
       canSubscribe: true,
     });
-    
-    console.log('   Grants added');
 
-    // Generate JWT token
     const token = await at.toJwt();
-    
-    console.log('   Token type:', typeof token);
-    console.log('   Token value:', token ? token.substring(0, 50) + '...' : 'null/undefined');
-    
-    // Verify token was generated
-    if (!token || typeof token !== 'string') {
-      console.error('❌ Token generation returned invalid value:', token);
-      return res.status(500).json({ error: 'Token generation failed - invalid token' });
+    console.log("🐛 DEBUG: typeof token =", typeof token);
+    console.log("🐛 DEBUG: token value =", token);
+    console.log("🐛 DEBUG: token is string?", typeof token === "string");
+
+    if (typeof token === "string") {
+      console.log("✅ Token generated successfully");
+      res.json({ token });
+    } else {
+      console.error("❌ Token is not a string! Type:", typeof token);
+      res.status(500).json({ error: "Token generation failed" });
     }
-    
-    console.log('✅ Token generated successfully');
-    
-    // Return token as string
-    res.json({ token: token });
-    
   } catch (error) {
-    console.error('❌ Error generating token:', error);
-    console.error('   Stack:', error.stack);
-    res.status(500).json({ 
-      error: error.message,
-      stack: error.stack 
-    });
+    console.error("❌ Error generating token:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Token server running' });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", apiKey: LIVEKIT_API_KEY });
 });
 
 const PORT = 3001;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Token server running on http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/health`);
-  
-  // Test SDK loading on startup
-  try {
-    const sdk = require('livekit-server-sdk');
-    console.log('   ✅ livekit-server-sdk loaded successfully');
-    console.log('   Available exports:', Object.keys(sdk).join(', '));
-  } catch (error) {
-    console.error('   ❌ Failed to load livekit-server-sdk:', error.message);
-    console.error('   Run: npm install livekit-server-sdk');
-  }
+  console.log(`   API Key: ${LIVEKIT_API_KEY}`);
+  console.log(`   API Secret: ${LIVEKIT_API_SECRET ? "[SET]" : "[NOT SET]"}`);
 });

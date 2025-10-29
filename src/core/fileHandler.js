@@ -126,10 +126,9 @@ function updateScene(fileData) {
       const yRange = bounds[3] - bounds[2];
       const zRange = bounds[5] - bounds[4];
       const maxRange = Math.max(xRange, yRange, zRange);
-      const annotationRadius = maxRange * 0.01; // 1% of largest dimension
-      
-      // Import and set annotation size
-      import('../core/annotationRenderer.js').then(module => {
+      const annotationRadius = maxRange * 0.01;
+
+      import("../core/annotationRenderer.js").then((module) => {
         module.annotationRenderer.setMarkerRadius(annotationRadius);
         logInfo(`Annotation marker size: ${annotationRadius.toFixed(4)}`);
       });
@@ -140,15 +139,34 @@ function updateScene(fileData) {
     }
 
     mapper.setInputData(polyData);
-    
-    // ONLY set pickable - don't mess with representation
     actor.setPickable(true);
-    
+
     renderer.addActor(actor);
     renderer.resetCamera();
-    renderWindow.render();
-    setCurrentActor(actor);
 
+    // FORCE MULTIPLE RENDERS - fixes visibility issue
+    renderWindow.render();
+
+    // Force resize event to ensure canvas updates
+    setTimeout(() => {
+      if (renderWindow.getViews() && renderWindow.getViews()[0]) {
+        const view = renderWindow.getViews()[0];
+        const canvas = view.getCanvas();
+        if (canvas) {
+          // Trigger resize
+          const event = new Event("resize");
+          window.dispatchEvent(event);
+        }
+      }
+      renderWindow.render();
+    }, 100);
+
+    // Another render after short delay
+    setTimeout(() => {
+      renderWindow.render();
+    }, 300);
+
+    setCurrentActor(actor);
     setReductionApplied(false);
 
     logSuccess("Visualization rendered successfully");
@@ -160,7 +178,6 @@ function updateScene(fileData) {
     logMemoryUsage("after file loading error");
   }
 }
-
 
 function arrayBufferToBase64(buffer) {
   let binary = "";

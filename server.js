@@ -1,76 +1,90 @@
-// Import the WebSocket library
+// server.js - Simple but reliable Yjs relay
 const WebSocket = require('ws');
+const http = require('http');
 
-// Create a new WebSocket server
-const wss = new WebSocket.Server({ port: 9001 });
+const server = http.createServer();
+const wss = new WebSocket.Server({ server });
 
-// Handle new connections
-wss.on('connection', (ws) => {
-  console.log('New client connected.');
+// Store connected clients by room
+const rooms = new Map();
 
-  // Handle incoming messages from clients (browser tabs)
+wss.on('connection', (ws, req) => {
+  // Extract room name from URL (e.g., /vtk-room)
+  const roomName = req.url.slice(1) || 'vtk-room';
+  console.log(`✅ Client connected to room: ${roomName}`);
+  
+  // Create room if it doesn't exist
+  if (!rooms.has(roomName)) {
+    rooms.set(roomName, new Set());
+  }
+  
+  const room = rooms.get(roomName);
+  room.add(ws);
+  console.log(`   Total clients in ${roomName}: ${room.size}`);
+  
+  // Relay all messages to other clients in the same room
   ws.on('message', (message) => {
-    // Try to parse as JSON string first
-    try {
-      const str = message.toString('utf8');
-      const parsed = JSON.parse(str);
-  
-      console.log('Received JSON message:', parsed);
-  
-      // Broadcast to other clients
-      wss.clients.forEach((client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(parsed));
-        }
-      });
-  
-    } catch (err) {
-      // If not JSON, then treat it as binary (assume it's a VTK file)
-      console.log('Received binary VTK file:', message);
-  
-      wss.clients.forEach((client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
+    // Broadcast to all other clients in this room
+    room.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        try {
           client.send(message);
+        } catch (error) {
+          console.error('   ❌ Failed to relay message:', error.message);
         }
-      });
+      }
+    });
+  });
+  
+  // Handle disconnection
+  ws.on('close', () => {
+    room.delete(ws);
+    console.log(`👋 Client disconnected from ${roomName}`);
+    console.log(`   Remaining clients: ${room.size}`);
+    
+    // Clean up empty rooms
+    if (room.size === 0) {
+      rooms.delete(roomName);
+      console.log(`   Room ${roomName} deleted (empty)`);
     }
   });
-    // if (Buffer.isBuffer(message)) {
-    //   console.log('Received a binary file (VTK file):', message);
-      
-    //   // Broadcast the binary data to all connected clients (except the sender)
-    //   wss.clients.forEach(client => {
-    //     if (client !== ws && client.readyState === WebSocket.OPEN) {
-    //       client.send(message);  // Send binary data to other clients
-    //     }
-    //   });
-    // }
-    // else{
-    //   try {
-    //   console.log('Received non-binary message:', message);
-    //   const parsedMessage = JSON.parse(message); // Parse the message
-
-    //   // Broadcast the received message to all clients (except sender)
-    //   wss.clients.forEach((client) => {
-    //     if (client !== ws && client.readyState === WebSocket.OPEN) {
-    //       client.send(JSON.stringify(parsedMessage));  // Send the message to other clients
-    //     }
-    //   });
-    //   } catch (e) {
-    //     console.error('Error parsing message:', e);
-    //   }
-    // }
-
-  // Handle client disconnect
-  ws.on('close', () => {
-    console.log('Client disconnected');
-  });
-
-  // Handle WebSocket errors
+  
+  // Handle errors
   ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
+    console.error('❌ WebSocket error:', error.message);
   });
 });
 
-// Print a message when the server starts
-console.log('WebSocket server running at ws://localhost:9001');
+const PORT = 8080;
+server.listen(PORT, () => {
+  console.log(`🔄 Yjs relay server running on ws://localhost:${PORT}`);
+  console.log(`   Ready to relay messages between clients`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.error('   Kill the process using port 8080 or change the port.');
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', error);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n👋 Shutting down server gracefully...');
+  
+  // Close all WebSocket connections
+  wss.clients.forEach(client => {
+    client.close();
+  });
+  
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+console.log('🚀 Starting Yjs relay server...');

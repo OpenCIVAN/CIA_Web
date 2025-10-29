@@ -5,10 +5,13 @@
 // For streamlined VR development install the WebXR emulator extension
 // https://github.com/MozillaReality/WebXR-emulator-extension
 
-import { voiceChat } from './collaboration/voiceChat.js';
-import { getUserName, setupUserName } from './collaboration/userManagement.js';
-import { annotationRenderer } from "./core/annotationRenderer.js";
-import { addAnnotationControls } from "./ui/annotationControls.js";
+import { voiceChat } from "./collaboration/voiceChat.js";
+import { getUserName, setupUserName, initializeNameEditor } from "./collaboration/userManagement.js";
+import { modeManager } from "./core/modeManager.js";
+import { adaptiveUI } from "./ui/adaptiveUI.js";
+import { vrControllers } from "./vr/vrControllers.js";
+import { vrAvatarSystem } from "./vr/vrAvatars.js";
+import { vrSpatialUI } from "./vr/vrSpatialUI.js";
 
 import {
   initializeLogging,
@@ -30,19 +33,23 @@ import {
   setReductionMethod,
   setReductionComponents,
 } from "./ui/controls.js";
+import { textChat } from './collaboration/textChat.js';
 import { addCursorControls } from "./ui/cursorControls.js";
-import { addVoiceChatControls } from "./ui/voiceChatControls.js";
-import { addTextChatControls } from "./ui/textChatControls.js";
+import { addAnnotationControls } from "./ui/annotationControls.js";
+import { initializePeopleControls } from "./ui/peopleControls.js";
+import { initializeTextChatControls } from "./ui/textChatControls.js";
+import { initializeVoiceChatControls } from "./ui/voiceChatControls.js";
 import { initializeCursorSystem } from "./collaboration/cursors.js";
 import { setupActorSync } from "./collaboration/actorSync.js";
 import { setupReductionSync } from "./collaboration/reductionSync.js";
 import { toggleDimensionalityReduction } from "./core/reductionController.js";
 import { setupViewportInteraction } from "./ui/viewportInteraction.js";
+import { annotationRenderer } from "./core/annotationRenderer.js";
 
 // Get room name from URL or use default
 function getRoomName() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('room') || 'default-analytics-room';
+  return params.get("room") || "default-analytics-room";
 }
 
 async function initializeApplication() {
@@ -61,22 +68,9 @@ async function initializeApplication() {
   initializeScene();
   logProgress("3D scene initialized");
 
-    // Setup viewport interaction (must be before annotation renderer)
-  setupViewportInteraction();
-
-  // Initialize annotation renderer AFTER scene is ready
-  setTimeout(() => {
-    annotationRenderer.initialize();
-    logProgress("Annotation renderer initialized");
-  }, 500);
-
   // Setup file handling
   setupFileHandler();
   logProgress("File handler ready");
-
-  // Setup UI controls
-  setupDimensionalityReductionControls(toggleDimensionalityReduction);
-  logProgress("Dimensionality reduction controls ready");
 
   // Get room name for collaboration
   const roomName = getRoomName();
@@ -86,9 +80,29 @@ async function initializeApplication() {
   await setupUserName();
   logProgress("User name configured");
 
-    // Note: Yjs is already connected via imports in other modules
-  // The WebsocketProvider connects automatically when yjsSetup.js is imported
-  logProgress("✅ Yjs collaboration ready");
+  // Initialize text chat system (only once!)
+  textChat.initialize();
+  logProgress("Text chat system initialized");
+
+  // Initialize VR systems (non-blocking)
+  try {
+    modeManager.setupVRDetection();
+    logProgress("VR detection initialized");
+
+    adaptiveUI.initialize();
+    logProgress("Adaptive UI initialized");
+
+    vrControllers.initialize();
+    logProgress("VR controllers initialized");
+
+    vrAvatarSystem.initialize();
+    logProgress("VR avatar system initialized");
+
+    vrSpatialUI.initialize();
+    logProgress("VR spatial UI initialized");
+  } catch (error) {
+    console.warn("VR systems failed to initialize (non-critical):", error);
+  }
 
   // Setup collaboration features
   setupActorSync();
@@ -106,47 +120,84 @@ async function initializeApplication() {
   // Initialize collaborative cursor system
   initializeCursorSystem();
 
+  // Setup viewport interaction (must be before annotation renderer)
   setupViewportInteraction();
 
-// Add cursor UI controls with delay to ensure table exists
+  // Initialize annotation renderer after scene is ready
   setTimeout(() => {
-    console.log('🔧 Starting to add controls...');
-    
+    annotationRenderer.initialize();
+    logProgress("Annotation renderer initialized");
+  }, 500);
+
+  // Add UI controls with delay to ensure DOM is ready
+  setTimeout(() => {
+    console.log("🔧 Starting to add controls...");
+
     try {
-      console.log('Adding cursor controls...');
-      addCursorControls();
-      logProgress("Cursor controls added");
+      // LEFT PANEL: Data controls
+      console.log("Adding dimensionality reduction controls...");
+      setupDimensionalityReductionControls(toggleDimensionalityReduction);
+      logProgress("Data controls added");
     } catch (error) {
-      console.error("Failed to add cursor controls:", error);
+      console.error("Failed to add data controls:", error);
     }
-    
+
     try {
-      console.log('Adding voice chat controls...');
-      addVoiceChatControls(roomName);
-      logProgress("Voice chat controls added");
-    } catch (error) {
-      console.error("Failed to add voice chat controls:", error);
-    }
-    
-    try {
-      console.log('Adding text chat controls...');
-      addTextChatControls();
-      logProgress("Text chat controls added");
-    } catch (error) {
-      console.error("Failed to add text chat controls:", error);
-    }
-    
-    try {
-      console.log('Adding annotation controls...');
+      // RIGHT PANEL: Annotations only
+      console.log("Adding annotation controls...");
       addAnnotationControls();
       logProgress("Annotation controls added");
     } catch (error) {
       console.error("Failed to add annotation controls:", error);
     }
-    
-    console.log('✅ Finished adding controls');
-  }, 1000);
 
+    try {
+      // COLLABORATION PANEL: Name editor
+      console.log("Initializing name editor...");
+      initializeNameEditor();
+      logProgress("Name editor initialized");
+    } catch (error) {
+      console.error("Failed to initialize name editor:", error);
+    }
+
+    try {
+      // COLLABORATION PANEL: People list
+      console.log("Initializing people controls...");
+      initializePeopleControls();
+      logProgress("People controls initialized");
+    } catch (error) {
+      console.error("Failed to initialize people controls:", error);
+    }
+
+    try {
+      // COLLABORATION PANEL: Text chat
+      console.log("Initializing text chat UI...");
+      initializeTextChatControls();
+      logProgress("Text chat UI initialized");
+    } catch (error) {
+      console.error("Failed to initialize text chat UI:", error);
+    }
+
+    try {
+      // COLLABORATION PANEL: Voice chat
+      console.log("Initializing voice chat controls...");
+      initializeVoiceChatControls(roomName);
+      logProgress("Voice chat controls initialized");
+    } catch (error) {
+      console.error("Failed to initialize voice chat controls:", error);
+    }
+
+    try {
+      // Cursor visibility controls
+      console.log("Adding cursor controls...");
+      addCursorControls();
+      logProgress("Cursor controls added");
+    } catch (error) {
+      console.error("Failed to add cursor controls:", error);
+    }
+
+    console.log("✅ Finished adding controls");
+  }, 1000);
 
   // Voice chat will connect when user clicks "Join Voice Chat" button
   logProgress("Voice chat ready - click 'Join Voice Chat' to connect");
@@ -159,6 +210,8 @@ async function initializeApplication() {
   logProgress("  ✓ t-SNE and UMAP (pure JavaScript implementations)");
   logProgress("  ✓ Real-time collaboration (Yjs)");
   logProgress("  ✓ Collaborative cursors");
+  logProgress("  ✓ Voice & text chat");
+  logProgress("  ✓ Annotations");
   logProgress("  ✓ Advanced logging and performance monitoring");
   logProgress(
     "  ✓ Automatic optimization for datasets from 100 to 1,000,000+ points"
@@ -171,6 +224,7 @@ async function initializeApplication() {
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
     cleanupTensors();
+    voiceChat.disconnect();
   });
 }
 
@@ -182,6 +236,8 @@ if (typeof window !== "undefined") {
     cleanup: cleanupTensors,
     getReductionMethod,
     getReductionComponents,
+    voiceChat,
+    textChat,
   };
 
   console.log("Debug API available at window.debugAPI");
@@ -190,9 +246,4 @@ if (typeof window !== "undefined") {
 // Start the application
 initializeApplication().catch((error) => {
   console.error("Failed to initialize application:", error);
-});
-
-// Clean up on page unload
-window.addEventListener('beforeunload', () => {
-  voiceChat.disconnect();
 });

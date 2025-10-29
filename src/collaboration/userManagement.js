@@ -1,18 +1,18 @@
-import { yUserNames } from "./yjsSetup.js";
-import { USER_COLORS } from "../config/constants.js";
-import {
-  logInfo,
-  logSuccess,
-  logProgress,
-  logError,
-  logWarning,
-} from "../ui/logging.js";
+// ----------------------------------------------------------------------------
+// User Management - Handles user identity and names
+// ----------------------------------------------------------------------------
 
-// Generate a unique user ID for this session
-const userId = "user_" + Math.random().toString(36).substr(2, 9);
-let userName = localStorage.getItem("vtk-username") || "";
+import { yCursors } from "./yjsSetup.js";
+import { USER_COLORS } from "../config/constants.js";
+
+let userId = null;
+let userName = "Guest";
+let userColor = null;
 
 export function getUserId() {
+  if (!userId) {
+    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
   return userId;
 }
 
@@ -20,188 +20,106 @@ export function getUserName() {
   return userName;
 }
 
-export function getUserColor(userId) {
-  // Create consistent color based on user ID
-  const hash = userId.split("").reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+export function setUserName(name) {
+  userName = name;
+  
+  // Update in Yjs cursor data (which tracks online users)
+  const currentCursor = yCursors.get(getUserId()) || {};
+  yCursors.set(getUserId(), {
+    ...currentCursor,
+    name: name,
+    color: getUserColor(getUserId()),
+    x: currentCursor.x || 0,
+    y: currentCursor.y || 0,
+    timestamp: Date.now()
+  });
+  
+  console.log("✅ Username updated:", name);
 }
 
-// ----------------------------------------------------------------------------
-// User Name Management
-// ----------------------------------------------------------------------------
-
-export async function showNameDialog() {
-  return new Promise((resolve) => {
-    // Create modal overlay
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10001;
-      font-family: Arial, sans-serif;
-    `;
-
-    // Create dialog box
-    const dialog = document.createElement("div");
-    dialog.style.cssText = `
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      max-width: 400px;
-      width: 90%;
-      text-align: center;
-    `;
-
-    const title = document.createElement("h3");
-    title.textContent = "Set Your Display Name";
-    title.style.cssText = "margin: 0 0 15px 0; color: #333; font-size: 20px;";
-
-    const subtitle = document.createElement("p");
-    subtitle.textContent =
-      "This name will appear on your cursor for other users to see:";
-    subtitle.style.cssText =
-      "margin: 0 0 20px 0; color: #666; font-size: 14px;";
-
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "Enter your name...";
-    input.value = userName;
-    input.style.cssText = `
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 6px;
-      font-size: 16px;
-      box-sizing: border-box;
-      margin-bottom: 20px;
-    `;
-    input.maxLength = 20;
-
-    const buttonContainer = document.createElement("div");
-    buttonContainer.style.cssText =
-      "display: flex; gap: 10px; justify-content: center;";
-
-    const confirmButton = document.createElement("button");
-    confirmButton.textContent = "Confirm";
-    confirmButton.style.cssText = `
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      flex: 1;
-    `;
-
-    const skipButton = document.createElement("button");
-    skipButton.textContent = "Skip";
-    skipButton.style.cssText = `
-      background: #f44336;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      flex: 1;
-    `;
-
-    function closeDialog(name) {
-      document.body.removeChild(overlay);
-      resolve(name);
-    }
-
-    confirmButton.addEventListener("click", () => {
-      const name = input.value.trim();
-      if (name) {
-        closeDialog(name);
-      } else {
-        input.style.borderColor = "#f44336";
-        input.placeholder = "Please enter a name...";
-      }
-    });
-
-    skipButton.addEventListener("click", () => {
-      closeDialog("");
-    });
-
-    input.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        confirmButton.click();
-      }
-    });
-
-    // Focus input after a short delay
-    setTimeout(() => input.focus(), 100);
-
-    buttonContainer.appendChild(confirmButton);
-    buttonContainer.appendChild(skipButton);
-
-    dialog.appendChild(title);
-    dialog.appendChild(subtitle);
-    dialog.appendChild(input);
-    dialog.appendChild(buttonContainer);
-
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-  });
+export function getUserColor(id) {
+  if (!userColor) {
+    const hash = id.split("").reduce((acc, char) => {
+      return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    userColor = USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+  }
+  return userColor;
 }
 
 export async function setupUserName() {
-  // If no name is stored, show dialog
-  if (!userName) {
-    userName = await showNameDialog();
-  }
-
-  // Store the name locally
-  if (userName) {
+  // Check if name is stored in localStorage
+  const storedName = localStorage.getItem("vtk-username");
+  
+  // Always prompt, but prefill with stored name if it exists
+  const defaultName = storedName || "Guest";
+  const enteredName = prompt("Enter your display name:", defaultName);
+  
+  if (enteredName && enteredName.trim()) {
+    // User entered a name
+    userName = enteredName.trim();
     localStorage.setItem("vtk-username", userName);
-    yUserNames.set(userId, userName);
-    logInfo(`User name set to: ${userName}`);
+    console.log("👤 Username set:", userName);
+  } else if (storedName) {
+    // User cancelled but we have a stored name - use it
+    userName = storedName;
+    console.log("👤 Using stored username:", userName);
   } else {
-    userName = `User ${userId.slice(-4)}`;
-    logInfo(`Using default name: ${userName}`);
-  }
-}
-
-export function updateUserName(newName) {
-  if (newName && newName.trim()) {
-    userName = newName.trim();
+    // User cancelled and no stored name - generate random
+    const randomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    userName = `User_${randomId}`;
     localStorage.setItem("vtk-username", userName);
-    yUserNames.set(userId, userName);
-    logInfo(`User name updated to: ${userName}`);
-
-    // Update own cursor label if it exists
-    const ownCursor = document.getElementById(`cursor-${userId}`);
-    if (ownCursor) {
-      const label = ownCursor.querySelector("div");
-      if (label) {
-        label.textContent = userName;
-      }
-    }
+    console.log("👤 Generated random username:", userName);
   }
+
+  // Initialize cursor with name (this tracks online users)
+  yCursors.set(getUserId(), {
+    name: userName,
+    color: getUserColor(getUserId()),
+    x: 0,
+    y: 0,
+    timestamp: Date.now()
+  });
+
+  console.log("👤 User initialized:", userName, "ID:", getUserId());
 }
 
-
-// ----------------------------------------------------------------------------
-// Cleanup on page unload
-// ----------------------------------------------------------------------------
-
-window.addEventListener("beforeunload", () => {
-  // Remove user name from shared state
-  if (yUserNames) {
-    yUserNames.delete(userId);
+export function initializeNameEditor() {
+  const editNameBtn = document.getElementById('editNameBtn');
+  const displayNameEl = document.getElementById('displayName');
+  
+  if (!editNameBtn || !displayNameEl) {
+    console.warn("Name editor elements not found");
+    return;
   }
-});
+
+  // Set initial display from current userName
+  displayNameEl.textContent = getUserName();
+
+  editNameBtn.addEventListener('click', () => {
+    const currentName = getUserName();
+    const newName = prompt("Enter your display name:", currentName);
+    
+    if (newName && newName.trim() && newName.trim() !== currentName) {
+      setUserName(newName.trim());
+      displayNameEl.textContent = newName.trim();
+      
+      // Store in localStorage (persists forever)
+      localStorage.setItem("vtk-username", newName.trim());
+      
+      console.log("✅ Display name updated:", newName.trim());
+    }
+  });
+
+  console.log("✏️ Name editor initialized with name:", getUserName());
+}
+
+// Cleanup on page unload - remove user from online list
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    if (yCursors && userId) {
+      yCursors.delete(userId);
+      console.log("👋 User removed from online list");
+    }
+  });
+}

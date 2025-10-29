@@ -1,256 +1,168 @@
 // ----------------------------------------------------------------------------
-// Text Chat Controls UI
+// Text Chat Controls - New compact layout with unread tracking
 // ----------------------------------------------------------------------------
 
-import { textChat } from "../collaboration/textChat.js";
-import { getUserId } from "../collaboration/userManagement.js";
-import { logSuccess, logInfo } from "./logging.js";
+import { textChat } from '../collaboration/textChat.js';
+import { getUserId } from '../collaboration/userManagement.js';
 
-export function addTextChatControls() {
-  const controlTable = document.querySelector("table");
+let messagesContainer = null;
+let chatInput = null;
+let sendButton = null;
+let unreadCount = 0;
+let unreadSection = null;
+let unreadCountEl = null;
+let collabPanel = null;
 
-  if (!controlTable) {
-    console.error("Control table not found");
+export function initializeTextChatControls() {
+  messagesContainer = document.getElementById('chatMessages');
+  chatInput = document.getElementById('chatInput');
+  sendButton = document.getElementById('chatSendBtn');
+  unreadSection = document.getElementById('unreadSection');
+  unreadCountEl = document.getElementById('unreadCount');
+  collabPanel = document.getElementById('collaborationPanel');
+  
+  if (!messagesContainer || !chatInput || !sendButton) {
+    console.error("Chat UI elements not found");
     return;
   }
 
-  // Chat Header Row
-  const headerRow = document.createElement("tr");
-  const headerCell = document.createElement("td");
-  const headerContainer = document.createElement("div");
-  headerContainer.style.cssText = `
-    background: #FF9800; 
-    color: white; 
-    padding: 8px; 
-    border-radius: 4px; 
-    font-weight: bold; 
-    text-align: center;
-    margin-top: 10px;
-  `;
-  headerContainer.textContent = "💬 Text Chat";
-  headerCell.appendChild(headerContainer);
-  headerRow.appendChild(headerCell);
-  controlTable.appendChild(headerRow);
+  // Setup send button
+  sendButton.addEventListener('click', () => sendMessage());
 
-  // Chat Messages Display Row
-  const messagesRow = document.createElement("tr");
-  const messagesCell = document.createElement("td");
-  const messagesContainer = document.createElement("div");
-  messagesContainer.id = "chat-messages-container";
-  messagesContainer.style.cssText = `
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-    height: 200px;
-    overflow-y: auto;
-    font-size: 12px;
-    scroll-behavior: smooth;
-  `;
-
-  const messagesList = document.createElement("div");
-  messagesList.id = "chat-messages-list";
-
-  messagesContainer.appendChild(messagesList);
-  messagesCell.appendChild(messagesContainer);
-  messagesRow.appendChild(messagesCell);
-  controlTable.appendChild(messagesRow);
-
-  // Chat Input Row
-  const inputRow = document.createElement("tr");
-  const inputCell = document.createElement("td");
-  const inputContainer = document.createElement("div");
-  inputContainer.style.cssText =
-    "display: flex; gap: 5px; align-items: center;";
-
-  const chatInput = document.createElement("input");
-  chatInput.type = "text";
-  chatInput.id = "chat-input";
-  chatInput.placeholder = "Type a message...";
-  chatInput.maxLength = 500;
-  chatInput.style.cssText = `
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 12px;
-  `;
-
-  const sendButton = document.createElement("button");
-  sendButton.textContent = "Send";
-  sendButton.style.cssText = `
-    background: #FF9800;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-  `;
-
-  const sendMessage = () => {
-    const text = chatInput.value.trim();
-    if (text) {
-      textChat.sendMessage(text);
-      chatInput.value = "";
-      chatInput.focus();
-    }
-  };
-
-  sendButton.addEventListener("click", sendMessage);
-
-  chatInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
+  // Setup enter key
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       sendMessage();
     }
   });
 
-  inputContainer.appendChild(chatInput);
-  inputContainer.appendChild(sendButton);
-  inputCell.appendChild(inputContainer);
-  inputRow.appendChild(inputCell);
-  controlTable.appendChild(inputRow);
-
-  // Chat Controls Row (clear button)
-  const controlsRow = document.createElement("tr");
-  const controlsCell = document.createElement("td");
-  const controlsContainer = document.createElement("div");
-  controlsContainer.style.cssText =
-    "display: flex; gap: 5px; justify-content: flex-end;";
-
-  const clearButton = document.createElement("button");
-  clearButton.textContent = "Clear Chat";
-  clearButton.style.cssText = `
-    background: #999;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-  `;
-
-  clearButton.addEventListener("click", () => {
-    if (confirm("Clear all chat messages for everyone?")) {
-      textChat.clearMessages();
-      // Also clear the UI immediately
-      const messagesList = document.getElementById("chat-messages-list");
-      if (messagesList) {
-        messagesList.innerHTML = "";
-      }
-      logInfo("Chat cleared");
-    }
-  });
-
-  controlsContainer.appendChild(clearButton);
-  controlsCell.appendChild(controlsContainer);
-  controlsRow.appendChild(controlsCell);
-  controlTable.appendChild(controlsRow);
-
-  // Initialize chat and load existing messages
-  textChat.initialize();
-  loadExistingMessages();
-
   // Listen for new messages
   textChat.onMessage((message) => {
-    addMessageToUI(message);
-  });
-
-  // Listen for chat clears
-  textChat.onClear(() => {
-    const messagesList = document.getElementById("chat-messages-list");
-    if (messagesList) {
-      messagesList.innerHTML = "";
+    updateMessagesDisplay();
+    
+    // Track unread if panel is minimized and not own message
+    if (collabPanel && collabPanel.classList.contains('minimized') && message.userId !== getUserId()) {
+      unreadCount++;
+      updateUnreadIndicator();
     }
-    logInfo("Chat cleared by another user");
   });
 
-  logSuccess("Text chat controls added");
+  // Clear unread when panel is opened
+  const minimizeBtn = document.getElementById('minimizeCollabBtn');
+  if (minimizeBtn) {
+    minimizeBtn.addEventListener('click', () => {
+      // When transitioning from minimized to open, clear unread
+      if (collabPanel && collabPanel.classList.contains('minimized')) {
+        setTimeout(() => {
+          unreadCount = 0;
+          updateUnreadIndicator();
+        }, 100);
+      }
+    });
+  }
+
+  // Also clear unread when user starts typing (they've seen the panel)
+  chatInput.addEventListener('focus', () => {
+    if (!collabPanel || !collabPanel.classList.contains('minimized')) {
+      unreadCount = 0;
+      updateUnreadIndicator();
+    }
+  });
+
+  // Listen for clear
+  textChat.onClear(() => updateMessagesDisplay());
+
+  // Initial display
+  updateMessagesDisplay();
+
+  console.log("💬 Text chat controls initialized");
 }
 
-function loadExistingMessages() {
-  const messages = textChat.getRecentMessages(50);
+function sendMessage() {
+  const value = chatInput.value.trim();
+  
+  if (value) {
+    try {
+      textChat.sendMessage(value);
+      chatInput.value = "";
+      chatInput.focus(); // Keep focus for easy continuous chatting
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message. Check console for details.");
+    }
+  }
+}
+
+function updateMessagesDisplay() {
+  if (!messagesContainer) return;
+
+  messagesContainer.innerHTML = "";
+
+  const messages = textChat.getMessages();
+
+  if (messages.length === 0) {
+    const emptyMsg = document.createElement("div");
+    emptyMsg.textContent = "No messages yet. Start chatting!";
+    emptyMsg.style.cssText = "color: #999; font-style: italic; padding: 20px; text-align: center;";
+    messagesContainer.appendChild(emptyMsg);
+    return;
+  }
+
+  const currentUserId = getUserId();
+
   messages.forEach((message) => {
-    addMessageToUI(message, false); // Don't scroll for existing messages
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "chat-message";
+    messageDiv.style.borderLeftColor = message.userColor || '#2196F3';
+
+    const timestamp = new Date(message.timestamp).toLocaleTimeString();
+    const isOwnMessage = message.userId === currentUserId;
+    
+    messageDiv.innerHTML = `
+      <div class="chat-message-header">
+        ${escapeHtml(message.userName)} - ${timestamp}
+        ${isOwnMessage ? '<span style="color: #4CAF50; font-size: 10px;"> (You)</span>' : ''}
+      </div>
+      <div class="chat-message-text">
+        ${escapeHtml(message.text)}
+      </div>
+    `;
+
+    // Add delete button for own messages
+    if (isOwnMessage) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-message-btn";
+      deleteBtn.textContent = "×";
+      deleteBtn.title = "Delete this message";
+      deleteBtn.addEventListener('click', () => {
+        if (confirm("Delete this message for everyone?")) {
+          textChat.deleteMessage(message.id);
+        }
+      });
+      messageDiv.appendChild(deleteBtn);
+    }
+
+    messagesContainer.appendChild(messageDiv);
   });
 
-  // Scroll to bottom after loading
-  const container = document.getElementById("chat-messages-container");
-  if (container) {
-    container.scrollTop = container.scrollHeight;
-  }
+  // Auto-scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-function addMessageToUI(message, autoScroll = true) {
-  const messagesList = document.getElementById("chat-messages-list");
-  if (!messagesList) return;
+function updateUnreadIndicator() {
+  if (!unreadSection || !unreadCountEl) return;
 
-  const messageDiv = document.createElement("div");
-  messageDiv.style.cssText = `
-    margin-bottom: 8px;
-    padding: 6px;
-    border-radius: 4px;
-    background: ${
-      message.userId === getUserId() ? "rgba(33, 150, 243, 0.1)" : "white"
-    };
-    border-left: 3px solid ${message.userColor || "#999"};
-  `;
-
-  const headerDiv = document.createElement("div");
-  headerDiv.style.cssText =
-    "display: flex; justify-content: space-between; margin-bottom: 2px;";
-
-  const nameSpan = document.createElement("span");
-  nameSpan.textContent = message.userName || "Unknown";
-  nameSpan.style.cssText = `
-    font-weight: bold;
-    color: ${message.userColor || "#333"};
-    font-size: 11px;
-  `;
-
-  const timeSpan = document.createElement("span");
-  timeSpan.textContent = formatTime(message.timestamp);
-  timeSpan.style.cssText = "font-size: 10px; color: #999;";
-
-  headerDiv.appendChild(nameSpan);
-  headerDiv.appendChild(timeSpan);
-
-  const textDiv = document.createElement("div");
-  textDiv.textContent = message.text;
-  textDiv.style.cssText =
-    "color: #333; font-size: 12px; word-wrap: break-word;";
-
-  messageDiv.appendChild(headerDiv);
-  messageDiv.appendChild(textDiv);
-  messagesList.appendChild(messageDiv);
-
-  // Auto-scroll to bottom for new messages
-  if (autoScroll) {
-    const container = document.getElementById("chat-messages-container");
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }
-
-  // Limit displayed messages
-  while (messagesList.children.length > 50) {
-    messagesList.removeChild(messagesList.firstChild);
-  }
-}
-
-function formatTime(timestamp) {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-
-  if (isToday) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (unreadCount > 0 && collabPanel && collabPanel.classList.contains('minimized')) {
+    unreadSection.style.display = 'flex';
+    unreadCountEl.textContent = unreadCount;
   } else {
-    return (
-      date.toLocaleDateString([], { month: "short", day: "numeric" }) +
-      " " +
-      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    );
+    unreadSection.style.display = 'none';
   }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }

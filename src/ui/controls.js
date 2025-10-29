@@ -19,7 +19,14 @@ let toggleReductionFunction = null;
 export function setupDimensionalityReductionControls(toggleReduction) {
   toggleReductionFunction = toggleReduction;
 
-  const controlTable = document.querySelector("table");
+  // Use left panel table instead of generic table
+  const controlTable = document.querySelector("#leftPanelTable tbody");
+  
+  if (!controlTable) {
+    console.error("Left panel table not found!");
+    return;
+  }
+
   const { renderer, renderWindow } = getSceneObjects();
 
   // Method selection row

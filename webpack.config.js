@@ -1,54 +1,60 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin'); // For generating the HTML file
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const fs = require('fs');
 
 module.exports = {
-    entry: {
-        app: path.join(__dirname, 'src', 'index.js'),  // The entry point of your application
+  entry: './src/index.js',
+  output: {
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+    clean: true,
+  },
+  mode: 'development',
+  devtool: 'source-map',
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'dist'),
     },
-    output: {
-        filename: 'bundle.js',  // Output file name after bundling
-        path: path.resolve(__dirname, 'dist'),  // Directory for bundled output
+    compress: true,
+    port: 8081,
+    host: '0.0.0.0',
+    hot: true,
+    server: {
+      type: 'https',
+      options: {
+        key: fs.readFileSync('./certs/key.pem'),
+        cert: fs.readFileSync('./certs/cert.pem'),
+      },
     },
-    module: {
-        rules: [
-        {
-            test: /\.js$/,  // Apply Babel loader to all .js files
-            exclude: /node_modules/,  // Don't process files in node_modules
-            use: {
-            loader: 'babel-loader',  // Use babel-loader to transpile JavaScript
-            options: {
-                presets: ['@babel/preset-env'],  // Use Babel preset to handle modern JavaScript
-                sourceType: 'module',  // Ensure files are treated as ES modules
-            },
-            },
+    allowedHosts: 'all',
+  },
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+      },
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        resolve: {
+          fullySpecified: false,
         },
-        // Add GLSL loader for shader files
-        {
-            test: /\.glsl$/,
-            use: 'webpack-glsl-loader',
-        },
-        {
-            test: /\.html$/,  // Match .html files
-            use: 'html-loader',  // Use html-loader for .html files
-        },
-        ],
-    },
-    resolve: {
-        extensions: ['.js', '.html'],  // Resolve only JavaScript files
-    },
-    devServer: {
-        static: {
-        directory: path.join(__dirname, 'dist'),  // Serve static files from 'dist'
-        },
-        compress: true,  // Enable gzip compression
-        port: 8080,  // The port to run the server on
-        open: true,  // Automatically open the browser
-        hot: true,  // Enable Hot Module Replacement
-    },
-    plugins: [
-        new HtmlWebpackPlugin({
-        template: './src/index.html',  // Path to your HTML template
-        }),
+      },
     ],
-    mode: 'development',  // Set the mode to development
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      filename: 'index.html',
+    }),
+  ],
+  // Ignore controller.html
+  externals: {
+    './controller.html': 'controller.html',
+  },
 };

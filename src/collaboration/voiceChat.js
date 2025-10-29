@@ -1,45 +1,24 @@
-import { Room, RoomEvent } from "livekit-client";
+// ----------------------------------------------------------------------------
+// Voice Chat System (LiveKit-based)
+// ----------------------------------------------------------------------------
+
+import { Room } from "livekit-client";
 
 class VoiceChat {
   constructor() {
     this.room = null;
     this.isConnected = false;
-    this.isMuted = true;
-  }
-
-  async connect(roomName, userName) {
-    try {
-      console.log("🔌 Connecting to LiveKit server...");
-      console.log("   Room:", roomName);
-      console.log("   User:", userName);
-
-      const token = await this.getDevToken(roomName, userName);
-
-      this.room = new Room();
-      this.setupEventListeners();
-
-      await this.room.connect("ws://localhost:7880", token);
-
-      // Enable microphone
-      await this.room.localParticipant.setMicrophoneEnabled(true);
-      this.isMuted = false;
-
-      this.isConnected = true; // IMPORTANT: Set this after successful connection
-      console.log("✅ Voice chat connected successfully!");
-    } catch (error) {
-      console.error("❌ Failed to connect to voice chat:", error);
-      this.isConnected = false; // Make sure it's false on error
-      throw error;
-    }
+    this.isMuted = false;
   }
 
   async getDevToken(roomName, userName) {
-    // For dev mode, fetch token from a simple endpoint
-    // OR use CLI-generated tokens
+    // Use HTTP not HTTPS for local token server
+    const TOKEN_SERVER = "http://localhost:3001";
 
-    // Option 1: Fetch from a local token server (recommended)
+    console.log("   Fetching token from:", TOKEN_SERVER);
+
     try {
-      const response = await fetch("http://localhost:3001/token", {
+      const response = await fetch(`${TOKEN_SERVER}/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomName, userName }),
@@ -47,87 +26,95 @@ class VoiceChat {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("   ✅ Token received");
+        console.log("🐛 DEBUG data:", data);
+        console.log("🐛 DEBUG data.token:", data.token);
+        console.log("🐛 DEBUG typeof data.token:", typeof data.token);
         return data.token;
+      } else {
+        console.error("   ❌ Token server error:", response.status);
       }
     } catch (error) {
-      console.log("Token server not running, using fallback...");
+      console.error("   ❌ Token server not reachable:", error.message);
     }
 
-    // Option 2: Fallback - paste a CLI-generated token here for testing
-    // Generate one with: lk token create --api-key devkey --api-secret secret --join --room test-room --identity user1
-    const FALLBACK_TOKEN = "PASTE_YOUR_CLI_TOKEN_HERE";
+    throw new Error("Could not get token from server");
+  }
 
-    if (FALLBACK_TOKEN !== "PASTE_YOUR_CLI_TOKEN_HERE") {
-      return FALLBACK_TOKEN;
+  async connect(roomName, userName) {
+    try {
+      console.log("🔌 Connecting to voice chat...");
+
+      const token = await this.getDevToken(roomName, userName);
+
+      this.room = new Room();
+      this.setupEventListeners();
+
+      // Use local LiveKit server
+      const LIVEKIT_URL = "ws://localhost:7880";
+
+      // DEBUG: Log token to verify it's a string, not an object
+      console.log("🐛 DEBUG: Token type:", typeof token);
+      console.log("🐛 DEBUG: Token value:", token);
+      console.log("🐛 DEBUG: Token is string?", typeof token === "string");
+
+      await this.room.connect(LIVEKIT_URL, token);
+
+      await this.room.localParticipant.setMicrophoneEnabled(true);
+      this.isMuted = false;
+
+      this.isConnected = true;
+      console.log("✅ Voice chat connected!");
+    } catch (error) {
+      console.error("❌ Failed to connect:", error);
+      this.isConnected = false;
+      throw error;
     }
-
-    throw new Error(
-      "No token available. Either start token server or paste a CLI token."
-    );
   }
 
   setupEventListeners() {
-    this.room.on(RoomEvent.Connected, () => {
-      console.log("✅ Room connected");
-      this.isConnected = true; // Make sure this is set
+    if (!this.room) return;
+
+    this.room.on("participantConnected", (participant) => {
+      console.log("👤 Participant joined:", participant.identity);
     });
 
-    this.room.on(RoomEvent.Disconnected, (reason) => {
-      console.log("🔌 Room disconnected:", reason);
-      this.isConnected = false; // Make sure this is set
+    this.room.on("participantDisconnected", (participant) => {
+      console.log("👋 Participant left:", participant.identity);
     });
 
-    this.room.on(RoomEvent.Reconnecting, () => {
-      console.log("🔄 Reconnecting...");
-    });
-
-    this.room.on(RoomEvent.Reconnected, () => {
-      console.log("✅ Reconnected!");
-      this.isConnected = true;
-    });
-
-    this.room.on(RoomEvent.ConnectionStateChanged, (state) => {
-      console.log("Connection state:", state);
-    });
-
-    this.room.on(RoomEvent.ParticipantConnected, (participant) => {
-      console.log(`👤 ${participant.identity} joined voice chat`);
-    });
-
-    this.room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-      console.log(`👋 ${participant.identity} left voice chat`);
-    });
-
-    this.room.on(
-      RoomEvent.TrackSubscribed,
-      (track, publication, participant) => {
-        if (track.kind === "audio") {
-          console.log(`🔊 Receiving audio from ${participant.identity}`);
-        }
+    this.room.on("trackSubscribed", (track, publication, participant) => {
+      if (track.kind === "audio") {
+        const audioElement = track.attach();
+        document.body.appendChild(audioElement);
+        console.log("🔊 Audio track subscribed from:", participant.identity);
       }
-    );
+    });
   }
 
   async toggleMute() {
-    if (!this.room) return;
+    if (!this.room || !this.isConnected) {
+      console.warn("Not connected to voice chat");
+      return;
+    }
 
-    this.isMuted = !this.isMuted;
-    await this.room.localParticipant.setMicrophoneEnabled(!this.isMuted);
-    console.log(this.isMuted ? "🔇 Muted" : "🎤 Unmuted");
-    return this.isMuted;
+    try {
+      this.isMuted = !this.isMuted;
+      await this.room.localParticipant.setMicrophoneEnabled(!this.isMuted);
+      console.log(`🎤 Microphone ${this.isMuted ? "muted" : "unmuted"}`);
+    } catch (error) {
+      console.error("Failed to toggle mute:", error);
+    }
   }
 
   disconnect() {
     if (this.room) {
       this.room.disconnect();
+      this.room = null;
       this.isConnected = false;
-      console.log("Disconnected from voice chat");
+      this.isMuted = false;
+      console.log("Voice chat disconnected");
     }
-  }
-
-  getParticipants() {
-    if (!this.room) return [];
-    return Array.from(this.room.remoteParticipants.values());
   }
 }
 

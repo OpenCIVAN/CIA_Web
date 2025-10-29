@@ -17,8 +17,6 @@ import "@kitware/vtk.js/IO/Core/DataAccessHelper/HtmlDataAccessHelper";
 import "@kitware/vtk.js/IO/Core/DataAccessHelper/HttpDataAccessHelper";
 import "@kitware/vtk.js/IO/Core/DataAccessHelper/JSZipDataAccessHelper";
 
-// Custom UI controls, including button to start XR session
-import controlPanel from "../controller.html";
 import { initializeViewHelpers } from "../utils/viewHelpers.js";
 
 // Dynamically load WebXR polyfill from CDN for WebVR and Cardboard API backwards compatibility
@@ -63,7 +61,8 @@ export function initializeScene() {
   actor.setMapper(mapper);
   actor.setPickable(true);
 
-  fullScreenRenderer.addController(controlPanel);
+  // REMOVED: fullScreenRenderer.addController(controlPanel);
+  // We build our own UI controls instead
 
   initializeViewHelpers(renderer, renderWindow, camera, interactor);
 
@@ -128,9 +127,9 @@ export function stopVR() {
 }
 
 export function getVTKRenderer() {
-  return renderer; // Your VTK.js renderer instance
+  return renderer;
 }
 
 export function getVTKRenderWindow() {
-  return renderWindow; // Your VTK.js render window instance
+  return renderWindow;
 }

@@ -1,23 +1,11 @@
-import { ydoc, yCursors, yUserNames } from "./yjsSetup.js";
-import {
-  logInfo,
-  logSuccess,
-  logProgress,
-  logError,
-  logWarning,
-} from "../ui/logging.js";
-import { NETWORK_CONFIG } from "../config/constants.js";
-import { getSceneObjects } from "../core/scene.js";
-import {
-  getUserId,
-  getUserName,
-  setupUserName,
-  getUserColor,
-} from "./userManagement.js";
-
 // ----------------------------------------------------------------------------
 // Collaborative Cursor System
 // ----------------------------------------------------------------------------
+
+import { yCursors } from "./yjsSetup.js";
+import { logInfo, logSuccess, logProgress, logError, logWarning } from "../ui/logging.js";
+import { NETWORK_CONFIG } from "../config/constants.js";
+import { getUserId, getUserName, getUserColor } from "./userManagement.js";
 
 // Store active cursors
 const activeCursors = new Map();
@@ -66,11 +54,10 @@ function createCursorElement(userId, color, displayName) {
       text-overflow: ellipsis;
       overflow: hidden;
     `;
-    label.textContent = displayName || userId.replace("user_", "User ");
+    label.textContent = displayName || 'Unknown';
 
     cursor.appendChild(label);
 
-    // Verify document.body exists before appending
     if (document.body) {
       document.body.appendChild(cursor);
     } else {
@@ -96,7 +83,7 @@ function trackMouse() {
       timestamp: now,
     };
 
-    // Throttle updates to prevent overwhelming the network
+    // Throttle updates
     if (mouseMoveTimeout) {
       clearTimeout(mouseMoveTimeout);
     }
@@ -108,12 +95,12 @@ function trackMouse() {
 
   // Handle mouse leave
   document.addEventListener("mouseleave", () => {
-    hideMyCursor();
+    hideMyCursor(false);
   });
 
   // Handle window focus/blur
   window.addEventListener("blur", () => {
-    hideMyCursor();
+    hideMyCursor(false);
   });
 
   window.addEventListener("focus", () => {
@@ -126,22 +113,28 @@ function trackMouse() {
 export function updateMyCursor() {
   if (!lastMousePosition || lastMousePosition.timestamp === 0) return;
 
+  // Include name in cursor data
   yCursors.set(getUserId(), {
     x: lastMousePosition.x,
     y: lastMousePosition.y,
     timestamp: lastMousePosition.timestamp,
     color: getUserColor(getUserId()),
+    name: getUserName(),
     active: true,
   });
 }
 
-export function hideMyCursor() {
+export function hideMyCursor(hide = true) {
+  const currentCursor = yCursors.get(getUserId()) || {};
+  
   yCursors.set(getUserId(), {
-    x: 0,
-    y: 0,
+    ...currentCursor,
+    x: currentCursor.x || 0,
+    y: currentCursor.y || 0,
     timestamp: Date.now(),
     color: getUserColor(getUserId()),
-    active: false,
+    name: getUserName(),
+    active: !hide,
   });
 }
 
@@ -149,9 +142,8 @@ function updateRemoteCursor(userId, data) {
   let cursorData = activeCursors.get(userId);
   let cursorElement = cursorData ? cursorData.element : null;
 
-  // Get display name for this user
-  const displayName =
-    yUserNames.get(userId) || userId.replace("user_", "User ");
+  // Get display name from cursor data (not from yUserNames)
+  const displayName = data.name || 'Unknown';
 
   if (!cursorElement || !cursorElement.parentNode) {
     // Create new cursor element
@@ -178,7 +170,7 @@ function updateRemoteCursor(userId, data) {
     currentData.displayName = displayName;
   }
 
-  // Safely update position
+  // Update position
   try {
     if (cursorElement && cursorElement.style) {
       cursorElement.style.left = data.x + "px";
@@ -201,7 +193,6 @@ function updateRemoteCursor(userId, data) {
     }
   } catch (error) {
     logError(`Error updating cursor for ${userId}: ${error.message}`);
-    // Clean up potentially corrupted cursor
     removeCursor(userId);
   }
 }
@@ -235,7 +226,6 @@ function removeCursor(userId) {
 // Cursor Synchronization
 // ----------------------------------------------------------------------------
 
-// Setup cursor synchronization observer
 function setupCursorSync() {
   yCursors.observe((event) => {
     try {
@@ -245,32 +235,24 @@ function setupCursorSync() {
         try {
           const cursorData = yCursors.get(key);
           if (!cursorData) {
-            // Cursor removed
             removeCursor(key);
             return;
           }
 
           if (!cursorData.active) {
-            // Hide cursor
             hideCursor(key);
             return;
           }
 
           // Validate cursor data
-          if (
-            typeof cursorData.x !== "number" ||
-            typeof cursorData.y !== "number"
-          ) {
-            logWarning(`Invalid cursor data for ${key}:`, cursorData);
+          if (typeof cursorData.x !== "number" || typeof cursorData.y !== "number") {
+            logWarning(`Invalid cursor data for ${key}`);
             return;
           }
 
-          // Update or create cursor
           updateRemoteCursor(key, cursorData);
         } catch (innerError) {
-          logError(
-            `Error processing cursor update for ${key}: ${innerError.message}`
-          );
+          logError(`Error processing cursor update for ${key}: ${innerError.message}`);
         }
       });
     } catch (error) {
@@ -283,13 +265,12 @@ function setupCursorSync() {
 // Cursor Cleanup
 // ----------------------------------------------------------------------------
 
-// Cleanup stale cursors
 function startCursorCleanup() {
-  // Clean up stale cursors per threshold
   setInterval(() => {
     const now = Date.now();
-    const STALE_THRESHOLD = NETWORK_CONFIG.STALE_CURSOR_THRESHOLD; // 30 seconds
+    const STALE_THRESHOLD = NETWORK_CONFIG.STALE_CURSOR_THRESHOLD;
 
+    // Clean up stale cursors from DOM
     activeCursors.forEach((cursor, userId) => {
       if (now - cursor.lastUpdate > STALE_THRESHOLD) {
         logProgress(`Removing stale cursor for ${userId}`);
@@ -297,40 +278,37 @@ function startCursorCleanup() {
       }
     });
 
-    // Also clean up from Yjs
+    // Clean up stale cursors from Yjs
     const allCursors = yCursors.toJSON();
     Object.keys(allCursors).forEach((userId) => {
       const cursorData = allCursors[userId];
-      if (now - cursorData.timestamp > STALE_THRESHOLD) {
+      if (cursorData && now - cursorData.timestamp > STALE_THRESHOLD) {
         yCursors.delete(userId);
-        // Also remove from user names
-        yUserNames.delete(userId);
       }
     });
   }, NETWORK_CONFIG.STALE_CURSOR_THRESHOLD);
 }
 
+// ----------------------------------------------------------------------------
+// Initialization
+// ----------------------------------------------------------------------------
+
 export function initializeCursorSystem() {
   try {
     logInfo(`Initializing collaborative cursors for user: ${getUserId()}`);
 
-    // Verify required dependencies
-    if (!ydoc || !yCursors) {
+    if (!yCursors) {
       logError("Yjs not properly initialized - cursor system cannot start");
       return false;
     }
 
     if (!document.body) {
       logError("Document not ready - deferring cursor system initialization");
-      // Try again after DOM is ready
       document.addEventListener("DOMContentLoaded", () => {
         initializeCursorSystem();
       });
       return false;
     }
-
-    // Set up user name first
-    setupUserName();
 
     // Set up mouse tracking
     trackMouse();
@@ -339,17 +317,16 @@ export function initializeCursorSystem() {
     setupCursorSync();
     startCursorCleanup();
 
-    // Send initial cursor position after a short delay
+    // Send initial cursor position after delay
     setTimeout(() => {
       if (lastMousePosition.timestamp > 0) {
         updateMyCursor();
       }
-    }, 2000); // Increased delay to allow name setup
+    }, 1000);
 
     logSuccess("Collaborative cursor system initialized");
     logProgress(`Your cursor color: ${getUserColor(getUserId())}`);
-    logProgress(`Your display name: ${getUserName() || "Default"}`);
-    logProgress("Move your mouse to see your cursor appear for other users");
+    logProgress(`Your display name: ${getUserName()}`);
 
     return true;
   } catch (error) {
@@ -362,10 +339,9 @@ export function getActiveCursors() {
   return activeCursors;
 }
 
-// ----------------------------------------------------------------------------
 // Cleanup on page unload
-// ----------------------------------------------------------------------------
-
-window.addEventListener("beforeunload", () => {
-  hideMyCursor();
-});
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    hideMyCursor(true);
+  });
+}

@@ -34,114 +34,193 @@ A real-time collaborative platform for immersive scientific data visualization a
 ### Prerequisites
 - [Node.js](https://nodejs.org/) v16+ 
 - [npm](https://www.npmjs.com/)
+- [LiveKit Server](https://docs.livekit.io/realtime/self-hosting/local/)
 - VR headset (optional, for WebXR features)
 
 ### 📥 Installation
 
 1. **Clone the repository**
 ```bash
-   git clone <repository-url>
-   cd CIA_Web
+git clone <repository-url>
+cd CIA_Web
 ```
 
 2. **Install dependencies**
 ```bash
-   npm install
+npm install
 ```
 
-3. **Start the development server**
+3. **Generate Self-Signed SSL Certificates** (required for WebXR/HTTPS)
 ```bash
-   npm start
+mkdir certs
+openssl req -x509 -newkey rsa:4096 -keyout certs/key.pem -out certs/cert.pem -days 365 -nodes
 ```
-   The app will open automatically at `http://localhost:8080`
+*Note: The `certs/` folder is in `.gitignore` and should never be committed.*
 
-4. **Load sample data**
+4. **Install LiveKit Server**
+```bash
+# macOS
+brew install livekit
+
+# Linux/macOS (alternative)
+curl -sSL https://get.livekit.io | bash
+```
+
+5. **Start All Services** (requires 4 terminal windows)
+
+**Terminal 1 - Yjs Server (collaboration sync):**
+```bash
+node server.js
+```
+*Expected output:* `🔄 Yjs relay server running on ws://localhost:8080`
+
+**Terminal 2 - Token Server (LiveKit authentication):**
+```bash
+node token-server.js
+```
+*Expected output:* `✅ Token server running on http://localhost:3001`
+
+**Terminal 3 - LiveKit Server (voice chat):**
+```bash
+livekit-server --dev
+```
+*Expected output:* `starting LiveKit server {"portHttp": 7880}`
+
+**Terminal 4 - Web Application:**
+```bash
+npm start
+```
+*Expected output:* Browser opens to `https://localhost:8081`
+
+6. **Accept Security Warning**
+   - Your browser will warn about the self-signed certificate
+   - Click "Advanced" → "Proceed to localhost (unsafe)"
+   - This is normal for local development
+
+7. **Load Sample Data**
    - Upload a `.vtp` file from the `vtp_files/` folder
    - Or drag and drop your own VTP files
 
 ---
 
-## 🎤 Voice Chat Setup
+## 🔐 Security & Deployment
 
-### Local Development (Current Setup)
+### ⚠️ DEVELOPMENT MODE WARNING
 
-Voice chat works out of the box for local testing using LiveKit's development mode.
+**This setup uses default development credentials and is NOT secure for production use!**
 
-**What's Running:**
-- **LiveKit Server** (`Terminal 1`): `livekit-server --dev`
-- **Token Server** (`Terminal 2`): `node token-server.js`
-- **Dev Server** (`Terminal 3`): `npm start`
+The included configuration uses:
+- ✅ `devkey` / `secret` - LiveKit's public development credentials (local only)
+- ✅ Self-signed SSL certificates (not trusted by browsers)
+- ✅ CORS set to allow all origins (`*`)
+- ✅ No authentication or authorization
 
-**Quick Setup:**
-1. Install LiveKit:
+**These are intentionally insecure for ease of local development.**
+
+### 🚀 Production Deployment Checklist
+
+Before deploying to production, you **MUST**:
+
+1. **Use Real LiveKit Credentials**
+   - Sign up at [LiveKit Cloud](https://cloud.livekit.io) (free tier available)
+   - Set environment variables:
 ```bash
-   brew install livekit
-   # OR
-   curl -sSL https://get.livekit.io | bash
+   export LIVEKIT_API_KEY="your-real-key"
+   export LIVEKIT_API_SECRET="your-real-secret"
 ```
 
-2. Start LiveKit server:
-```bash
-   livekit-server --dev
+2. **Use Valid SSL Certificates**
+   - Use [Let's Encrypt](https://letsencrypt.org/) for free SSL certificates
+   - Or use certificates from your certificate authority
+
+3. **Configure CORS Properly**
+   - In `token-server.js`, change from `origin: "*"` to your specific domain
+
+4. **Add Authentication**
+   - Implement user login/registration
+   - Validate user sessions before issuing tokens
+
+5. **Use Production LiveKit Server**
+   - Deploy LiveKit server or use LiveKit Cloud
+   - Update `LIVEKIT_URL` in your configuration
+
+6. **Never Commit Secrets**
+   - Keep `certs/` in `.gitignore` ✅ (already configured)
+   - Use environment variables for all secrets
+   - Never commit `.env` files with real credentials
+
+---
+
+## 🎤 Voice Chat Setup Details
+
+### How It Works
+
+Voice chat uses a 3-server architecture:
+```
+Browser → Token Server → Get JWT Token
+        ↓
+        → LiveKit Server → Voice/Audio via WebRTC
 ```
 
-3. Create `token-server.js` in project root:
+### Token Server Code (`token-server.js`)
+
+**Important:** The token generation is async in livekit-server-sdk v2.x. Make sure to use `async/await`:
 ```javascript
-   const express = require('express');
-   const { AccessToken } = require('livekit-server-sdk');
-   const cors = require('cors');
+const express = require('express');
+const { AccessToken } = require('livekit-server-sdk');
+const cors = require('cors');
 
-   const app = express();
-   app.use(cors());
-   app.use(express.json());
+const app = express();
+app.use(cors({ origin: '*', credentials: true }));
+app.use(express.json());
 
-   app.post('/token', (req, res) => {
-     const { roomName, userName } = req.body;
-     
-     const at = new AccessToken('devkey', 'secret', {
-       identity: userName,
-     });
-     
-     at.addGrant({
-       roomJoin: true,
-       room: roomName,
-       canPublish: true,
-       canSubscribe: true,
-     });
+// ⚠️ WARNING: These are development-only credentials!
+// "devkey" and "secret" are LiveKit's default dev mode keys.
+// For production, use environment variables with real credentials.
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'devkey';
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'secret';
 
-     res.json({ token: at.toJwt() });
-   });
+app.post('/token', async (req, res) => {  // ✅ async is required!
+  try {
+    const { roomName, userName } = req.body;
+    
+    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+      identity: userName,
+    });
+    
+    at.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: true,
+      canSubscribe: true,
+    });
 
-   app.listen(3001, () => {
-     console.log('Token server running on http://localhost:3001');
-   });
+    const token = await at.toJwt();  // ✅ await is required!
+    res.json({ token });
+    
+  } catch (error) {
+    console.error('Error generating token:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(3001, () => {
+  console.log('✅ Token server running on http://localhost:3001');
+});
 ```
 
-4. Install token server dependencies:
+**Install dependencies:**
 ```bash
-   npm install express livekit-server-sdk cors
+npm install express livekit-server-sdk cors
 ```
 
-5. Start token server:
-```bash
-   node token-server.js
-```
+### Testing Voice Chat
 
-### Production Deployment
-
-For production use, sign up for [LiveKit Cloud](https://cloud.livekit.io) (free tier available):
-
-1. Create a project and get your credentials
-2. Update `.env` file:
-```env
-   LIVEKIT_URL=wss://your-project.livekit.cloud
-   LIVEKIT_API_KEY=your_api_key
-   LIVEKIT_API_SECRET=your_secret
-```
-3. Deploy your token server with these credentials
-4. Update `voiceChat.js` to use production URL
-
-⚠️ **Security Note:** The included development credentials (`devkey`/`secret`) are public and only work locally. Never commit production credentials to version control!
+1. Start all 4 servers (see Quick Start)
+2. Open the app in 2 browser tabs: `https://localhost:8081`
+3. Click **"Join Voice Chat"** in both tabs
+4. Grant microphone permissions
+5. You should hear yourself with a slight echo (tab 1 ↔ tab 2)
 
 ---
 
@@ -206,16 +285,31 @@ CIA_Web/
 ├── src/
 │   ├── algorithms/          # PCA, t-SNE, UMAP implementations
 │   ├── collaboration/       # Real-time sync (Yjs, cursors, voice, text, annotations)
-│   ├── config/             # Configuration constants
-│   ├── core/               # Scene management, file handling, annotation rendering
-│   ├── ui/                 # UI controls and interactions
-│   └── utils/              # TensorFlow setup, helpers
-├── vtp_files/              # Sample VTP datasets
-├── token-server.js         # LiveKit token generation (create this)
-├── package.json            # Dependencies and scripts
-├── webpack.config.js       # Webpack configuration
-└── README.md              # This file
+│   ├── config/              # Configuration constants
+│   ├── core/                # Scene management, file handling, annotation rendering
+│   ├── ui/                  # UI controls and interactions
+│   ├── utils/               # TensorFlow setup, helpers
+│   ├── vr/                  # VR controllers, avatars, spatial UI
+│   └── index.js             # Application entry point
+├── vtp_files/               # Sample VTP datasets
+├── certs/                   # SSL certificates (DO NOT COMMIT - in .gitignore)
+├── server.js                # Yjs WebSocket server for collaboration
+├── token-server.js          # LiveKit token generation server
+├── package.json             # Dependencies and scripts
+├── webpack.config.js        # Webpack configuration
+└── README.md                # This file
 ```
+
+---
+
+## 🌐 Port Configuration
+
+| Service | Port | URL |
+|---------|------|-----|
+| Web Application | 8081 | `https://localhost:8081` |
+| Yjs Server | 8080 | `ws://localhost:8080` |
+| LiveKit Server | 7880 | `ws://localhost:7880` |
+| Token Server | 3001 | `http://localhost:3001` |
 
 ---
 
@@ -224,7 +318,7 @@ CIA_Web/
 - **[VTK.js](https://kitware.github.io/vtk-js/)** - 3D visualization and rendering
 - **[WebXR](https://immersiveweb.dev/)** - Virtual reality support
 - **[TensorFlow.js](https://www.tensorflow.org/js)** - Machine learning in the browser
-- **[Yjs](https://yjs.dev/)** - Real-time collaboration framework
+- **[Yjs](https://yjs.dev/)** - Real-time collaboration framework (CRDT-based)
 - **[LiveKit](https://livekit.io/)** - WebRTC voice/video communication
 - **[Webpack](https://webpack.js.org/)** - Module bundling
 
@@ -244,30 +338,48 @@ CIA_Web/
 
 ### Voice Chat Issues
 
-**Firefox:** Voice chat may not work in Firefox due to localhost WebSocket restrictions. Use Chrome for development.
+**"Connection failed" or 401 Unauthorized:**
+- Ensure LiveKit server is running: `livekit-server --dev`
+- Ensure token server is running: `node token-server.js`
+- Check token-server.js uses `async/await` (see Voice Chat Setup section)
+- Clear browser cache and hard refresh (`Cmd+Shift+R`)
 
-**No audio:** 
+**No audio from other participants:**
 - Check microphone permissions in browser
-- Verify LiveKit server is running (`livekit-server --dev`)
-- Check token server is running (`node token-server.js`)
+- Verify both users are in the same room
+- Check browser console for WebRTC errors
 
-**"Connection failed" error:**
-- Ensure all three servers are running (LiveKit, token server, dev server)
-- Check browser console for specific errors
+**Firefox issues:**
+- Voice chat may not work in Firefox due to localhost WebSocket restrictions
+- Use Chrome or Edge for development
+
+### Collaboration Issues
+
+**Cursors not syncing:**
+- Ensure Yjs server is running: `node server.js`
+- Check browser console for WebSocket connection errors
+- Verify both users are accessing the same room URL
+
+**Annotations in wrong place:**
+- Make sure VTP file is loaded before annotating
+- Try clicking directly on geometry (not empty space)
 
 ### Visualization Issues
 
 **File won't load:**
 - Ensure file is valid VTP (VTK XML PolyData) format
 - Check browser console for parsing errors
+- Try a sample file from `vtp_files/` folder
 
 **Performance issues with large datasets:**
 - Use datasets under 1 million points for best performance
 - Memory-optimized algorithms activate automatically for large files
+- Check memory usage in console logs
 
-**Annotations in wrong place:**
-- Make sure VTP file is loaded before annotating
-- Try clicking directly on geometry (not empty space)
+**SSL Certificate Warning:**
+- This is normal for self-signed certificates
+- Click "Advanced" → "Proceed to localhost (unsafe)"
+- Only an issue in development; use real certificates for production
 
 ---
 
@@ -282,6 +394,35 @@ CIA_Web/
 - [ ] File sharing and management
 - [ ] Spatial audio in VR mode
 - [ ] Mobile device support
+- [ ] Persistent storage for annotations and chat history
+
+---
+
+## 📝 Development Notes
+
+### Adding New Features
+
+1. Keep collaboration features in `src/collaboration/`
+2. UI controls go in `src/ui/`
+3. Core visualization in `src/core/`
+4. Update `src/index.js` to initialize new features
+
+### Memory Management
+
+- TensorFlow.js operations use `tf.tidy()` for automatic cleanup
+- Large datasets automatically trigger optimization strategies
+- Monitor memory usage via debug API: `window.debugAPI.logMemory()`
+
+### Debugging
+
+Access the debug API in browser console:
+```javascript
+window.debugAPI.toggleReduction()  // Toggle dimensionality reduction
+window.debugAPI.logMemory()        // Log current memory usage
+window.debugAPI.cleanup()          // Force cleanup TensorFlow tensors
+window.debugAPI.voiceChat          // Access voice chat instance
+window.debugAPI.textChat           // Access text chat instance
+```
 
 ---
 
@@ -290,7 +431,10 @@ CIA_Web/
 - Built with [VTK.js](https://kitware.github.io/vtk-js/) by Kitware
 - Voice chat powered by [LiveKit](https://livekit.io/)
 - Collaboration framework by [Yjs](https://yjs.dev/)
+- Dimensionality reduction algorithms from [TensorFlow.js](https://www.tensorflow.org/js)
 
 ---
 
 **Happy Collaborating! 🎉**
+
+*Remember: This setup is for development only. See the Security & Deployment section before going to production!*

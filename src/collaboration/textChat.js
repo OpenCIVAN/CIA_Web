@@ -103,6 +103,18 @@ class TextChat {
       }
     });
   }
+
+  deleteMessage(messageId) {
+    if (!this.messages) return;
+
+    const messages = this.messages.toArray();
+    const index = messages.findIndex((msg) => msg.id === messageId);
+
+    if (index !== -1) {
+      this.messages.delete(index, 1);
+      console.log("💬 Message deleted:", messageId);
+    }
+  }
 }
 
 export const textChat = new TextChat();
