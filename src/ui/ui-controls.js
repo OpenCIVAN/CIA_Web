@@ -6,14 +6,11 @@ import { yActor, yUIState, setLocalUIChange } from '../collaboration/yjs-setup.j
 import { logInfo, logSuccess, logProgress, logWarning, logMemoryUsage, cleanupTensors } from '../utils/logging.js';
 import { handleFileInput } from '../scene/file-handler.js';
 import { setupDimensionalityReductionControls } from './reduction-controls.js';
-import { initializeLabelWidget, createLabelControlPanel } from './label-widget.js';
-import { setupLabelControls } from './label-controls.js';
+import { initializeLineWidget, createLineControlPanel } from './line-widget.js';
+import { setupLineControls } from './line-controls.js';
 
 export function setupUI() {
   fullScreenRenderer.addController(controlPanel);
-  
-  // Create and add label control panel programmatically
-  createLabelControlPanel();
   
   const representationSelector = document.querySelector('.representations');
   const vrbutton = document.querySelector('.vrbutton');
@@ -42,9 +39,18 @@ export function setupUI() {
   
   setupDimensionalityReductionControls();
   
-  // Initialize label widget system
-  initializeLabelWidget();
-  setupLabelControls();
+  // Initialize line widget system - add slight delay to ensure DOM is ready
+  setTimeout(() => {
+    try {
+      createLineControlPanel();
+      initializeLineWidget();
+      setupLineControls();
+      logSuccess('Line widget system initialized');
+    } catch (error) {
+      logWarning(`Line widget initialization failed: ${error.message}`);
+      console.error('Line widget error:', error);
+    }
+  }, 500);
   
   logSuccess('UI controls initialized (including label widgets)');
 }

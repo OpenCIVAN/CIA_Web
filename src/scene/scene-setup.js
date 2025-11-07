@@ -8,6 +8,8 @@ import vtkXMLPolyDataReader from '@kitware/vtk.js/IO/XML/XMLPolyDataReader';
 import vtkOrientationMarkerWidget from '@kitware/vtk.js/Interaction/Widgets/OrientationMarkerWidget';
 import vtkAnnotatedCubeActor from '@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor';
 import { XrSessionTypes } from '@kitware/vtk.js/Rendering/WebXR/RenderWindowHelper/Constants';
+import { setupInteractionHandlers } from './interaction-handler.js';
+import { logSuccess } from '../utils/logging.js'
 
 // Scene globals
 export let fullScreenRenderer;
@@ -46,6 +48,11 @@ export function setupScene() {
   actor.setMapper(mapper);
   
   createOrientationMarker();
+
+  // Setup interaction handlers for collaborative actor movement
+  setupInteractionHandlers();
+  
+  logSuccess('Scene setup complete with interaction handlers');
 }
 
 function createOrientationMarker() {
