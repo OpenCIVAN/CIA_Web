@@ -1,8 +1,8 @@
-// src/ui/react/WarRoomApp.jsx
+// src/ui/react/CIAWebApp.jsx
 // Updated to show username modal before main UI
 
 import React, { useState, useEffect, useRef } from 'react';
-import WarRoomLayout from './layouts/WarRoomLayout.jsx';
+import CIAWebLayout from './layouts/CIAWebLayout.jsx';
 import LeftToolbar from './components/LeftToolbar.jsx';
 import RightCollaborationPanel from './components/RightCollaborationPanel.jsx';
 import ToolPanel from './components/ToolPanel.jsx';
@@ -18,8 +18,9 @@ import { setUserName, hasUserName } from '../../collaboration/userManagement.js'
 import { presenceSystem } from '../../collaboration/presenceSystem.js';
 import AnnotationModal from './components/modals/AnnotationModal.jsx';
 import InstructionsModal from './components/modals/InstructionsModal.jsx';
+import { TestPanel } from './components/TestPanel.jsx';
 
-export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
+export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
   const [activeTool, setActiveTool] = useState(null);
   const [vtkInitialized, setVtkInitialized] = useState(false);
   const [postSceneInitialized, setPostSceneInitialized] = useState(false);
@@ -38,8 +39,11 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
   useEffect(() => {
     if (!hasUserName()) {
       setShowUsernameModal(true);
+      // ✨ Still hide loading screen even if showing username modal
+      if (window.hideLoadingScreen) {
+        window.hideLoadingScreen();
+      }
     } else {
-      // Username already exists, hide loading screen and show app
       if (window.hideLoadingScreen) {
         window.hideLoadingScreen();
       }
@@ -99,7 +103,7 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
         const sceneObjects = initializeScene(vtkContainer);
 
         if (sceneObjects) {
-          console.log('✅ VTK initialized in War Room');
+          console.log('✅ VTK initialized in Web App');
           setVtkInitialized(true);
           window.vtkScene = sceneObjects;
         } else {
@@ -113,7 +117,7 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
     return () => { };
   }, []);
 
-  // In WarRoomApp useEffect, replace window.showAnnotationModal:
+  // In CIAWebApp useEffect, replace window.showAnnotationModal:
   useEffect(() => {
     // Check if we should skip instructions
     const skipInstructions = localStorage.getItem('annotation_skip_instructions') === 'true';
@@ -161,8 +165,9 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
 
   return (
     <>
-      <WarRoomLayout
-        roomName="Analytics War Room"
+      <TestPanel />
+      <CIAWebLayout
+        roomName="Analytics Web App"
         datasetName="{Project Name}"
         leftPanel={
           <LeftToolbar
@@ -307,7 +312,7 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
             });
           }}
         />
-      </WarRoomLayout>
+      </CIAWebLayout>
 
       {/* Logging Panel - outside main layout */}
       <LoggingPanel />

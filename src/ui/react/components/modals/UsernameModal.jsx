@@ -81,7 +81,7 @@ export default function UsernameModal({ onSubmit }) {
             color: '#e0e0e0',
             fontWeight: '600'
           }}>
-            CIA War Room
+            CIA Web App
           </h1>
           <p style={{
             margin: '8px 0 0 0',
@@ -175,7 +175,7 @@ export default function UsernameModal({ onSubmit }) {
               e.target.style.boxShadow = 'none';
             }}
           >
-            Enter War Room
+            Enter Web App
           </button>
         </form>
 

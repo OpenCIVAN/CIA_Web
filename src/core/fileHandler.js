@@ -29,21 +29,23 @@ export function setupFileHandler() {
   // Yjs Observer: File Data (DEPRECATED - using datasetManager instead)
   // ----------------------------------------------------------------------------
 
-//   yFile.observe((event) => {
-//     if (isLocalFileLoad) {
-//       isLocalFileLoad = false;
-//       return;
-//     }
+  //   yFile.observe((event) => {
+  //     if (isLocalFileLoad) {
+  //       isLocalFileLoad = false;
+  //       return;
+  //     }
 
-//     const b64 = yFile.get("polydata");
-//     const datasetId = yFile.get("datasetId"); // ← Get dataset ID from Yjs
+  //     const b64 = yFile.get("polydata");
+  //     const datasetId = yFile.get("datasetId"); // ← Get dataset ID from Yjs
 
-//     if (b64) {
-//       const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
-//       updateScene(binary, datasetId); // ← Pass dataset ID
-//     }
-//   });
+  //     if (b64) {
+  //       const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+  //       updateScene(binary, datasetId); // ← Pass dataset ID
+  //     }
+  //   });
 }
+
+// In fileHandler.js, update the handleFile function:
 
 async function handleFile(e) {
   preventDefaults(e);
@@ -67,15 +69,25 @@ async function handleFile(e) {
 
       logProgress("Waiting for polydata...");
 
-      // Wait for polydata to be ready (poll with timeout)
+      // ✨ FIX: Use sync method in polling loop
       let attempts = 0;
       const maxAttempts = 20;
 
       while (attempts < maxAttempts) {
-        const dataset = datasetManager.getDataset(datasetId);
+        const dataset = datasetManager.getDatasetSync(datasetId); // ← Changed to sync
 
         if (dataset && dataset.polydata) {
           logSuccess("Dataset ready!");
+
+          // Render the scene immediately
+          logProgress("Rendering visualization...");
+          const arrayBuffer = await file.arrayBuffer();
+          updateScene(arrayBuffer, datasetId);
+
+          // ✨ ADD: Force render for remote users
+          import("./scene.js").then(({ forceInitialRender }) => {
+            forceInitialRender();
+          });
 
           // Now set as current - this will trigger loading in ALL tabs
           simpleVisualizationManager.setCurrentDataset(datasetId, file.name);
@@ -83,8 +95,8 @@ async function handleFile(e) {
           break;
         }
 
-        // Wait 200ms before next check
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Wait 100ms before next check (reduced from 200ms)
+        await new Promise((resolve) => setTimeout(resolve, 100));
         attempts++;
       }
 

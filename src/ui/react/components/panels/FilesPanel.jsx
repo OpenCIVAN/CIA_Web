@@ -6,9 +6,7 @@ import { loadDatasetIntoScene } from '../../../../core/scene.js';
 import { sceneState } from '../../../../core/sceneState.js';
 import { getSceneObjects } from "../../../../core/scene.js";
 
-// Add a clear datasets button and better timeout handling
-
-// At the top of the component, add this helper:
+// Helper to clear all datasets
 const handleClearAllDatasets = () => {
     if (confirm('Clear all datasets?')) {
         // 1. Clear local datasets
@@ -32,7 +30,6 @@ const handleClearAllDatasets = () => {
     }
 };
 
-
 export default function FilesPanel() {
     const [datasets, setDatasets] = useState([]);
     const [currentDataset, setCurrentDataset] = useState(null);
@@ -44,96 +41,137 @@ export default function FilesPanel() {
     useEffect(() => {
         const updateDatasets = () => {
             const allDatasets = datasetManager.getAllDatasets();
+            console.log('📋 Datasets updated:', allDatasets.length, 'datasets');
             setDatasets(allDatasets);
         };
 
         datasetManager.onChange(updateDatasets);
         yDatasets.observe(updateDatasets);
-        updateDatasets();
+        updateDatasets(); // Initial load
 
         return () => {
             yDatasets.unobserve(updateDatasets);
         };
     }, []);
 
-    // Listen for "current dataset" changes - LOAD ONLY ONCE
+    // Listen for "current dataset" changes - LOAD INTO SCENE
+    // Listen for "current dataset" changes - LOAD INTO SCENE
     useEffect(() => {
         let mounted = true;
 
-        const handleCurrentChange = () => {
+        const handleCurrentChange = async () => {
             const current = simpleVisualizationManager.getCurrentDataset();
 
             if (!mounted) return;
 
-            console.log('🎯 Current dataset:', current?.datasetName || 'none');
+            console.log('🔔 ======================================');
+            console.log('🔔 CURRENT DATASET CHANGED');
+            console.log(`🔔 New current: ${current?.datasetName || 'none'}`);
+            console.log(`🔔 Dataset ID: ${current?.datasetId || 'none'}`);
+            console.log('🔔 ======================================');
+
             setCurrentDataset(current);
 
-            if (!current) return;
+            if (!current) {
+                console.log('🔔 No current dataset, nothing to load');
+                return;
+            }
 
-            // CRITICAL: Only load if it's different AND we're not already loading
+            // Check if already loaded
             if (sceneState.isDatasetLoaded(current.datasetId)) {
-                console.log('✅ Already in scene, skipping');
+                console.log('🔔 ✅ Already in scene, skipping load');
                 return;
             }
 
+            // Prevent concurrent loads
             if (loadingRef.current) {
-                console.log('⏳ Already loading, skipping');
+                console.log('🔔 ⏳ Already loading another dataset, skipping');
                 return;
             }
 
-            const dataset = datasetManager.getDataset(current.datasetId);
+            console.log('🔔 Checking if polydata is ready...');
+
+            // ✅ Use sync method
+            const dataset = datasetManager.getDatasetSync(current.datasetId);
 
             if (dataset && dataset.polydata) {
-                console.log('📊 Loading NOW:', dataset.filename);
+                console.log('🔔 ✅ Polydata ready immediately, loading into scene...');
                 loadingRef.current = true;
 
                 try {
                     loadDatasetIntoScene(dataset.polydata, true, current.datasetId);
                     sceneState.setLoadedDataset(current.datasetId);
-                    console.log('✅ Loaded into scene');
+                    console.log('🔔 ✅ Loaded into scene successfully');
+                } catch (error) {
+                    console.error('🔔 ❌ Error loading into scene:', error);
                 } finally {
                     loadingRef.current = false;
                 }
             } else {
-                console.log('⏳ Polydata not ready, polling...');
+                console.log('🔔 ⏳ Polydata not ready, starting polling...');
+                console.log(`🔔    Available datasets: ${Array.from(datasetManager.datasets.keys()).join(', ') || 'none'}`);
 
                 // Poll for polydata with timeout
                 let attempts = 0;
+                const maxAttempts = 30; // 15 seconds max
+
                 const pollInterval = setInterval(() => {
                     if (!mounted) {
+                        console.log('🔔 ❌ Component unmounted, stopping poll');
                         clearInterval(pollInterval);
                         return;
                     }
 
                     attempts++;
-                    const updated = datasetManager.getDataset(current.datasetId);
+                    console.log(`🔔 Poll attempt ${attempts}/${maxAttempts}...`);
+
+                    // Use sync method in polling
+                    const updated = datasetManager.getDatasetSync(current.datasetId);
 
                     if (updated && updated.polydata) {
-                        console.log('✅ Polydata ready');
+                        console.log('🔔 ✅ Polydata ready after polling!');
                         clearInterval(pollInterval);
 
                         // Double check we still want this one
                         const stillCurrent = simpleVisualizationManager.getCurrentDataset();
-                        if (stillCurrent && stillCurrent.datasetId === current.datasetId && !sceneState.isDatasetLoaded(current.datasetId)) {
+                        if (stillCurrent &&
+                            stillCurrent.datasetId === current.datasetId &&
+                            !sceneState.isDatasetLoaded(current.datasetId)) {
+
                             loadingRef.current = true;
                             try {
                                 loadDatasetIntoScene(updated.polydata, true, current.datasetId);
                                 sceneState.setLoadedDataset(current.datasetId);
-                                console.log('✅ Loaded into scene after waiting');
+                                console.log('🔔 ✅ Loaded into scene after polling');
+                            } catch (error) {
+                                console.error('🔔 ❌ Error loading into scene:', error);
                             } finally {
                                 loadingRef.current = false;
                             }
+                        } else {
+                            console.log('🔔 ⚠️  Current dataset changed or already loaded, skipping');
                         }
-                    } else if (attempts > 30) {
-                        console.log('❌ Timeout');
+                    } else if (attempts >= maxAttempts) {
+                        console.error('🔔 ========================================');
+                        console.error('🔔 ❌ POLLING TIMEOUT');
+                        console.error(`🔔 Dataset ID: ${current.datasetId}`);
+                        console.error(`🔔 Dataset name: ${current.datasetName}`);
+                        console.error(`🔔 Waited: ${maxAttempts * 0.5} seconds`);
+                        console.error(`🔔 Available datasets: ${Array.from(datasetManager.datasets.keys()).join(', ') || 'none'}`);
+                        console.error('🔔 ========================================');
+
                         clearInterval(pollInterval);
+                        loadingRef.current = false;
+
+                        // Show error to user
+                        alert(`Failed to load dataset: ${current.datasetName}\n\nPolydata not available after 15 seconds.\n\nCheck console for details.`);
                     }
                 }, 500);
             }
         };
 
         simpleVisualizationManager.yViz.observe(handleCurrentChange);
-        handleCurrentChange();
+        handleCurrentChange(); // Initial check
 
         return () => {
             mounted = false;
@@ -150,10 +188,16 @@ export default function FilesPanel() {
             return;
         }
 
+        console.log('🎬 ======================================');
+        console.log('🎬 USER ACTION: File selected');
+        console.log(`🎬 File: ${file.name}`);
+        console.log('🎬 ======================================');
+
         // Check if already exists
         const existing = datasetManager.findDatasetByFilename(file.name);
         if (existing) {
-            console.log('ℹ️ File already loaded, switching to it');
+            console.log('🎬 File already exists, switching to it');
+            console.log(`   Existing ID: ${existing.id}`);
             simpleVisualizationManager.setCurrentDataset(existing.id, file.name);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
@@ -164,26 +208,52 @@ export default function FilesPanel() {
         setIsLoading(true);
 
         try {
-            console.log('📂 User loading file:', file.name);
+            console.log('🎬 Starting datasetManager.loadDataset()...');
+            const loadStartTime = Date.now();
 
             const datasetId = await datasetManager.loadDataset(file, null);
-            simpleVisualizationManager.setCurrentDataset(datasetId, file.name);
 
-            console.log('✅ File loaded');
+            const loadEndTime = Date.now();
+            console.log(`🎬 datasetManager.loadDataset() completed in ${loadEndTime - loadStartTime}ms`);
+            console.log(`🎬 Returned ID: ${datasetId}`);
+
+            // 🔥 CRITICAL: Verify polydata is available NOW
+            console.log('🎬 Verifying polydata availability...');
+            const verification = datasetManager.getDatasetSync(datasetId);
+            if (verification && verification.polydata) {
+                console.log(`🎬 ✅ Polydata is available (${verification.polydata.getPoints()?.getNumberOfPoints() || 0} points)`);
+            } else {
+                console.error('🎬 ❌ Polydata NOT AVAILABLE after loadDataset() completed!');
+                console.log('🎬    This is the bug - polydata should be ready now');
+            }
+
+            // Small delay to ensure everything is settled
+            console.log('🎬 Waiting 100ms for state to settle...');
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            console.log('🎬 Setting as current dataset...');
+            simpleVisualizationManager.setCurrentDataset(datasetId, file.name);
+            console.log('🎬 Current dataset set - this should trigger scene loading');
+
+            console.log('🎬 ✅ File load sequence complete');
 
         } catch (error) {
-            console.error('❌ Error loading file:', error);
-            alert('Failed to load file. Check console for details.');
+            console.error('🎬 ❌ Error in file load sequence:', error);
+            alert(`Failed to load file: ${error.message}`);
         } finally {
             setIsLoading(false);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
         }
+
+        console.log('🎬 ====================================== END');
     };
 
     const handleLoadDataset = (datasetId) => {
-        const dataset = datasetManager.getDataset(datasetId);
+        // ✅ FIX: Use sync method
+        const dataset = datasetManager.getDatasetSync(datasetId);
+
         if (!dataset) {
             alert('Dataset not found');
             return;
@@ -194,8 +264,8 @@ export default function FilesPanel() {
             return;
         }
 
-        console.log('👆 User clicked to view:', dataset.filename);
-        simpleVisualizationManager.setCurrentDataset(datasetId, dataset.filename);
+        console.log('👆 User clicked to view:', dataset.name);
+        simpleVisualizationManager.setCurrentDataset(datasetId, dataset.name);
     };
 
     const handleLoadSample = async (samplePath, sampleName) => {
@@ -221,9 +291,13 @@ export default function FilesPanel() {
             const file = new File([blob], sampleName, { type: 'application/octet-stream' });
 
             const datasetId = await datasetManager.loadDataset(file, samplePath);
+
+            // Wait a bit for polydata to be available
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             simpleVisualizationManager.setCurrentDataset(datasetId, sampleName);
 
-            console.log('✅ Sample loaded');
+            console.log('✅ Sample loaded successfully');
 
         } catch (error) {
             console.error('❌ Error loading sample:', error);
@@ -395,10 +469,10 @@ export default function FilesPanel() {
                                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>
                                     {isCurrent && '✓ '}
                                     {dataset.isLoading && '⏳ '}
-                                    {dataset.filename}
+                                    {dataset.filename || dataset.name || 'Unknown'}
                                 </div>
                                 <div style={{ fontSize: '11px', color: '#999' }}>
-                                    By {dataset.uploadedByName}
+                                    By {dataset.uploadedByName || 'Unknown'}
                                     {dataset.isLoading && ' • Loading...'}
                                     {!dataset.hasPolydata && !dataset.isLoading && ' • Not available'}
                                 </div>
@@ -457,6 +531,7 @@ export default function FilesPanel() {
                     </button>
                 ))}
             </div>
+
             {/* Debug/Admin Controls */}
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #333' }}>
                 <button

@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import WarRoomApp from "./WarRoomApp.jsx";
+import CIAWebApp from "./CIAWebApp.jsx";
 
 // Store the root instance to prevent multiple createRoot calls
 let reactRoot = null;
@@ -20,11 +20,11 @@ export function mountReactUI(roomName = "default-analytics-room") {
   // If root already exists, just update it
   if (reactRoot) {
     console.log("🔄 Updating existing React root");
-    reactRoot.render(<WarRoomApp roomName={roomName} />);
+    reactRoot.render(<CIAWebApp roomName={roomName} />);
   } else {
     console.log("🆕 Creating new React root");
     reactRoot = createRoot(rootElement);
-    reactRoot.render(<WarRoomApp roomName={roomName} />);
+    reactRoot.render(<CIAWebApp roomName={roomName} />);
   }
 
   console.log("✅ React UI mounted successfully");
