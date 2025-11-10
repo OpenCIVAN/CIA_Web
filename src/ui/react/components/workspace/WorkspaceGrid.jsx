@@ -9,6 +9,8 @@
 // Grid layout for multiple VTK instances
 // AUTO-CREATES first instance when a dataset is loaded if no instances exist
 
+// src/ui/react/components/workspace/WorkspaceGrid.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 
@@ -38,126 +40,82 @@ export function WorkspaceGrid() {
     useEffect(() => {
         if (datasetId && instances.length === 0) {
             console.log(`🎨 Auto-creating instance for dataset: ${datasetId}`);
-            createNewInstance();
+            createNewInstance(datasetId); // ← Pass the datasetId!
         }
-    }, [datasetId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [datasetId, instances.length]);
 
-    const createNewInstance = () => {
+    // ✨ NEW: Accept datasetId parameter to link instance to dataset
+    const createNewInstance = (datasetIdForInstance = null) => {
         const instanceId = `instance-${Date.now()}`;
         const instanceName = `View ${instances.length + 1}`;
 
         console.log(`✅ Creating instance: ${instanceId}`);
+        if (datasetIdForInstance) {
+            console.log(`   Linked to dataset: ${datasetIdForInstance}`);
+        }
 
         setInstances(prev => [...prev, {
             id: instanceId,
             name: instanceName,
+            datasetId: datasetIdForInstance, // ← Store the dataset ID!
             created: Date.now()
         }]);
     };
 
     const handleDeleteInstance = (instanceId) => {
         console.log(`🗑️  Deleting instance: ${instanceId}`);
-
-        // Clean up in workspace manager
         workspaceManager.deleteInstance(instanceId);
-
-        // Remove from state
         setInstances(prev => prev.filter(i => i.id !== instanceId));
     };
 
     const handleDuplicateInstance = (instanceId) => {
         console.log(`📋 Duplicating instance: ${instanceId}`);
-        createNewInstance();
+        // Find the original instance to copy its dataset
+        const original = instances.find(i => i.id === instanceId);
+        createNewInstance(original?.datasetId || null);
     };
 
     const getGridStyle = () => {
-        const [cols, rows] = layout.split("x").map(Number);
+        // Your existing grid style code...
+        const cols = layout === "2x1" ? 2 : 1;
         return {
             display: "grid",
             gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gridTemplateRows: `repeat(${rows}, 1fr)`,
-            gap: "8px",
-            width: "100%",
-            height: "100%",
-            padding: "8px",
+            gap: "16px",
+            flex: 1,
+            padding: "16px",
             backgroundColor: "#0a0a0a"
         };
     };
 
     return (
         <div style={{
-            width: "100%",
-            height: "100%",
             display: "flex",
-            flexDirection: "column"
+            flexDirection: "column",
+            height: "100%",
+            backgroundColor: "#0f0f0f"
         }}>
-            {/* Workspace Toolbar */}
+            {/* Toolbar */}
             <div style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                justifyContent: "space-between",
                 padding: "12px 16px",
                 backgroundColor: "#1a1a1a",
                 borderBottom: "1px solid #2a2a2a"
             }}>
-                <span style={{ color: "#888", fontSize: "13px" }}>Layout:</span>
-
+                <span style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>
+                    Workspace ({instances.length}/4 instances)
+                </span>
                 <button
-                    onClick={() => setLayout("1x1")}
-                    style={{
-                        padding: "6px 12px",
-                        backgroundColor: layout === "1x1" ? "#2a4a4a" : "#2a2a2a",
-                        border: "1px solid #3a3a3a",
-                        borderRadius: "4px",
-                        color: layout === "1x1" ? "#5af" : "#ccc",
-                        cursor: "pointer",
-                        fontSize: "12px"
-                    }}
-                >
-                    1×1
-                </button>
-
-                <button
-                    onClick={() => setLayout("2x1")}
-                    style={{
-                        padding: "6px 12px",
-                        backgroundColor: layout === "2x1" ? "#2a4a4a" : "#2a2a2a",
-                        border: "1px solid #3a3a3a",
-                        borderRadius: "4px",
-                        color: layout === "2x1" ? "#5af" : "#ccc",
-                        cursor: "pointer",
-                        fontSize: "12px"
-                    }}
-                >
-                    2×1
-                </button>
-
-                <button
-                    onClick={() => setLayout("2x2")}
-                    style={{
-                        padding: "6px 12px",
-                        backgroundColor: layout === "2x2" ? "#2a4a4a" : "#2a2a2a",
-                        border: "1px solid #3a3a3a",
-                        borderRadius: "4px",
-                        color: layout === "2x2" ? "#5af" : "#ccc",
-                        cursor: "pointer",
-                        fontSize: "12px"
-                    }}
-                >
-                    2×2
-                </button>
-
-                <div style={{ flex: 1 }} />
-
-                <button
-                    onClick={createNewInstance}
+                    onClick={() => createNewInstance(datasetId)} // ← Use current dataset
                     disabled={instances.length >= 4}
                     style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
-                        padding: "8px 16px",
-                        backgroundColor: instances.length >= 4 ? "#2a2a2a" : "#c98910",
+                        padding: "8px 14px",
+                        backgroundColor: instances.length >= 4 ? "#2a2a2a" : "#3a5a3a",
                         border: "none",
                         borderRadius: "4px",
                         color: instances.length >= 4 ? "#666" : "#fff",
@@ -185,17 +143,8 @@ export function WorkspaceGrid() {
                     gap: "16px",
                     padding: "40px"
                 }}>
-                    <div style={{
-                        fontSize: "48px",
-                        opacity: 0.3
-                    }}>
-                        🎨
-                    </div>
-                    <div style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        color: "#888"
-                    }}>
+                    <div style={{ fontSize: "48px", opacity: 0.3 }}>🎨</div>
+                    <div style={{ fontSize: "16px", fontWeight: 600, color: "#888" }}>
                         No visualization windows open
                     </div>
                     <div style={{
@@ -209,14 +158,14 @@ export function WorkspaceGrid() {
                         or click "Add Instance" to create one manually.
                     </div>
                     <button
-                        onClick={createNewInstance}
+                        onClick={() => createNewInstance(datasetId)}
                         style={{
                             marginTop: "16px",
                             display: "flex",
                             alignItems: "center",
                             gap: "8px",
                             padding: "10px 20px",
-                            backgroundColor: "#c98910",
+                            backgroundColor: "#3a5a3a",
                             border: "none",
                             borderRadius: "6px",
                             color: "#fff",
@@ -237,6 +186,7 @@ export function WorkspaceGrid() {
                             key={instance.id}
                             instanceId={instance.id}
                             instanceName={instance.name}
+                            datasetId={instance.datasetId} // ← Pass it through!
                             onDelete={() => handleDeleteInstance(instance.id)}
                             onDuplicate={() => handleDuplicateInstance(instance.id)}
                         />

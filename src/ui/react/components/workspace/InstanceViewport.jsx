@@ -1,15 +1,17 @@
 // src/ui/react/components/workspace/InstanceViewport.jsx
-// A single VTK visualization instance
 
 import React, { useRef, useEffect, useState } from "react";
 
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { datasetManager } from "@Core/datasets/datasetManager.js";
 
-export function InstanceViewport({ instanceId, instanceName, onDelete, onDuplicate }) {
+export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete, onDuplicate }) {
     const containerRef = useRef(null);
     const [initialized, setInitialized] = useState(false);
+    const [hasData, setHasData] = useState(false);
     const initOnce = useRef(false);
 
+    // Initialize the VTK scene once
     useEffect(() => {
         if (containerRef.current && !initOnce.current) {
             initOnce.current = true;
@@ -17,7 +19,6 @@ export function InstanceViewport({ instanceId, instanceName, onDelete, onDuplica
             console.log(`🎨 Initializing instance viewport: ${instanceId}`);
 
             try {
-                // Create the instance in the workspace manager
                 workspaceManager.createInstance(containerRef.current, {
                     instanceId: instanceId
                 });
@@ -34,6 +35,45 @@ export function InstanceViewport({ instanceId, instanceName, onDelete, onDuplica
             // Cleanup handled by WorkspaceGrid when instance is deleted
         };
     }, [instanceId]);
+
+    // ✨ NEW: Load dataset when it changes and scene is ready
+    useEffect(() => {
+        // Wait until both the scene is initialized and we have a dataset
+        if (!initialized || !datasetId) {
+            return;
+        }
+
+        console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
+
+        // Get the dataset from datasetManager
+        const dataset = datasetManager.getDatasetSync(datasetId);
+
+        if (!dataset) {
+            console.warn(`⚠️  Dataset ${datasetId} not found in manager`);
+            return;
+        }
+
+        if (!dataset.polydata) {
+            console.warn(`⚠️  Dataset ${datasetId} has no polydata yet - waiting...`);
+            // You might want to add a polling mechanism here or use datasetManager.onChange
+            return;
+        }
+
+        try {
+            // Use the workspaceManager's method to load the dataset
+            console.log(`🎨 Loading ${dataset.polydata.getPoints().getNumberOfPoints()} points into instance`);
+
+            // ✅ CORRECT: Use workspaceManager's method
+            workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, dataset.polydata);
+            setHasData(true);
+
+            console.log(`✅ Dataset loaded into instance ${instanceId}`);
+
+        } catch (error) {
+            console.error(`❌ Failed to load dataset into instance:`, error);
+        }
+
+    }, [initialized, datasetId, instanceId]);
 
     return (
         <div style={{
@@ -54,10 +94,11 @@ export function InstanceViewport({ instanceId, instanceName, onDelete, onDuplica
                 borderBottom: "1px solid #2a2a2a"
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    {/* Status indicator: gray = initializing, yellow = ready, green = has data */}
                     <span style={{
                         width: "8px",
                         height: "8px",
-                        background: initialized ? "#0f0" : "#666",
+                        background: !initialized ? "#666" : (hasData ? "#0f0" : "#ff0"),
                         borderRadius: "50%"
                     }} />
                     <span style={{ color: "#fff", fontSize: "13px", fontWeight: 600 }}>
@@ -116,6 +157,18 @@ export function InstanceViewport({ instanceId, instanceName, onDelete, onDuplica
                         fontSize: "12px"
                     }}>
                         Initializing VTK...
+                    </div>
+                )}
+                {initialized && !hasData && (
+                    <div style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        color: "#888",
+                        fontSize: "12px"
+                    }}>
+                        {datasetId ? "Loading dataset..." : "No dataset selected"}
                     </div>
                 )}
             </div>

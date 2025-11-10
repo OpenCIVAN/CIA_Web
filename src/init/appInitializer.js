@@ -140,21 +140,6 @@ export function initializePhase3() {
       console.warn("⚠️ Could not load cursor system:", error.message);
     });
 
-  // Initialize dataset loading orchestrator
-  // This coordinates dataset loading but doesn't need VTK containers
-  import("@Core/datasets/datasetLoadingOrchestrator.js")
-    .then(({ datasetLoadingOrchestrator }) => {
-      try {
-        datasetLoadingOrchestrator.initialize();
-        console.log("✅ Dataset loading orchestrator initialized");
-      } catch (error) {
-        console.warn("⚠️ Dataset orchestrator not available:", error.message);
-      }
-    })
-    .catch((error) => {
-      console.warn("⚠️ Could not load dataset orchestrator:", error.message);
-    });
-
   console.log("✅ Phase 3 complete - Ready for instances!");
   console.log(
     "💡 Instance-specific systems will initialize when instances are created"
