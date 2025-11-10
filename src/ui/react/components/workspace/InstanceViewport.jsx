@@ -36,16 +36,14 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
         };
     }, [instanceId]);
 
-    // ✨ NEW: Load dataset when it changes and scene is ready
+    // Load dataset when it changes and scene is ready
     useEffect(() => {
-        // Wait until both the scene is initialized and we have a dataset
         if (!initialized || !datasetId) {
             return;
         }
 
         console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
 
-        // Get the dataset from datasetManager
         const dataset = datasetManager.getDatasetSync(datasetId);
 
         if (!dataset) {
@@ -55,50 +53,46 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
 
         if (!dataset.polydata) {
             console.warn(`⚠️  Dataset ${datasetId} has no polydata yet - waiting...`);
-            // You might want to add a polling mechanism here or use datasetManager.onChange
             return;
         }
 
         try {
-            // Use the workspaceManager's method to load the dataset
             console.log(`🎨 Loading ${dataset.polydata.getPoints().getNumberOfPoints()} points into instance`);
 
-            // ✅ CORRECT: Use workspaceManager's method
-            workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, dataset.polydata);
-            setHasData(true);
+            workspaceManager.loadDatasetIntoInstance(instanceId, datasetId);
 
+            setHasData(true);
             console.log(`✅ Dataset loaded into instance ${instanceId}`);
 
         } catch (error) {
             console.error(`❌ Failed to load dataset into instance:`, error);
         }
-
     }, [initialized, datasetId, instanceId]);
 
     return (
         <div style={{
             display: "flex",
             flexDirection: "column",
-            backgroundColor: "#0f0f0f",
-            border: "1px solid #2a2a2a",
-            borderRadius: "6px",
-            overflow: "hidden"
+            height: "100%",
+            border: "1px solid #333",
+            borderRadius: "8px",
+            overflow: "hidden",
+            backgroundColor: "#1a1a1a"
         }}>
-            {/* Instance Header */}
+            {/* Header Bar */}
             <div style={{
                 display: "flex",
-                alignItems: "center",
                 justifyContent: "space-between",
-                padding: "10px 14px",
-                backgroundColor: "#1a1a1a",
-                borderBottom: "1px solid #2a2a2a"
+                alignItems: "center",
+                padding: "8px 12px",
+                backgroundColor: "#2a2a2a",
+                borderBottom: "1px solid #333"
             }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {/* Status indicator: gray = initializing, yellow = ready, green = has data */}
-                    <span style={{
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{
                         width: "8px",
                         height: "8px",
-                        background: !initialized ? "#666" : (hasData ? "#0f0" : "#ff0"),
+                        backgroundColor: !initialized ? "#666" : (hasData ? "#0f0" : "#ff0"),
                         borderRadius: "50%"
                     }} />
                     <span style={{ color: "#fff", fontSize: "13px", fontWeight: 600 }}>
@@ -138,15 +132,27 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
                 </div>
             </div>
 
-            {/* VTK Container */}
-            <div
-                ref={containerRef}
-                style={{
-                    flex: 1,
-                    position: "relative",
-                    backgroundColor: "#0a0a0a"
-                }}
-            >
+            {/* FIXED: Wrapper container for React-managed overlays */}
+            <div style={{
+                flex: 1,
+                position: "relative",
+                backgroundColor: "#0a0a0a"
+            }}>
+                {/* VTK Container - NO CHILDREN ALLOWED */}
+                {/* This div is exclusively for VTK - React never puts children here */}
+                <div
+                    ref={containerRef}
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        position: "absolute",
+                        top: 0,
+                        left: 0
+                    }}
+                />
+
+                {/* Loading overlays - siblings to VTK container, not children */}
+                {/* These are positioned OVER the VTK container using absolute positioning */}
                 {!initialized && (
                     <div style={{
                         position: "absolute",
@@ -154,7 +160,9 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
                         left: "50%",
                         transform: "translate(-50%, -50%)",
                         color: "#666",
-                        fontSize: "12px"
+                        fontSize: "12px",
+                        pointerEvents: "none",
+                        zIndex: 1
                     }}>
                         Initializing VTK...
                     </div>
@@ -166,7 +174,9 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
                         left: "50%",
                         transform: "translate(-50%, -50%)",
                         color: "#888",
-                        fontSize: "12px"
+                        fontSize: "12px",
+                        pointerEvents: "none",
+                        zIndex: 1
                     }}>
                         {datasetId ? "Loading dataset..." : "No dataset selected"}
                     </div>
