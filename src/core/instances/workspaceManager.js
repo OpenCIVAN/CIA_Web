@@ -133,6 +133,13 @@ class WorkspaceManager {
       // Clean up VTK objects
       const { sceneObjects } = instance;
 
+      // FIXED: Disconnect the ResizeObserver FIRST, before deleting VTK objects
+      if (sceneObjects.resizeObserver) {
+        sceneObjects.resizeObserver.disconnect();
+        console.log("   ✅ ResizeObserver disconnected");
+      }
+
+      // Now it's safe to delete VTK objects
       if (sceneObjects.openGLRenderWindow) {
         sceneObjects.openGLRenderWindow.delete();
       }
