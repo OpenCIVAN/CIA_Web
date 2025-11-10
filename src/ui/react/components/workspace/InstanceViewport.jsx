@@ -59,7 +59,7 @@ export function InstanceViewport({ instanceId, instanceName, datasetId, onDelete
         try {
             console.log(`🎨 Loading ${dataset.polydata.getPoints().getNumberOfPoints()} points into instance`);
 
-            workspaceManager.loadDatasetIntoInstance(instanceId, datasetId);
+            workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, dataset.polydata);
 
             setHasData(true);
             console.log(`✅ Dataset loaded into instance ${instanceId}`);

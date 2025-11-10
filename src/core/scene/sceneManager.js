@@ -103,11 +103,14 @@ export function initializeScene(containerElement) {
   // Initialize view helpers
   initializeViewHelpers(renderer, renderWindow, camera, interactor);
 
-  // Handle window resize
+  // Handle window resize - with safety check for deleted objects
   const resizeObserver = new ResizeObserver(() => {
-    const { width, height } = containerElement.getBoundingClientRect();
-    openGLRenderWindow.setSize(width, height);
-    renderWindow.render();
+    // Only resize if objects still exist (not deleted)
+    if (openGLRenderWindow && !openGLRenderWindow.isDeleted()) {
+      const { width, height } = containerElement.getBoundingClientRect();
+      openGLRenderWindow.setSize(width, height);
+      renderWindow.render();
+    }
   });
   resizeObserver.observe(containerElement);
 
@@ -124,6 +127,7 @@ export function initializeScene(containerElement) {
     vtpReader,
     mapper,
     actor,
+    resizeObserver,
   };
 }
 
