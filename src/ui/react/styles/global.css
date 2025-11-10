@@ -62,8 +62,13 @@ body {
     sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  /* Use font-smooth if supported (draft spec) */
+  font-smooth: auto;
+  /* Fallback to vendor prefixes for older browsers */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Rely on browser defaults for font rendering */
+  text-rendering: optimizeLegibility;
 }
 
 /* Button base styles */

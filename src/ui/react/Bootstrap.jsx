@@ -2,40 +2,66 @@
 // Minimal component to collect username before full app initialization
 // Ensures username is collected before initializing collaboration systems
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
-import { hasUserName, getUserName } from "@Collaboration/presence/userManagement.js";
+import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { UsernameModal } from "@UI/react/components/modals/UsernameModal.jsx";
 
+// Track if Phase 2 has run at module level (persists across remounts)
+let phase2Complete = false;
+
 export function Bootstrap({ roomName }) {
     const [username, setUsername] = useState(null);
     const [isInitializing, setIsInitializing] = useState(false);
-    const [initializationComplete, setInitializationComplete] = useState(false);
+    const [initializationComplete, setInitializationComplete] = useState(phase2Complete);
     const [showModal, setShowModal] = useState(true);
+    const initOnce = useRef(false); // Prevent double-initialization in React Strict Mode
 
     // Check if username already exists (from localStorage)
     useEffect(() => {
+        // If Phase 2 already completed from a previous mount, skip to the end
+        if (phase2Complete) {
+            const existingName = getUserName();
+            setUsername(existingName);
+            setShowModal(false);
+            setInitializationComplete(true);
+            return;
+        }
+
+        // Check if username already exists (from localStorage)
         if (hasUserName()) {
             const existingName = getUserName();
             console.log("✅ Username already set:", existingName);
             setUsername(existingName);
             setShowModal(false);
-            // Trigger Phase 2 initialization immediately
-            handleUsernameSet(existingName);
+
+            // Only trigger Phase 2 once, even if this effect runs twice
+            if (!initOnce.current) {
+                initOnce.current = true;
+                handleUsernameSet(existingName);
+            }
         }
     }, []);
 
     const handleUsernameSet = async (name) => {
+        // CRITICAL: Set the username in userManagement FIRST, SYNCHRONOUSLY
+        setUserName(name);
         console.log("👤 Username set:", name);
-        setUsername(name);
+        setUsername(name); // This username for React state
         setShowModal(false);
         setIsInitializing(true);
+
+        // Small delay to ensure userManagement state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         try {
             // Run Phase 2 initialization with the username
             await initializePhase2(name);
+
+            // Mark as complete at module level so remounts skip initialization
+            phase2Complete = true;
 
             setInitializationComplete(true);
             setIsInitializing(false);
@@ -53,11 +79,6 @@ export function Bootstrap({ roomName }) {
     if (showModal) {
         return (
             <UsernameModal onSubmit={handleUsernameSet} />
-            // <div className="bootstrap-container">
-            //     <UsernameModal
-            //         onSubmit={handleUsernameSet}
-            //     />
-            // </div>
         );
     }
 
@@ -65,7 +86,6 @@ export function Bootstrap({ roomName }) {
     if (isInitializing) {
         return (
             <div style={{
-            // <div className="bootstrap-container" style={{
                 position: "fixed",
                 top: 0,
                 left: 0,

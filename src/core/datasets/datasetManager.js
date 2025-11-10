@@ -162,15 +162,20 @@ class DatasetManager {
         name: file.name,
         hash: hash,
         bounds: polydata.getBounds(),
-        pointCount: pointCount,
+        pointCount: polydata.getPoints()?.getNumberOfPoints() || 0, // Make sure this is set
         cellCount: polydata.getNumberOfCells(),
         sizeBytes: file.size,
         uploadedBy: getUserId(),
-        uploadedByName: getUserName(),
+        uploadedByName: getUserName(), // Make sure this is set
         uploadedAt: Date.now(),
         publicPath: publicPath, // Critical for cross-browser sync!
         annotations: [],
       };
+      console.log("📊 Creating metadata:", {
+        name: metadata.name,
+        pointCount: metadata.pointCount,
+        uploadedByName: metadata.uploadedByName,
+      });
       console.log(`  ✅ [${Date.now() - startTime}ms] Metadata created`);
 
       // Step 7: Store polydata in memory FIRST before any syncing

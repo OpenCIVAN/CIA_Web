@@ -68,56 +68,73 @@ async function handleRemoteDataset(datasetId, metadata) {
  * Actually process a remote dataset
  */
 async function processRemoteDataset(datasetId, metadata) {
+  const myId = getUserId();
   console.log("📥 Processing remote dataset:", metadata.name);
+  console.log(`   Uploaded by: ${metadata.uploadedBy}`);
+  console.log(`   My ID: ${myId}`);
+  console.log(`   Am I the uploader? ${metadata.uploadedBy === myId}`);
 
   // Add to Zustand store (metadata only)
   useDatasetStore.getState().addDataset(datasetId, metadata);
 
-  // Check if we have the file in cache
+  // Check if we already have polydata in memory
+  const inMemory = datasetManager.datasets.get(datasetId);
+  if (inMemory?.polydata) {
+    console.log("📥 ✅ Already have polydata in memory, skipping load");
+    return;
+  }
+
+  // Check if we have the file in IndexedDB cache
   const hasFile = await dataCache.hasDataset(metadata.hash);
+  console.log(`📥 File in cache: ${hasFile}`);
 
-  if (!hasFile) {
-    console.log("📥 ⚠️  File not in cache");
-
-    // Auto-fetch if it's a public file (sample dataset)
-    if (metadata.publicPath) {
-      console.log(`📥 📄 Auto-fetching public file: ${metadata.publicPath}`);
-      try {
-        const response = await fetch(metadata.publicPath);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const file = new File([blob], metadata.name, {
-          type: "application/octet-stream",
-        });
-
-        // Store in cache
-        console.log("📥 Storing fetched file in cache...");
-        await dataCache.storeDataset(file);
-        console.log("📥 ✅ Public file cached successfully");
-
-        // Now load the polydata
-        console.log("📥 Loading polydata from cache...");
-        const { datasetManager } = await import(
-          "@Core/datasets/datasetManager.js"
-        );
-        await datasetManager.loadPolydataFromCache(datasetId);
-      } catch (error) {
-        console.error(`📥 ❌ Failed to fetch public file:`, error);
-      }
-    } else {
-      // Not a public file - user would need to upload
-      // But DON'T show any prompts here - just log it
-      console.log(`📥    Hash: ${metadata.hash?.substring(0, 16)}...`);
-      console.log(`📥    File is user-uploaded, not in our cache`);
-    }
-  } else {
-    console.log("📥 ✅ File found in cache, loading polydata...");
+  if (hasFile) {
+    // We have it cached - load from cache
+    console.log("📥 Loading polydata from our cache...");
     const { datasetManager } = await import("@Core/datasets/datasetManager.js");
     await datasetManager.loadPolydataFromCache(datasetId);
+    console.log("📥 ✅ Loaded from cache successfully");
+    return;
+  }
+
+  // Not in cache - try to fetch if it's a public file
+  if (metadata.publicPath) {
+    console.log(`📥 📄 Auto-fetching public file: ${metadata.publicPath}`);
+    try {
+      const response = await fetch(metadata.publicPath);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const file = new File([blob], metadata.name, {
+        type: "application/octet-stream",
+      });
+
+      console.log("📥 Storing fetched file in cache...");
+      await dataCache.storeDataset(file);
+      console.log("📥 ✅ Public file cached successfully");
+
+      const { datasetManager } = await import(
+        "@Core/datasets/datasetManager.js"
+      );
+      await datasetManager.loadPolydataFromCache(datasetId);
+    } catch (error) {
+      console.error(`📥 ❌ Failed to fetch public file:`, error);
+    }
+  } else {
+    // Not a public file and not in our cache
+    // This is where we would show an upload prompt (but only if we don't recognize it)
+    console.log(`📥 Hash: ${metadata.hash?.substring(0, 16)}...`);
+    console.log(`📥 File is user-uploaded, not in our cache`);
+
+    // Only show prompt if this is NOT our own upload from a previous session
+    // (If it is ours, it should be in cache, so something went wrong)
+    if (metadata.uploadedBy === myId) {
+      console.warn(
+        "📥 ⚠️ This is our own upload but not in cache - data may have been cleared"
+      );
+    }
   }
 }
 
@@ -133,7 +150,11 @@ async function processRemoteDataset(datasetId, metadata) {
 export function initializeDatasetObserver() {
   console.log("🔍 Setting up dataset observer");
   yDatasets.observe((event) => {
-    console.log("🔍 Dataset observer fired", event.changes.keys.size, "changes");
+    console.log(
+      "🔍 Dataset observer fired",
+      event.changes.keys.size,
+      "changes"
+    );
     const changes = [];
     event.changes.keys.forEach((change, key) => {
       changes.push({
@@ -145,20 +166,12 @@ export function initializeDatasetObserver() {
 
     // Process changes asynchronously
     setTimeout(async () => {
-      const myId = getUserId();
-
       for (const { action, datasetId, data } of changes) {
         if (action === "add" || action === "update") {
           const remoteDataset = data;
 
           if (!remoteDataset) {
             console.warn("⚠️  Received null dataset data");
-            continue;
-          }
-
-          // Skip if this dataset came from us
-          if (remoteDataset.uploadedBy === myId) {
-            console.log(`📥 Ignoring dataset from self: ${remoteDataset.name}`);
             continue;
           }
 
@@ -187,7 +200,11 @@ export function initializeDatasetObserver() {
 export function initializeInstanceObserver() {
   console.log("🔍 Setting up instance observer");
   yInstances.observe((event) => {
-    console.log("🔍 Instance observer fired", event.changes.keys.size, "changes");
+    console.log(
+      "🔍 Instance observer fired",
+      event.changes.keys.size,
+      "changes"
+    );
     const changes = [];
     event.changes.keys.forEach((change, key) => {
       changes.push({
@@ -241,7 +258,11 @@ export function initializeAnnotationObserver() {
   yAnnotations.observe((event) => {
     console.log("🔍 Setting up annotation observer");
     // Capture changes IMMEDIATELY while event is still valid
-    console.log("🔍 Annotation observer fired", event.changes.keys.size, "changes");
+    console.log(
+      "🔍 Annotation observer fired",
+      event.changes.keys.size,
+      "changes"
+    );
     const changes = [];
     event.changes.keys.forEach((change, key) => {
       changes.push({

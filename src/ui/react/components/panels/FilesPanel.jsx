@@ -70,6 +70,7 @@ export function FilesPanel() {
 
         } catch (error) {
             console.error("❌ Failed to load sample:", error);
+            console.error("Error stack:", error.stack); // This will show the full call chain
             alert(`Failed to load sample: ${error.message}`);
         }
     };
@@ -143,7 +144,6 @@ export function FilesPanel() {
                 )}
             </div>
 
-            {/* Upload Section */}
             <div className="files-panel__upload-section">
                 <div className="files-panel__tabs">
                     <button
@@ -209,20 +209,20 @@ export function FilesPanel() {
                             Choose VTP File
                         </button>
                         <p className="files-panel__hint">
-                            Note: User-uploaded files are only visible to users who upload the same file
+                            User-uploaded files are only visible to users who upload the same file
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Loaded Datasets */}
             <div className="files-panel__datasets-section">
                 <h4>Loaded Datasets ({datasets.length})</h4>
                 <div className="files-panel__dataset-list">
                     {datasets.map((dataset) => (
                         <div
                             key={dataset.id}
-                            className={`files-panel__dataset-item ${dataset.id === currentDatasetId ? "active" : ""} ${dataset.isLoading ? "loading" : ""}`}
+                            className={`files-panel__dataset-item ${dataset.id === currentDatasetId ? "active" : ""
+                                } ${dataset.isLoading ? "loading" : ""}`}
                             onClick={() => handleSelectDataset(dataset)}
                         >
                             <div className="files-panel__dataset-info">
@@ -246,244 +246,13 @@ export function FilesPanel() {
                                     {dataset.publicPath && " • 🌐 Public"}
                                 </div>
                             </div>
-                            {dataset.id === currentDatasetId &&
+                            {dataset.id === currentDatasetId && (
                                 <span className="files-panel__current-badge">Current</span>
-                            }
+                            )}
                         </div>
                     ))}
                 </div>
             </div>
-
-            <style jsx>{`
-                .files-panel {
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    padding: 10px;
-                }
-
-                .panel-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 15px;
-                }
-
-                .panel-header h3 {
-                    margin: 0;
-                    font-size: 18px;
-                }
-
-                .loading-indicator {
-                    font-size: 12px;
-                    color: #ff6b6b;
-                    animation: pulse 1s infinite;
-                }
-
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                }
-
-                .upload-section {
-                    background: #2a2a2a;
-                    border-radius: 8px;
-                    padding: 10px;
-                    margin-bottom: 15px;
-                }
-
-                .upload-tabs {
-                    display: flex;
-                    gap: 5px;
-                    margin-bottom: 10px;
-                }
-
-                .tab {
-                    flex: 1;
-                    padding: 8px;
-                    background: transparent;
-                    border: 1px solid #444;
-                    color: #888;
-                    cursor: pointer;
-                    border-radius: 4px;
-                    transition: all 0.2s;
-                }
-
-                .tab.active {
-                    background: #333;
-                    color: white;
-                    border-color: #666;
-                }
-
-                .tab:hover:not(.active):not(:disabled) {
-                    background: #333;
-                }
-
-                .tab:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                .sample-files {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .sample-file-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 8px 12px;
-                    background: #333;
-                    border: 1px solid #444;
-                    border-radius: 4px;
-                    color: white;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-
-                .sample-file-btn:hover:not(:disabled) {
-                    background: #3a3a3a;
-                    border-color: #666;
-                }
-
-                .sample-file-btn:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                .file-name {
-                    flex: 1;
-                    text-align: left;
-                }
-
-                .file-size {
-                    color: #888;
-                    font-size: 12px;
-                }
-
-                .loaded-badge {
-                    color: #4CAF50;
-                    font-weight: bold;
-                }
-
-                .upload-area {
-                    text-align: center;
-                }
-
-                .upload-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 12px 24px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: background 0.2s;
-                }
-
-                .upload-btn:hover:not(:disabled) {
-                    background: #45a049;
-                }
-
-                .upload-btn:disabled {
-                    background: #666;
-                    cursor: not-allowed;
-                }
-
-                .upload-hint {
-                    margin-top: 10px;
-                    font-size: 11px;
-                    color: #888;
-                    font-style: italic;
-                }
-
-                .datasets-section {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                }
-
-                .datasets-section h4 {
-                    margin: 0 0 10px 0;
-                    font-size: 14px;
-                    color: #888;
-                }
-
-                .dataset-list {
-                    flex: 1;
-                    overflow-y: auto;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .dataset-item {
-                    padding: 10px;
-                    background: #2a2a2a;
-                    border: 1px solid #444;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .dataset-item:hover {
-                    background: #333;
-                    border-color: #666;
-                }
-
-                .dataset-item.active {
-                    background: #3a4a5a;
-                    border-color: #4CAF50;
-                }
-
-                .dataset-info {
-                    flex: 1;
-                }
-
-                .dataset-name {
-                    font-size: 14px;
-                    margin-bottom: 4px;
-                }
-
-                .dataset-meta {
-                    font-size: 11px;
-                    color: #888;
-                }
-
-                .current-badge {
-                    padding: 2px 8px;
-                    background: #4CAF50;
-                    color: white;
-                    border-radius: 3px;
-                    font-size: 11px;
-                }
-
-                .loading-badge {
-                    color: #ff9800;
-                    font-size: 11px;
-                    animation: pulse 1s infinite;
-                }
-
-                .stage-indicator {
-                    color: #888;
-                    font-size: 11px;
-                    font-style: italic;
-                }
-
-                .dataset-item.loading {
-                    opacity: 0.7;
-                    cursor: wait;
-                }
-            `}</style>
         </div>
     );
 }

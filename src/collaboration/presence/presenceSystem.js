@@ -84,6 +84,11 @@ class PresenceSystem {
    * Update my presence information
    */
   async updateMyPresence(updates) {
+    console.log("👤 Updating my presence:", {
+      userId: getUserId(),
+      userName: getUserName(),
+      sessionId: this.sessionId, // If you track sessions
+    });
     if (!this.localPresence || !this.awareness) {
       console.warn("⚠️ Cannot update presence - not initialized");
       return;

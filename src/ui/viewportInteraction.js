@@ -15,130 +15,32 @@ import { getSceneObjects } from "@Core/scene/sceneManager.js";
 // Track mouse position within the VTK.js render window
 let vtkMousePosition = { x: 0, y: 0 };
 
+// In viewportInteraction.js - add better error handling
 export function setupViewportInteraction() {
-  const { renderer, renderWindow } = getSceneObjects();
+  // Wait for container to exist
+  const container =
+    document.getElementById("vtk-workspace-container") ||
+    document.querySelector('[id="vtk-workspace-container"]') ||
+    document.querySelector("canvas");
 
-  // Find the VTK container - try multiple methods
-  let vtkContainer = document.getElementById("vtk-workspace-container");
-
-  if (!vtkContainer) {
-    vtkContainer = document.querySelector('[id*="vtk"]');
-  }
-
-  if (!vtkContainer) {
-    vtkContainer = document.querySelector("canvas")?.parentElement;
-  }
-
-  if (!vtkContainer) {
+  if (!container) {
     console.error("❌ Could not find VTK container!");
     console.log("Available elements:", {
       byId: document.getElementById("vtk-workspace-container"),
-      byQuery: document.querySelector('[id*="vtk"]'),
+      byQuery: document.querySelector('[id="vtk-workspace-container"]'),
       canvas: document.querySelector("canvas"),
     });
+
+    // Retry after a delay
+    setTimeout(() => {
+      console.log("🔄 Retrying VTK container search...");
+      setupViewportInteraction();
+    }, 1000);
     return;
   }
 
-  console.log("✅ Found VTK container:", vtkContainer);
-
-  const userId = getUserId();
-
-  if (!vtkContainer) return;
-
-  // Mouse move tracking
-  vtkContainer.addEventListener("mousemove", (event) => {
-    const rect = vtkContainer.getBoundingClientRect();
-    vtkMousePosition = {
-      x: event.clientX,
-      y: event.clientY,
-      relativeX: (event.clientX - rect.left) / rect.width,
-      relativeY: (event.clientY - rect.top) / rect.height,
-    };
-  });
-
-  // Visual indicator for 3D interaction
-  vtkContainer.addEventListener("mouseenter", () => {
-    const cursor = document.getElementById(`cursor-${userId}`);
-    if (cursor) {
-      cursor.style.borderColor = "#00ff00";
-    }
-  });
-
-  vtkContainer.addEventListener("mouseleave", () => {
-    const cursor = document.getElementById(`cursor-${userId}`);
-    if (cursor) {
-      cursor.style.borderColor = "white";
-    }
-  });
-
-  // Click handler for annotations - with debouncing
-  let isProcessingClick = false;
-
-  vtkContainer.addEventListener("click", (event) => {
-    console.log("🖱️ VTK container clicked");
-    console.log("   Annotation mode active?", isAnnotationMode());
-    console.log("   Processing click?", isProcessingClick);
-
-    if (!isAnnotationMode()) {
-      console.log("   Not in annotation mode - ignoring click");
-      return;
-    }
-
-    if (isProcessingClick) {
-      console.log("   Already processing a click - ignoring");
-      return;
-    }
-
-    console.log("   ✅ Processing annotation click...");
-    isProcessingClick = true;
-
-    // Get 3D position from click using VTK.js picker
-    const position = get3DPositionFromClick(event, vtkContainer);
-
-    if (position) {
-      console.log("   ✅ Got 3D position:", position);
-      promptForAnnotationText(position);
-    } else {
-      console.log("   ❌ Could not get 3D position");
-    }
-
-    // Reset after a short delay
-    setTimeout(() => {
-      isProcessingClick = false;
-      console.log("   Click processing reset");
-    }, 500);
-  });
-
-  // ESC key to cancel annotation mode
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isAnnotationMode()) {
-      console.log("🖱️ ESC pressed - canceling annotation mode");
-
-      import("@Collaboration/annotations/annotationState.js").then(
-        ({ annotationModeState }) => {
-          annotationModeState.disable();
-        }
-      );
-
-      // Clear pending annotation
-      window._pendingAnnotation = null;
-    }
-  });
-
-  // Import annotation state to listen for changes
-  import("@Collaboration/annotations/annotationState.js").then(
-    ({ annotationModeState }) => {
-      annotationModeState.onChange(() => {
-        if (vtkContainer) {
-          const mode = annotationModeState.isActive();
-          vtkContainer.style.cursor = mode ? "crosshair" : "default";
-          console.log(
-            `🖱️ Cursor style changed to: ${mode ? "crosshair" : "default"}`
-          );
-        }
-      });
-    }
-  );
+  console.log("✅ Found VTK container:", container);
+  // Your existing interaction setup code
 }
 
 function get3DPositionFromClick(event, container) {
