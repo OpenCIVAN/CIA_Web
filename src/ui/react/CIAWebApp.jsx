@@ -72,10 +72,10 @@ export function CIAWebApp({ roomName, userName }) {
           />
         }
       >
-        {/* Main Content - WorkspaceGrid goes inside as children */}
+        {/* Main Content - WorkspaceGrid */}
         <WorkspaceGrid />
 
-        {/* Tool Panels - These overlay on top when opened */}
+        {/* Tool Panels */}
         <ToolPanel
           isOpen={activeTool === "files"}
           title="File Manager"
@@ -104,9 +104,13 @@ export function CIAWebApp({ roomName, userName }) {
         </ToolPanel>
       </CIAWebLayout>
 
-      {/* Logging Panel - outside main layout */}
-      <LoggingPanel />
-      {/* {process.env.NODE_ENV === "development" && <DebugPanel />} */}
+      {/* Development-only panels */}
+      {process.env.NODE_ENV === "development" && (
+        <>
+          <LoggingPanel />
+          {/* <DebugPanel /> */}
+        </>
+      )}
     </>
   );
 }

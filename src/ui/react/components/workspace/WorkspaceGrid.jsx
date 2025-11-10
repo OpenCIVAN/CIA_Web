@@ -1,21 +1,10 @@
 // src/ui/react/components/workspace/WorkspaceGrid.jsx
-// Grid layout for multiple VTK instances
-// Instances are created ONLY when:
-// 1. User explicitly clicks "Add Instance"
-// 2. Loading a saved session with open windows (future)
-// 3. Joining a room where others have shared windows (future)
-
-// src/ui/react/components/workspace/WorkspaceGrid.jsx
-// Grid layout for multiple VTK instances
-// AUTO-CREATES first instance when a dataset is loaded if no instances exist
-
-// src/ui/react/components/workspace/WorkspaceGrid.jsx
 
 import React, { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 
-import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
 import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 
 export function WorkspaceGrid() {
@@ -36,15 +25,16 @@ export function WorkspaceGrid() {
         }
     }, []);
 
-    // Auto-create instance when a dataset is loaded and no instances exist
+    // ✨ FIXED: Only depend on datasetId, not instances.length
+    // The instances.length check is INSIDE the effect, not a dependency
     useEffect(() => {
         if (datasetId && instances.length === 0) {
             console.log(`🎨 Auto-creating instance for dataset: ${datasetId}`);
-            createNewInstance(datasetId); // ← Pass the datasetId!
+            createNewInstance(datasetId);
         }
-    }, [datasetId, instances.length]);
+    }, [datasetId]); // ← ONLY datasetId in the dependency array
 
-    // ✨ NEW: Accept datasetId parameter to link instance to dataset
+    // Accept datasetId parameter to link instance to dataset
     const createNewInstance = (datasetIdForInstance = null) => {
         const instanceId = `instance-${Date.now()}`;
         const instanceName = `View ${instances.length + 1}`;
@@ -57,7 +47,7 @@ export function WorkspaceGrid() {
         setInstances(prev => [...prev, {
             id: instanceId,
             name: instanceName,
-            datasetId: datasetIdForInstance, // ← Store the dataset ID!
+            datasetId: datasetIdForInstance,
             created: Date.now()
         }]);
     };
@@ -70,13 +60,11 @@ export function WorkspaceGrid() {
 
     const handleDuplicateInstance = (instanceId) => {
         console.log(`📋 Duplicating instance: ${instanceId}`);
-        // Find the original instance to copy its dataset
         const original = instances.find(i => i.id === instanceId);
         createNewInstance(original?.datasetId || null);
     };
 
     const getGridStyle = () => {
-        // Your existing grid style code...
         const cols = layout === "2x1" ? 2 : 1;
         return {
             display: "grid",
@@ -108,7 +96,7 @@ export function WorkspaceGrid() {
                     Workspace ({instances.length}/4 instances)
                 </span>
                 <button
-                    onClick={() => createNewInstance(datasetId)} // ← Use current dataset
+                    onClick={() => createNewInstance(datasetId)}
                     disabled={instances.length >= 4}
                     style={{
                         display: "flex",
@@ -186,7 +174,7 @@ export function WorkspaceGrid() {
                             key={instance.id}
                             instanceId={instance.id}
                             instanceName={instance.name}
-                            datasetId={instance.datasetId} // ← Pass it through!
+                            datasetId={instance.datasetId}
                             onDelete={() => handleDeleteInstance(instance.id)}
                             onDuplicate={() => handleDuplicateInstance(instance.id)}
                         />
