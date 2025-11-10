@@ -7,6 +7,7 @@ import {
   yAnnotations,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
+import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { useInstanceStore } from "@UI/react/store/instanceStore.js";
@@ -91,7 +92,6 @@ async function processRemoteDataset(datasetId, metadata) {
   if (hasFile) {
     // We have it cached - load from cache
     console.log("📥 Loading polydata from our cache...");
-    const { datasetManager } = await import("@Core/datasets/datasetManager.js");
     await datasetManager.loadPolydataFromCache(datasetId);
     console.log("📥 ✅ Loaded from cache successfully");
     return;
@@ -115,9 +115,6 @@ async function processRemoteDataset(datasetId, metadata) {
       await dataCache.storeDataset(file);
       console.log("📥 ✅ Public file cached successfully");
 
-      const { datasetManager } = await import(
-        "@Core/datasets/datasetManager.js"
-      );
       await datasetManager.loadPolydataFromCache(datasetId);
     } catch (error) {
       console.error(`📥 ❌ Failed to fetch public file:`, error);

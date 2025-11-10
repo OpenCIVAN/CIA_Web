@@ -1,55 +1,58 @@
 // src/ui/react/hooks/useDatasets.js
-// FIXED: Use shallow comparison to prevent infinite loop from array recreation
+// ULTRA SIMPLE: Don't use Zustand at all, subscribe directly to datasetManager
 
-import { useSyncExternalStore } from "react";
-import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+import { useState, useEffect } from "react";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
-import { shallow } from "zustand/shallow";
-
-// CRITICAL: Move subscribe/getSnapshot functions OUTSIDE the hook
-const subscribeToDatasetManager = (callback) => {
-  return datasetManager.onChange(callback);
-};
-
-const getDatasetManagerSnapshot = () => {
-  return datasetManager.datasets.size + datasetManager.loadingDatasets.size;
-};
 
 export function useDatasets() {
-  // CRITICAL FIX: Use shallow equality to compare array contents
-  // Without this, Zustand creates a new array reference every time,
-  // causing infinite re-renders even when the data hasn't changed
-  const datasetsMetadata = useDatasetStore(
-    (state) => state.getAllDatasets(),
-    shallow // ← This is the key fix!
-  );
+  const [datasets, setDatasets] = useState([]);
 
-  // Subscribe to datasetManager for loading state
-  const managerVersion = useSyncExternalStore(
-    subscribeToDatasetManager,
-    getDatasetManagerSnapshot
-  );
+  useEffect(() => {
+    console.log("🔗 useDatasets: Setting up subscription");
 
-  // Transform the data - runs on every render but that's fine, it's fast
-  return datasetsMetadata.map((metadata) => {
-    const localDataset = datasetManager.datasets.get(metadata.id);
-    const loadingInfo = datasetManager.loadingDatasets.get(metadata.id);
+    const updateDatasets = () => {
+      console.log("📊 useDatasets: Updating datasets");
 
-    return {
-      id: metadata.id,
-      name: metadata.name,
-      hash: metadata.hash,
-      pointCount: metadata.pointCount || 0,
-      cellCount: metadata.cellCount || 0,
-      uploadedBy: metadata.uploadedBy,
-      uploadedByName: metadata.uploadedByName || "Unknown",
-      uploadedAt: metadata.uploadedAt,
-      publicPath: metadata.publicPath,
-      bounds: metadata.bounds,
-      annotations: metadata.annotations || [],
-      hasPolydata: !!localDataset?.polydata,
-      isLoading: !!loadingInfo,
-      loadingStage: loadingInfo?.stage || null,
+      // Get all datasets from datasetManager
+      const allDatasets = datasetManager.getAllDatasets();
+
+      // Transform to include loading state
+      const transformed = allDatasets.map((metadata) => {
+        const localDataset = datasetManager.datasets.get(metadata.id);
+        const loadingInfo = datasetManager.loadingDatasets.get(metadata.id);
+
+        return {
+          id: metadata.id,
+          name: metadata.name,
+          hash: metadata.hash,
+          pointCount: metadata.pointCount || 0,
+          cellCount: metadata.cellCount || 0,
+          uploadedBy: metadata.uploadedBy,
+          uploadedByName: metadata.uploadedByName || "Unknown",
+          uploadedAt: metadata.uploadedAt,
+          publicPath: metadata.publicPath,
+          bounds: metadata.bounds,
+          annotations: metadata.annotations || [],
+          hasPolydata: !!localDataset?.polydata,
+          isLoading: !!loadingInfo,
+          loadingStage: loadingInfo?.stage || null,
+        };
+      });
+
+      setDatasets(transformed);
     };
-  });
+
+    // Initial update
+    updateDatasets();
+
+    // Subscribe to changes
+    const unsubscribe = datasetManager.onChange(updateDatasets);
+
+    return () => {
+      console.log("🔗 useDatasets: Cleaning up subscription");
+      unsubscribe();
+    };
+  }, []); // Empty deps - only subscribe once
+
+  return datasets;
 }
