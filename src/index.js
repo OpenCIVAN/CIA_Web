@@ -1,47 +1,89 @@
 // src/index.js
-// Entry point with phased initialization
+// Main entry point for CIA Web application
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Bootstrap } from "@UI/react/Bootstrap.jsx";
-import { initializePhase1 } from "@Init/appInitializer.js";
+import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
+
+// Import global styles
 import "@UI/react/styles/global.css";
 
-async function startApp() {
-  try {
-    console.log("🚀 Starting CIA Web Application...");
+// Check for required browser features
+function checkBrowserCompatibility() {
+  const required = {
+    WebGL: !!document.createElement("canvas").getContext("webgl2"),
+    WebRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+    WebSocket: "WebSocket" in window,
+    IndexedDB: "indexedDB" in window,
+  };
 
-    // Phase 1: Initialize basic systems (no username needed)
-    const phase1Data = await initializePhase1();
+  const missing = Object.entries(required)
+    .filter(([feature, supported]) => !supported)
+    .map(([feature]) => feature);
 
-    console.log("✅ Phase 1 complete, mounting React...");
+  if (missing.length > 0) {
+    console.warn(`⚠️ Missing browser features: ${missing.join(", ")}`);
+    return false;
+  }
 
-    // Mount Bootstrap component
-    // This will show username modal, then trigger Phase 2
-    const root = ReactDOM.createRoot(document.getElementById("react-root"));
-    root.render(
-      <React.StrictMode>
-        <Bootstrap roomName={phase1Data.roomName} />
-      </React.StrictMode>
-    );
+  return true;
+}
 
-    console.log("✅ React mounted, waiting for user input...");
-  } catch (error) {
-    console.error("❌ Failed to start application:", error);
+// Initialize the application
+function initializeApp() {
+  console.log("====================================");
+  console.log("   CIA Web - Collaborative");
+  console.log("   Immersive Analytics");
+  console.log("====================================");
+  console.log("");
 
+  // Check browser compatibility
+  if (!checkBrowserCompatibility()) {
     document.body.innerHTML = `
-      <div style="padding: 40px; text-align: center; color: #ff6b6b;">
-        <h1>Failed to Initialize</h1>
-        <p>${error.message}</p>
-        <button onclick="location.reload()">Refresh Page</button>
+      <div style="padding: 20px; font-family: system-ui;">
+        <h1>Browser Compatibility Issue</h1>
+        <p>Your browser doesn't support all required features.</p>
+        <p>Please use a modern browser like Chrome, Firefox, or Edge.</p>
       </div>
     `;
+    return;
   }
+
+  // Get or create root element
+  let rootElement = document.getElementById("root");
+  if (!rootElement) {
+    rootElement = document.createElement("div");
+    rootElement.id = "root";
+    document.body.appendChild(rootElement);
+  }
+
+  // Create React root and render app
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <CIAWebApp />
+    </React.StrictMode>
+  );
+
+  console.log("✅ React app rendered");
+  console.log("📝 Type CIA.help() in console for debug commands");
 }
 
-// Start when DOM is ready
+// Start the app when DOM is ready
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", startApp);
+  document.addEventListener("DOMContentLoaded", initializeApp);
 } else {
-  startApp();
+  initializeApp();
 }
+
+// Handle errors globally
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
+});
+
+// Export for debugging
+window.CIAWebAppVersion = "2.0.0";

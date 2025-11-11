@@ -1,15 +1,16 @@
 // src/ui/react/components/panels/FilesPanel.jsx
-// Enhanced version with proper publicPath handling for sample files
+// Enhanced version with instance spawning support
 
-import React, { useState, useRef } from "react";
-import { FolderOpen, Upload, File as FileIcon, Check, Loader } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { FolderOpen, Upload, File as FileIcon, Check, Loader, Plus } from "lucide-react";
 
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
 import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
+import { useInstanceStore } from "@UI/react/store/instanceStore.js";
 
-import "./FilesPanel.css";  // Use a separate CSS file
+import "./FilesPanel.css";
 
 const SAMPLE_FILES = [
     { name: "Skull.vtp", path: "/vtp_files/Skull.vtp", size: "19.5 MB" },
@@ -21,14 +22,62 @@ const SAMPLE_FILES = [
 ];
 
 export function FilesPanel() {
-    // Get datasets from the hook - this includes loading state
     const datasets = useDatasets();
     const { datasetId: currentDatasetId } = useCurrentDataset();
     const [uploadType, setUploadType] = useState("samples");
     const fileInputRef = useRef(null);
+    const [spawnNewInstances, setSpawnNewInstances] = useState(true); // New toggle
 
-    // Check if ANY dataset is currently loading
     const isAnyLoading = datasets.some(d => d.isLoading);
+
+    // Function to handle dataset selection with instance spawning
+    const handleDatasetAction = async (datasetId, datasetName, action = 'auto') => {
+        // Get the instance store to manage instances
+        const instanceStore = useInstanceStore.getState();
+
+        // Determine the action
+        if (action === 'auto') {
+            action = spawnNewInstances ? 'spawn' : 'replace';
+        }
+
+        if (action === 'spawn') {
+            // Create a new instance with this dataset
+            console.log(`🆕 Spawning new instance for dataset: ${datasetName}`);
+
+            // Generate a unique instance ID
+            const instanceId = `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            // Add the instance to the store
+            instanceStore.addInstance({
+                id: instanceId,
+                name: datasetName,
+                datasetId: datasetId,
+                type: 'desktop',
+                visibility: 'shared'
+            });
+
+            // Also set it as current for immediate feedback
+            visualizationManager.setCurrentDataset(datasetId, datasetName);
+        } else {
+            // Replace current instance's dataset
+            console.log(`🔄 Replacing current dataset with: ${datasetName}`);
+
+            // Get the active instance
+            const instances = instanceStore.instances;
+            const activeInstance = instances.find(i => i.isActive) || instances[0];
+
+            if (activeInstance) {
+                // Update the instance's dataset
+                instanceStore.updateInstance(activeInstance.id, {
+                    datasetId: datasetId,
+                    name: datasetName
+                });
+            }
+
+            // Update visualization manager
+            visualizationManager.setCurrentDataset(datasetId, datasetName);
+        }
+    };
 
     // Handle loading a sample file
     const handleLoadSample = async (sampleFile) => {
@@ -38,15 +87,15 @@ export function FilesPanel() {
             // Check if already exists and is loaded
             const existing = datasets.find(d => d.name === sampleFile.name);
             if (existing?.hasPolydata) {
-                console.log("📂 Sample already loaded, switching to it");
-                visualizationManager.setCurrentDataset(existing.id, sampleFile.name);
+                console.log("📂 Sample already loaded, using it");
+                await handleDatasetAction(existing.id, sampleFile.name);
                 return;
             }
 
             // If exists but not loaded, just select it and let the system load it
             if (existing) {
-                console.log("📂 Sample exists, selecting it...");
-                visualizationManager.setCurrentDataset(existing.id, sampleFile.name);
+                console.log("📂 Sample exists, loading it...");
+                await handleDatasetAction(existing.id, sampleFile.name);
                 return;
             }
 
@@ -59,18 +108,17 @@ export function FilesPanel() {
             const blob = await response.blob();
             const file = new File([blob], sampleFile.name, { type: "application/octet-stream" });
 
-            // Load through dataset manager - it handles all state updates
+            // Load through dataset manager
             const publicPath = window.location.origin + sampleFile.path;
             const datasetId = await datasetManager.loadDataset(file, publicPath);
 
             console.log(`✅ Sample loaded successfully`);
 
-            // Set as current dataset
-            visualizationManager.setCurrentDataset(datasetId, sampleFile.name);
+            // Handle the dataset action
+            await handleDatasetAction(datasetId, sampleFile.name);
 
         } catch (error) {
             console.error("❌ Failed to load sample:", error);
-            console.error("Error stack:", error.stack); // This will show the full call chain
             alert(`Failed to load sample: ${error.message}`);
         }
     };
@@ -86,21 +134,18 @@ export function FilesPanel() {
             // Check if already exists
             const existing = datasets.find(d => d.name === file.name);
             if (existing?.hasPolydata) {
-                console.log("📂 File already exists, switching to it");
-                visualizationManager.setCurrentDataset(existing.id, file.name);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                }
+                console.log("📂 File already exists, using it");
+                await handleDatasetAction(existing.id, file.name);
+                fileInputRef.current.value = "";
                 return;
             }
 
-            // Load the file - dataset manager handles all state
+            // Load the file
             const datasetId = await datasetManager.loadDataset(file, null);
-
             console.log(`✅ File uploaded successfully`);
 
-            // Set as current dataset
-            visualizationManager.setCurrentDataset(datasetId, file.name);
+            // Handle the dataset action
+            await handleDatasetAction(datasetId, file.name);
 
         } catch (error) {
             console.error("❌ Failed to upload file:", error);
@@ -114,21 +159,34 @@ export function FilesPanel() {
 
     // Handle clicking on an existing dataset
     const handleSelectDataset = (dataset) => {
-        // If already loaded, just switch to it
+        // If already loaded, handle the action
         if (dataset.hasPolydata) {
-            visualizationManager.setCurrentDataset(dataset.id, dataset.name);
+            handleDatasetAction(dataset.id, dataset.name);
             return;
         }
 
-        // If loading, do nothing (let it finish)
+        // If loading, do nothing
         if (dataset.isLoading) {
             console.log(`⏳ Dataset is loading: ${dataset.name}`);
             return;
         }
 
-        // Not loaded yet - trigger async load by selecting it
+        // Not loaded yet - trigger load and then handle action
         console.log(`📂 Dataset not loaded, triggering load: ${dataset.name}`);
-        visualizationManager.setCurrentDataset(dataset.id, dataset.name);
+        handleDatasetAction(dataset.id, dataset.name);
+    };
+
+    // Handle spawning a new instance for a dataset
+    const handleSpawnNewInstance = (dataset, event) => {
+        event.stopPropagation(); // Prevent triggering the regular select
+
+        if (!dataset.hasPolydata) {
+            console.warn("Cannot spawn instance - dataset not loaded");
+            return;
+        }
+
+        console.log(`🆕 Explicitly spawning new instance for: ${dataset.name}`);
+        handleDatasetAction(dataset.id, dataset.name, 'spawn');
     };
 
     return (
@@ -142,6 +200,23 @@ export function FilesPanel() {
                         Loading...
                     </span>
                 )}
+            </div>
+
+            {/* New toggle for spawn behavior */}
+            <div className="files-panel__spawn-toggle">
+                <label className="toggle-label">
+                    <input
+                        type="checkbox"
+                        checked={spawnNewInstances}
+                        onChange={(e) => setSpawnNewInstances(e.target.checked)}
+                    />
+                    <span>Spawn new instances</span>
+                </label>
+                <span className="toggle-hint">
+                    {spawnNewInstances
+                        ? "Each dataset opens in a new window"
+                        : "Datasets replace current view"}
+                </span>
             </div>
 
             <div className="files-panel__upload-section">
@@ -168,14 +243,13 @@ export function FilesPanel() {
                             const dataset = datasets.find(d => d.name === sample.name);
                             const isThisLoading = dataset?.isLoading || false;
                             const isLoaded = dataset?.hasPolydata || false;
-                            const isAlreadyAdded = datasets.some(d => d.name === sample.name);
 
                             return (
                                 <button
                                     key={sample.name}
                                     className="files-panel__sample-btn"
                                     onClick={() => handleLoadSample(sample)}
-                                    disabled={isAnyLoading || isAlreadyAdded}
+                                    disabled={isAnyLoading}
                                 >
                                     <FileIcon size={18} />
                                     <span className="files-panel__sample-name">{sample.name}</span>
@@ -232,7 +306,7 @@ export function FilesPanel() {
                                     ) : dataset.hasPolydata ? (
                                         <Check size={14} />
                                     ) : (
-                                        "⚠️"
+                                        <FileIcon size={14} />
                                     )}
                                     {dataset.name}
                                     {dataset.isLoading && dataset.loadingStage && (
@@ -246,9 +320,20 @@ export function FilesPanel() {
                                     {dataset.publicPath && " • 🌐 Public"}
                                 </div>
                             </div>
-                            {dataset.id === currentDatasetId && (
-                                <span className="files-panel__current-badge">Current</span>
-                            )}
+                            <div className="files-panel__dataset-actions">
+                                {dataset.id === currentDatasetId && (
+                                    <span className="files-panel__current-badge">Current</span>
+                                )}
+                                {dataset.hasPolydata && (
+                                    <button
+                                        className="files-panel__spawn-btn"
+                                        onClick={(e) => handleSpawnNewInstance(dataset, e)}
+                                        title="Open in new window"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
