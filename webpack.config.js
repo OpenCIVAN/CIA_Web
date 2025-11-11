@@ -88,6 +88,7 @@ module.exports = {
       "@UI": path.resolve(__dirname, "src/ui"),
       "@Utils": path.resolve(__dirname, "src/utils"),
       "@VR": path.resolve(__dirname, "src/vr"),
+      "@VTK": path.resolve(__dirname, "src/core/instances/types/vtk"),
     },
   },
 };
