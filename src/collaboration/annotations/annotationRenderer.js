@@ -11,7 +11,7 @@ import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 
 class AnnotationRenderer {
   constructor() {

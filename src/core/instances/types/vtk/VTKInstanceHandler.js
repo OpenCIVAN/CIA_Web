@@ -3,7 +3,7 @@
 // This serves as the blueprint for contributors adding new instance types
 
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
-import { initializeScene } from "@Core/scene/sceneManager.js";
+import { initializeScene } from "@VTK/scene/sceneManager.js";
 
 /**
  * VTKInstanceHandler

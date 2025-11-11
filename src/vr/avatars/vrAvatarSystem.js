@@ -11,7 +11,7 @@ import {
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { yAvatars } from "@Collaboration/yjs/yjsSetup.js";
-import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 import { vrModeManager } from "@VR/vrModeManager.js";
 
 class VRAvatarSystem {

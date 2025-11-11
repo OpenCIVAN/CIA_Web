@@ -1,5 +1,5 @@
 import { yDoc } from "@Collaboration/yjs/yjsSetup.js";
-import { getCurrentActor } from "@Core/scene/sceneManager.js";
+import { getCurrentActor } from "@VTK/scene/sceneManager.js";
 import { logInfo } from "@UI/react/hooks/useLogging.js";
 
 let reductionMethod = "pca";

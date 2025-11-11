@@ -2,7 +2,7 @@
 // VR Controllers - Handle Meta Quest / Oculus Controllers
 // ----------------------------------------------------------------------------
 
-import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 import { logInfo, logSuccess } from "@UI/react/hooks/useLogging.js";
 import { vrModeManager } from "@VR/vrModeManager.js";
 

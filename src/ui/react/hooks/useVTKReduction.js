@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 
 import { toggleDimensionalityReduction } from "@Core/reductionController.js";
 import { reductionState } from "@Core/reductionState.js";
-import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 
 /**
  * Hook to control dimensionality reduction (PCA, t-SNE, UMAP)

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { yInstances } from "@Collaboration/yjs/yjsSetup.js";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
-import { loadDatasetIntoScene } from "@Core/scene/sceneManager.js"
+import { loadDatasetIntoScene } from "@VTK/scene/sceneManager.js"
 import { visualizationManager } from "@Core/visualizationManager.js";
 
 export function ViewSwitcher() {

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
-import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
 
 export function DebugPanel() {
@@ -111,7 +111,7 @@ export function DebugPanel() {
         }
 
         try {
-            const { loadDatasetIntoScene } = await import("@Core/scene/sceneManager.js");
+            const { loadDatasetIntoScene } = await import("@VTK/scene/sceneManager.js");
             loadDatasetIntoScene(dataset.polydata, true, datasetId);
             console.log("✅ Loaded into scene");
         } catch (error) {

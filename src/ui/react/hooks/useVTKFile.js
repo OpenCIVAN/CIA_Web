@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 
 import { datasetManager } from "@Core/datasets/datasetManager.js";
-import { sceneState } from "@Core/scene/sceneState.js";
+import { sceneState } from "@VTK/scene/sceneState.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 
 /**

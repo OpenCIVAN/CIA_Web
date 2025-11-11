@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 
 import { yActor as yActorMap } from "@Collaboration/yjs/yjsSetup.js";
-import { getAxes, getAxesPosition } from "@Core/scene/orientationMarker.js";
-import { getCurrentActor, getSceneObjects } from "@Core/scene/sceneManager.js";
+import { getAxes, getAxesPosition } from "@VTK/scene/orientationMarker.js";
+import { getCurrentActor, getSceneObjects } from "@VTK/scene/sceneManager.js";
 
 export function setupActorSync() {
   const { renderer, renderWindow, camera, interactor } = getSceneObjects();

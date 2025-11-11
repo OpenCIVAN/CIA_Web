@@ -22,7 +22,7 @@ import {
   getOriginalPointsData,
   setReductionApplied,
   isReductionApplied,
-} from "@Core/scene/sceneManager.js";
+} from "@VTK/scene/sceneManager.js";
 import {
   cleanupTensors,
   logMemoryUsage,
