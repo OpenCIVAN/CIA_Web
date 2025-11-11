@@ -2,7 +2,6 @@
 // A diagnostic panel to help understand what's happening in the app
 
 import React, { useState, useEffect } from "react";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
@@ -19,7 +18,7 @@ export function DebugPanel() {
 
     const updateDebugInfo = () => {
         // Check datasets in memory
-        const allDatasets = datasetManager.getAllDatasets();
+        const allDatasets = window.CIA.datasetManager.getAllDatasets();
         const datasetsInMemory = allDatasets.length;
 
         // Check datasets in Y.js
@@ -36,7 +35,7 @@ export function DebugPanel() {
         // Check polydata status for each dataset
         const polydataStatus = {};
         allDatasets.forEach(dataset => {
-            const localData = datasetManager.getDatasetSync(dataset.id);
+            const localData = window.CIA.datasetManager.getDatasetSync(dataset.id);
             polydataStatus[dataset.name] = {
                 hasPolydata: !!localData?.polydata,
                 pointCount: localData?.polydata?.getPoints()?.getNumberOfPoints() || 0,
@@ -72,7 +71,7 @@ export function DebugPanel() {
         const interval = setInterval(updateDebugInfo, 1000);
 
         // Also update on dataset changes
-        const unsubscribe = datasetManager.onChange(updateDebugInfo);
+        const unsubscribe = window.CIA.datasetManager.onChange(updateDebugInfo);
 
         // And on Y.js changes
         visualizationManager.yViz.observe(updateDebugInfo);
@@ -87,7 +86,7 @@ export function DebugPanel() {
     // Manual actions for debugging
     const forceSetCurrent = (datasetId) => {
         console.log("🔧 Manually setting current dataset:", datasetId);
-        const dataset = datasetManager.getAllDatasets().find(d => d.id === datasetId);
+        const dataset = window.CIA.datasetManager.getAllDatasets().find(d => d.id === datasetId);
         if (dataset) {
             visualizationManager.setCurrentDataset(datasetId, dataset.name);
             console.log("✅ Current dataset set");
@@ -98,7 +97,7 @@ export function DebugPanel() {
 
     const forceLoadIntoScene = async (datasetId) => {
         console.log("🔧 Manually loading into scene:", datasetId);
-        const dataset = datasetManager.getDatasetSync(datasetId);
+        const dataset = window.CIA.datasetManager.getDatasetSync(datasetId);
 
         if (!dataset) {
             console.error("❌ Dataset not in memory");
@@ -172,7 +171,7 @@ export function DebugPanel() {
 
             <div style={{ marginTop: "15px", borderTop: "1px solid #444", paddingTop: "10px" }}>
                 <strong>Manual Actions:</strong>
-                {datasetManager.getAllDatasets().map(dataset => (
+                {window.CIA.datasetManager.getAllDatasets().map(dataset => (
                     <div key={dataset.id} style={{ marginTop: "5px" }}>
                         <button
                             onClick={() => forceSetCurrent(dataset.id)}

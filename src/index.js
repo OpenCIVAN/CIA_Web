@@ -100,6 +100,11 @@ async function initializeApp() {
     await initializePhase1();
     console.log("✅ Foundation: Core services ready");
 
+    // Verify critical services are available
+    if (!window.CIA || !window.CIA.datasetManager) {
+      throw new Error("Phase 1 failed to initialize DatasetManager");
+    }
+
     // Create or find root element
     let rootElement = document.getElementById("root");
     if (!rootElement) {

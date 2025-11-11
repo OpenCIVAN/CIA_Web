@@ -279,6 +279,141 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   }
 
   // ===========================================================================
+  // FILE PARSING - VTK-SPECIFIC
+  // This is where VTP file parsing belongs, not in DatasetManager
+  // ===========================================================================
+
+  /**
+   * Parse a VTP file and return polydata
+   *
+   * This is VTK-specific logic that was previously in datasetManager.
+   * By moving it here, we properly compartmentalize type-specific code.
+   *
+   * Other instance types will have their own parseFile methods:
+   * - PlotlyHandler.parseFile() might parse CSV → JSON
+   * - ImageHandler.parseFile() might parse DICOM → pixel data
+   * - etc.
+   *
+   * @param {File} file - The VTP file to parse
+   * @returns {Promise<Object>} VTK polydata object
+   */
+  async parseFile(file) {
+    console.log(`🎨 VTK Handler: Parsing VTP file "${file.name}"`);
+
+    try {
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Create VTK XML reader
+      // Dynamically import to avoid loading VTK.js unless needed
+      const vtkXMLPolyDataReader = await import(
+        "@kitware/vtk.js/IO/XML/XMLPolyDataReader"
+      ).then((m) => m.default);
+
+      const reader = vtkXMLPolyDataReader.newInstance();
+
+      // Parse the VTP data
+      reader.parseAsArrayBuffer(arrayBuffer);
+      const polydata = reader.getOutputData();
+
+      if (!polydata) {
+        throw new Error("Failed to parse VTP file - reader returned null");
+      }
+
+      // Extract statistics for logging
+      const points = polydata.getPoints();
+      const pointCount = points ? points.getNumberOfPoints() : 0;
+      const cellCount = polydata.getNumberOfCells();
+
+      console.log(`✅ VTK Handler: VTP parsed successfully`);
+      console.log(`   Points: ${pointCount.toLocaleString()}`);
+      console.log(`   Cells: ${cellCount.toLocaleString()}`);
+
+      return polydata;
+    } catch (error) {
+      console.error(
+        `❌ VTK Handler: Failed to parse VTP file "${file.name}":`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Parse VTP data from an ArrayBuffer
+   *
+   * This variant is used when loading from cache, where we already have
+   * the ArrayBuffer instead of a File object.
+   *
+   * @param {ArrayBuffer} arrayBuffer - The VTP data
+   * @param {string} filename - Original filename (for logging)
+   * @returns {Promise<Object>} VTK polydata object
+   */
+  async parseArrayBuffer(arrayBuffer, filename = "unknown") {
+    console.log(
+      `🎨 VTK Handler: Parsing VTP data from ArrayBuffer (${filename})`
+    );
+
+    try {
+      // Dynamically import VTK reader
+      const vtkXMLPolyDataReader = await import(
+        "@kitware/vtk.js/IO/XML/XMLPolyDataReader"
+      ).then((m) => m.default);
+
+      const reader = vtkXMLPolyDataReader.newInstance();
+      reader.parseAsArrayBuffer(arrayBuffer);
+      const polydata = reader.getOutputData();
+
+      if (!polydata) {
+        throw new Error("Failed to parse VTP data - reader returned null");
+      }
+
+      const points = polydata.getPoints();
+      const pointCount = points ? points.getNumberOfPoints() : 0;
+
+      console.log(
+        `✅ VTK Handler: VTP data parsed (${pointCount.toLocaleString()} points)`
+      );
+
+      return polydata;
+    } catch (error) {
+      console.error(`❌ VTK Handler: Failed to parse VTP data:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract spatial metadata from polydata
+   *
+   * This pulls out bounds, point counts, and other metadata that
+   * the DatasetManager needs for the Dataset object.
+   *
+   * @param {Object} polydata - VTK polydata object
+   * @returns {Object} Spatial metadata
+   */
+  extractMetadata(polydata) {
+    const points = polydata.getPoints();
+    const pointCount = points ? points.getNumberOfPoints() : 0;
+    const cellCount = polydata.getNumberOfCells();
+    const bounds = polydata.getBounds();
+
+    return {
+      pointCount,
+      cellCount,
+      bounds: {
+        xMin: bounds[0],
+        xMax: bounds[1],
+        yMin: bounds[2],
+        yMax: bounds[3],
+        zMin: bounds[4],
+        zMax: bounds[5],
+      },
+      // Mark that this has been analyzed
+      analyzed: true,
+    };
+  }
+
+  // ===========================================================================
   // OPTIONAL FEATURES - Tools and UI
   // These enhance functionality but aren't required
   // ===========================================================================

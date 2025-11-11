@@ -4,7 +4,6 @@
 
 import { useState, useEffect } from "react";
 
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { sceneState } from "@VTK/scene/sceneState.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 
@@ -44,7 +43,7 @@ export function useVTKFile() {
         return;
       }
 
-      const dataset = datasetManager.getDataset(current.datasetId);
+      const dataset = window.CIA.datasetManager.getDataset(current.datasetId);
 
       if (dataset && dataset.polydata) {
         const points = dataset.polydata.getPoints();
@@ -72,7 +71,7 @@ export function useVTKFile() {
     };
 
     // Listen for dataset changes
-    datasetManager.onChange(updateFileState);
+    window.CIA.datasetManager.onChange(updateFileState);
     visualizationManager.yViz.observe(updateFileState);
 
     // Initial update

@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 
 export function InstanceViewport({
     instanceId,
@@ -78,7 +77,7 @@ export function InstanceViewport({
         console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
 
         const loadDataset = async () => {
-            const dataset = datasetManager.getDatasetSync(datasetId);
+            const dataset = window.CIA.datasetManager.getDatasetSync(datasetId);
 
             if (!dataset) {
                 console.warn(`⚠️ Dataset ${datasetId} not found in manager`);
@@ -91,7 +90,7 @@ export function InstanceViewport({
 
                 // Set up a listener for when it loads
                 const checkInterval = setInterval(() => {
-                    const updatedDataset = datasetManager.getDatasetSync(datasetId);
+                    const updatedDataset = window.CIA.datasetManager.getDatasetSync(datasetId);
                     if (updatedDataset?.polydata) {
                         clearInterval(checkInterval);
                         workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, updatedDataset.polydata);
@@ -202,7 +201,7 @@ export function InstanceViewport({
     };
 
     // Get dataset name for display
-    const dataset = datasetId ? datasetManager.getDatasetSync(datasetId) : null;
+    const dataset = datasetId ? window.CIA.datasetManager.getDatasetSync(datasetId) : null;
     const displayName = instanceName || dataset?.name || `Instance ${instanceId.slice(-6)}`;
 
     return (

@@ -2,7 +2,6 @@
 // Utility to clean up orphaned datasets and stale data
 
 import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 
@@ -48,7 +47,7 @@ class DataCleanup {
 
     for (const dataset of orphaned) {
       console.log(`  - ${dataset.name} (${dataset.reason})`);
-      datasetManager.removeDataset(dataset.id);
+      window.CIA.datasetManager.removeDataset(dataset.id);
     }
 
     return orphaned.length;

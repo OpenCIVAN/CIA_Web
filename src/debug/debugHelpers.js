@@ -2,7 +2,7 @@
 // This file exposes internal managers to the global window object for debugging
 
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { datasetManager } from "@Core/data/managers/datasetManager.js";
 
 export function initializeDebugHelpers() {
   window.CIA = {

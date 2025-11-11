@@ -1,19 +1,9 @@
 // src/ui/react/hooks/useCurrentDataset.js
-// FIXED: Prevents infinite loop by using single state object
-
-import { useEffect, useState, useCallback } from "react";
-
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { useEffect, useState } from "react";
+import { getDatasetManager } from "./useDatasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 
-/**
- * Hook to track the current dataset with complete information
- *
- * CRITICAL FIX: Uses a single state object instead of multiple state variables
- * to prevent cascading re-renders when used by multiple components
- */
 export function useCurrentDataset() {
-  // CRITICAL: Use single state object to batch updates
   const [state, setState] = useState({
     datasetId: null,
     datasetInfo: null,
@@ -23,15 +13,16 @@ export function useCurrentDataset() {
   });
 
   useEffect(() => {
-    // Memoized update function - won't change on every render
+    const datasetManager = getDatasetManager();
+
     const updateDatasetState = () => {
       const current = visualizationManager.getCurrentDataset();
 
       if (current && current.datasetId) {
-        const dataset = datasetManager.getDatasetSync(current.datasetId);
+        const dataset = datasetManager.getDataset(current.datasetId);
 
         if (dataset && dataset.polydata) {
-          // Dataset fully loaded - batch all updates into one setState
+          // Dataset fully loaded
           setState({
             datasetId: current.datasetId,
             datasetInfo: current,
@@ -40,34 +31,17 @@ export function useCurrentDataset() {
             hasPolydata: true,
           });
         } else {
-          // Dataset selected but not loaded yet
+          // Dataset exists but polydata not loaded yet
           setState({
             datasetId: current.datasetId,
             datasetInfo: current,
-            datasetDetails: null,
-            isLoading: true,
+            datasetDetails: dataset,
+            isLoading: !dataset,
             hasPolydata: false,
-          });
-
-          // Try to load asynchronously
-          datasetManager.getDataset(current.datasetId).then((loaded) => {
-            if (loaded && loaded.polydata) {
-              setState((prev) => ({
-                ...prev,
-                datasetDetails: loaded,
-                isLoading: false,
-                hasPolydata: true,
-              }));
-            } else {
-              setState((prev) => ({
-                ...prev,
-                isLoading: false,
-              }));
-            }
           });
         }
       } else {
-        // No dataset selected - batch clear all state
+        // No dataset selected
         setState({
           datasetId: null,
           datasetInfo: null,
@@ -83,20 +57,19 @@ export function useCurrentDataset() {
 
     // Listen for changes
     visualizationManager.yViz.observe(updateDatasetState);
-    const unsubscribeDataset = datasetManager.onChange(updateDatasetState);
+    datasetManager.on("datasetLoaded", updateDatasetState);
+    datasetManager.on("datasetUpdated", updateDatasetState);
 
-    // Cleanup
     return () => {
       visualizationManager.yViz.unobserve(updateDatasetState);
-      unsubscribeDataset();
+      datasetManager.off("datasetLoaded", updateDatasetState);
+      datasetManager.off("datasetUpdated", updateDatasetState);
     };
-  }, []); // Empty deps - only set up listeners once
+  }, []);
 
-  // Return destructured state for backward compatibility
   return state;
 }
 
-// Simplified version that only returns the ID
 export function useCurrentDatasetId() {
   const { datasetId } = useCurrentDataset();
   return datasetId;

@@ -9,7 +9,6 @@ import {
   syncDatasetToYjs,
   syncInstanceToYjs,
 } from "@Collaboration/yjs/yjsSetup.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { useInstanceStore } from "@UI/react/store/instanceStore.js";
@@ -17,6 +16,8 @@ import {
   getUserId,
   getUserName,
 } from "@Collaboration/presence/userManagement.js";
+
+const { datasetManager } = window.CIA;
 
 class SyncManager {
   constructor() {

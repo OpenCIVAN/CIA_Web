@@ -44,7 +44,8 @@ class VisualizationManager {
 
     // ✨ CRITICAL FIX: Validate that the dataset actually exists
     // Import dynamically to avoid circular dependency
-    const { datasetManager } = require("@Core/datasets/datasetManager.js");
+    const datasetManager = window.CIA.datasetManager;
+    // const { datasetManager } = require("@Core/datasets/datasetManager.js");
 
     // Check if this dataset exists in the store
     const exists = datasetManager.datasets.has(stored.datasetId);

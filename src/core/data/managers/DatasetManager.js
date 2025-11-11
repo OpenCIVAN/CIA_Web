@@ -287,6 +287,208 @@ export class DatasetManager {
   }
 
   /**
+   * Load a dataset file (BRIDGE METHOD)
+   *
+   * This provides backward compatibility with the old datasetManager API
+   * while using the new three-layer architecture internally.
+   *
+   * Eventually, this workflow will change:
+   * - DatasetManager will ONLY store raw files and metadata
+   * - VTKInstanceHandler will parse files WHEN NEEDED for rendering
+   * - Polydata will live in ViewConfiguration, not Dataset
+   *
+   * But for now, this bridge keeps existing code working while we migrate.
+   *
+   * @param {File} file - The file to load
+   * @param {string} publicPath - Optional public URL for sample files
+   * @param {string} userId - User loading the file
+   * @returns {Promise<Dataset>} - The loaded dataset
+   */
+  async loadDataset(file, publicPath = null, userId = null) {
+    console.log(`📦 DatasetManager: Loading dataset "${file.name}"`);
+
+    // Use current user if not specified
+    if (!userId) {
+      // Import getUserId from your user management
+      const { getUserId } = await import(
+        "@Collaboration/presence/userManagement.js"
+      );
+      userId = getUserId();
+    }
+
+    try {
+      // Step 1: Calculate hash for deduplication
+      const hash = await this._fileCache.calculateHash(file);
+      console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
+
+      // Step 2: Check if we already have this dataset
+      const existingDatasets = this.getAllDatasets();
+      const existing = existingDatasets.find(
+        (d) => d.metadata.hash === hash || d.filename === file.name
+      );
+
+      if (existing) {
+        console.log(`  ⚠️ Dataset already exists: ${existing.id}`);
+        // Check if we have polydata loaded
+        if (existing.polydata) {
+          console.log(`  ✓ Polydata already in memory`);
+          return existing;
+        }
+        // If not, we'll load it below
+        console.log(`  ⏳ Loading polydata for existing dataset...`);
+      }
+
+      // Step 3: Add dataset (stores file and creates Dataset object)
+      const dataset = existing || (await this.addDataset(file, userId));
+
+      // Store the hash and public path in metadata
+      await this.updateMetadata(dataset.id, {
+        hash,
+        publicPath,
+      });
+
+      // Step 4: Parse the file to get polydata
+      // This is VTK-specific, so we delegate to VTKInstanceHandler
+      console.log(`  ⏳ Parsing VTP file...`);
+
+      // Get the VTK handler from the registry
+      const { getHandlerForType } = await import(
+        "@Core/instances/types/instanceTypesInit.js"
+      );
+      const vtkHandler = getHandlerForType("vtk");
+
+      // Parse the file
+      const polydata = await vtkHandler.parseFile(file);
+
+      // Step 5: Extract spatial metadata from polydata
+      const spatialMetadata = vtkHandler.extractMetadata(polydata);
+
+      // Update dataset with spatial metadata
+      await this.updateMetadata(dataset.id, spatialMetadata);
+
+      console.log(`  ✓ Spatial metadata extracted`);
+      console.log(`    Points: ${spatialMetadata.pointCount.toLocaleString()}`);
+      console.log(
+        `    Bounds: [${Object.values(spatialMetadata.bounds).join(", ")}]`
+      );
+
+      // Step 6: TEMPORARY - Store polydata on dataset for backward compatibility
+      // Eventually, polydata will be managed by ViewConfiguration/handlers
+      // But for now, UI code expects dataset.polydata to exist
+      dataset.polydata = polydata;
+
+      console.log(`✅ DatasetManager: Dataset "${file.name}" fully loaded`);
+
+      // Emit event so hooks can react
+      this._emit("datasetLoaded", dataset);
+
+      return dataset;
+    } catch (error) {
+      console.error(
+        `❌ DatasetManager: Failed to load dataset "${file.name}":`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Load polydata from cache for an existing dataset
+   *
+   * This is called when we have dataset metadata but need to load
+   * the actual polydata (e.g., from Y.js sync or after page reload)
+   *
+   * @param {string} datasetId - The dataset ID
+   * @returns {Promise<Object>} - The polydata object
+   */
+  async loadPolydataFromCache(datasetId) {
+    console.log(
+      `📦 DatasetManager: Loading polydata from cache for ${datasetId}`
+    );
+
+    const dataset = this.getDataset(datasetId);
+    if (!dataset) {
+      throw new Error(`Dataset ${datasetId} not found`);
+    }
+
+    // Check if already loaded
+    if (dataset.polydata) {
+      console.log(`  ✓ Polydata already in memory`);
+      return dataset.polydata;
+    }
+
+    try {
+      // Get the cached file
+      const file = await this.loadFile(datasetId);
+
+      if (!file) {
+        // If not in cache but has publicPath, fetch it
+        if (dataset.metadata.publicPath) {
+          console.log(
+            `  ⏳ Fetching from public path: ${dataset.metadata.publicPath}`
+          );
+          const response = await fetch(dataset.metadata.publicPath);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.status}`);
+          }
+          const blob = await response.blob();
+          const fetchedFile = new File([blob], dataset.filename, {
+            type: "application/octet-stream",
+          });
+
+          // Store in cache for future use
+          const hash = await this._fileCache.storeFile(fetchedFile);
+          await this.updateMetadata(datasetId, { hash });
+
+          // Parse and return
+          return await this._parseAndStorePolydata(datasetId, fetchedFile);
+        }
+
+        throw new Error(`File not in cache and no public path available`);
+      }
+
+      // Parse the cached file
+      return await this._parseAndStorePolydata(datasetId, file);
+    } catch (error) {
+      console.error(
+        `❌ DatasetManager: Failed to load polydata from cache:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to parse file and store polydata
+   * @private
+   */
+  async _parseAndStorePolydata(datasetId, file) {
+    const dataset = this.getDataset(datasetId);
+
+    // Get VTK handler
+    const { getHandlerForType } = await import(
+      "@Core/instances/types/instanceTypesInit.js"
+    );
+    const vtkHandler = getHandlerForType("vtk");
+
+    // Parse
+    const polydata = await vtkHandler.parseFile(file);
+
+    // Store on dataset (temporary for backward compatibility)
+    dataset.polydata = polydata;
+
+    // Extract and update metadata if needed
+    if (!dataset.isAnalyzed()) {
+      const spatialMetadata = vtkHandler.extractMetadata(polydata);
+      await this.updateMetadata(datasetId, spatialMetadata);
+    }
+
+    console.log(`✅ Polydata loaded and stored for ${datasetId}`);
+
+    return polydata;
+  }
+
+  /**
    * Load the actual file data for a dataset
    * This is called by handlers when they need to visualize the data
    *

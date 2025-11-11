@@ -1,7 +1,7 @@
 // src/ui/react/components/layout/StatusBar.jsx
 import React, { useEffect, useState } from "react";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { getDatasetManager } from "@UI/react/hooks/useDatasetManager.js";
 
 export function StatusBar({ phase, ready }) {
     const [instanceCount, setInstanceCount] = useState(0);
@@ -10,14 +10,15 @@ export function StatusBar({ phase, ready }) {
 
     useEffect(() => {
         // Update counts periodically
+        // Then in your component, where you're calling getAllDatasets:
         const updateStats = () => {
-            setInstanceCount(workspaceManager.getInstanceCount());
-            setDatasetCount(datasetManager.getAllDatasets().length);
-
-            // Check sync status if available
-            if (window.CIA?.syncManager) {
-                const status = window.CIA.syncManager.getSyncStatus();
-                setSyncStatus(status.pendingDatasets > 0 ? 'syncing' : 'synced');
+            try {
+                const datasetManager = getDatasetManager();
+                const datasets = datasetManager.getAllDatasets();
+                // ... rest of your logic
+            } catch (error) {
+                console.error('StatusBar: Failed to get dataset stats:', error);
+                // Handle error gracefully
             }
         };
 

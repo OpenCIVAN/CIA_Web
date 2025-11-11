@@ -7,7 +7,6 @@ import {
   yAnnotations,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { useInstanceStore } from "@UI/react/store/instanceStore.js";
@@ -79,7 +78,7 @@ async function processRemoteDataset(datasetId, metadata) {
   useDatasetStore.getState().addDataset(datasetId, metadata);
 
   // Check if we already have polydata in memory
-  const inMemory = datasetManager.datasets.get(datasetId);
+  const inMemory = window.CIA.datasetManager.datasets.get(datasetId);
   if (inMemory?.polydata) {
     console.log("📥 ✅ Already have polydata in memory, skipping load");
     return;
@@ -92,7 +91,7 @@ async function processRemoteDataset(datasetId, metadata) {
   if (hasFile) {
     // We have it cached - load from cache
     console.log("📥 Loading polydata from our cache...");
-    await datasetManager.loadPolydataFromCache(datasetId);
+    await window.CIA.datasetManager.loadPolydataFromCache(datasetId);
     console.log("📥 ✅ Loaded from cache successfully");
     return;
   }
@@ -115,7 +114,7 @@ async function processRemoteDataset(datasetId, metadata) {
       await dataCache.storeDataset(file);
       console.log("📥 ✅ Public file cached successfully");
 
-      await datasetManager.loadPolydataFromCache(datasetId);
+      await window.CIA.datasetManager.loadPolydataFromCache(datasetId);
     } catch (error) {
       console.error(`📥 ❌ Failed to fetch public file:`, error);
     }

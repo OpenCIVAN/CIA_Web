@@ -1,8 +1,6 @@
 // src/ui/react/hooks/useDatasets.js
-// ULTRA SIMPLE: Don't use Zustand at all, subscribe directly to datasetManager
-
 import { useState, useEffect } from "react";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { getDatasetManager } from "./useDatasetManager.js";
 
 export function useDatasets() {
   const [datasets, setDatasets] = useState([]);
@@ -10,34 +8,32 @@ export function useDatasets() {
   useEffect(() => {
     console.log("🔗 useDatasets: Setting up subscription");
 
+    // Get the manager (this will throw a clear error if not ready)
+    const datasetManager = getDatasetManager();
+
     const updateDatasets = () => {
       console.log("📊 useDatasets: Updating datasets");
 
-      // Get all datasets from datasetManager
+      // Get all datasets from the NEW datasetManager
       const allDatasets = datasetManager.getAllDatasets();
 
-      // Transform to include loading state
-      const transformed = allDatasets.map((metadata) => {
-        const localDataset = datasetManager.datasets.get(metadata.id);
-        const loadingInfo = datasetManager.loadingDatasets.get(metadata.id);
-
-        return {
-          id: metadata.id,
-          name: metadata.name,
-          hash: metadata.hash,
-          pointCount: metadata.pointCount || 0,
-          cellCount: metadata.cellCount || 0,
-          uploadedBy: metadata.uploadedBy,
-          uploadedByName: metadata.uploadedByName || "Unknown",
-          uploadedAt: metadata.uploadedAt,
-          publicPath: metadata.publicPath,
-          bounds: metadata.bounds,
-          annotations: metadata.annotations || [],
-          hasPolydata: !!localDataset?.polydata,
-          isLoading: !!loadingInfo,
-          loadingStage: loadingInfo?.stage || null,
-        };
-      });
+      // The NEW manager returns proper Dataset objects
+      // Transform them for React consumption
+      const transformed = allDatasets.map((dataset) => ({
+        id: dataset.id,
+        name: dataset.filename,
+        hash: dataset.metadata?.hash,
+        pointCount: dataset.metadata?.pointCount || 0,
+        cellCount: dataset.metadata?.cellCount || 0,
+        uploadedBy: dataset.metadata?.uploadedBy,
+        uploadedByName: dataset.metadata?.uploadedByName || "Unknown",
+        uploadedAt: dataset.metadata?.uploadedAt,
+        publicPath: dataset.metadata?.publicPath,
+        bounds: dataset.metadata?.bounds,
+        annotations: dataset.annotations || [],
+        hasPolydata: !!dataset.polydata, // Temporary until ViewConfiguration
+        isAnalyzed: dataset.isAnalyzed(),
+      }));
 
       setDatasets(transformed);
     };
@@ -45,14 +41,21 @@ export function useDatasets() {
     // Initial update
     updateDatasets();
 
-    // Subscribe to changes
-    const unsubscribe = datasetManager.onChange(updateDatasets);
+    // Subscribe to changes from the NEW datasetManager
+    // The NEW manager uses the 'on' method for subscriptions
+    datasetManager.on("datasetAdded", updateDatasets);
+    datasetManager.on("datasetUpdated", updateDatasets);
+    datasetManager.on("datasetRemoved", updateDatasets);
+    datasetManager.on("datasetLoaded", updateDatasets);
 
     return () => {
       console.log("🔗 useDatasets: Cleaning up subscription");
-      unsubscribe();
+      datasetManager.off("datasetAdded", updateDatasets);
+      datasetManager.off("datasetUpdated", updateDatasets);
+      datasetManager.off("datasetRemoved", updateDatasets);
+      datasetManager.off("datasetLoaded", updateDatasets);
     };
-  }, []); // Empty deps - only subscribe once
+  }, []);
 
   return datasets;
 }

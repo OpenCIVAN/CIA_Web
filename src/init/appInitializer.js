@@ -1,12 +1,16 @@
-// src/init/appInitializer.js
-// CORRECTLY FIXED VERSION matching your actual folder structure
+// src/init/appInitializer.js - UPDATED FOR NEW ARCHITECTURE
+// Changes are marked with // ⭐ NEW or // ❌ REMOVED
 
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
-import { dataCache } from "@Services/storage/dataCache.js";
+import { dataCache } from "@Services/storage/dataCache.js"; // ⭐ Keep this - it's your working cache
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+
+// ⭐ NEW: Import the new architecture components
+import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
+import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
+
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
 import {
@@ -20,20 +24,29 @@ import { runFoundationTests } from "@Tests/core/instanceTypes.test.js";
 // Instance type registration
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 
-// VR imports - these exist in your structure
+// VR imports
 import { vrModeManager } from "@VR/vrModeManager.js";
 import { vrControllers } from "@VR/controllers/vrControllers.js";
 import { vrAvatarSystem } from "@VR/avatars/vrAvatarSystem.js";
 import { vrSpatialUI } from "@VR/ui/vrSpatialUI.js";
 
-// Enhanced systems that may or may not exist yet
+// At the top of appInitializer.js, add this export after initialization
+export { datasetManager };
+
+// Enhanced systems
 let syncManager = null;
 let instanceCollaboration = null;
 let instanceTools = null;
 
+// ⭐ NEW: Global references to new architecture components
+let datasetManager = null; // Will be the NEW DatasetManager instance
+let dataCacheAdapter = null; // Adapter that bridges dataCache to DatasetManager
+
 /**
  * Phase 1: Pre-React Initialization
  * Initialize core services that don't depend on UI
+ *
+ * ⭐ UPDATED: Now initializes new DatasetManager with adapter
  */
 export async function initializePhase1() {
   console.log("🚀 Phase 1: Core Services Initialization");
@@ -41,7 +54,6 @@ export async function initializePhase1() {
 
   try {
     // Instance type registration - MUST happen first
-    // This makes visualization types (VTK, Plotly, etc.) available
     console.log("📋 Registering instance types...");
     registerInstanceTypes();
 
@@ -50,17 +62,33 @@ export async function initializePhase1() {
     sessionManager.initializeFromURL();
     console.log(`✅ Session initialized - Room: ${sessionManager.getRoomId()}`);
 
-    // Data cache - handles file storage
-    console.log("💾 Setting up data cache...");
+    // ⭐ NEW: Initialize data cache with adapter pattern
+    console.log("💾 Setting up data storage layer...");
+
+    // Step 1: Ensure dataCache is ready
     if (dataCache) {
       if (typeof dataCache.initialize === "function") {
-        dataCache.initialize();
-        console.log("✅ Data cache initialized");
+        await dataCache.initialize();
+        console.log("  ✓ Data cache initialized");
       } else {
-        // The dataCache might auto-initialize on import
-        console.log("✅ Data cache ready (auto-initialized)");
+        // dataCache auto-initializes on first use
+        console.log("  ✓ Data cache ready (auto-initialized)");
       }
     }
+
+    // Step 2: Create adapter that bridges dataCache to DatasetManager interface
+    console.log("  Creating cache adapter...");
+    dataCacheAdapter = new DatasetManagerAdapter(dataCache);
+    await dataCacheAdapter.initialize();
+    console.log("  ✓ Cache adapter ready");
+
+    // Step 3: Create and initialize the NEW DatasetManager
+    console.log("  Creating dataset manager...");
+    datasetManager = new DatasetManager();
+    await datasetManager.initialize(dataCacheAdapter);
+    console.log("  ✓ Dataset manager ready");
+
+    console.log("✅ Data storage layer complete");
 
     // TensorFlow setup for dimensionality reduction algorithms
     console.log("🧠 Setting up TensorFlow...");
@@ -85,6 +113,10 @@ export async function initializePhase1() {
       throw new Error("Y.js provider is required for collaboration");
     }
 
+    // Set up debug helpers for console access
+    setupDebugHelpers();
+    console.log("✅ Debug helpers available");
+
     console.log("✅ Phase 1 complete - Core services ready");
     console.log("");
   } catch (error) {
@@ -96,6 +128,8 @@ export async function initializePhase1() {
 /**
  * Phase 2: Post-Username Initialization
  * Initialize user-dependent services after username is set
+ *
+ * ⭐ UPDATED: No longer initializes old datasetManager
  */
 export async function initializePhase2() {
   console.log("🚀 Phase 2: User Services Initialization");
@@ -111,23 +145,20 @@ export async function initializePhase2() {
       presenceSystem &&
       typeof presenceSystem.initializePresence === "function"
     ) {
-      // Some versions might use initializePresence instead
       presenceSystem.initializePresence();
       console.log("✅ Presence system ready");
     } else {
       console.warn("⚠️ Presence system not available");
     }
 
-    // Data managers for handling datasets and visualizations
+    // ⭐ UPDATED: Data managers section
     console.log("📦 Initializing data managers...");
 
-    if (datasetManager) {
-      if (typeof datasetManager.initialize === "function") {
-        datasetManager.initialize();
-      }
-      console.log("   ✓ Dataset manager ready");
-    }
+    // DatasetManager was already initialized in Phase 1
+    console.log("   ✓ Dataset manager ready (initialized in Phase 1)");
 
+    // ⭐ TODO: These managers will be updated in future sessions
+    // For now, keep them as-is but they'll need refactoring
     if (visualizationManager) {
       if (typeof visualizationManager.initialize === "function") {
         visualizationManager.initialize();
@@ -237,6 +268,8 @@ export async function initializePhase2() {
 /**
  * Phase 3: Post-React Initialization
  * Initialize optional enhancement systems
+ *
+ * (No changes needed here for now)
  */
 export async function initializePhase3() {
   console.log("🚀 Phase 3: Enhanced Systems Initialization");
@@ -290,13 +323,9 @@ export async function initializePhase3() {
       console.log("✅ Instance hooks configured");
     }
 
-    // Set up debug helpers for console access
-    setupDebugHelpers();
-    console.log("✅ Debug helpers available");
-
     console.log("✅ Phase 3 complete");
     console.log("🎉 CIA Web fully initialized!");
-    console.log("📝 Type CIA.help() for debug commands");
+    console.log("📋 Type CIA.help() for debug commands");
   } catch (error) {
     // Phase 3 errors are non-critical
     console.warn("⚠️ Phase 3 partial failure:", error);
@@ -306,6 +335,7 @@ export async function initializePhase3() {
 
 /**
  * Set up hooks for instance creation/deletion to add enhanced features
+ * (No changes needed here for now)
  */
 function setupInstanceHooks() {
   if (!workspaceManager) {
@@ -313,7 +343,6 @@ function setupInstanceHooks() {
     return;
   }
 
-  // Only set up if we have enhanced systems
   if (!instanceCollaboration && !instanceTools) {
     console.log("⚠️ No enhanced systems for instance hooks");
     return;
@@ -327,16 +356,12 @@ function setupInstanceHooks() {
 
   // Override createInstance to add enhancements
   workspaceManager.createInstance = function (containerElement, options = {}) {
-    // Call original method first
     const instanceId = originalCreateInstance(containerElement, options);
-
     if (!instanceId) return null;
 
-    // Get the created instance
     const instance = workspaceManager.getInstance(instanceId);
 
     if (instance && instance.sceneObjects) {
-      // Add collaboration features if available
       if (instanceCollaboration) {
         try {
           instanceCollaboration.initializeForInstance(
@@ -353,7 +378,6 @@ function setupInstanceHooks() {
         }
       }
 
-      // Add tools if available
       if (instanceTools) {
         try {
           instanceTools.initializeTools(instanceId, instance.sceneObjects);
@@ -372,7 +396,6 @@ function setupInstanceHooks() {
 
   // Override deleteInstance to clean up enhancements
   workspaceManager.deleteInstance = function (instanceId) {
-    // Clean up enhancements first
     if (instanceCollaboration) {
       try {
         instanceCollaboration.cleanupInstance(instanceId);
@@ -392,7 +415,6 @@ function setupInstanceHooks() {
       }
     }
 
-    // Call original method
     originalDeleteInstance(instanceId);
   };
 
@@ -401,17 +423,21 @@ function setupInstanceHooks() {
 
 /**
  * Set up debug helpers for console access
+ * ⭐ UPDATED: Exposes new DatasetManager and adapter
  */
 function setupDebugHelpers() {
   if (typeof window !== "undefined") {
     window.CIA = window.CIA || {};
 
+    // ⭐ NEW: Expose new architecture components
+    window.CIA.datasetManager = datasetManager; // NEW DatasetManager
+    window.CIA.dataCacheAdapter = dataCacheAdapter; // The adapter
+    window.CIA.dataCache = dataCache; // Original cache (for comparison)
+
     // Add core managers
     window.CIA.workspaceManager = workspaceManager;
-    window.CIA.datasetManager = datasetManager;
     window.CIA.visualizationManager = visualizationManager;
     window.CIA.annotationSystem = annotationSystem;
-    window.CIA.dataCache = dataCache;
     window.CIA.presenceSystem = presenceSystem;
 
     // Add enhanced systems if available
@@ -433,10 +459,9 @@ function setupDebugHelpers() {
       return ids;
     };
 
+    // ⭐ UPDATED: Uses new DatasetManager
     window.CIA.listDatasets = () => {
-      const datasets = datasetManager.getAllDatasets
-        ? datasetManager.getAllDatasets()
-        : [];
+      const datasets = datasetManager.getAllDatasets();
       if (datasets.length === 0) {
         console.log("No datasets loaded");
         return [];
@@ -444,21 +469,36 @@ function setupDebugHelpers() {
       console.table(
         datasets.map((d) => ({
           id: d.id?.slice(-8),
-          name: d.name,
-          points: d.pointCount,
-          loaded: !!d.hasPolydata,
+          filename: d.filename,
+          fileType: d.metadata?.fileType,
+          annotations: d.annotations?.length || 0,
+          analyzed: d.isAnalyzed(),
         }))
       );
       return datasets;
+    };
+
+    // ⭐ NEW: Helper to check cache stats
+    window.CIA.cacheStats = async () => {
+      const stats = await dataCacheAdapter.getStats();
+      console.log("📊 Cache Statistics:");
+      console.log(`  Total files: ${stats.count}`);
+      console.log(
+        `  Total size: ${(stats.totalSize / 1024 / 1024).toFixed(2)} MB`
+      );
+      console.table(stats.files);
+      return stats;
     };
 
     window.CIA.help = () => {
       console.log("🔧 CIA Web Debug Commands:");
       console.log("  CIA.listInstances() - List all active instances");
       console.log("  CIA.listDatasets() - List all loaded datasets");
+      console.log("  CIA.cacheStats() - Show cache statistics");
+      console.log("  CIA.datasetManager - Access new dataset manager");
+      console.log("  CIA.dataCache - Access original cache");
+      console.log("  CIA.dataCacheAdapter - Access the adapter");
       console.log("  CIA.workspaceManager - Access workspace manager");
-      console.log("  CIA.datasetManager - Access dataset manager");
-      console.log("  CIA.dataCache - Access data cache");
       console.log("  CIA.presenceSystem - Access presence system");
       if (syncManager) {
         console.log("  CIA.syncManager.forceSyncAll() - Force sync all data");
