@@ -302,7 +302,7 @@ class SyncManager {
       });
     } else {
       // Add new remote instance
-      instanceStore.addInstance({
+      instanceStore.createInstance({
         ...remoteInstance,
         isRemote: true,
         isActive: false, // Remote instances are not active locally

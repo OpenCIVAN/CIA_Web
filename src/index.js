@@ -104,7 +104,7 @@ async function initializeApp() {
     let rootElement = document.getElementById("root");
     if (!rootElement) {
       rootElement = document.createElement("div");
-      rootElement.id = "root";
+      rootElement.id = "react-root";
       document.body.appendChild(rootElement);
     }
 

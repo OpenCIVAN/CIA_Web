@@ -7,6 +7,9 @@ import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/u
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 
+import "@UI/react/styles/bootstrap.css";
+import "@UI/react/styles/panels.css";
+
 /**
  * Bootstrap Component
  * 
@@ -34,6 +37,12 @@ export function Bootstrap() {
     // STEP 1: Check prerequisites on mount
     useEffect(() => {
         checkPrerequisites();
+
+        // Hide the HTML loading screen once Bootstrap renders
+        // This ensures users see the React UI instead of the HTML loading screen
+        if (window.hideLoadingScreen) {
+            window.hideLoadingScreen();
+        }
     }, []);
 
     /**

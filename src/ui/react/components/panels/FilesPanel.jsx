@@ -48,7 +48,7 @@ export function FilesPanel() {
             const instanceId = `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             // Add the instance to the store
-            instanceStore.addInstance({
+            instanceStore.createInstance({
                 id: instanceId,
                 name: datasetName,
                 datasetId: datasetId,
@@ -63,8 +63,8 @@ export function FilesPanel() {
             console.log(`🔄 Replacing current dataset with: ${datasetName}`);
 
             // Get the active instance
-            const instances = instanceStore.instances;
-            const activeInstance = instances.find(i => i.isActive) || instances[0];
+            const instances = instanceStore.getAllInstances();
+            const activeInstance = instances.find(i => i.id === instanceStore.activeInstanceId) || instances[0];
 
             if (activeInstance) {
                 // Update the instance's dataset
