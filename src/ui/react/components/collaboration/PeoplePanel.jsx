@@ -9,13 +9,26 @@ export function PeoplePanel() {
   const [isMuted, setIsMuted] = useState(true);
 
   // Update user list from presence system
+  // Update user list from presence system
   useEffect(() => {
+    console.log("👥 PeoplePanel: Setting up presence listener");
+
     const cleanup = presenceSystem.onPresenceChange((onlineUsers) => {
-      console.log("👥 People panel updating with", onlineUsers.length, "users");
+      console.log("👥 PeoplePanel: Received presence update");
+      console.log("   Users count:", onlineUsers.length);
+      console.log("   Users:", onlineUsers.map(u => u.userName));
       setUsers(onlineUsers);
     });
 
-    return cleanup;
+    // CRITICAL: Force initial update immediately
+    const initialUsers = presenceSystem.getOnlineUsers();
+    console.log("👥 PeoplePanel: Initial users:", initialUsers);
+    setUsers(initialUsers);
+
+    return () => {
+      console.log("👥 PeoplePanel: Cleaning up listener");
+      cleanup();
+    };
   }, []);
 
   // Update voice status

@@ -27,42 +27,34 @@ export function TextChatPanel() {
   useEffect(() => {
     textChat.initialize();
 
-    // Wait for Y.js to fully sync before loading messages
+    // Wait for Y.js to sync before loading messages
     let syncTimeout;
 
     const handleSync = (synced) => {
       if (synced) {
         console.log("🔄 Y.js synced, loading messages...");
         clearTimeout(syncTimeout);
-
-        // Small delay to ensure everything is ready
         setTimeout(() => {
           refreshMessages();
         }, 500);
       }
     };
 
-    // Listen for sync
     provider.on("sync", handleSync);
 
-    // Fallback: Load after delay even if sync event doesn't fire
+    // Fallback timeout
     syncTimeout = setTimeout(() => {
       console.log("⏰ Sync timeout, loading messages anyway");
       refreshMessages();
     }, 3000);
 
-    // Also listen to the Y.js array directly for changes
-    const handleYjsChange = () => {
-      console.log("📬 Y.js array changed");
-      refreshMessages();
-    };
+    // ✅ REMOVED: yText.observe() - this was causing double sends
+    // The textChat.sendMessage() already updates Y.js, which triggers
+    // the sync event, which calls refreshMessages(). We don't need
+    // a second observer.
 
-    yText.observe(handleYjsChange);
-
-    // Cleanup
     return () => {
       provider.off("sync", handleSync);
-      yText.unobserve(handleYjsChange);
       clearTimeout(syncTimeout);
     };
   }, []);

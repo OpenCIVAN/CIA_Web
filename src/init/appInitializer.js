@@ -125,18 +125,53 @@ export async function initializePhase2() {
   console.log("=====================================");
 
   try {
+    // ⭐ NEW: Wait for Y.js to be synced before initializing presence
+    const { provider } = await import("@Collaboration/yjs/yjsSetup.js");
+
+    console.log("⏳ Checking Y.js sync status...");
+    if (!provider.synced) {
+      console.log("⏳ Waiting for Y.js sync before Phase 2...");
+
+      await new Promise((resolve) => {
+        // Check if already synced
+        if (provider.synced) {
+          resolve();
+          return;
+        }
+
+        // Wait for sync event
+        const onSync = (synced) => {
+          if (synced) {
+            console.log("✅ Y.js synced!");
+            provider.off("sync", onSync);
+            resolve();
+          }
+        };
+        provider.on("sync", onSync);
+
+        // Safety timeout after 10 seconds
+        setTimeout(() => {
+          console.warn("⚠️ Y.js sync timeout, continuing anyway");
+          provider.off("sync", onSync);
+          resolve();
+        }, 10000);
+      });
+    } else {
+      console.log("✅ Y.js already synced");
+    }
+
     // STEP 1: Presence system
-    // Tracks which users are in the room and their activities
+    // Now safe to initialize since Y.js is synced
     console.log("👥 Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
       console.log("✅ Presence system ready");
-    } else if (
-      presenceSystem &&
-      typeof presenceSystem.initializePresence === "function"
-    ) {
-      presenceSystem.initializePresence();
-      console.log("✅ Presence system ready");
+
+      // ⭐ NEW: Verify presence is working
+      const myPresence = presenceSystem.localPresence;
+      const onlineUsers = presenceSystem.getOnlineUsers();
+      console.log("   My presence:", myPresence);
+      console.log("   Online users:", onlineUsers.length);
     } else {
       console.warn("⚠️ Presence system not available");
     }

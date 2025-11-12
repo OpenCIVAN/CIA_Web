@@ -171,19 +171,29 @@ class PresenceSystem {
   handlePresenceChange(changes) {
     const { added, updated, removed } = changes;
 
-    // Log changes for debugging
+    // Enhanced logging
     if (added.length > 0) {
-      console.log("👋 Users joined:", added.length);
+      const names = added.map(
+        (id) => this.awareness.getStates().get(id)?.userName || "Unknown"
+      );
+      console.log("👋 Users joined:", names);
     }
     if (removed.length > 0) {
-      console.log("👋 Users left:", removed.length);
+      console.log("👋 Users left:", removed.length, "users");
     }
     if (updated.length > 0) {
-      console.log("🔄 Users updated:", updated.length);
+      console.log("🔄 Users updated:", updated.length, "users");
     }
 
-    // Get current user list and notify all listeners
+    // CRITICAL: Always get fresh user list and notify ALL listeners
     const users = this.getOnlineUsers();
+    console.log(
+      "👥 Broadcasting to",
+      this.presenceListeners.length,
+      "listeners with",
+      users.length,
+      "users"
+    );
     this.notifyPresenceListeners(users);
   }
 

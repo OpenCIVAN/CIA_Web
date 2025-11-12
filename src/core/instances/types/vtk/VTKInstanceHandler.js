@@ -9,6 +9,7 @@ import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
 import { initializeScene } from "@VTK/scene/sceneManager.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature.js";
+import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 
 /**
  * VTKInstanceHandler
@@ -91,6 +92,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     widgetManager.setRenderer(sceneObjects.renderer);
     this.widgetManagers.set(instanceId, widgetManager);
 
+    // ⭐ NEW: Setup cursors for this instance
+    vtkInstanceCursors.setupInstanceCursors(instanceId, containerElement);
+
     const instanceData = {
       instanceId,
       sceneObjects,
@@ -124,6 +128,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const { instanceId, sceneObjects, actors, widgets } = instanceData;
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
+
+    vtkInstanceCursors.cleanupInstance(instanceId);
 
     // Cleanup features
     await this.reductionFeature.cleanup(instanceId);

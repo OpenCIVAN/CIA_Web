@@ -3,13 +3,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { initializePhase3 } from "@Init/appInitializer.js";
+import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
 import { FilesPanel } from "./components/panels/FilesPanel.jsx";
-import { ControlPanel } from "./components/ControlPanel.jsx";
 import { WorkspaceGrid } from "./components/workspace/WorkspaceGrid.jsx";
 import { TopBar } from "./components/layout/TopBar.jsx";
 import { StatusBar } from "./components/layout/StatusBar.jsx";
+import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel.jsx"
 
 // Import styles
 import "./styles/panels.css";
@@ -97,11 +98,11 @@ export function CIAWebApp({ username }) {
         <div className="right-panel" style={{
           width: '280px',
           flexShrink: 0,
-          overflow: 'auto', // This panel can scroll if content is too tall
+          overflow: 'auto',
           backgroundColor: 'var(--bg-primary)',
           borderLeft: '1px solid var(--border-subtle)',
         }}>
-          <ControlPanel />
+          <RightCollaborationPanel roomName={sessionManager?.getRoomId() || 'default-analytics-room'} />
         </div>
       </div>
 
