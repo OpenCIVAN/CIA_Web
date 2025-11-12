@@ -61,7 +61,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", apiKey: LIVEKIT_API_KEY });
 });
 
-const PORT = 3001;
+const PORT = 3002;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Token server running on http://localhost:${PORT}`);
   console.log(`   API Key: ${LIVEKIT_API_KEY}`);

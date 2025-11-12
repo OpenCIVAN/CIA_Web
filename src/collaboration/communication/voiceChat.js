@@ -13,7 +13,7 @@ class VoiceChat {
 
   async getDevToken(roomName, userName) {
     // Use HTTP not HTTPS for local token server
-    const TOKEN_SERVER = "http://localhost:3001";
+    const TOKEN_SERVER = "http://localhost:3002";
 
     console.log("   Fetching token from:", TOKEN_SERVER);
 

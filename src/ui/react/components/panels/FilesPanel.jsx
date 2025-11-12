@@ -24,6 +24,8 @@ export function FilesPanel() {
     const [uploadType, setUploadType] = useState("samples");
     const fileInputRef = useRef(null);
     const [spawnNewInstances, setSpawnNewInstances] = useState(true);
+    // At the top of your FilesPanel component, add a ref to track loading files
+    const loadingFilesRef = useRef(new Set());
 
     // Get instance counts for each dataset
     // This prevents showing duplicate entries
@@ -61,69 +63,30 @@ export function FilesPanel() {
     /**
      * Load a sample file
      */
-    const handleLoadSample = async (sampleFile) => {
-        console.log(`📂 Loading sample: ${sampleFile.path}`);
+    // Modify your handleLoadSample function
+    const handleLoadSample = async (filename) => {
+        // Check if this file is already being loaded
+        if (loadingFilesRef.current.has(filename)) {
+            console.log(`📂 File ${filename} is already loading, ignoring duplicate request`);
+            return;
+        }
+
+        // Mark this file as loading
+        loadingFilesRef.current.add(filename);
 
         try {
-            // Check if already exists
-            const existing = datasets.find(d => d.name === sampleFile.name);
+            console.log(`📂 Loading sample: ${publicPath}`);
 
-            if (existing) {
-                console.log("📂 Sample exists in metadata");
-
-                // CRITICAL: Check if polydata is actually loaded
-                if (existing.hasPolydata) {
-                    console.log("✅ Sample already loaded with polydata");
-                    // Trigger instance creation
-                    window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                        detail: { datasetId: existing.id }
-                    }));
-                    return;
-                } else {
-                    // Metadata exists but no polydata - need to load it
-                    console.log("📂 Sample metadata exists, loading polydata from cache...");
-
-                    // Trigger async load from cache
-                    const loaded = await datasetManager.loadPolydataFromCache(existing.id);
-
-                    if (loaded) {
-                        console.log("✅ Sample polydata loaded from cache");
-                        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                            detail: { datasetId: existing.id }
-                        }));
-                        return;
-                    } else {
-                        console.log("⚠️ Sample not in cache, fetching...");
-                        // Fall through to fetch and load
-                    }
-                }
-            }
-
-            // Fetch the sample file (either new or re-fetching)
-            const response = await fetch(sampleFile.path);
-            if (!response.ok) {
-                throw new Error(`Failed to load sample: ${response.status}`);
-            }
-
-            const blob = await response.blob();
-            const file = new File([blob], sampleFile.name, {
-                type: "application/octet-stream"
-            });
-
-            // Load through dataset manager
-            const publicPath = window.location.origin + sampleFile.path;
-            const datasetId = await datasetManager.loadDataset(file, publicPath);
-
-            console.log(`✅ Sample loaded successfully`);
-
-            // Trigger instance creation
-            window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                detail: { datasetId }
-            }));
+            // Your existing loading logic here...
+            const response = await fetch(publicPath);
+            // ... rest of your code
 
         } catch (error) {
-            console.error("❌ Failed to load sample:", error);
-            alert(`Failed to load sample: ${error.message}`);
+            console.error('❌ Failed to load sample:', error);
+            // Show error to user
+        } finally {
+            // Always remove from loading set when done (success or failure)
+            loadingFilesRef.current.delete(filename);
         }
     };
 

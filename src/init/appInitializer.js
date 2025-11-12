@@ -6,7 +6,9 @@ import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
-import { workspaceManager } from "@Core/instances/workspaceManager.js"; // ✅ ADD THIS IMPORT
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { DEFAULT_SESSION_ID, API_BASE_URL, USE_SERVER_STORAGE } from "@Core/config/storage.js";
+import { ServerStorageProvider } from "@Core/data/providers/ServerStorageProvider.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
@@ -24,6 +26,7 @@ let annotationManager = null;
 // Global references (exported for use throughout the app)
 export let datasetManager = null;
 export let dataCacheAdapter = null;
+export let storageProvider = null;
 export let viewConfigurationManager = null;
 
 /**
@@ -51,23 +54,27 @@ export async function initializePhase1() {
     // STEP 3: Data storage layer (Layer 1)
     console.log("💾 Setting up data storage layer...");
 
-    if (dataCache) {
-      if (typeof dataCache.initialize === "function") {
-        await dataCache.initialize();
-        console.log("  ✓ Data cache initialized");
-      } else {
-        console.log("  ✓ Data cache ready (auto-initialized)");
+    if (USE_SERVER_STORAGE) {
+      console.log("  📡 Creating server storage provider...");
+      storageProvider = new ServerStorageProvider(
+        API_BASE_URL,
+        DEFAULT_SESSION_ID
+      );
+      await storageProvider.initialize();
+    } else {
+      console.log("  💾 Creating local storage adapter...");
+      if (dataCache) {
+        if (typeof dataCache.initialize === "function") {
+          await dataCache.initialize();
+        }
       }
+      storageProvider = new DatasetManagerAdapter(dataCache);
+      await storageProvider.initialize();
     }
-
-    console.log("  Creating cache adapter...");
-    dataCacheAdapter = new DatasetManagerAdapter(dataCache);
-    await dataCacheAdapter.initialize();
-    console.log("  ✓ Cache adapter ready");
 
     console.log("  Creating dataset manager (Layer 1)...");
     datasetManager = new DatasetManager();
-    await datasetManager.initialize(dataCacheAdapter);
+    await datasetManager.initialize(storageProvider);
     console.log("  ✓ Dataset manager ready");
 
     console.log("✅ Data storage layer complete");
@@ -298,11 +305,12 @@ function setupDebugHelpers() {
 
   window.CIA = window.CIA || {};
 
-  // Expose managers for debugging
+  // Expose managers and providers for debugging
   window.CIA.datasetManager = datasetManager;
   window.CIA.viewConfigurationManager = viewConfigurationManager;
   window.CIA.workspaceManager = workspaceManager;
   window.CIA.sessionManager = sessionManager;
+  window.CIA.storageProvider = storageProvider;
 
   // Helper functions
   window.CIA.help = function () {
