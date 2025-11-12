@@ -4,7 +4,7 @@
 import React from "react";
 
 import { useVTKFile } from "@UI/react/hooks/useVTKFile.js";
-import { useVTKReduction } from "@UI/react/hooks/useVTKReduction.js";
+import { useVTKReduction } from "@VTK/hooks/useVTKReduction.js";
 
 export function AnalyzePanel() {
   const { isFileLoaded, filename, numPoints } = useVTKFile();
