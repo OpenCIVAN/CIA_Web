@@ -471,20 +471,6 @@ export class InstanceTypeHandler {
     // Default: do nothing
   }
 
-  /**
-   * Get current camera/view state
-   *
-   * Returns the current camera/view state in a format that can be
-   * synced to other users. The format is type-specific.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @returns {Object} Camera/view state
-   */
-  async getCameraState(instanceData) {
-    // Default: no camera state
-    return null;
-  }
-
   // =========================================================================
   // VR CAPABILITIES
   // These methods declare and implement VR support for this instance type

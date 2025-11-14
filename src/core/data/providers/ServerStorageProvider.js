@@ -80,23 +80,20 @@ export class ServerStorageProvider {
     console.log(`📡 ServerStorageProvider: Uploading file "${file.name}"`);
 
     try {
-      // First, calculate hash to check if we already have this file
       const hash = await this.calculateHash(file);
 
-      // Check if we already uploaded this file (deduplication)
       if (this._hashToId.has(hash)) {
         const existingId = this._hashToId.get(hash);
         console.log(`  ✓ File already exists with ID ${existingId}`);
         return existingId;
       }
 
-      // Prepare upload
       const formData = new FormData();
       formData.append("file", file);
       formData.append("uploadedBy", this._getCurrentUser());
 
-      // Upload to server
-      const response = await fetch(`${this.apiBaseUrl}/api/datasets/upload`, {
+      // FIXED: apiBaseUrl already includes /api, so we don't add it again
+      const response = await fetch(`${this.apiBaseUrl}/datasets/upload`, {
         method: "POST",
         body: formData,
       });
@@ -107,23 +104,18 @@ export class ServerStorageProvider {
 
       const { dataset } = await response.json();
 
-      // Store the hash-to-id mapping for deduplication
       this._hashToId.set(hash, dataset.id);
-
-      // Store metadata
       this._metadata.set(dataset.id, {
         ...dataset,
         metadata: {
           ...dataset.metadata,
-          hash, // Add the hash we calculated
+          hash,
         },
       });
 
       console.log(
         `✅ ServerStorageProvider: File uploaded with ID ${dataset.id}`
       );
-
-      // Return the dataset ID - this becomes the "cache key" in Dataset objects
       return dataset.id;
     } catch (error) {
       console.error("❌ ServerStorageProvider: Upload failed:", error);
@@ -141,9 +133,9 @@ export class ServerStorageProvider {
     console.log(`📡 ServerStorageProvider: Downloading file ${cacheKey}`);
 
     try {
-      // Download from server
+      // FIXED: apiBaseUrl already includes /api
       const response = await fetch(
-        `${this.apiBaseUrl}/api/datasets/${cacheKey}/download`
+        `${this.apiBaseUrl}/datasets/${cacheKey}/download`
       );
 
       if (!response.ok) {
@@ -154,14 +146,10 @@ export class ServerStorageProvider {
         throw new Error(`Download failed: ${response.statusText}`);
       }
 
-      // Get the file data as ArrayBuffer
       const arrayBuffer = await response.arrayBuffer();
-
-      // Get metadata to reconstruct the filename
       const metadata = this._metadata.get(cacheKey);
       const filename = metadata?.filename || "downloaded.vtp";
 
-      // Convert to File object
       const blob = new Blob([arrayBuffer]);
       const file = new File([blob], filename, {
         type: "application/octet-stream",
@@ -171,7 +159,6 @@ export class ServerStorageProvider {
       });
 
       console.log(`✅ ServerStorageProvider: File downloaded: "${filename}"`);
-
       return file;
     } catch (error) {
       console.error("❌ ServerStorageProvider: Download failed:", error);
@@ -187,10 +174,10 @@ export class ServerStorageProvider {
    */
   async hasFile(cacheKey) {
     try {
-      const response = await fetch(
-        `${this.apiBaseUrl}/api/datasets/${cacheKey}`,
-        { method: "HEAD" } // HEAD request just checks if resource exists
-      );
+      // FIXED: apiBaseUrl already includes /api
+      const response = await fetch(`${this.apiBaseUrl}/datasets/${cacheKey}`, {
+        method: "HEAD",
+      });
       return response.ok;
     } catch (error) {
       console.error(
@@ -260,8 +247,9 @@ export class ServerStorageProvider {
     console.log("📡 ServerStorageProvider: Listing datasets from server");
 
     try {
+      // FIXED: Server route is /api/datasets/session/:sessionId, not /sessions/...
       const response = await fetch(
-        `${this.apiBaseUrl}/sessions/${this.sessionId}/datasets`,
+        `${this.apiBaseUrl}/datasets/session/${this.sessionId}`,
         {
           method: "GET",
           headers: {
@@ -276,7 +264,10 @@ export class ServerStorageProvider {
         );
       }
 
-      const datasets = await response.json();
+      // Server returns { datasets: [...] }
+      const data = await response.json();
+      const datasets = data.datasets || [];
+
       console.log(`   ✓ Retrieved ${datasets.length} datasets from server`);
 
       return datasets;

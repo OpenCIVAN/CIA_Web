@@ -103,12 +103,45 @@ class InstanceManager {
 
           console.log(`   ✅ Callbacks notified`);
         } else if (change.action === "update") {
-          console.log(`🔄 Remote instance updated: ${instanceId}`);
+          console.log(`📄 Remote instance updated: ${instanceId}`);
+
+          // EXISTING: Notify UI callbacks about the update
           this._notifySyncCallbacks({
             action: "update",
             instanceId,
             instance,
           });
+
+          // NEW: Apply state changes if this is a remote instance we're rendering
+          const localInstance = workspaceManager.getInstance(instanceId);
+
+          // Only proceed if we have a local rendering of this instance
+          if (
+            localInstance &&
+            localInstance.instanceData &&
+            instance.typeSpecificState
+          ) {
+            // Check if this update is from another user (not echoing our own change back)
+            const isOurUpdate =
+              instance.userId === getUserId() &&
+              instance.typeSpecificState.updatedBy === "local" &&
+              Date.now() - instance.typeSpecificState.lastUpdated < 100;
+
+            if (!isOurUpdate && localInstance.instanceData.stateAdapter) {
+              // Apply the remote state through the adapter
+              localInstance.instanceData.stateAdapter.applyRemoteState(
+                instance.typeSpecificState,
+                (remoteState) =>
+                  localInstance.handler.applySharedState(
+                    localInstance.instanceData,
+                    remoteState,
+                    instance.userId
+                  )
+              );
+
+              console.log(`📥 Applied remote state to ${instanceId}`);
+            }
+          }
         } else if (change.action === "delete") {
           console.log(`🗑️ Remote instance deleted: ${instanceId}`);
 
@@ -223,7 +256,7 @@ class InstanceManager {
       datasetId,
     });
 
-    // Sync to Y.js so other users can see it
+    // CRITICAL: Sync to Y.js so other users can see it!
     this._syncToYjs(instanceId, datasetId);
 
     return instanceId;
@@ -292,6 +325,13 @@ class InstanceManager {
    */
   deleteInstance(instanceId) {
     console.log(`🗑️ Deleting instance: ${instanceId}`);
+
+    // NEW: Unsubscribe from state updates
+    if (this._stateSubscriptions && this._stateSubscriptions.has(instanceId)) {
+      const unsubscribe = this._stateSubscriptions.get(instanceId);
+      unsubscribe();
+      this._stateSubscriptions.delete(instanceId);
+    }
 
     this._deleteLocalInstance(instanceId);
 
@@ -460,19 +500,35 @@ class InstanceManager {
    * INTERNAL: Sync instance metadata to Y.js
    */
   _syncToYjs(instanceId, datasetId) {
-    yInstances.set(instanceId, {
-      id: instanceId,
-      userId: getUserId(),
-      userName: getUserName(),
-      datasetId: datasetId || null,
-      type: "vtk",
-      visibility: "shared",
-      createdAt: Date.now(),
-      lastModified: Date.now(),
-      typeSpecificState: null, // Will be populated by requestSync()
-    });
+    // Access yInstances through global to ensure it's initialized
+    const yInstances = window.CIA?.yInstances;
 
-    console.log(`📤 Instance synced to Y.js: ${instanceId}`);
+    if (!yInstances) {
+      console.error("❌ Cannot sync instance: Y.js not initialized yet");
+      console.error("   This should not happen if Phase 1 completed correctly");
+      return;
+    }
+    try {
+      yInstances.set(instanceId, {
+        id: instanceId,
+        userId: getUserId(),
+        userName: getUserName(),
+        datasetId: datasetId || null,
+        type: "vtk",
+        visibility: "shared",
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+        typeSpecificState: null, // Will be populated by requestSync()
+      });
+
+      console.log(`📤 Instance synced to Y.js: ${instanceId}`);
+      console.log(`   Owner: ${getUserName()} (${getUserId()})`);
+      console.log(`   Dataset: ${datasetId || "none"}`);
+    } catch (error) {
+      console.error("❌ Failed to sync instance to Y.js:", error);
+      console.error("   Instance ID:", instanceId);
+      console.error("   Dataset ID:", datasetId);
+    }
   }
 
   /**

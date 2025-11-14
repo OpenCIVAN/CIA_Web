@@ -1,4 +1,5 @@
 // src/core/data/managers/DatasetManager.js
+import { EventEmitter } from "events"; // Node.js events
 
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
@@ -12,13 +13,18 @@ import { generateDatasetId } from "@Utils/idGenerator.js";
  * It knows NOTHING about specific file formats (VTK, JSON, etc).
  * Format-specific parsing is delegated to instance type handlers.
  */
-export class DatasetManager {
+export class DatasetManager extends EventEmitter {
   constructor(storageProvider, config = {}) {
+    super();
+
     this.storageProvider = storageProvider;
     this._datasets = new Map();
+    this.parsedDataCache = new Map();
     this._dbName = config.dbName || "CIA_Datasets";
     this._dbVersion = config.dbVersion || 1;
     this._db = null;
+
+    console.log("📦 DatasetManager: Initializing...");
 
     this._listeners = {
       datasetAdded: [],
@@ -133,6 +139,74 @@ export class DatasetManager {
       request.onerror = () =>
         reject(new Error("Failed to load existing datasets"));
     });
+  }
+
+  /**
+   * Sync datasets from the server's session storage
+   * Called during Phase 1 initialization to populate from server
+   */
+  async syncDatasetsFromServer() {
+    console.log("📡 DatasetManager: Syncing datasets from server...");
+
+    // Check if we're using server storage
+    if (!this.storageProvider || !this.storageProvider.listDatasets) {
+      console.log("   ℹ️ Not using server storage, skipping sync");
+      return;
+    }
+
+    try {
+      const serverDatasets = await this.storageProvider.listDatasets();
+
+      console.log(`   Found ${serverDatasets.length} dataset(s) on server`);
+
+      let syncedCount = 0;
+      let skippedCount = 0;
+
+      for (const serverDataset of serverDatasets) {
+        const existingDataset = this.getDataset(serverDataset.id);
+
+        if (existingDataset) {
+          skippedCount++;
+          continue;
+        }
+
+        console.log(
+          `   📥 Creating dataset from server: ${serverDataset.filename}`
+        );
+
+        const dataset = new Dataset({
+          id: serverDataset.id,
+          filename: serverDataset.filename,
+          fileType: serverDataset.file_type,
+          fileSize: serverDataset.file_size,
+          uploadedBy: serverDataset.uploaded_by,
+          uploadedAt: serverDataset.uploaded_at,
+          cacheKey: serverDataset.id,
+          fileStatus: "on-server",
+          metadata: serverDataset.metadata || {},
+        });
+
+        this._datasets.set(dataset.id, dataset);
+        this._emit("datasetAdded", dataset);
+
+        syncedCount++;
+      }
+
+      console.log(
+        `   ✅ Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
+      );
+
+      this.syncAllDatasetsToYjs();
+
+      return {
+        total: serverDatasets.length,
+        synced: syncedCount,
+        skipped: skippedCount,
+      };
+    } catch (error) {
+      console.error("❌ DatasetManager: Server sync failed:", error);
+      throw error;
+    }
   }
 
   /**

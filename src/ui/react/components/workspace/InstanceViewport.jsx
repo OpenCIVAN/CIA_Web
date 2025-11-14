@@ -189,7 +189,7 @@ export function InstanceViewport({
                 console.log(`📊 Loading dataset ${dataset.filename} into instance`);
 
                 // Load the data through the handler
-                await registry.loadData(instance, dataset, null);
+                await registry.loadData(instance.instanceData, dataset, null);
 
                 // Update header with stats
                 const newHeaderInfo = workspaceManager.getInstanceHeaderInfo(actualInstanceId);

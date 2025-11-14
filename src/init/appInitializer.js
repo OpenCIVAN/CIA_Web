@@ -1,6 +1,10 @@
 // src/init/appInitializer.js
 // Application initialization - three-phase startup
-
+import {
+  yInstances,
+  yDatasets,
+  yAnnotations,
+} from "@Collaboration/yjs/yjsSetup.js";
 import { initializeStorageProvider } from "@Core/config/storage.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
@@ -124,6 +128,12 @@ export async function initializePhase1() {
     console.error("❌ Phase 1 initialization failed:", error);
     throw error;
   }
+
+  // Make Y.js maps globally accessible
+  window.CIA = window.CIA || {};
+  window.CIA.yInstances = yInstances;
+  window.CIA.yDatasets = yDatasets;
+  window.CIA.yAnnotations = yAnnotations;
 }
 
 /**

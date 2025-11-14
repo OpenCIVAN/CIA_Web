@@ -2,6 +2,8 @@
 // Complete VTK handler implementation with proper interface
 
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
+import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
+
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
 import vtkRenderWindowInteractor from "@kitware/vtk.js/Rendering/Core/RenderWindowInteractor";
@@ -127,11 +129,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       `🎨 VTK Handler: Initializing instance ${instanceId} (lazy mode)`
     );
 
+    // ✨ ADD THESE TWO LINES - Create the state adapter
+    const stateAdapter = new ViewStateAdapter(instanceId, "vtk");
+    console.log(`📡 Created stateAdapter for ${instanceId}`);
+
     // Create instance data structure WITHOUT initializing VTK yet
     const instanceData = {
       instanceId,
       container: containerElement,
       datasetId,
+
+      // Add the state adapter to instance data
+      stateAdapter, // NEW!
 
       // VTK objects will be created lazily
       sceneObjects: null,
@@ -189,6 +198,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const { instanceId } = instanceData;
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
+
+    // Clean up the state adapter
+    if (instanceData.stateAdapter) {
+      instanceData.stateAdapter.destroy();
+    }
 
     // Only clean up if VTK was initialized
     if (instanceData.initialized && instanceData.sceneObjects) {
@@ -393,6 +407,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Initialize VTK pipeline if this is the first data load
     if (!instanceData.sceneObjects) {
       console.log(`  🎨 First data load - initializing VTK pipeline...`);
+
+      // DIAGNOSTIC: Check if stateAdapter exists before initializing pipeline
+      if (!instanceData.stateAdapter) {
+        console.error(
+          "❌ CRITICAL: stateAdapter missing before pipeline init!"
+        );
+        console.log("instanceData keys:", Object.keys(instanceData));
+      }
+
       const pipelineObjects = this._initializeVTKPipeline(instanceData);
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
@@ -770,36 +793,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   }
 
   /**
-   * Get current camera state
-   */
-  async getCameraState(instanceData) {
-    if (!instanceData?.initialized) return null;
-
-    const camera = instanceData.sceneObjects.camera;
-    return {
-      position: camera.getPosition(),
-      focalPoint: camera.getFocalPoint(),
-      viewUp: camera.getViewUp(),
-    };
-  }
-
-  /**
    * Get current VTK state for synchronization
    */
   async getSharedState(instanceData) {
-    // Don't sync while applying remote state (prevents loops)
-    if (this._isApplyingRemoteState) {
-      return null;
-    }
+    return instanceData.stateAdapter?.getState() || null;
+  }
 
-    // Only sync if VTK pipeline is initialized
-    if (!instanceData?.sceneObjects) {
-      return null;
-    }
+  /**
+   * Helper to extract current VTK state
+   * This replaces your getSharedState() method's internal logic
+   */
+  _getCurrentVTKState(instanceData) {
+    if (!instanceData.sceneObjects) return {};
 
     const state = {};
 
-    // Extract camera state
+    // Camera state
     const camera = instanceData.sceneObjects.camera;
     if (camera) {
       state.camera = {
@@ -807,27 +816,21 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         focalPoint: camera.getFocalPoint(),
         viewUp: camera.getViewUp(),
         parallelScale: camera.getParallelScale(),
+        // 🆕 ADD THESE for proper zoom synchronization:
+        clippingRange: camera.getClippingRange(),
+        viewAngle: camera.getViewAngle(),
       };
     }
 
-    // Extract actor properties (opacity, color, etc.)
+    // Actor/visualization properties
     const actor = instanceData.sceneObjects.actor;
     if (actor) {
       const property = actor.getProperty();
       state.visualization = {
         opacity: property.getOpacity(),
-        representation: property.getRepresentation(), // wireframe vs surface
-        // Add more as you implement them:
-        // colorMap: this._currentColorMap,
-        // pointSize: property.getPointSize(),
+        representation: property.getRepresentation(),
       };
     }
-
-    // Extract widget states (when you implement widgets)
-    // state.widgets = this._getWidgetStates(instanceData);
-
-    // Extract filter states (when you implement filters)
-    // state.filters = this._getFilterStates(instanceData);
 
     return state;
   }
@@ -859,6 +862,17 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         if (state.camera.parallelScale !== undefined) {
           camera.setParallelScale(state.camera.parallelScale);
         }
+        // 🆕 ADD THESE zoom-related properties:
+        if (state.camera.clippingRange) {
+          camera.setClippingRange(...state.camera.clippingRange);
+        }
+
+        if (state.camera.viewAngle !== undefined) {
+          camera.setViewAngle(state.camera.viewAngle);
+        }
+
+        // Reset clipping range for the new camera position
+        instanceData.sceneObjects.renderer.resetCameraClippingRange();
       }
 
       // Apply visualization properties
@@ -1033,6 +1047,53 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     // Get the camera reference from the renderer
     const camera = renderer.getActiveCamera();
+
+    // Listen for camera modifications and publish through adapter
+    camera.onModified(() => {
+      // Only publish if we're not applying remote state
+      if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
+        const cameraState = {
+          position: camera.getPosition(),
+          focalPoint: camera.getFocalPoint(),
+          viewUp: camera.getViewUp(),
+          parallelScale: camera.getParallelScale(),
+          // 🆕 ADD THESE for proper zoom synchronization:
+          clippingRange: camera.getClippingRange(),
+          viewAngle: camera.getViewAngle(),
+        };
+
+        // Publish through adapter instead of directly to Y.js
+        instanceData.stateAdapter.updateState(
+          {
+            camera: cameraState,
+          },
+          "local"
+        );
+      } else if (!instanceData.stateAdapter) {
+        // This helps us debug if something went wrong
+        console.warn(
+          "⚠️ Camera modified but stateAdapter is missing - state not synced"
+        );
+      }
+    });
+
+    // When user stops interacting, publish the final state
+    const publishStateAfterInteraction = () => {
+      // CRITICAL: Add the same defensive checks here
+      if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
+        // Get complete state and publish it
+        const state = this._getCurrentVTKState(instanceData);
+        instanceData.stateAdapter.updateState(state, "local");
+      } else if (!instanceData.stateAdapter) {
+        // This should help us understand if something's still wrong
+        console.warn(
+          "⚠️ Interaction ended but stateAdapter is missing - state not synced"
+        );
+      }
+    };
+
+    // Bind to interaction end events
+    interactor.onEndAnimation(publishStateAfterInteraction);
 
     // Create mapper (converts data to renderable primitives)
     const mapper = vtkMapper.newInstance();

@@ -124,6 +124,32 @@ class WorkspaceManager {
 
       // Store the instance
       this.instances.set(instanceId, instance);
+      // 🆕 NEW: Subscribe to state changes from this instance's adapter
+      // This ensures camera movements get synced to Y.js for other users to see
+      if (instanceData.stateAdapter) {
+        console.log(
+          `📡 WorkspaceManager: Subscribing to state changes for ${instanceId}`
+        );
+        const unsubscribe = instanceData.stateAdapter.observe((stateUpdate) => {
+          // Update Y.js with the new state so other users can see it
+          const yInstance = window.CIA?.yInstances?.get(instanceId);
+          if (yInstance && yInstance.userId === this._getCurrentUserId()) {
+            window.CIA.yInstances.set(instanceId, {
+              ...yInstance,
+              typeSpecificState: stateUpdate.fullState,
+              lastModified: Date.now(),
+            });
+            console.log(`📤 Published state update for ${instanceId}`);
+          }
+        });
+        // Store the unsubscribe function for cleanup
+        if (!this._stateSubscriptions) {
+          this._stateSubscriptions = new Map();
+        }
+        this._stateSubscriptions.set(instanceId, unsubscribe);
+      }
+
+      console.log(`✅ WorkspaceManager: Instance ${instanceId} created`);
 
       // Set as active if it's the first instance
       if (!this.activeInstanceId) {
@@ -145,6 +171,11 @@ class WorkspaceManager {
       );
       throw error;
     }
+  }
+
+  _getCurrentUserId() {
+    // Import at top: import { getUserId } from '@Collaboration/presence/userManagement.js';
+    return window.CIA?.sessionManager?.userId || getUserId();
   }
 
   /**

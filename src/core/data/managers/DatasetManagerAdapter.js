@@ -225,6 +225,101 @@ export class DatasetManagerAdapter {
       return false;
     }
   }
+
+  // In DatasetManager.js
+
+  /**
+   * Sync datasets from the server's session storage
+   *
+   * This method fetches the list of datasets that exist on the server for this session
+   * and creates Dataset objects for any that we don't already have locally. This is
+   * important when:
+   * 1. A user joins a session where datasets were already uploaded
+   * 2. After a page refresh, to restore access to previously uploaded files
+   * 3. When another user uploads a file to the shared session
+   *
+   * The server becomes our source of truth for what datasets exist, while Y.js handles
+   * the real-time synchronization of dataset metadata and state between users.
+   */
+  async syncDatasetsFromServer() {
+    console.log("📡 DatasetManager: Syncing datasets from server...");
+
+    // Check if we're using server storage
+    if (!this.storageProvider || !this.storageProvider.listDatasets) {
+      console.log("   ℹ️ Not using server storage, skipping sync");
+      return;
+    }
+
+    try {
+      // Get the list of datasets from the server
+      const serverDatasets = await this.storageProvider.listDatasets();
+
+      console.log(`   Found ${serverDatasets.length} dataset(s) on server`);
+
+      let syncedCount = 0;
+      let skippedCount = 0;
+
+      for (const serverDataset of serverDatasets) {
+        // Check if we already have this dataset
+        const existingDataset = this.getDataset(serverDataset.id);
+
+        if (existingDataset) {
+          // We already have it, skip
+          skippedCount++;
+          continue;
+        }
+
+        console.log(
+          `   📥 Creating dataset from server: ${serverDataset.filename}`
+        );
+
+        // Create a Dataset object from the server metadata
+        // The file itself stays on the server until someone actually needs to view it
+        const dataset = new Dataset({
+          id: serverDataset.id,
+          filename: serverDataset.filename,
+          fileType: serverDataset.file_type,
+          fileSize: serverDataset.file_size || 0,
+          uploadedBy: serverDataset.uploaded_by,
+          uploadedAt: serverDataset.uploaded_at || Date.now(),
+          publicPath: serverDataset.public_path || null,
+
+          // Store the server's storage key so we can fetch the file later if needed
+          cacheKey: serverDataset.id,
+
+          // Mark that the file is on the server, not in local cache
+          fileStatus: "on-server",
+
+          // Copy over any metadata the server has
+          metadata: serverDataset.metadata || {},
+        });
+
+        // Add to our datasets map
+        this.datasets.set(dataset.id, dataset);
+
+        // Emit event so UI can update
+        this._emit("datasetAdded", dataset);
+
+        syncedCount++;
+      }
+
+      console.log(
+        `   ✅ Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
+      );
+
+      // After syncing from server, sync the metadata to Y.js so other users see it
+      this.syncAllDatasetsToYjs();
+
+      return {
+        total: serverDatasets.length,
+        synced: syncedCount,
+        skipped: skippedCount,
+      };
+    } catch (error) {
+      console.error("❌ DatasetManager: Server sync failed:", error);
+      throw error;
+    }
+  }
 }
 
 /**

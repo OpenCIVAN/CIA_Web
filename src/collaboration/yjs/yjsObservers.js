@@ -10,6 +10,7 @@ import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { datasetManager } from "@Init/appInitializer.js";
+import { Dataset } from "@Core/data/models/Dataset.js";
 
 // ----------------------------------------------------------------------------
 // System Readiness
@@ -170,46 +171,96 @@ async function processRemoteDataset(datasetId, metadata) {
 // Watches for remote dataset changes
 // ----------------------------------------------------------------------------
 export function initializeDatasetObserver() {
+  // ← No parameter!
   console.log("🔍 Setting up dataset observer");
+
   yDatasets.observe((event) => {
-    console.log(
-      "🔍 Dataset observer fired",
-      event.changes.keys.size,
-      "changes"
-    );
-    const changes = [];
-    event.changes.keys.forEach((change, key) => {
-      changes.push({
-        action: change.action,
-        datasetId: key,
-        data: yDatasets.get(key),
-      });
-    });
+    console.log(`🔍 Dataset observer fired ${event.changes.keys.size} changes`);
 
-    // Process changes asynchronously
-    setTimeout(async () => {
-      for (const { action, datasetId, data } of changes) {
-        if (action === "add" || action === "update") {
-          const remoteDataset = data;
+    event.changes.keys.forEach((change, datasetId) => {
+      if (change.action === "add") {
+        const remoteDataset = yDatasets.get(datasetId);
 
-          if (!remoteDataset) {
-            console.warn("⚠️  Received null dataset data");
-            continue;
+        if (!remoteDataset) {
+          console.log(`   ⚠️ Dataset ${datasetId} not found in Y.js map`);
+          return;
+        }
+
+        console.log(`📥 Remote dataset received: ${remoteDataset.filename}`);
+        console.log(`   Uploaded by: ${remoteDataset.uploadedBy}`);
+
+        // Get current user ID - this is a VALUE not a function
+        const currentUserId = window.CIA?.sessionManager?.userId;
+        console.log(`   My ID: ${currentUserId}`);
+        console.log(
+          `   Am I the uploader? ${remoteDataset.uploadedBy === currentUserId}`
+        );
+
+        // FIX 1: Remove the parentheses - currentUserId is a value, not a function!
+        if (remoteDataset.uploadedBy === currentUserId) {
+          // ← No parentheses!
+          console.log(`   ⏭️ Skipping own dataset`);
+          return;
+        }
+
+        // FIX 2: Use the imported datasetManager (no parameter shadowing)
+        const existing = datasetManager.getDataset(datasetId);
+        if (existing) {
+          console.log(`   ✓ Already have dataset in DatasetManager, skipping`);
+          return;
+        }
+
+        console.log(`   📥 Creating dataset from remote metadata`);
+
+        // Create dataset using the imported Dataset class
+        const dataset = new Dataset({
+          id: datasetId,
+          filename: remoteDataset.filename,
+          fileType: remoteDataset.fileType,
+          fileSize: remoteDataset.fileSize || 0,
+          uploadedBy: remoteDataset.uploadedBy,
+          uploadedAt: remoteDataset.uploadedAt || Date.now(),
+          publicPath: remoteDataset.publicPath,
+          cacheKey: remoteDataset.cacheKey,
+          fileStatus: remoteDataset.publicPath ? "on-server" : "needs-upload",
+          metadata: remoteDataset.metadata || {},
+        });
+
+        // Add to DatasetManager using the imported datasetManager
+        datasetManager._datasets.set(datasetId, dataset);
+          // Persist to IndexedDB so it survives page reload
+        datasetManager._persistDataset(dataset);
+        datasetManager._emit("datasetAdded", dataset);
+      } else if (change.action === "update") {
+        console.log(`📝 Remote dataset updated: ${datasetId}`);
+
+        // Use the imported datasetManager
+        const dataset = datasetManager.getDataset(datasetId);
+        if (dataset) {
+          const remoteDataset = yDatasets.get(datasetId);
+
+          if (remoteDataset && remoteDataset.metadata) {
+            dataset.metadata = {
+              ...dataset.metadata,
+              ...remoteDataset.metadata,
+            };
           }
 
-          // Call handleRemoteDataset instead of processing directly
-          console.log("📥 Remote dataset received:", remoteDataset.name);
-          await handleRemoteDataset(datasetId, remoteDataset);
+          datasetManager._emit("datasetUpdated", dataset);
         }
+      } else if (change.action === "delete") {
+        console.log(`📥 Remote dataset removed: ${datasetId}`);
 
-        if (action === "delete") {
-          console.log(`📥 Remote dataset removed: ${datasetId}`);
-          useDatasetStore.getState().removeDataset(datasetId);
+        // Use the imported datasetManager
+        const dataset = datasetManager._datasets.get(datasetId);
+        if (dataset) {
+          datasetManager._datasets.delete(datasetId);
+          datasetManager._emit("datasetRemoved", datasetId);
         }
       }
+    });
 
-      console.log("📥 Observer processing complete");
-    }, 0);
+    console.log(`📥 Observer processing complete`);
   });
 
   console.log("✅ Dataset observer initialized");
