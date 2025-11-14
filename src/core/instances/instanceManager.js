@@ -14,6 +14,7 @@ class InstanceManager {
     this._syncCallbacks = [];
     this._localInstanceIds = new Set();
     this._initializationComplete = false; // NEW: Track if we've started observing
+    this._stateSubscriptions = new Map();
   }
 
   /**
@@ -473,19 +474,6 @@ class InstanceManager {
   }
 
   /**
-   * Listen for remote instance changes
-   *
-   * This is how the UI (WorkspaceGrid) learns about instances
-   * created by other users.
-   */
-  onRemoteInstanceChange(callback) {
-    this._syncCallbacks.push(callback);
-    return () => {
-      this._syncCallbacks = this._syncCallbacks.filter((cb) => cb !== callback);
-    };
-  }
-
-  /**
    * INTERNAL: Delete an instance locally only
    */
   _deleteLocalInstance(instanceId) {
@@ -564,39 +552,46 @@ class InstanceManager {
   getInstancesForDataset(datasetId) {
     const instanceIds = [];
 
-    // Check local instances (might be undefined or not initialized yet)
-    if (this.localInstances instanceof Map) {
-      for (const [instanceId, instance] of this.localInstances.entries()) {
-        if (instance.datasetId === datasetId) {
+    // Get all local instances from workspaceManager (the source of truth)
+    const allInstanceIds = workspaceManager.getAllInstanceIds();
+
+    allInstanceIds.forEach((instanceId) => {
+      const instance = workspaceManager.getInstance(instanceId);
+      if (instance && instance.datasetId === datasetId) {
+        instanceIds.push(instanceId);
+      }
+    });
+
+    // Also check Y.js for remote instances that exist but aren't rendered locally
+    // This can happen if a remote user is viewing a dataset we haven't opened yet
+    const currentUserId = getUserId();
+
+    if (typeof yInstances !== "undefined") {
+      yInstances.forEach((yInstance, instanceId) => {
+        // Skip our own instances (already counted from workspaceManager)
+        if (yInstance.userId === currentUserId) {
+          return;
+        }
+
+        // Skip if already in our list
+        if (instanceIds.includes(instanceId)) {
+          return;
+        }
+
+        // Count shared remote instances viewing this dataset
+        if (
+          yInstance.datasetId === datasetId &&
+          yInstance.visibility === "shared"
+        ) {
           instanceIds.push(instanceId);
         }
-      }
+      });
     }
 
-    // Also check remote instances (from Y.js) if they exist
-    if (this.remoteInstances instanceof Map) {
-      for (const [instanceId, instance] of this.remoteInstances.entries()) {
-        if (instance.datasetId === datasetId) {
-          instanceIds.push(instanceId);
-        }
-      }
-    }
-
+    console.log(
+      `📊 Found ${instanceIds.length} instance(s) viewing dataset ${datasetId}`
+    );
     return instanceIds;
-  }
-
-  /**
-   * Get the count of instances viewing a specific dataset
-   *
-   * This is used in the UI to show how many viewports are currently
-   * displaying each dataset. It's a lighter-weight query than getting
-   * all the instance IDs when you just need the count.
-   *
-   * @param {string} datasetId - The dataset ID
-   * @returns {number} - Count of instances viewing this dataset
-   */
-  getInstanceCountForDataset(datasetId) {
-    return this.getInstancesForDataset(datasetId).length;
   }
 
   /**
@@ -615,15 +610,23 @@ class InstanceManager {
       `🗑️ Deleting ${instanceIds.length} instance(s) for dataset ${datasetId}`
     );
 
+    let deletedCount = 0;
+
     for (const instanceId of instanceIds) {
       try {
-        this.deleteInstance(instanceId);
+        // Only delete local instances (ones we're rendering)
+        // Remote instances will be handled by their owners
+        if (this._localInstanceIds.has(instanceId)) {
+          this.deleteInstance(instanceId);
+          deletedCount++;
+        }
       } catch (error) {
         console.warn(`⚠️ Failed to delete instance ${instanceId}:`, error);
       }
     }
 
-    return instanceIds.length;
+    console.log(`✅ Deleted ${deletedCount} local instance(s)`);
+    return deletedCount;
   }
 }
 

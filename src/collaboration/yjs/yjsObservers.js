@@ -177,7 +177,7 @@ export function initializeDatasetObserver() {
   yDatasets.observe((event) => {
     console.log(`🔍 Dataset observer fired ${event.changes.keys.size} changes`);
 
-    event.changes.keys.forEach((change, datasetId) => {
+    event.changes.keys.forEach(async (change, datasetId) => {
       if (change.action === "add") {
         const remoteDataset = yDatasets.get(datasetId);
 
@@ -229,7 +229,7 @@ export function initializeDatasetObserver() {
         // Add to DatasetManager using the imported datasetManager
         datasetManager._datasets.set(datasetId, dataset);
           // Persist to IndexedDB so it survives page reload
-        datasetManager._persistDataset(dataset);
+        await datasetManager._persistDataset(dataset);
         datasetManager._emit("datasetAdded", dataset);
       } else if (change.action === "update") {
         console.log(`📝 Remote dataset updated: ${datasetId}`);

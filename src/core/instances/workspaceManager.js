@@ -4,13 +4,14 @@
 
 import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 
 /**
  * WorkspaceManager
  *
  * TRANSFORMED FROM VTK-SPECIFIC TO TYPE-AGNOSTIC
  *
- * This manager no longer knows about VTK, sceneManager, or any specific
+ * This manager no longer knows about VTK or any specific
  * visualization technology. Instead, it works through the handler interface
  * to create and manage instances of any registered type.
  *
@@ -174,7 +175,6 @@ class WorkspaceManager {
   }
 
   _getCurrentUserId() {
-    // Import at top: import { getUserId } from '@Collaboration/presence/userManagement.js';
     return window.CIA?.sessionManager?.userId || getUserId();
   }
 

@@ -1,92 +1,75 @@
-// src/ui/react/hooks/useVTKReduction.js
-// Custom hook for dimensionality reduction state and controls
-// Bridges React UI with core reduction algorithms
+// src/core/instances/types/vtk/hooks/useVTKReduction.js
 
 import { useState, useEffect, useCallback } from "react";
-
-import { toggleDimensionalityReduction } from "@Core/reductionController.js";
-import { reductionState } from "@Core/reductionState.js";
-import { getSceneObjects } from "@VTK/scene/sceneManager.js";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 
 /**
- * Hook to control dimensionality reduction (PCA, t-SNE, UMAP)
- * Returns: {
- *   method, setMethod,
- *   components, setComponents,
- *   isReductionApplied,
- *   toggleReduction,
- *   canApplyReduction
- * }
+ * Hook to control dimensionality reduction for a specific VTK instance
+ *
+ * @param {string} instanceId - The instance to control
+ * @returns {Object} Reduction controls
  */
-export function useVTKReduction() {
-  const [method, setMethodState] = useState(reductionState.getMethod());
-  const [components, setComponentsState] = useState(
-    reductionState.getComponents()
-  );
-  const [isReductionApplied, setIsReductionApplied] = useState(
-    reductionState.getIsApplied()
-  );
+export function useVTKReduction(instanceId) {
+  const [method, setMethod] = useState("pca");
+  const [components, setComponents] = useState(3);
+  const [isReductionApplied, setIsReductionApplied] = useState(false);
   const [canApplyReduction, setCanApplyReduction] = useState(false);
 
-  // Sync with global state
-  useEffect(() => {
-    const handleStateChange = () => {
-      setMethodState(reductionState.getMethod());
-      setComponentsState(reductionState.getComponents());
-      setIsReductionApplied(reductionState.getIsApplied());
-    };
-
-    reductionState.onChange(handleStateChange);
-
-    return () => {
-      reductionState.offChange(handleStateChange);
-    };
-  }, []);
-
-  // Check if reduction can be applied (need loaded file)
+  // Check if this instance has data loaded
   useEffect(() => {
     const checkReductionReady = () => {
-      const sceneObjects = getSceneObjects();
-      const hasData =
-        sceneObjects && sceneObjects.actor && sceneObjects.actor.getMapper();
-      setCanApplyReduction(!!hasData);
+      const instance = workspaceManager.getInstance(instanceId);
+
+      if (!instance) {
+        setCanApplyReduction(false);
+        return;
+      }
+
+      // Check if instance has data
+      const hasData = instance.instanceData?.hasData || false;
+      setCanApplyReduction(hasData);
     };
 
-    // Check immediately
+    // Initial check
     checkReductionReady();
 
-    // Check periodically (in case file loads)
-    const interval = setInterval(checkReductionReady, 1000);
+    // Subscribe to workspace changes
+    workspaceManager.addListener(checkReductionReady);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      workspaceManager.removeListener(checkReductionReady);
+    };
+  }, [instanceId]);
 
-  // Update global state when user changes settings
-  const setMethod = useCallback((newMethod) => {
-    reductionState.setMethod(newMethod);
-  }, []);
-
-  const setComponents = useCallback((newComponents) => {
-    reductionState.setComponents(newComponents);
-  }, []);
-
-  // Toggle reduction with current settings
+  // Toggle reduction
   const toggleReduction = useCallback(async () => {
     if (!canApplyReduction) {
       console.warn("⚠️ Cannot apply reduction: No data loaded");
       return false;
     }
 
+    const instance = workspaceManager.getInstance(instanceId);
+    if (!instance) return false;
+
     try {
-      console.log(`🔄 Toggling reduction: ${method}, ${components} components`);
-      await toggleDimensionalityReduction(false); // false = not remote
-      // State will be updated by reductionController
-      return true;
+      // Call the handler's reduction feature
+      // This is handler-specific, but we're in VTK hooks so that's OK
+      const success = await instance.handler.toggleReduction(
+        instance.instanceData,
+        method,
+        components
+      );
+
+      if (success) {
+        setIsReductionApplied(!isReductionApplied);
+      }
+
+      return success;
     } catch (error) {
       console.error("❌ Reduction failed:", error);
       return false;
     }
-  }, [method, components, canApplyReduction]);
+  }, [instanceId, method, components, canApplyReduction, isReductionApplied]);
 
   return {
     method,
