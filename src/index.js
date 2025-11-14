@@ -1,275 +1,158 @@
-// ----------------------------------------------------------------------------
-// Application Initialization
-// ----------------------------------------------------------------------------
+// src/index.js
+// Foundation layer - handles browser compatibility and Phase 1 initialization
+// Then hands control to Bootstrap for gate-keeping and user setup
 
-// For streamlined VR development install the WebXR emulator extension
-// https://github.com/MozillaReality/WebXR-emulator-extension
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { initializePhase1 } from "@Init/appInitializer.js";
+import { Bootstrap } from "@UI/react/Bootstrap.jsx";
 
-import { voiceChat } from "./collaboration/voiceChat.js";
-import { setupUserName } from "./collaboration/userManagement.js";
-import { modeManager } from "./core/modeManager.js";
-import { vrControllers } from "./vr/vrControllers.js";
-import { vrAvatarSystem } from "./vr/vrAvatars.js";
-import { vrSpatialUI } from "./vr/vrSpatialUI.js";
+// Import global styles
+import "@UI/react/styles/global.css";
 
-// Import logging from the new hook
-import {
-  logInfo,
-  logSuccess,
-  logProgress,
-} from "./ui/react/hooks/useLogging.js";
-
-import {
-  initializeTensorFlow,
-  logMemoryUsage,
-  cleanupTensors,
-} from "./utils/tensorflowSetup.js";
-
-import { setupFileHandler } from "./core/fileHandler.js";
-
-// Import reduction state manager (not the hook!)
-import {
-  getReductionMethod,
-  getReductionComponents,
-  setReductionMethod,
-  setReductionComponents,
-} from "./core/reductionState.js";
-
-import { textChat } from "./collaboration/textChat.js";
-import { initializeCursorSystem } from "./collaboration/cursors.js";
-import { setupActorSync } from "./collaboration/actorSync.js";
-import { setupReductionSync } from "./collaboration/reductionSync.js";
-import { toggleDimensionalityReduction } from "./core/reductionController.js";
-import { setupViewportInteraction } from "./ui/viewportInteraction.js";
-import { annotationRenderer } from "./core/annotationRenderer.js";
-import { annotationSystem } from "./collaboration/annotations.js";
-import { presenceSystem } from "./collaboration/presenceSystem.js";
-import { datasetManager } from "./core/datasetManager.js";
-import { simpleVisualizationManager } from "./core/simpleVisualizationManager.js";
-import { cameraSync } from "./collaboration/cameraSync.js";
-
-// Get room name from URL or use default
-function getRoomName() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("room") || "default-analytics-room";
-}
-
-// ========================================
-// PHASE 1: Pre-Scene Initialization
-// Things that don't need VTK scene
-// ========================================
-async function initializeApplicationPreScene() {
-  logInfo("Starting CIA War Room Application...");
-
-  // Initialize TensorFlow.js
-  const tfReady = await initializeTensorFlow();
-  if (!tfReady) {
-    console.error("TensorFlow.js failed to initialize, PCA will not work");
-  }
-
-  logProgress("Scene will be initialized by War Room UI");
-
-  // Setup file handling
-  setupFileHandler();
-  logProgress("File handler ready");
-
-  // Get room name for collaboration
-  const roomName = getRoomName();
-  logProgress(`Joining room: ${roomName}`);
-
-  // Setup user name BEFORE connecting to Yjs and voice chat
-  const hasUsername = await setupUserName();
-  if (hasUsername) {
-    logProgress("User name configured");
-  } else {
-    logProgress("User name will be prompted by UI");
-  }
-
-  // Initialize presence system (must be after user setup)
-  presenceSystem.initialize();
-  logProgress("Presence system initialized");
-
-  // Initialize dataset manager
-  datasetManager.initialize();
-  logProgress("Dataset manager initialized");
-
-  // Initialize visualization manager
-  simpleVisualizationManager.initialize();
-  logProgress("Visualization manager initialized");
-
-  // Initialize annotation system early
-  annotationSystem.initialize();
-  logProgress("Annotation system initialized");
-
-  // Initialize text chat system (only once!)
-  textChat.initialize();
-  logProgress("Text chat system initialized");
-
-  // Initialize VR systems (non-blocking)
-  try {
-    modeManager.setupVRDetection();
-    logProgress("VR detection initialized");
-
-    vrControllers.initialize();
-    logProgress("VR controllers initialized");
-
-    vrAvatarSystem.initialize();
-    logProgress("VR avatar system initialized");
-
-    vrSpatialUI.initialize();
-    logProgress("VR spatial UI initialized");
-  } catch (error) {
-    console.warn("VR systems failed to initialize (non-critical):", error);
-  }
-
-  logSuccess("Pre-scene initialization complete!");
-
-  return roomName;
-}
-
-// ========================================
-// PHASE 2: Post-Scene Initialization
-// Things that REQUIRE VTK scene to exist
-// This is called by React after VTK is initialized
-// ========================================
-export function initializeApplicationPostScene() {
-  console.log("🔧 Starting post-scene initialization...");
-
-  try {
-    // Setup collaboration features (these need the scene)
-    setupActorSync();
-    logProgress("Actor synchronization ready");
-
-    setupReductionSync(
-      toggleDimensionalityReduction,
-      getReductionMethod,
-      getReductionComponents,
-      setReductionMethod,
-      setReductionComponents
-    );
-    logProgress("Reduction synchronization ready");
-
-    // Initialize collaborative cursor system
-    initializeCursorSystem();
-    logProgress("Collaborative cursor system ready");
-
-    // Setup viewport interaction (must be before annotation renderer)
-    try {
-      setupViewportInteraction();
-      logProgress("Viewport interaction ready");
-      console.log("✅ Viewport interaction initialized");
-    } catch (error) {
-      console.error("❌ Failed to setup viewport interaction:", error);
-    }
-
-    // Add camera sync
-    cameraSync.initialize();
-    logProgress("Camera synchronization ready");
-
-    // Initialize annotation renderer after scene is ready
-    setTimeout(() => {
-      annotationRenderer.initialize();
-      logProgress("Annotation renderer initialized");
-    }, 500);
-
-    logSuccess("Post-scene initialization complete!");
-    logInfo("🎉 War Room is ready!");
-  } catch (error) {
-    console.error("Error in post-scene initialization:", error);
-  }
-}
-
-// Set up cleanup on page unload
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeunload", () => {
-    cleanupTensors();
-    voiceChat.disconnect();
-  });
-}
-
-// Expose functions for debugging
-if (typeof window !== "undefined") {
-  window.debugAPI = {
-    toggleReduction: toggleDimensionalityReduction,
-    logMemory: logMemoryUsage,
-    cleanup: cleanupTensors,
-    getReductionMethod,
-    getReductionComponents,
-    voiceChat,
-    textChat,
-    annotationSystem,
-    annotationRenderer,
+/**
+ * Check browser compatibility
+ * Ensures the user's browser supports all required features
+ */
+function checkBrowserCompatibility() {
+  const required = {
+    WebGL: !!document.createElement("canvas").getContext("webgl2"),
+    WebRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+    WebSocket: "WebSocket" in window,
+    IndexedDB: "indexedDB" in window,
   };
 
-  console.log("💡 Debug API available at window.debugAPI");
-}
+  const missing = Object.entries(required)
+    .filter(([feature, supported]) => !supported)
+    .map(([feature]) => feature);
 
-// ========================================
-// Hide old UI elements
-// ========================================
-function hideOldUI() {
-  console.log("🧹 Hiding old UI elements...");
-
-  // Hide old VTK container (from vtkFullScreenRenderWindow)
-  const oldContainer = document.querySelector(".vtk-container");
-  if (oldContainer) {
-    oldContainer.style.display = "none";
-    console.log("✅ Hidden old VTK container");
+  if (missing.length > 0) {
+    console.warn(`⚠️ Missing browser features: ${missing.join(", ")}`);
+    return false;
   }
 
-  // Hide any old control panels
-  const controlPanels = document.querySelectorAll(".control-panel");
-  controlPanels.forEach((panel) => {
-    panel.style.display = "none";
-  });
+  return true;
+}
 
-  // Hide elements from old index.html
-  const elementsToHide = [
-    "leftPanel",
-    "rightPanel",
-    "collaborationPanel",
-    "logsPanel",
-    "leftPanelTable",
-    "rightPanelTable",
-  ];
+/**
+ * Show error screen for fatal errors
+ */
+function showFatalError(message) {
+  document.body.innerHTML = `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: system-ui;
+      padding: 20px;
+    ">
+      <h1 style="color: #ff4444;">Fatal Error</h1>
+      <p style="max-width: 600px; text-align: center; line-height: 1.5;">
+        ${message}
+      </p>
+      <button 
+        onclick="window.location.reload()"
+        style="
+          margin-top: 20px;
+          padding: 10px 20px;
+          background: #007acc;
+          border: none;
+          border-radius: 4px;
+          color: white;
+          cursor: pointer;
+          font-size: 16px;
+        "
+      >
+        Reload Page
+      </button>
+    </div>
+  `;
+}
 
-  elementsToHide.forEach((id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.style.display = "none";
-      console.log(`✅ Hidden ${id}`);
+/**
+ * Main initialization function
+ * Runs Phase 1, then hands control to Bootstrap → CIAWebApp
+ */
+async function initializeApp() {
+  console.log("====================================");
+  console.log("   CIA Web - Collaborative");
+  console.log("   Immersive Analytics");
+  console.log("====================================");
+  console.log("");
+
+  // Check browser compatibility first
+  if (!checkBrowserCompatibility()) {
+    showFatalError(
+      "Your browser doesn't support all required features. " +
+        "Please use a modern browser like Chrome, Firefox, or Edge."
+    );
+    return;
+  }
+
+  try {
+    // Run Phase 1: Core Services (before React)
+    // This initializes services that don't depend on user context
+    console.log("🏗️ Foundation: Initializing core services...");
+    await initializePhase1();
+    console.log("✅ Foundation: Core services ready");
+
+    // Verify critical services are available
+    if (!window.CIA || !window.CIA.datasetManager) {
+      throw new Error("Phase 1 failed to initialize DatasetManager");
     }
-  });
 
-  console.log("✅ Old UI elements hidden");
+    // Create or find root element
+    let rootElement = document.getElementById("root");
+    if (!rootElement) {
+      rootElement = document.createElement("div");
+      rootElement.id = "react-root";
+      document.body.appendChild(rootElement);
+    }
+
+    // Render Bootstrap component
+    // Bootstrap will handle:
+    // - Authentication (future)
+    // - Username collection
+    // - Phase 2 initialization
+    // - Then render CIAWebApp
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <Bootstrap />
+      </React.StrictMode>
+    );
+
+    console.log("✅ Foundation: React application rendered");
+    console.log("🔐 Bootstrap layer will handle user setup and Phase 2");
+    console.log("📝 Type CIA.help() in console for debug commands");
+  } catch (error) {
+    console.error("❌ Fatal error during core initialization:", error);
+    showFatalError(
+      `Failed to initialize core services: ${error.message}. ` +
+        `Check the console for details and try refreshing the page.`
+    );
+  }
 }
 
-// ========================================
-// Start the application and mount React War Room
-// ========================================
-import { mountReactUI } from "./ui/react/index.js";
-
-// Flag to ensure we only initialize once
-let appInitialized = false;
-
-// Run pre-scene initialization, then mount React War Room
-if (!appInitialized) {
-  appInitialized = true;
-
-  initializeApplicationPreScene()
-    .then((roomName) => {
-      console.log("🎨 Mounting React War Room UI...");
-
-      // Hide old UI first
-      hideOldUI();
-
-      // Mount React War Room (which will initialize VTK and then call initializeApplicationPostScene)
-      mountReactUI(roomName);
-
-      console.log("🚀 War Room UI mounted - waiting for VTK initialization");
-    })
-    .catch((error) => {
-      console.error("Failed to initialize application:", error);
-      appInitialized = false; // Reset on error so it can be retried
-    });
+// Start when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp);
+} else {
+  initializeApp();
 }
+
+// Global error handlers for debugging
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
+});
+
+// Version for debugging
+window.CIAWebAppVersion = "2.0.0";

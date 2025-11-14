@@ -223,3 +223,5 @@ livekit.yaml
 
 # VTP test files (optional - uncomment if you don't want to track them)
 # vtp_files/*.vtp
+server/uploads/*
+!server/uploads/.gitkeep

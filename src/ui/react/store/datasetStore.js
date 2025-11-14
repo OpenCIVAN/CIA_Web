@@ -1,0 +1,145 @@
+// src/ui/react/store/datasetStore.js
+// React state synchronization for DatasetManager
+// This store is now a THIN WRAPPER around DatasetManager for React reactivity
+
+import { create } from "zustand";
+
+/**
+ * Dataset Store
+ *
+ * ARCHITECTURAL ROLE:
+ * This store is now a React-specific synchronization layer that mirrors
+ * DatasetManager state for React components. It does NOT own the data -
+ * DatasetManager does. This store just triggers React re-renders.
+ *
+ * WHY THIS EXISTS:
+ * DatasetManager is vanilla JS and doesn't trigger React re-renders.
+ * This Zustand store subscribes to DatasetManager events and updates
+ * React state when data changes.
+ *
+ * MIGRATION NOTE:
+ * Eventually, this could be replaced with a custom hook that uses
+ * DatasetManager directly. But for now, keeping Zustand makes the
+ * migration easier for existing components.
+ */
+export const useDatasetStore = create((set, get) => ({
+  // Dataset IDs for rendering lists
+  // We store IDs instead of full datasets to avoid stale data
+  datasetIds: [],
+
+  // Currently selected dataset for UI
+  selectedDatasetId: null,
+
+  // Refresh counter to force re-renders when needed
+  _refreshCounter: 0,
+
+  /**
+   * Initialize store by subscribing to DatasetManager
+   * Call this after DatasetManager is ready (in Phase 1/2)
+   *
+   * @param {DatasetManager} datasetManager - The dataset manager instance
+   */
+  initialize: (datasetManager) => {
+    console.log("📊 Initializing dataset store sync with DatasetManager");
+
+    // Subscribe to dataset changes
+    datasetManager.on("datasetAdded", (dataset) => {
+      console.log("📊 React: Dataset added:", dataset.id);
+      get().refresh();
+    });
+
+    datasetManager.on("datasetRemoved", (datasetId) => {
+      console.log("📊 React: Dataset removed:", datasetId);
+      get().refresh();
+    });
+
+    datasetManager.on("datasetUpdated", (dataset) => {
+      console.log("📊 React: Dataset updated:", dataset.id);
+      get().refresh();
+    });
+
+    datasetManager.on("datasetLoaded", ({ datasetId }) => {
+      console.log("📊 React: Dataset loaded:", datasetId);
+      get().refresh();
+    });
+
+    // Initial load
+    get().refresh();
+
+    console.log("✅ Dataset store initialized and synced");
+  },
+
+  /**
+   * Force refresh of dataset IDs from DatasetManager
+   * Called automatically when manager emits events
+   */
+  refresh: () => {
+    // Import dynamically to avoid circular dependency
+    import("@Init/appInitializer.js").then(({ datasetManager }) => {
+      if (!datasetManager) {
+        console.warn("⚠️ DatasetManager not available yet");
+        return;
+      }
+
+      const datasets = datasetManager.getAllDatasets();
+      const ids = datasets.map((ds) => ds.id);
+
+      set({
+        datasetIds: ids,
+        _refreshCounter: get()._refreshCounter + 1,
+      });
+    });
+  },
+
+  /**
+   * Select a dataset for UI purposes
+   * This is UI state only - doesn't affect the actual data
+   *
+   * @param {string} id - Dataset ID to select
+   */
+  setSelectedDataset: (id) => {
+    set({ selectedDatasetId: id });
+    console.log(`✅ UI: Selected dataset: ${id}`);
+  },
+
+  /**
+   * Get selected dataset ID
+   */
+  getSelectedDataset: () => {
+    return get().selectedDatasetId;
+  },
+
+  /**
+   * Clear selection
+   */
+  clearSelection: () => {
+    set({ selectedDatasetId: null });
+  },
+}));
+
+/**
+ * USAGE EXAMPLE IN REACT COMPONENTS:
+ *
+ * import { useDatasetStore } from '@UI/react/store/datasetStore.js';
+ * import { datasetManager } from '@Init/appInitializer.js';
+ *
+ * function DatasetList() {
+ *   // Get dataset IDs from store (triggers re-render on change)
+ *   const datasetIds = useDatasetStore((state) => state.datasetIds);
+ *
+ *   return (
+ *     <div>
+ *       {datasetIds.map(id => {
+ *         // Get actual dataset data from manager
+ *         const dataset = datasetManager.getDataset(id);
+ *
+ *         return (
+ *           <div key={id}>
+ *             {dataset.filename} - {dataset.metadata.pointCount} points
+ *           </div>
+ *         );
+ *       })}
+ *     </div>
+ *   );
+ * }
+ */

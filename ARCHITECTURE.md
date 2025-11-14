@@ -1,16 +1,18 @@
 # Architecture Overview
 
-This document explains the architecture and extensibility of the CIA War Room.
+This document explains the architecture and extensibility of the CIA Web App.
 
 ## Current State (Phase 1)
 
 ### Core Technologies
+
 - **VTK.js**: 3D visualization
 - **React**: UI components
 - **Y.js**: Real-time collaboration (in-memory)
 - **WebRTC**: Voice chat
 
 ### Architecture Layers
+
 ```
 ┌─────────────────────────────────────┐
 │         React UI Layer              │  Components, layouts
@@ -25,20 +27,43 @@ This document explains the architecture and extensibility of the CIA War Room.
 
 ### Key Managers
 
-**DatasetManager** (`src/core/datasetManager.js`)
-- Loads and stores VTP files
-- Tracks dataset metadata
-- Syncs metadata via Y.js (polydata stays local)
+**DatasetManager** (`src/core/data/managers/DatasetManager.js`)
 
-**VisualizationManager** (`src/core/visualizationManager.js`)
-- Creates views of datasets
-- Manages personal vs shared scopes
-- Syncs camera positions
+- NEW three-layer architecture: Dataset → ViewConfiguration → InstanceWindow
+- Loads and stores VTP files via IndexedDB
+- Tracks dataset metadata (bounds, point count, etc.)
+- Syncs metadata via Y.js (binary data stays local)
+- Event-driven: emits 'datasetLoaded', 'datasetUpdated', 'datasetRemoved'
 
-**PresenceSystem** (`src/collaboration/presenceSystem.js`)
-- Tracks online users
-- Heartbeat system
+**WorkspaceManager** (`src/core/instances/workspaceManager.js`)
+
+- Type-agnostic instance management (VTK, Plotly, Three.js, etc.)
+- Uses InstanceTypeHandler plugin pattern
+- Delegates to specific handlers (VTKInstanceHandler, etc.)
+- Manages multi-instance grid layout
+
+**PresenceSystem** (`src/collaboration/presence/presenceSystem.js`)
+
+- Tracks online users via Y.js Awareness
+- Heartbeat system for activity detection
 - Status tracking (active/idle/away)
+- Notifies React components of presence changes
+
+### Plugin Architecture
+
+**InstanceTypeHandler** (`src/core/instances/types/InstanceTypeInterface.js`)
+
+- Base class for all instance types
+- Reference implementation: VTKInstanceHandler
+- Methods: initialize(), cleanup(), loadData(), getTools()
+- Makes system extensible without modifying core code
+
+**VTKInstanceHandler** (`src/core/instances/types/vtk/VTKInstanceHandler.js`)
+
+- Reference implementation for VTK.js visualizations
+- Demonstrates proper handler pattern
+- Features: reduction, annotations, VR (coming)
+- Blueprint for contributors adding new instance types
 
 ## Extension Points
 
@@ -56,6 +81,7 @@ This document explains the architecture and extensibility of the CIA War Room.
 See `TODO (Backend)` markers in code for specific integration points.
 
 **Files to modify**:
+
 - `src/collaboration/yjsSetup.js` - Add persistence provider
 - Create `server/persistence.js` - Backend save/load logic
 - Create `server/database/schema.sql` - Database tables
@@ -74,6 +100,7 @@ See `TODO (Backend)` markers in code for specific integration points.
 See `TODO (Groups)` markers in code.
 
 **Files to modify**:
+
 - `src/collaboration/yjsSetup.js` - Add yGroups map
 - `src/core/visualizationManager.js` - Group scoping logic
 - Create `src/collaboration/groupManager.js`
@@ -95,6 +122,7 @@ See `TODO (Access Control)` markers.
 ## Contributing
 
 ### Code Style
+
 - Use JSDoc comments for public methods
 - Add TODO markers for future extensibility
 - Keep managers focused on single responsibility
