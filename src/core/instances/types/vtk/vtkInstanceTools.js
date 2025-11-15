@@ -8,6 +8,7 @@ import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 import vtkAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
 import vtkPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
 import vtkLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
+import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget.js";
 
 /**
  * InstanceToolsManager
@@ -271,6 +272,82 @@ class InstanceToolsManager {
     );
   }
 
+  /**
+   * Set representation mode (surface, wireframe, or points)
+   * VTK representation values: 0 = points, 1 = wireframe, 2 = surface
+   */
+  setRepresentation(instanceId, mode) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    const { actor, renderWindow } = tools.sceneObjects;
+    const property = actor.getProperty();
+
+    const modeMap = {
+      surface: 2,
+      wireframe: 1,
+      points: 0,
+    };
+
+    const representation = modeMap[mode];
+    if (representation === undefined) {
+      console.warn(`Unknown representation mode: ${mode}`);
+      return;
+    }
+
+    property.setRepresentation(representation);
+
+    // For points mode, make them bigger so they're visible
+    if (mode === "points") {
+      property.setPointSize(5);
+    }
+
+    renderWindow.render();
+
+    console.log(`🎨 Representation set to ${mode} for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current representation mode
+   */
+  getRepresentation(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return null;
+
+    const { actor } = tools.sceneObjects;
+    const property = actor.getProperty();
+    const rep = property.getRepresentation();
+
+    const modeMap = {
+      0: "points",
+      1: "wireframe",
+      2: "surface",
+    };
+
+    return modeMap[rep] || "surface";
+  }
+
+  /**
+   * Get current opacity
+   */
+  getOpacity(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return 1.0;
+
+    const { actor } = tools.sceneObjects;
+    return actor.getProperty().getOpacity();
+  }
+
+  /**
+   * Force a render (useful after widget config changes)
+   */
+  forceRender(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (tools?.sceneObjects?.renderWindow) {
+      tools.sceneObjects.renderWindow.render();
+    }
+  }
+
   // ===========================================================================
   // 🆕 WIDGET MANAGEMENT (New helper methods)
   // ===========================================================================
@@ -298,7 +375,7 @@ class InstanceToolsManager {
   /**
    * Enable distance measurement
    */
-  enableDistanceMeasurement(instanceId) {
+  toggleDistanceMeasurement(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
@@ -357,7 +434,7 @@ class InstanceToolsManager {
   /**
    * Enable angle measurement
    */
-  enableAngleMeasurement(instanceId) {
+  toggleAngleMeasurement(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
@@ -427,7 +504,7 @@ class InstanceToolsManager {
   /**
    * Enable clipping plane
    */
-  enableClippingPlane(instanceId) {
+  toggleClippingPlane(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
@@ -515,6 +592,49 @@ class InstanceToolsManager {
     console.log(`🧭 Axes ${tools.axesVisible ? "shown" : "hidden"}`);
 
     // Re-render
+    if (tools.sceneObjects?.renderWindow) {
+      tools.sceneObjects.renderWindow.render();
+    }
+  }
+
+  /**
+   * Initialize orientation widget tracking
+   * Called by VTKInstanceHandler after widget is created
+   */
+  initializeOrientationWidget(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    // Mark orientation as active in widgets map
+    tools.widgets.set("orientation", { enabled: true });
+
+    console.log(`🧭 Orientation widget tracked for instance: ${instanceId}`);
+  }
+
+  /**
+   * Toggle orientation widget
+   * This now actually calls the VTKOrientationWidget module
+   */
+  toggleOrientation(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    // Check current state
+    const isActive = tools.widgets.has("orientation");
+
+    if (isActive) {
+      // Hide the widget
+      vtkOrientationWidget.setVisible(instanceId, false);
+      tools.widgets.delete("orientation");
+      console.log(`🧭 Orientation widget disabled for instance: ${instanceId}`);
+    } else {
+      // Show the widget
+      vtkOrientationWidget.setVisible(instanceId, true);
+      tools.widgets.set("orientation", { enabled: true });
+      console.log(`🧭 Orientation widget enabled for instance: ${instanceId}`);
+    }
+
+    // Force render to show/hide immediately
     if (tools.sceneObjects?.renderWindow) {
       tools.sceneObjects.renderWindow.render();
     }

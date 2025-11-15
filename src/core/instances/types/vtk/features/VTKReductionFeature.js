@@ -47,6 +47,93 @@ export class VTKReductionFeature extends ReductionFeature {
     );
   }
 
+  /**
+   * Toggle a reduction method on/off
+   * If the method is currently active, restore original data
+   * If not active or a different method is active, apply new reduction
+   *
+   * @param {string} instanceId - Instance to toggle
+   * @param {string} method - Method to toggle ('pca', 'tsne', 'umap')
+   * @returns {Promise<void>}
+   */
+  async toggleReduction(instanceId, method) {
+    const state = this.instanceStates.get(instanceId);
+
+    if (!state) {
+      console.warn(`⚠️ Instance ${instanceId} not initialized for reduction`);
+      return;
+    }
+
+    // If this method is currently active, turn it off
+    if (state.isApplied && state.method === method) {
+      await this.restoreOriginal(instanceId);
+    } else {
+      // Either no reduction active, or different method active
+      // Apply this method with current components (default to 3D)
+      const components = state.components || 3;
+      await this.applyReduction(instanceId, method, components);
+    }
+  }
+
+  /**
+   * Change number of components (2D vs 3D)
+   * Only works if a reduction is currently applied
+   *
+   * @param {string} instanceId - Instance to update
+   * @param {number} components - Number of dimensions (2 or 3)
+   * @returns {Promise<void>}
+   */
+  async setComponents(instanceId, components) {
+    const state = this.instanceStates.get(instanceId);
+
+    if (!state) {
+      console.warn(`⚠️ Instance ${instanceId} not initialized for reduction`);
+      return;
+    }
+
+    if (!state.isApplied || !state.method) {
+      console.warn(`⚠️ No reduction applied - can't change components`);
+      return;
+    }
+
+    // Already at this dimension count?
+    if (state.components === components) {
+      console.log(`ℹ️ Already using ${components} components`);
+      return;
+    }
+
+    // Re-apply same method with new component count
+    console.log(`🔄 Changing from ${state.components}D to ${components}D`);
+
+    // Restore original first
+    await this.restoreOriginal(instanceId);
+
+    // Re-apply with new components
+    await this.applyReduction(instanceId, state.method, components);
+  }
+
+  /**
+   * Get current reduction components
+   *
+   * @param {string} instanceId - Instance to query
+   * @returns {number|null} Number of components (2 or 3), or null if no reduction
+   */
+  getCurrentComponents(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    return state?.components || null;
+  }
+
+  /**
+   * Check if any reduction is applied
+   *
+   * @param {string} instanceId - Instance to check
+   * @returns {boolean} True if reduction is active
+   */
+  hasReduction(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    return state?.isApplied || false;
+  }
+
   async cleanup(instanceId) {
     const state = this.instanceStates.get(instanceId);
 

@@ -44,6 +44,7 @@ import {
   Rainbow,
   ThermometerSun,
   Eclipse,
+  Compass,
 
   // Annotations & Communication
   MessageSquare,
@@ -206,6 +207,7 @@ const TOOL_ICON_MAP = {
  * @returns {React.Component} Lucide icon component
  */
 export function getToolIcon(toolId, toolIcon) {
+  console.log(toolId, toolIcon);
   // Priority 1: Explicit icon provided by tool
   if (toolIcon && TOOL_ICON_MAP[toolIcon]) {
     return TOOL_ICON_MAP[toolIcon];

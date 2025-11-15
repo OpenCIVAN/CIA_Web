@@ -298,3 +298,9 @@ export class VTKOrientationWidget {
 
 // Export singleton instance for use by VTKInstanceHandler
 export const vtkOrientationWidget = new VTKOrientationWidget();
+
+// Make available for debugging
+if (typeof window !== "undefined") {
+  window.CIA = window.CIA || {};
+  window.CIA.vtkOrientationWidget = vtkOrientationWidget;
+}

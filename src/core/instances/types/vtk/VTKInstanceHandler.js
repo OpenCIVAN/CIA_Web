@@ -5,6 +5,7 @@ import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface
 import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
 import { instanceTools } from "@VTK/vtkInstanceTools.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
+import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -187,6 +188,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const { instanceId } = instanceData;
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
+
+    // 🆕 CLEAN UP FEATURES FIRST (before sceneObjects are destroyed)
+    await this.reductionFeature.cleanup(instanceId);
+    vtkOrientationWidget.cleanup(instanceId);
+
+    // Clean up instance tools
+    instanceTools.cleanupTools(instanceId);
 
     // Clean up the state adapter
     if (instanceData.stateAdapter) {
@@ -409,12 +417,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
 
-      // Emit event so React knows tools are now available
-      console.log(
-        `📢 Emitting tools-updated event after pipeline initialization`
-      );
-      this._emitToolsUpdate(instanceId);
-
       // Remove the placeholder now that we have real rendering
       if (instanceData.placeholder) {
         instanceData.placeholder.remove();
@@ -436,9 +438,34 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Mark that we have data
     instanceData.hasData = true;
 
+    // Initialize reduction feature (needs sceneObjects)
+    await this.reductionFeature.initialize(instanceId, {
+      sceneObjects: instanceData.sceneObjects,
+    });
+
+    // Initialize orientation widget (starts enabled by default)
+    vtkOrientationWidget.initialize(instanceId, instanceData.sceneObjects, {
+      enabled: true,
+      corner: "BOTTOM_RIGHT",
+      viewportSize: 0.1,
+      minPixelSize: 80,
+      maxPixelSize: 280,
+    });
+
+    // Mark that orientation is active in instanceTools
+    instanceTools.initializeOrientationWidget(instanceId);
+
+    console.log(`✅ Features initialized for instance ${instanceId}`);
+
     // Position camera and render
     renderer.resetCamera();
     renderWindow.render();
+
+    // Emit event so React knows tools are now available
+    console.log(
+      `📢 Emitting tools-updated event after pipeline initialization`
+    );
+    this._emitToolsUpdate(instanceId);
 
     console.log(`✅ VTK Handler: Dataset loaded and rendered`);
   }
@@ -541,6 +568,72 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   // ===========================================================================
 
   /**
+   * Helper: Check if instance has valid data for operations
+   */
+  _getInstanceCapabilities(instanceData) {
+    const instanceId = instanceData.instanceId;
+    const instanceState = this.instances.get(instanceId);
+
+    // CRITICAL: Check if instance is initialized AND has data
+    // During initialization, these will be false, so all buttons disabled
+    // After data loads, these become true, toolbar refreshes, buttons enable
+    const isInitialized = instanceData?.initialized || false;
+    const hasData = instanceData?.hasData || false;
+
+    // Only check for data details if we're initialized with data
+    if (!isInitialized || !hasData) {
+      return {
+        hasData: false,
+        hasScalarData: false,
+        hasGeometry: false,
+        canUseColormap: false,
+        canUseMeasurement: false,
+        canUseClipping: false,
+        canUseWidgets: false,
+      };
+    }
+
+    // Now we know we have initialized VTK with data, safe to check details
+    let hasScalarData = false;
+    let hasGeometry = false;
+
+    if (instanceState?.sceneObjects?.mapper) {
+      try {
+        const mapper = instanceState.sceneObjects.mapper;
+        const inputData = mapper.getInputData();
+
+        if (inputData) {
+          // Check for scalar data
+          const pointData = inputData.getPointData();
+          const scalars = pointData?.getScalars();
+          hasScalarData = scalars !== null && scalars !== undefined;
+
+          // Check for geometry
+          const points = inputData.getPoints();
+          hasGeometry =
+            points !== null &&
+            points !== undefined &&
+            points.getNumberOfPoints() > 0;
+        }
+      } catch (error) {
+        console.warn("Error checking data capabilities:", error);
+        hasScalarData = false;
+        hasGeometry = false;
+      }
+    }
+
+    return {
+      hasData: true,
+      hasScalarData,
+      hasGeometry,
+      canUseColormap: hasScalarData,
+      canUseMeasurement: hasGeometry,
+      canUseClipping: hasGeometry,
+      canUseWidgets: hasGeometry,
+    };
+  }
+
+  /**
    * Get tools for this instance type
    * Returns dynamic tools based on instance statet
    *
@@ -553,6 +646,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const instanceId = instanceData.instanceId;
     const tools = [];
 
+    // 🆕 GET INSTANCE CAPABILITIES
+    const caps = this._getInstanceCapabilities(instanceData);
+
     // ========================================================================
     // CAMERA VIEWS MENU
     // ========================================================================
@@ -562,6 +658,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       icon: "camera",
       label: "Views",
       description: "Standard camera views",
+      disabled: !caps.hasData, // 🆕 Disable if no data
       options: [
         {
           id: "view-front",
@@ -623,7 +720,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       type: "menu",
       icon: "transform",
       label: "Widgets",
-      description: "Interactive measurement and manipulation tools",
+      description: caps.canUseWidgets
+        ? "Interactive measurement and manipulation tools"
+        : "Widgets require loaded geometry", // 🆕 Helpful message
+      disabled: !caps.canUseWidgets, // 🆕 Disable if no geometry
       options: [
         {
           id: "widget-line",
@@ -631,9 +731,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Line Measurement",
           description: "Measure distance between two points",
           active: lineActive,
+          disabled: !caps.canUseMeasurement, // 🆕 Individual disable
           onClick: () => {
             console.log("🎯 Line measurement clicked");
-            instanceTools.enableDistanceMeasurement(instanceId);
+            instanceTools.toggleDistanceMeasurement(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -643,9 +744,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Angle Measurement",
           description: "Measure angle between three points",
           active: angleActive,
+          disabled: !caps.canUseMeasurement, // 🆕 Individual disable
           onClick: () => {
             console.log("🎯 Angle measurement clicked");
-            instanceTools.enableAngleMeasurement(instanceId);
+            instanceTools.toggleAngleMeasurement(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -655,9 +757,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Clipping Plane",
           description: "Cut away parts of the data",
           active: planeActive,
+          disabled: !caps.canUseClipping, // 🆕 Individual disable
           onClick: () => {
             console.log("🎯 Clipping plane clicked");
-            instanceTools.enableClippingPlane(instanceId);
+            instanceTools.toggleClippingPlane(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -695,9 +798,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // DIMENSIONALITY REDUCTION MENU (Feature pattern)
     // ========================================================================
     const reductionState = this.reductionFeature.getState(instanceId);
-    const hasReduction = reductionState?.isApplied || false;
+    const hasReduction = this.reductionFeature.hasReduction(instanceId);
     const currentMethod = reductionState?.method || null;
-    const currentComponents = reductionState?.components || 2;
+    const currentComponents = hasReduction
+      ? this.reductionFeature.getCurrentComponents(instanceId)
+      : null;
 
     tools.push({
       id: "reduction",
@@ -705,7 +810,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       icon: "layers",
       label: "Dimensionality Reduction",
       description: "Reduce high-dimensional data for visualization",
+      disabled: !caps.hasData, // 🆕 Disable if no data
       active: hasReduction,
+      disabled: !caps.hasData, // 🆕 Individual disable
       options: [
         {
           id: "pca",
@@ -725,6 +832,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "t-SNE",
           description: "t-Distributed Stochastic Neighbor Embedding",
           active: currentMethod === "tsne",
+          disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
             console.log("🎯 t-SNE clicked");
             await this.reductionFeature.toggleReduction(instanceId, "tsne");
@@ -737,6 +845,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "UMAP",
           description: "Uniform Manifold Approximation and Projection",
           active: currentMethod === "umap",
+          disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
             console.log("🎯 UMAP clicked");
             await this.reductionFeature.toggleReduction(instanceId, "umap");
@@ -789,19 +898,127 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     tools.push({ type: "separator" });
 
     // ========================================================================
-    // VISUALIZATION CONTROLS MENU
+    // 🆕 APPEARANCE MENU - Representation & Opacity
     // ========================================================================
+    const currentRep = caps.hasData
+      ? instanceTools.getRepresentation(instanceId)
+      : "surface";
+    const currentOpacity = caps.hasData
+      ? instanceTools.getOpacity(instanceId)
+      : 1.0;
+
     tools.push({
-      id: "visualization",
+      id: "appearance",
       type: "menu",
       icon: "palette",
-      label: "Visualization",
-      description: "Appearance and rendering settings",
+      label: "Appearance",
+      description: caps.hasData
+        ? "Surface rendering and transparency"
+        : "Appearance requires loaded data",
+      disabled: !caps.hasData,
+      options: [
+        // Representation modes
+        {
+          id: "rep-surface",
+          icon: "box",
+          label: "Surface",
+          description: "Solid surface rendering",
+          active: currentRep === "surface",
+          onClick: () => {
+            instanceTools.setRepresentation(instanceId, "surface");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "rep-wireframe",
+          icon: "grid-3x3",
+          label: "Wireframe",
+          description: "Show mesh edges",
+          active: currentRep === "wireframe",
+          onClick: () => {
+            instanceTools.setRepresentation(instanceId, "wireframe");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "rep-points",
+          icon: "circle-dot",
+          label: "Points",
+          description: "Show individual vertices",
+          active: currentRep === "points",
+          onClick: () => {
+            instanceTools.setRepresentation(instanceId, "points");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        { type: "separator" },
+        // Opacity presets
+        {
+          id: "opacity-100",
+          icon: "circle",
+          label: "Opaque (100%)",
+          description: "Fully solid",
+          active: currentOpacity === 1.0,
+          onClick: () => {
+            instanceTools.setOpacity(instanceId, 1.0);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "opacity-75",
+          icon: "circle",
+          label: "75% Opacity",
+          description: "Slightly transparent",
+          active: Math.abs(currentOpacity - 0.75) < 0.01,
+          onClick: () => {
+            instanceTools.setOpacity(instanceId, 0.75);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "opacity-50",
+          icon: "circle-dashed",
+          label: "50% Opacity",
+          description: "Half transparent",
+          active: Math.abs(currentOpacity - 0.5) < 0.01,
+          onClick: () => {
+            instanceTools.setOpacity(instanceId, 0.5);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "opacity-25",
+          icon: "circle-dashed",
+          label: "25% Opacity",
+          description: "Very transparent",
+          active: Math.abs(currentOpacity - 0.25) < 0.01,
+          onClick: () => {
+            instanceTools.setOpacity(instanceId, 0.25);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // 🆕 COLORMAP MENU (extracted from old visualization menu)
+    // ========================================================================
+    tools.push({
+      id: "colormap",
+      type: "menu",
+      icon: "droplet",
+      label: "Colormap",
+      description: caps.canUseColormap
+        ? "Color transfer functions"
+        : "Colormap requires scalar data",
+      disabled: !caps.canUseColormap,
       options: [
         {
           id: "colormap-rainbow",
           icon: "palette",
-          label: "Rainbow Colors",
+          label: "Rainbow",
           onClick: () => instanceTools.setColorMap(instanceId, "rainbow"),
         },
         {
@@ -822,16 +1039,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Cool",
           onClick: () => instanceTools.setColorMap(instanceId, "cool"),
         },
-        { type: "separator" },
-        {
-          id: "wireframe",
-          icon: "grid",
-          label: "Toggle Wireframe",
-          onClick: () => {
-            instanceTools.toggleWireframe(instanceId);
-            this._emitToolsUpdate(instanceData);
-          },
-        },
       ],
     });
 
@@ -846,21 +1053,128 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     );
 
     tools.push({
-      id: "toggle-orientation",
-      type: "button",
+      id: "orientation",
+      type: "menu",
       icon: "compass",
-      label: "Orientation Cube",
-      description: "Toggle orientation cube",
+      label: "Orientation",
+      description: "Orientation cube controls",
       active: orientationEnabled,
-      onClick: () => {
-        console.log("🎯 Toggle orientation clicked");
-        instanceTools.toggleAxes(instanceId);
-        this._emitToolsUpdate(instanceData);
-      },
+      options: [
+        // Toggle on/off
+        {
+          id: "orientation-toggle",
+          icon: orientationEnabled ? "eye-off" : "eye",
+          label: orientationEnabled ? "Hide Cube" : "Show Cube",
+          onClick: () => {
+            instanceTools.toggleOrientation(instanceId);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        { type: "separator" },
+        // Size presets
+        {
+          id: "size-small",
+          icon: "minimize-2",
+          label: "Small Size",
+          description: "8% of viewport",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              viewportSize: 0.08,
+              minPixelSize: 60,
+              maxPixelSize: 200,
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        {
+          id: "size-medium",
+          icon: "square",
+          label: "Medium Size",
+          description: "10% of viewport (default)",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              viewportSize: 0.1,
+              minPixelSize: 80,
+              maxPixelSize: 280,
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        {
+          id: "size-large",
+          icon: "maximize-2",
+          label: "Large Size",
+          description: "15% of viewport",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              viewportSize: 0.15,
+              minPixelSize: 120,
+              maxPixelSize: 400,
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        { type: "separator" },
+        // Corner positions
+        {
+          id: "corner-br",
+          icon: "corner-down-right",
+          label: "Bottom Right",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              corner: "BOTTOM_RIGHT",
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        {
+          id: "corner-bl",
+          icon: "corner-down-left",
+          label: "Bottom Left",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              corner: "BOTTOM_LEFT",
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        {
+          id: "corner-tr",
+          icon: "corner-up-right",
+          label: "Top Right",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              corner: "TOP_RIGHT",
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+        {
+          id: "corner-tl",
+          icon: "corner-up-left",
+          label: "Top Left",
+          onClick: () => {
+            vtkOrientationWidget.updateConfig(instanceId, {
+              corner: "TOP_LEFT",
+            });
+            instanceTools.forceRender(instanceId);
+          },
+        },
+      ],
     });
 
     console.log(`✅ Built ${tools.length} tools for instance ${instanceId}`);
     return tools;
+  }
+
+  /**
+   * Force a render (useful after widget config changes)
+   */
+  forceRender(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (tools?.sceneObjects?.renderWindow) {
+      tools.sceneObjects.renderWindow.render();
+    }
   }
 
   /**
