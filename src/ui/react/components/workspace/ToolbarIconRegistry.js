@@ -45,6 +45,10 @@ import {
   ThermometerSun,
   Eclipse,
   Compass,
+  Move3d,
+  Rotate3d,
+  Scale3d,
+  Grid3x3,
 
   // Annotations & Communication
   MessageSquare,
@@ -141,7 +145,7 @@ const TOOL_ICON_MAP = {
   visibility: Eye,
   show: Eye,
   hide: EyeOff,
-  "toggle-axes": Box, // Show/hide axis indicators
+  "toggle-axes": Move3d, // Show/hide axis indicators
   "toggle-grid": Box, // Show/hide grid
   lighting: Sun,
   colormap: Palette,
@@ -154,6 +158,7 @@ const TOOL_ICON_MAP = {
   solid: Box,
   "show-measurements": PencilRuler,
   visualization: Wallpaper,
+  compass: Compass,
 
   // ========================================================================
   // ANNOTATIONS

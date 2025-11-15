@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Import centralized icon registry
-import { getToolIcon } from './ToolbarIconRegistry.js';
+import { getToolIcon } from "./ToolbarIconRegistry.js";
 
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
