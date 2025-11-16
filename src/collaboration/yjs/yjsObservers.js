@@ -217,18 +217,21 @@ export function initializeDatasetObserver() {
           id: datasetId,
           filename: remoteDataset.filename,
           fileType: remoteDataset.fileType,
-          fileSize: remoteDataset.fileSize || 0,
-          uploadedBy: remoteDataset.uploadedBy,
-          uploadedAt: remoteDataset.uploadedAt || Date.now(),
+          hash: remoteDataset.hash,
           publicPath: remoteDataset.publicPath,
-          cacheKey: remoteDataset.cacheKey,
-          fileStatus: remoteDataset.publicPath ? "on-server" : "needs-upload",
-          metadata: remoteDataset.metadata || {},
+          storageKey: remoteDataset.storageKey,
+          userId: remoteDataset.userId,
+          fileStatus: remoteDataset.publicPath ? "fetchable" : "needs-upload",
+          metadata: {
+            fileSize: remoteDataset.metadata?.fileSize || 0,
+            uploadedAt: remoteDataset.metadata?.uploadedAt || Date.now(),
+            uploadedBy: remoteDataset.metadata?.uploadedBy,
+          },
         });
 
         // Add to DatasetManager using the imported datasetManager
         datasetManager._datasets.set(datasetId, dataset);
-          // Persist to IndexedDB so it survives page reload
+        // Persist to IndexedDB so it survives page reload
         await datasetManager._persistDataset(dataset);
         datasetManager._emit("datasetAdded", dataset);
       } else if (change.action === "update") {
