@@ -668,50 +668,83 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       icon: "camera",
       label: "Views",
       description: "Standard camera views",
-      disabled: !caps.hasData, // 🆕 Disable if no data
+      disabled: !caps.hasData,
       options: [
+        // =======================================================================
+        // ✅ NEW: Camera Grid Component
+        // =======================================================================
         {
-          id: "view-front",
-          icon: "camera",
-          label: "Front View",
-          onClick: () => instanceTools.setCameraView(instanceId, "front"),
-        },
-        {
-          id: "view-back",
-          icon: "camera",
-          label: "Back View",
-          onClick: () => instanceTools.setCameraView(instanceId, "back"),
-        },
-        {
-          id: "view-top",
-          icon: "camera",
-          label: "Top View",
-          onClick: () => instanceTools.setCameraView(instanceId, "top"),
-        },
-        {
-          id: "view-bottom",
-          icon: "camera",
-          label: "Bottom View",
-          onClick: () => instanceTools.setCameraView(instanceId, "bottom"),
-        },
-        {
-          id: "view-left",
-          icon: "camera",
-          label: "Left View",
-          onClick: () => instanceTools.setCameraView(instanceId, "left"),
-        },
-        {
-          id: "view-right",
-          icon: "camera",
-          label: "Right View",
-          onClick: () => instanceTools.setCameraView(instanceId, "right"),
-        },
-        { type: "separator" },
-        {
-          id: "reset-camera",
-          icon: "refresh",
-          label: "Reset Camera",
-          onClick: () => instanceTools.resetCamera(instanceId),
+          type: "camera-grid",
+          id: "camera-grid-main",
+          disabled: !caps.hasData,
+          // Define all views with proper structure
+          views: [
+            // Row 1: Top row
+            {
+              id: "top",
+              label: "Top",
+              icon: "camera",
+            },
+            {
+              id: "isometric",
+              label: "Iso",
+              icon: "box",
+              special: true, // Special styling for isometric view
+            },
+            // null creates empty cell in top-right
+
+            // Row 2: Middle row
+            {
+              id: "left",
+              label: "Left",
+              icon: "square",
+            },
+            {
+              id: "reset",
+              label: "Reset",
+              icon: "maximize-2",
+              special: true, // Special styling for reset
+            },
+            {
+              id: "right",
+              label: "Right",
+              icon: "square",
+            },
+
+            // Row 3: Bottom row
+            {
+              id: "bottom",
+              label: "Bottom",
+              icon: "camera",
+            },
+            {
+              id: "front",
+              label: "Front",
+              icon: "camera",
+            },
+            {
+              id: "back",
+              label: "Back",
+              icon: "camera",
+            },
+          ],
+          // Single callback handles all views
+          onViewSelect: (viewId) => {
+            if (!caps.hasData) return;
+
+            // Handle reset separately
+            if (viewId === "reset") {
+              instanceTools.resetCamera(instanceId);
+            } else {
+              // All other views use setCameraView
+              instanceTools.setCameraView(instanceId, viewId);
+            }
+
+            // Trigger re-render
+            this._emitToolsUpdate(instanceId);
+
+            console.log(`📷 Camera switched to: ${viewId}`);
+          },
         },
       ],
     });
