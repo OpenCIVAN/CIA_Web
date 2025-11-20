@@ -4,10 +4,19 @@ const router = express.Router();
 const multer = require("multer");
 const { pool } = require("../index");
 const { v4: uuidv4 } = require("uuid");
-const fs = require("fs").promises;
-const path = require("path");
+const AWS = require("aws-sdk");
+const crypto = require("crypto");
 
-// Configure multer for file uploads
+// Configure AWS S3
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
+
+// Configure multer for file uploads (keep in memory, not disk)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -15,25 +24,20 @@ const upload = multer({
   },
 });
 
-// Uploads directory path
-const UPLOAD_DIR = path.join(__dirname, "../../uploads");
-
 /**
  * POST /api/datasets/upload
- * Upload a new dataset file
- * This matches what your ServerStorageProvider expects
+ * Upload a new dataset file to S3
  */
 router.post("/upload", upload.single("file"), async (req, res, next) => {
   try {
     const { originalname, buffer, mimetype, size } = req.file;
     const { uploadedBy } = req.body;
 
-    // Calculate hash of the uploaded file for deduplication
-    const crypto = require("crypto");
+    // Calculate hash for deduplication
     const hash = crypto.createHash("sha256").update(buffer).digest("hex");
 
     console.log(
-      `📁 Received upload: ${originalname} (hash: ${hash.substring(0, 16)}...)`
+      `📦 Received upload: ${originalname} (${(size / 1024 / 1024).toFixed(2)}MB, hash: ${hash.substring(0, 16)}...)`
     );
 
     // Use the fixed session ID for development
@@ -48,25 +52,36 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
 
     if (existingDataset.rows.length > 0) {
       const existing = existingDataset.rows[0];
-      console.log(`✓ File already exists: ${existing.id} (deduplicating)`);
+      console.log(`✓ File already exists: ${existing.id} (deduplicated)`);
 
-      // Return the existing dataset instead of creating a new one
       return res.status(200).json({
         dataset: existing,
         deduplicated: true,
       });
     }
 
-    // File doesn't exist yet, create new dataset
+    // File doesn't exist yet - upload to S3
     const datasetId = uuidv4();
-    const storageKey = `${datasetId}-${originalname}`;
-    const filePath = path.join(UPLOAD_DIR, storageKey);
+    const s3Key = `datasets/${datasetId}/${originalname}`;
 
-    // Ensure uploads directory exists
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    console.log(`☁️  Uploading to S3: ${s3Key}`);
 
-    // Save file to disk
-    await fs.writeFile(filePath, buffer);
+    // Upload to S3
+    const s3Params = {
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: mimetype,
+      Metadata: {
+        originalname: originalname,
+        uploadedby: uploadedBy || "anonymous",
+        hash: hash,
+      },
+    };
+
+    await s3.upload(s3Params).promise();
+
+    console.log(`✅ S3 upload successful: ${s3Key}`);
 
     // Create session if it doesn't exist
     await pool.query(
@@ -74,7 +89,7 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
       [defaultSessionId, "Default Development Session"]
     );
 
-    // Insert database record with hash in metadata
+    // Insert database record with S3 key
     const result = await pool.query(
       `INSERT INTO datasets 
        (id, session_id, filename, file_size, mime_type, storage_key, uploaded_by, metadata)
@@ -86,18 +101,54 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
         originalname,
         size,
         mimetype,
-        storageKey,
+        s3Key, // Now storing S3 key instead of local path
         uploadedBy || "anonymous",
-        JSON.stringify({ hash }), // Store hash for deduplication
+        JSON.stringify({ hash, s3Bucket: BUCKET_NAME }),
       ]
     );
 
-    console.log("✅ Dataset uploaded:", datasetId, originalname);
+    console.log(`✅ Database record created: ${datasetId}`);
 
     res.status(201).json({ dataset: result.rows[0] });
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("❌ Upload error:", error);
     next(error);
+  }
+});
+
+/**
+ * GET /api/test-s3
+ * Test S3 connection (for debugging)
+ * IMPORTANT: This must come BEFORE /:datasetId route
+ */
+router.get("/test-s3", async (req, res, next) => {
+  try {
+    const params = {
+      Bucket: BUCKET_NAME,
+    };
+
+    const data = await s3.listObjectsV2(params).promise();
+
+    res.json({
+      success: true,
+      message: "✅ S3 connection successful!",
+      bucketName: BUCKET_NAME,
+      region: process.env.AWS_REGION,
+      fileCount: data.Contents.length,
+      files: data.Contents.map((file) => ({
+        key: file.Key,
+        size: file.Size,
+        lastModified: file.LastModified,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "❌ S3 connection failed",
+      error: error.message,
+      bucketName: BUCKET_NAME,
+      region: process.env.AWS_REGION,
+    });
   }
 });
 
@@ -125,14 +176,13 @@ router.get("/:datasetId", async (req, res, next) => {
 
 /**
  * GET /api/datasets/:datasetId/download
- * For local development, this returns the file directly
- * Later, when you move to S3, this will return a presigned URL
+ * Generate a presigned URL for downloading from S3
  */
 router.get("/:datasetId/download", async (req, res, next) => {
   try {
     const { datasetId } = req.params;
 
-    // Get file information
+    // Get file information from database
     const result = await pool.query(
       "SELECT filename, storage_key, mime_type FROM datasets WHERE id = $1",
       [datasetId]
@@ -143,24 +193,25 @@ router.get("/:datasetId/download", async (req, res, next) => {
     }
 
     const { filename, storage_key, mime_type } = result.rows[0];
-    const filePath = path.join(UPLOAD_DIR, storage_key);
 
-    // Check if file exists
-    try {
-      await fs.access(filePath);
-    } catch {
-      return res.status(404).json({ error: "File not found on disk" });
-    }
+    // Generate presigned URL (valid for 1 hour)
+    const presignedUrl = s3.getSignedUrl("getObject", {
+      Bucket: BUCKET_NAME,
+      Key: storage_key,
+      Expires: 3600, // 1 hour
+      ResponseContentDisposition: `attachment; filename="${filename}"`,
+      ResponseContentType: mime_type || "application/octet-stream",
+    });
 
-    // For local development, send the file directly
-    // Your ServerStorageProvider expects a downloadUrl in the response,
-    // but for local development we can send the file directly
-    // We'll adjust the ServerStorageProvider to handle both patterns
+    console.log(`🔗 Generated presigned URL for: ${filename}`);
 
-    res.setHeader("Content-Type", mime_type || "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.sendFile(filePath);
+    res.json({
+      downloadUrl: presignedUrl,
+      filename: filename,
+      expiresIn: 3600,
+    });
   } catch (error) {
+    console.error("❌ Download error:", error);
     next(error);
   }
 });
@@ -184,6 +235,81 @@ router.get("/session/:sessionId", async (req, res, next) => {
     res.json({ datasets: result.rows });
   } catch (error) {
     next(error);
+  }
+});
+
+/**
+ * DELETE /api/datasets/:datasetId
+ * Delete a dataset (removes from both S3 and database)
+ */
+router.delete("/:datasetId", async (req, res, next) => {
+  try {
+    const { datasetId } = req.params;
+
+    // Get storage key before deleting
+    const result = await pool.query(
+      "SELECT storage_key FROM datasets WHERE id = $1",
+      [datasetId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Dataset not found" });
+    }
+
+    const { storage_key } = result.rows[0];
+
+    // Delete from S3
+    await s3
+      .deleteObject({
+        Bucket: BUCKET_NAME,
+        Key: storage_key,
+      })
+      .promise();
+
+    // Delete from database (cascade will handle related records)
+    await pool.query("DELETE FROM datasets WHERE id = $1", [datasetId]);
+
+    console.log(`✅ Deleted dataset: ${datasetId}`);
+
+    res.json({ success: true, message: "Dataset deleted" });
+  } catch (error) {
+    console.error("❌ Delete error:", error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/test-s3
+ * Test S3 connection (for debugging)
+ */
+router.get("/test-s3", async (req, res, next) => {
+  try {
+    const params = {
+      Bucket: BUCKET_NAME,
+    };
+
+    const data = await s3.listObjectsV2(params).promise();
+
+    res.json({
+      success: true,
+      message: "✅ S3 connection successful!",
+      bucketName: BUCKET_NAME,
+      region: process.env.AWS_REGION,
+      fileCount: data.Contents.length,
+      files: data.Contents.map((file) => ({
+        key: file.Key,
+        size: file.Size,
+        lastModified: file.LastModified,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "❌ S3 connection failed",
+      error: error.message,
+      bucketName: BUCKET_NAME,
+      region: process.env.AWS_REGION,
+    });
   }
 });
 

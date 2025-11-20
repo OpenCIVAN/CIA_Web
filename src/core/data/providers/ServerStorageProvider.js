@@ -43,7 +43,8 @@ export class ServerStorageProvider {
    */
   async initialize() {
     console.log("📡 ServerStorageProvider: Initializing...");
-
+    console.log(`   API Base URL: ${this.apiBaseUrl}`);
+    console.log(`   Session ID: ${this.sessionId}`);
     try {
       // Load existing datasets for this session
       const datasets = await this.listDatasets();
