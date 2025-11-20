@@ -1,7 +1,16 @@
 // src/ui/react/components/workspace/SliderMenuOption.jsx
 // Reusable slider component for dropdown menus
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+/**
+ * SliderMenuOption - Reusable slider for dropdown menus
+ * 
+ * FIXES:
+ * 1. Real-time updates during drag (not just on mouseUp)
+ * 2. Throttled updates to avoid performance issues
+ * 3. Guaranteed final update on mouseUp
+ */
 
 /**
  * SliderMenuOption - Reusable slider for dropdown menus
@@ -32,22 +41,50 @@ export function SliderMenuOption({
   step = 0.01,
   onChange,
   formatValue = (val) => val.toFixed(2),
-  presets = null, // Array of preset values: [0, 0.25, 0.5, 0.75, 1]
+  presets = null,
   disabled = false,
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [isDragging, setIsDragging] = useState(false);
+  const throttleTimerRef = useRef(null);
+  const lastEmittedValueRef = useRef(value);
 
   // Update local value when prop changes (for external updates)
   useEffect(() => {
     if (!isDragging) {
       setLocalValue(value);
+      lastEmittedValueRef.current = value;
     }
   }, [value, isDragging]);
+
+  // Throttled onChange to avoid excessive updates during drag
+  const emitChange = (newValue) => {
+    if (!onChange) return;
+
+    // Clear any pending throttle
+    if (throttleTimerRef.current) {
+      clearTimeout(throttleTimerRef.current);
+    }
+
+    // Emit immediately if not dragging, otherwise throttle
+    if (!isDragging) {
+      onChange(newValue);
+      lastEmittedValueRef.current = newValue;
+    } else {
+      // Throttle updates during drag (every 50ms)
+      throttleTimerRef.current = setTimeout(() => {
+        onChange(newValue);
+        lastEmittedValueRef.current = newValue;
+      }, 50);
+    }
+  };
 
   const handleChange = (e) => {
     const newValue = parseFloat(e.target.value);
     setLocalValue(newValue);
+
+    // ✅ FIX: Call onChange during drag, not just on mouseUp
+    emitChange(newValue);
   };
 
   const handleMouseDown = () => {
@@ -56,18 +93,36 @@ export function SliderMenuOption({
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    // Only call onChange on mouse up to avoid excessive updates
-    if (onChange && localValue !== value) {
+
+    // ✅ FIX: Ensure final value is emitted on mouseUp
+    // Clear any pending throttled update
+    if (throttleTimerRef.current) {
+      clearTimeout(throttleTimerRef.current);
+      throttleTimerRef.current = null;
+    }
+
+    // Emit final value if it hasn't been emitted yet
+    if (onChange && localValue !== lastEmittedValueRef.current) {
       onChange(localValue);
+      lastEmittedValueRef.current = localValue;
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (throttleTimerRef.current) {
+        clearTimeout(throttleTimerRef.current);
+      }
+    };
+  }, []);
 
   // Calculate progress percentage for gradient
   const progress = ((localValue - min) / (max - min)) * 100;
 
   return (
-    <div 
-      className="menu-option slider-option" 
+    <div
+      className="menu-option slider-option"
       onClick={(e) => e.stopPropagation()}
       role="group"
       aria-label={label}
@@ -111,11 +166,11 @@ export function SliderMenuOption({
       {presets && (
         <div className="slider-presets">
           {presets.map((preset, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="slider-preset-mark"
-              style={{ 
-                opacity: Math.abs(localValue - preset) < step * 2 ? 1 : 0.3 
+              style={{
+                opacity: Math.abs(localValue - preset) < step * 2 ? 1 : 0.3
               }}
             />
           ))}

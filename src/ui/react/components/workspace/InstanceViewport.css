@@ -314,8 +314,33 @@
 }
 
 .toolbar-menu-dropdown {
-  max-height: min(400px, calc(100vh - 80px)); /* Never exceed viewport */
-  overflow-y: auto;  /* Enable scrolling */
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;  /* Reduced from 220px */
+  max-width: 260px;  /* Reduced from 280px */
+  
+  /* 🆕 GLASSMORPHISM EFFECT  */
+  background: rgba(30, 30, 30, 0.75);  /* Semi-transparent dark */
+  backdrop-filter: blur(20px) saturate(180%);  /* Key glassmorphism properties */
+  -webkit-backdrop-filter: blur(20px) saturate(180%);  /* Safari support */
+  
+  border: 1px solid rgba(255, 255, 255, 0.1);  /* Subtle bright border */
+  border-radius: 8px;  /* Slightly more rounded */
+  padding: 4px;
+  z-index: 1000;
+  
+  /* Enhanced shadow for depth */
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);  /* Inner highlight */
+  
+  /* Smart positioning */
+  max-height: min(500px, calc(100vh - 80px));
+  overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
@@ -332,8 +357,8 @@
 /* Menu separator */
 .menu-separator {
   height: 1px;
-  background: #333;
-  margin: 4px 0;
+  background: rgba(255, 255, 255, 0.1);  /* Glassmorphic separator */
+  margin: 3px 0;  /* ✅ REDUCED from 4px 0 */
 }
 
 /* ============================================================================
@@ -343,23 +368,24 @@
 .menu-option {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;  /* Reduced from 10px */
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 8px;  /* ✅ REDUCED from 8px 10px */
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
 }
 
 .menu-option:hover:not(:disabled) {
-  background: #3a3a3a;
+  background: rgba(255, 255, 255, 0.08);  /* Glassmorphic hover */
 }
 
+
 .menu-option.active {
-  background: #2a3a2a;
+  background: rgba(76, 175, 80, 0.15);  /* Glassmorphic active */
   color: #4CAF50;
 }
 
@@ -375,12 +401,12 @@
 /* Option icon */
 .option-icon {
   flex-shrink: 0;
-  color: #888;
+  color: rgba(255, 255, 255, 0.6);  /* Glassmorphic icon color */
   transition: color 0.15s ease;
 }
 
 .menu-option:hover:not(:disabled) .option-icon {
-  color: #e0e0e0;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Option text container */
@@ -393,21 +419,22 @@
 }
 
 .option-label {
-  font-size: 13px;
+  font-size: 12px;  /* ✅ REDUCED from 13px */
   font-weight: 500;
-  color: #e0e0e0;
+  color: rgba(255, 255, 255, 0.9);  /* Glassmorphic text */
   line-height: 1.3;
 }
 
 .option-description {
-  font-size: 11px;
-  color: #666;
+  font-size: 10px;  /* ✅ REDUCED from 11px */
+  color: rgba(255, 255, 255, 0.5);  /* Glassmorphic description */
   line-height: 1.3;
 }
 
 .menu-option:hover:not(:disabled) .option-description {
-  color: #888;
+  color: rgba(255, 255, 255, 0.65);
 }
+
 
 /* ============================================================================
    RESPONSIVE ADJUSTMENTS
@@ -415,13 +442,33 @@
 
 /* For very small viewports, make buttons slightly larger for touch */
 @media (max-width: 768px) {
-  .toolbar-icon-btn {
-    width: 36px;
-    height: 36px;
+  .toolbar-menu-dropdown {
+    min-width: 180px;
+    max-width: calc(100vw - 40px);
   }
   
-  .instance-toolbar {
-    padding: 6px;
+  .slider-input-container {
+    padding: 3px 2px;
+  }
+  
+  .dropdown-slider::-webkit-slider-thumb,
+  .dropdown-slider::-moz-range-thumb {
+    width: 16px;  /* Larger for touch on mobile */
+    height: 16px;
+  }
+}
+
+/* For very small screens, make dropdown full-width */
+@media (max-width: 480px) {
+  .toolbar-menu-dropdown {
+    left: 0;
+    right: 0;
+    width: calc(100% - 8px);
+    margin: 0 4px;
+  }
+  
+  .menu-option.slider-option {
+    padding: 12px 8px;  /* Slightly larger touch targets on mobile */
   }
 }
 
@@ -440,29 +487,39 @@
   outline-offset: -2px;
 }
 
-/* High contrast mode support */
+/* ============================================================================
+   HIGH CONTRAST MODE
+   ============================================================================ */
+
 @media (prefers-contrast: high) {
-  .toolbar-icon-btn {
-    border-color: #444;
+  .toolbar-menu-dropdown {
+    background: rgba(20, 20, 20, 0.95);
+    border-color: rgba(255, 255, 255, 0.3);
   }
   
-  .toolbar-icon-btn:hover {
-    border-color: #666;
+  .menu-option:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
   }
   
-  .toolbar-icon-btn.active {
-    border-color: #4CAF50;
-    border-width: 2px;
+  .option-label,
+  .slider-label {
+    color: #ffffff;
   }
 }
 
-/* Reduced motion support */
+/* ============================================================================
+   REDUCED MOTION SUPPORT
+   ============================================================================ */
+
 @media (prefers-reduced-motion: reduce) {
-  .toolbar-icon-btn,
-  .toolbar-tooltip,
+  .toolbar-menu-dropdown,
   .menu-option,
-  .option-icon {
+  .option-icon,
+  .dropdown-slider,
+  .dropdown-slider::-webkit-slider-thumb,
+  .dropdown-slider::-moz-range-thumb {
     transition: none;
+    animation: none;
   }
 }
 
@@ -620,10 +677,10 @@
 
 /* Menu header (for section labels) */
 .menu-header {
-  padding: 8px 10px 4px;
-  font-size: 11px;
-  color: #666;
-  font-weight: 500;
+  padding: 6px 8px 3px;  /* ✅ REDUCED from 8px 10px 4px */
+  font-size: 10px;  /* ✅ REDUCED from 11px */
+  color: rgba(255, 255, 255, 0.5);  /* Glassmorphic */
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: default;
@@ -633,13 +690,13 @@
 .menu-option.slider-option {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 10px;
-  cursor: default; /* Not clickable, contains interactive slider */
+  gap: 6px;  /* ✅ REDUCED from 8px */
+  padding: 10px 8px;  /* ✅ REDUCED from 12px 10px */
+  cursor: default;
 }
 
 .menu-option.slider-option:hover {
-  background: transparent; /* Don't highlight on hover */
+  background: transparent;
 }
 
 /* Slider header row */
@@ -647,35 +704,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;  /* ✅ REDUCED from 8px */
 }
 
 .slider-label-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;  /* ✅ REDUCED from 8px */
   flex: 1;
   min-width: 0;
 }
 
 .slider-icon {
   flex-shrink: 0;
-  color: #888;
+  color: rgba(255, 255, 255, 0.6);  /* Glassmorphic */
 }
 
 .slider-label {
-  font-size: 13px;
+  font-size: 12px;  /* ✅ REDUCED from 13px */
   font-weight: 500;
-  color: #e0e0e0;
+  color: rgba(255, 255, 255, 0.9);  /* Glassmorphic */
   line-height: 1.3;
 }
 
 .slider-value {
-  font-size: 12px;
+  font-size: 11px;  /* ✅ REDUCED from 12px */
   font-weight: 600;
   color: #4CAF50;
   font-family: 'Monaco', 'Courier New', monospace;
-  min-width: 45px;
+  min-width: 40px;  /* ✅ REDUCED from 45px */
   text-align: right;
   flex-shrink: 0;
 }
@@ -684,8 +741,8 @@
 .slider-input-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px;
+  gap: 6px;  /* ✅ REDUCED from 8px */
+  padding: 0 3px;  /* ✅ REDUCED from 0 4px */
 }
 
 /* The actual range input */
@@ -693,12 +750,14 @@
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
-  height: 6px;
+  height: 5px;  /* ✅ REDUCED from 6px */
+  
+  /* Glassmorphic slider track */
   background: linear-gradient(to right, 
-    #2a2a2a 0%, 
-    #2a2a2a var(--slider-progress), 
-    #1a1a1a var(--slider-progress), 
-    #1a1a1a 100%
+    rgba(76, 175, 80, 0.3) 0%, 
+    rgba(76, 175, 80, 0.3) var(--slider-progress), 
+    rgba(255, 255, 255, 0.1) var(--slider-progress), 
+    rgba(255, 255, 255, 0.1) 100%
   );
   border-radius: 3px;
   outline: none;
@@ -706,50 +765,61 @@
   transition: background 0.15s ease;
 }
 
+
 .dropdown-slider:hover {
   background: linear-gradient(to right, 
-    #3a3a3a 0%, 
-    #3a3a3a var(--slider-progress), 
-    #2a2a2a var(--slider-progress), 
-    #2a2a2a 100%
+    rgba(76, 175, 80, 0.4) 0%, 
+    rgba(76, 175, 80, 0.4) var(--slider-progress), 
+    rgba(255, 255, 255, 0.15) var(--slider-progress), 
+    rgba(255, 255, 255, 0.15) 100%
   );
 }
 
 .dropdown-slider:focus-visible {
-  outline: 2px solid #4CAF50;
+  outline: 2px solid rgba(76, 175, 80, 0.6);
   outline-offset: 2px;
 }
+
+
 
 /* Slider thumb (the draggable part) */
 .dropdown-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;  /* ✅ REDUCED from 16px */
+  height: 14px;
   background: #4CAF50;
-  border: 2px solid #1e1e1e;
+  border: 2px solid rgba(30, 30, 30, 0.8);
   border-radius: 50%;
   cursor: grab;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 0 rgba(76, 175, 80, 0.3);  /* Glow effect on hover/active */
 }
 
 .dropdown-slider::-webkit-slider-thumb:hover {
   background: #5fc96a;
-  transform: scale(1.1);
-  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.4);
+  transform: scale(1.15);
+  box-shadow: 
+    0 3px 8px rgba(76, 175, 80, 0.4),
+    0 0 0 4px rgba(76, 175, 80, 0.2);  /* Expanding glow */
 }
 
 .dropdown-slider::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.05);
+  transform: scale(1.1);
+  box-shadow: 
+    0 2px 6px rgba(76, 175, 80, 0.5),
+    0 0 0 6px rgba(76, 175, 80, 0.25);
 }
 
+/* Firefox slider thumb */
 .dropdown-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: #4CAF50;
-  border: 2px solid #1e1e1e;
+  border: 2px solid rgba(30, 30, 30, 0.8);
   border-radius: 50%;
   cursor: grab;
   transition: all 0.15s ease;
@@ -758,38 +828,38 @@
 
 .dropdown-slider::-moz-range-thumb:hover {
   background: #5fc96a;
-  transform: scale(1.1);
+  transform: scale(1.15);
   box-shadow: 0 3px 8px rgba(76, 175, 80, 0.4);
 }
 
 .dropdown-slider::-moz-range-thumb:active {
   cursor: grabbing;
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
-/* Optional: Preset tick marks */
+/* Preset tick marks */
 .slider-presets {
   display: flex;
   justify-content: space-between;
-  padding: 0 8px;
-  margin-top: -4px;
+  padding: 0 6px;  /* ✅ REDUCED from 0 8px */
+  margin-top: -3px;  /* ✅ REDUCED from -4px */
   pointer-events: none;
 }
 
 .slider-preset-mark {
   width: 2px;
-  height: 4px;
-  background: #333;
+  height: 3px;  /* ✅ REDUCED from 4px */
+  background: rgba(255, 255, 255, 0.3);  /* Glassmorphic */
   border-radius: 1px;
 }
 
-/* Optional: Description under slider */
+/* Slider description */
 .slider-description {
-  font-size: 11px;
-  color: #666;
+  font-size: 10px;  /* Already correct size */
+  color: rgba(255, 255, 255, 0.5);  /* Glassmorphic */
   line-height: 1.3;
-  padding: 0 4px;
-  margin-top: -4px;
+  padding: 0 3px;  /* ✅ REDUCED from 0 4px */
+  margin-top: -3px;  /* ✅ REDUCED from -4px */
 }
 
 /* ============================================================================
@@ -798,7 +868,6 @@
    ============================================================================ */
 
 .toolbar-menu-dropdown {
-  /* Existing styles... */
   display: none;
   position: absolute;
   top: 100%;
@@ -832,23 +901,41 @@
   right: 0;
 }
 
+/* Show on hover */
+.toolbar-menu:hover .toolbar-menu-dropdown {
+  display: block;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Add scrollbar styling for dropdown */
 .toolbar-menu-dropdown::-webkit-scrollbar {
   width: 6px;
 }
 
 .toolbar-menu-dropdown::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
 }
 
 .toolbar-menu-dropdown::-webkit-scrollbar-thumb {
-  background: #444;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
+  transition: background 0.15s ease;
 }
 
 .toolbar-menu-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* ============================================================================
