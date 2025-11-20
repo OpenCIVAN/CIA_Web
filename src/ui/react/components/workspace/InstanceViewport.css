@@ -1356,3 +1356,110 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* ============================================================================
+   POSITION GRID (for widget placement)
+   ============================================================================ */
+
+.position-grid-container {
+  padding: 8px;
+  min-width: 180px;
+}
+
+.position-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.position-grid-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.position-grid-cell {
+  position: relative;
+  aspect-ratio: 1.5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px;
+}
+
+.position-grid-cell.empty {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  cursor: default;
+}
+
+.position-grid-cell:not(.empty):hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(76, 175, 80, 0.5);
+  transform: scale(1.05);
+}
+
+.position-grid-cell.active {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: #4CAF50;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.3);
+}
+
+.position-grid-icon {
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.15s ease;
+}
+
+.position-grid-cell:hover .position-grid-icon {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.position-grid-cell.active .position-grid-icon {
+  color: #4CAF50;
+}
+
+.position-grid-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.position-grid-cell:hover .position-grid-label {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.position-grid-cell.active .position-grid-label {
+  color: #4CAF50;
+}
+
+.position-grid-hint {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  font-size: 10px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 768px) {
+  .position-grid-cell {
+    min-height: 56px;
+  }
+  
+  .position-grid-icon {
+    width: 22px;
+    height: 22px;
+  }
+}

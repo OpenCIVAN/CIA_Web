@@ -965,25 +965,25 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       type: "menu",
       icon: "eye",
       label: "Appearance",
-      description: caps.hasData ? "Visual settings" : "Load data first",
-      disabled: !caps.hasData, // Disable entire menu if no data
+      description: "Visual properties",
+      disabled: !caps.hasData,
       options: [
-        // ✅ OPACITY SLIDER
+        // Opacity slider with presets
         {
-          type: "slider",
+          type: "slider-with-presets",
           id: "opacity-slider",
-          label: "Opacity",
           icon: "circle",
+          label: "Opacity",
           value: currentOpacity,
           min: 0,
           max: 1,
           step: 0.01,
           formatValue: (val) => `${Math.round(val * 100)}%`,
           presets: [0, 0.25, 0.5, 0.75, 1.0],
-          description: caps.hasData
-            ? "Adjust material transparency"
-            : "Load data to adjust opacity",
           disabled: !caps.hasData,
+          disabledReason: caps.hasData
+            ? undefined
+            : "Load data to adjust opacity",
           onChange: (value) => {
             if (!caps.hasData) return;
             instanceTools.setOpacity(instanceId, value);
@@ -993,17 +993,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
         { type: "separator" },
 
-        // REPRESENTATION OPTIONS
+        // Representation mode buttons (optional - keep existing ones)
         {
           id: "rep-surface",
           icon: "box",
           label: "Surface",
           description: "Solid surface rendering",
-          active: currentRepresentation === "surface",
-          disabled: !caps.hasData,
           onClick: () => {
             if (!caps.hasData) return;
-            instanceTools.setRepresentation(instanceId, "surface");
+            instanceTools.setRepresentation?.(instanceId, "surface");
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1011,12 +1009,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           id: "rep-wireframe",
           icon: "grid-3x3",
           label: "Wireframe",
-          description: "Show mesh edges",
-          active: currentRepresentation === "wireframe",
-          disabled: !caps.hasData,
+          description: "Wireframe rendering",
           onClick: () => {
             if (!caps.hasData) return;
-            instanceTools.setRepresentation(instanceId, "wireframe");
+            instanceTools.setRepresentation?.(instanceId, "wireframe");
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1024,12 +1020,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           id: "rep-points",
           icon: "circle",
           label: "Points",
-          description: "Show vertices only",
-          active: currentRepresentation === "points",
-          disabled: !caps.hasData,
+          description: "Point cloud rendering",
           onClick: () => {
             if (!caps.hasData) return;
-            instanceTools.setRepresentation(instanceId, "points");
+            instanceTools.setRepresentation?.(instanceId, "points");
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1082,56 +1076,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onChange: (value) => {
             if (!caps.hasData || currentRepresentation !== "wireframe") return;
             instanceTools.setLineWidth?.(instanceId, value);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-
-        { type: "separator" },
-
-        // Quick preset header
-        {
-          type: "header",
-          id: "opacity-presets-header",
-          label: "Quick Opacity Presets",
-        },
-
-        // Quick preset buttons
-        {
-          id: "opacity-100",
-          icon: "circle",
-          label: "Opaque",
-          description: "100% opacity",
-          active: Math.abs(currentOpacity - 1.0) < 0.01,
-          disabled: !caps.hasData,
-          onClick: () => {
-            if (!caps.hasData) return;
-            instanceTools.setOpacity(instanceId, 1.0);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-        {
-          id: "opacity-50",
-          icon: "circle-dashed",
-          label: "Half",
-          description: "50% opacity",
-          active: Math.abs(currentOpacity - 0.5) < 0.01,
-          disabled: !caps.hasData,
-          onClick: () => {
-            if (!caps.hasData) return;
-            instanceTools.setOpacity(instanceId, 0.5);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-        {
-          id: "opacity-0",
-          icon: "circle-off",
-          label: "Invisible",
-          description: "0% opacity",
-          active: currentOpacity < 0.01,
-          disabled: !caps.hasData,
-          onClick: () => {
-            if (!caps.hasData) return;
-            instanceTools.setOpacity(instanceId, 0.0);
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1218,6 +1162,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // 🆕 COLORMAP MENU (extracted from old visualization menu)
     // ========================================================================
+    const currentColormap = caps.canUseColormap
+      ? instanceTools.getCurrentColormap?.(instanceId) || "viridis"
+      : "viridis";
+
     tools.push({
       id: "colormap",
       type: "menu",
@@ -1229,32 +1177,70 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       disabled: !caps.canUseColormap,
       options: [
         {
-          id: "colormap-rainbow",
-          icon: "palette",
-          label: "Rainbow",
-          onClick: () => instanceTools.setColorMap(instanceId, "rainbow"),
+          type: "color-swatch-grid",
+          id: "colormap-grid",
           disabled: !caps.canUseColormap,
-        },
-        {
-          id: "colormap-grayscale",
-          icon: "palette",
-          label: "Grayscale",
-          onClick: () => instanceTools.setColorMap(instanceId, "grayscale"),
-          disabled: !caps.canUseColormap,
-        },
-        {
-          id: "colormap-hot",
-          icon: "palette",
-          label: "Hot",
-          onClick: () => instanceTools.setColorMap(instanceId, "hot"),
-          disabled: !caps.canUseColormap,
-        },
-        {
-          id: "colormap-cool",
-          icon: "palette",
-          label: "Cool",
-          onClick: () => instanceTools.setColorMap(instanceId, "cool"),
-          disabled: !caps.canUseColormap,
+          currentColormap: currentColormap,
+          colormaps: [
+            {
+              id: "rainbow",
+              name: "Rainbow",
+              gradient:
+                "linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff)",
+            },
+            {
+              id: "viridis",
+              name: "Viridis",
+              gradient:
+                "linear-gradient(90deg, #440154, #31688e, #35b779, #fde724)",
+            },
+            {
+              id: "plasma",
+              name: "Plasma",
+              gradient:
+                "linear-gradient(90deg, #0d0887, #7e03a8, #cc4778, #f89540, #f0f921)",
+            },
+            {
+              id: "hot",
+              name: "Hot",
+              gradient:
+                "linear-gradient(90deg, #000000, #ff0000, #ffff00, #ffffff)",
+            },
+            {
+              id: "cool",
+              name: "Cool",
+              gradient: "linear-gradient(90deg, #00ffff, #0000ff, #ff00ff)",
+            },
+            {
+              id: "grayscale",
+              name: "Grayscale",
+              gradient: "linear-gradient(90deg, #000000, #ffffff)",
+            },
+            {
+              id: "turbo",
+              name: "Turbo",
+              gradient:
+                "linear-gradient(90deg, #30123b, #1ae4b6, #faba39, #7a0403)",
+            },
+            {
+              id: "magma",
+              name: "Magma",
+              gradient:
+                "linear-gradient(90deg, #000004, #731f57, #f1605d, #fcfdbf)",
+            },
+            {
+              id: "inferno",
+              name: "Inferno",
+              gradient:
+                "linear-gradient(90deg, #000004, #57106e, #f98e09, #fcffa4)",
+            },
+          ],
+          onColormapChange: (colormapId) => {
+            if (!caps.canUseColormap) return;
+            instanceTools.setColorMap(instanceId, colormapId);
+            this._emitToolsUpdate(instanceId);
+            console.log(`🎨 Colormap changed to: ${colormapId}`);
+          },
         },
       ],
     });
@@ -1269,6 +1255,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       "orientation"
     );
 
+    // Get current configuration
+    const currentConfig = vtkOrientationWidget.getConfig?.(instanceId) || {
+      viewportSize: 0.1,
+      corner: "BOTTOM_RIGHT",
+    };
+
+    // Calculate current size percentage (convert viewportSize to 0-100)
+    const currentSizePercent = currentConfig.viewportSize * 100;
+
     tools.push({
       id: "orientation",
       type: "menu",
@@ -1277,106 +1272,110 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       description: "Orientation cube controls",
       active: orientationEnabled,
       options: [
-        // Toggle on/off
+        // ========================================================================
+        // Show/Hide Toggle Button
+        // ========================================================================
         {
           id: "orientation-toggle",
-          icon: orientationEnabled ? "compass" : "compass-off",
+          icon: orientationEnabled ? "eye" : "eye-off",
           label: orientationEnabled ? "Hide Cube" : "Show Cube",
+          description: orientationEnabled
+            ? "Hide orientation cube"
+            : "Show orientation cube",
+          active: orientationEnabled,
           onClick: () => {
-            instanceTools.toggleOrientation(instanceId);
+            instanceTools.toggleOrientation?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
+
         { type: "separator" },
-        // Size presets
-        {
-          id: "size-small",
-          icon: "minimize-2",
-          label: "Small Size",
-          description: "8% of viewport",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              viewportSize: 0.08,
-              minPixelSize: 60,
-              maxPixelSize: 200,
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        {
-          id: "size-medium",
-          icon: "square",
-          label: "Medium Size",
-          description: "10% of viewport (default)",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              viewportSize: 0.1,
-              minPixelSize: 80,
-              maxPixelSize: 280,
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        {
-          id: "size-large",
-          icon: "maximize-2",
-          label: "Large Size",
-          description: "15% of viewport",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              viewportSize: 0.15,
-              minPixelSize: 120,
-              maxPixelSize: 400,
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        { type: "separator" },
-        // Corner positions
-        {
-          id: "corner-br",
-          icon: "corner-down-right",
-          label: "Bottom Right",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              corner: "BOTTOM_RIGHT",
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        {
-          id: "corner-bl",
-          icon: "corner-down-left",
-          label: "Bottom Left",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              corner: "BOTTOM_LEFT",
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        {
-          id: "corner-tr",
-          icon: "corner-up-right",
-          label: "Top Right",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              corner: "TOP_RIGHT",
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
-        {
-          id: "corner-tl",
-          icon: "corner-up-left",
-          label: "Top Left",
-          onClick: () => {
-            vtkOrientationWidget.updateConfig(instanceId, {
-              corner: "TOP_LEFT",
-            });
-            instanceTools.forceRender(instanceId);
-          },
-        },
+
+        // ========================================================================
+        // Size Slider with Presets (only show when enabled)
+        // ========================================================================
+        ...(orientationEnabled
+          ? [
+              {
+                type: "slider-with-presets",
+                id: "orientation-size-slider",
+                icon: "maximize-2",
+                label: "Widget Size",
+                value: currentSizePercent,
+                min: 5,
+                max: 20,
+                step: 1,
+                formatValue: (val) => `${val}%`,
+                presets: [6, 8, 10, 12, 15],
+                disabled: false,
+                onChange: (value) => {
+                  // Convert percentage to decimal
+                  const viewportSize = value / 100;
+
+                  // Calculate pixel bounds based on percentage
+                  const minPixelSize = value * 8; // 8px per percent
+                  const maxPixelSize = value * 25; // 25px per percent
+
+                  vtkOrientationWidget.updateConfig?.(instanceId, {
+                    viewportSize: viewportSize,
+                    minPixelSize: Math.max(60, minPixelSize),
+                    maxPixelSize: Math.min(400, maxPixelSize),
+                  });
+
+                  instanceTools.forceRender?.(instanceId);
+                  this._emitToolsUpdate(instanceId);
+                },
+              },
+            ]
+          : []),
+
+        // ========================================================================
+        // Position Grid (only show when enabled)
+        // ========================================================================
+        ...(orientationEnabled
+          ? [
+              { type: "separator" },
+              {
+                type: "header",
+                label: "POSITION",
+              },
+              {
+                type: "position-grid",
+                id: "orientation-position-grid",
+                currentPosition: currentConfig.corner,
+                positions: [
+                  {
+                    id: "TOP_LEFT",
+                    label: "Top Left",
+                    icon: "corner-up-left",
+                  },
+                  {
+                    id: "TOP_RIGHT",
+                    label: "Top Right",
+                    icon: "corner-up-right",
+                  },
+                  {
+                    id: "BOTTOM_LEFT",
+                    label: "Bottom Left",
+                    icon: "corner-down-left",
+                  },
+                  {
+                    id: "BOTTOM_RIGHT",
+                    label: "Bottom Right",
+                    icon: "corner-down-right",
+                  },
+                ],
+                onPositionChange: (positionId) => {
+                  vtkOrientationWidget.updateConfig?.(instanceId, {
+                    corner: positionId,
+                  });
+                  instanceTools.forceRender?.(instanceId);
+                  this._emitToolsUpdate(instanceId);
+                  console.log(`📍 Orientation widget moved to: ${positionId}`);
+                },
+              },
+            ]
+          : []),
       ],
     });
 

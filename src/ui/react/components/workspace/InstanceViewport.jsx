@@ -15,10 +15,11 @@ import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
-import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption';
-import { CameraViewGridPicker } from '@UI/react/components/workspace/CameraViewGridPicker';
-import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPresets';
-import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid';
+import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption.jsx';
+import { CameraViewGridPicker } from '@UI/react/components/workspace/CameraViewGridPicker.jsx';
+import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPresets.jsx';
+import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid.jsx';
+import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridPicker.jsx';
 
 import "@UI/react/components/workspace/InstanceViewport.css";
 
@@ -331,6 +332,36 @@ export function InstanceViewport({
         }
 
         // =====================================================================
+        // ✅ POSITION GRID - For widget positioning
+        // =====================================================================
+        if (option.type === 'position-grid') {
+            return (
+                <PositionGridPicker
+                    key={option.id}
+                    positions={option.positions}
+                    currentPosition={option.currentPosition}
+                    disabled={option.disabled}
+                    onPositionChange={option.onPositionChange}
+                />
+            );
+        }
+
+        // =====================================================================
+        // ✅ COLOR SWATCH GRID - UI layer interprets the plain object
+        // =====================================================================
+        if (option.type === 'color-swatch-grid') {
+            return (
+                <ColorSwatchGrid
+                    key={option.id}
+                    colormaps={option.colormaps}
+                    currentColormap={option.currentColormap}
+                    disabled={option.disabled}
+                    onColormapChange={option.onColormapChange}
+                />
+            );
+        }
+
+        // =====================================================================
         // ✅ SLIDER WITH PRESETS - UI layer interprets the plain object
         // =====================================================================
         if (option.type === 'slider-with-presets') {
@@ -353,22 +384,6 @@ export function InstanceViewport({
                 />
             );
         }
-
-        // =====================================================================
-        // ✅ COLOR SWATCH GRID - UI layer interprets the plain object
-        // =====================================================================
-        if (option.type === 'color-swatch-grid') {
-            return (
-                <ColorSwatchGrid
-                    key={option.id}
-                    colormaps={option.colormaps}
-                    currentColormap={option.currentColormap}
-                    disabled={option.disabled}
-                    onColormapChange={option.onColormapChange}
-                />
-            );
-        }
-
 
         // =====================================================================
         // SLIDER - Convert plain object to React component
