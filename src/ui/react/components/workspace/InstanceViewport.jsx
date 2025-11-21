@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
-import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
 import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption.jsx';
@@ -14,7 +13,6 @@ import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPres
 import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid.jsx';
 import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridPicker.jsx';
 
-// ✅ NEW: Import managers
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
 import "@UI/react/components/workspace/InstanceViewport.css";
@@ -22,7 +20,7 @@ import "@UI/react/components/workspace/InstanceViewport.css";
 /**
  * InstanceViewport
  * 
- * ✅ UPDATED: Now uses ViewConfiguration layer
+ * ✅ UPDATED: Now uses ViewConfiguration layer AND calls instanceManager
  * 
  * Props:
  * - viewConfigId: ViewConfiguration ID (replaces datasetId)
@@ -33,7 +31,7 @@ import "@UI/react/components/workspace/InstanceViewport.css";
  * - onDelete: Callback when instance should be deleted
  */
 export function InstanceViewport({
-    viewConfigId,        // ✅ Changed from datasetId
+    viewConfigId,
     type = 'vtk',
     isRemote = false,
     remoteInstanceId = null,
@@ -55,11 +53,11 @@ export function InstanceViewport({
     const [error, setError] = useState(null);
     const [tools, setTools] = useState([]);
     const [headerInfo, setHeaderInfo] = useState(null);
-    const [openMenuId, setOpenMenuId] = useState(null); 
+    const [openMenuId, setOpenMenuId] = useState(null);
     const [activeDropdown, setActiveDropdown] = useState(null);
 
     // =========================================================================
-    // INSTANCE INITIALIZATION
+    // ✅ FIXED: INSTANCE INITIALIZATION - Now calls instanceManager
     // =========================================================================
 
     useEffect(() => {
@@ -78,11 +76,12 @@ export function InstanceViewport({
 
                 console.log(`🎨 Creating new local instance (type: ${type})`);
 
-                // ✅ UPDATED: Store viewConfigId in options
-                const instanceId = await workspaceManager.createInstance(
+                // ✅ CRITICAL FIX: Call instanceManager.createInstance() instead of workspaceManager
+                // This ensures Y.js sync happens BEFORE state subscriptions are set up
+                const instanceId = await instanceManager.createInstance(
                     containerRef.current,
                     type,
-                    { viewConfigId }  // Pass viewConfigId to instance
+                    { viewConfigId }  // Pass viewConfigId for 3-layer architecture
                 );
 
                 setActualInstanceId(instanceId);
@@ -135,104 +134,9 @@ export function InstanceViewport({
     }, [actualInstanceId, initialized]);
 
     // =========================================================================
-    // ✅ NEW: VIEW CONFIGURATION LOADING
-    // This replaces the old dataset loading logic
+    // VIEW CONFIGURATION LOADING
     // =========================================================================
 
-    useEffect(() => {
-        if (!initialized || !actualInstanceId || !viewConfigId) {
-            setLoading(false);
-            return;
-        }
-
-        const loadView = async () => {
-            try {
-                // STEP 1: Get the ViewConfiguration
-                const view = viewConfigurationManager.getView(viewConfigId);
-                if (!view) {
-                    throw new Error(`ViewConfiguration ${viewConfigId} not found`);
-                }
-
-                console.log(`📋 Loading view ${viewConfigId}`);
-
-                // STEP 2: Get the Dataset from the view
-                const dataset = datasetManager.getDataset(view.datasetId);
-                if (!dataset) {
-                    throw new Error(`Dataset ${view.datasetId} not found for view`);
-                }
-
-                console.log(`📊 Loading dataset ${dataset.filename} via view`);
-
-                // STEP 3: Get the instance
-                const instance = workspaceManager.getInstance(actualInstanceId);
-                if (!instance) {
-                    throw new Error(`Instance ${actualInstanceId} not found`);
-                }
-
-                // STEP 4: Get the handler
-                const handler = instance.handler;
-                if (!handler) {
-                    throw new Error('Instance handler not available');
-                }
-
-                setLoading(true);
-
-                // STEP 5: Load the data
-                console.log(`📊 Loading data into instance ${actualInstanceId}`);
-                await handler.loadData(instance.instanceData, dataset, null);
-
-                // STEP 6: Apply saved camera state if it exists
-                if (view.camera && handler.applyCameraState) {
-                    console.log(`📷 Applying saved camera state from view`);
-                    handler.applyCameraState(actualInstanceId, view.camera);
-                }
-
-                // STEP 7: Apply filters if any
-                if (view.filters && view.filters.length > 0) {
-                    console.log(`🎨 Applying ${view.filters.length} filter(s) from view`);
-                    // TODO: Implement filter application
-                }
-
-                // STEP 8: Restore widgets if any
-                if (view.widgets && view.widgets.length > 0) {
-                    console.log(`🔧 Restoring ${view.widgets.length} widget(s) from view`);
-                    // TODO: Implement widget restoration
-                }
-
-                // Update header info
-                const newHeaderInfo = workspaceManager.getInstanceHeaderInfo(actualInstanceId);
-                setHeaderInfo(newHeaderInfo);
-
-                setLoading(false);
-                console.log(`✅ View loaded successfully`);
-
-            } catch (error) {
-                const errorMessage = error.message || 'Unknown error occurred';
-                console.error(`❌ Failed to load view:`, error);
-
-                // Get dataset info for error display
-                let datasetName = 'Unknown';
-                try {
-                    const view = viewConfigurationManager.getView(viewConfigId);
-                    if (view) {
-                        const dataset = datasetManager.getDataset(view.datasetId);
-                        datasetName = dataset?.filename || 'Unknown';
-                    }
-                } catch (e) {
-                    console.warn('Could not get dataset name for error display');
-                }
-
-                setError({
-                    message: errorMessage,
-                    viewConfigId: viewConfigId,
-                    datasetName: datasetName,
-                });
-                setLoading(false);
-            }
-        };
-
-        loadView();
-    }, [initialized, actualInstanceId, viewConfigId]);
 
     // =========================================================================
     // UI HELPERS
@@ -267,28 +171,25 @@ export function InstanceViewport({
             }
         }
 
-        return `Instance ${actualInstanceId ? actualInstanceId.slice(-6) : '...'}`;
+        return `Instance ${actualInstanceId ? actualInstanceId.slice(0, 12) : 'Loading'}...`;
     };
 
     const handleFullscreen = () => {
         if (containerRef.current) {
-            if (!document.fullscreenElement) {
-                containerRef.current.parentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
+            if (containerRef.current.requestFullscreen) {
+                containerRef.current.requestFullscreen();
             }
         }
     };
-
 
     // =========================================================================
     // TOOLBAR RENDERING
     // =========================================================================
 
-    /**
- * Render individual menu option
- * UPDATED to support 'custom' type for sliders
- */
+    /*
+    * Render individual menu option
+    * UPDATED to support 'custom' type for sliders
+    */
     const renderMenuOption = (option, optIndex, menuId) => {
         // Handle separator
         if (option.type === 'separator') {
@@ -532,9 +433,6 @@ export function InstanceViewport({
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '4px',
                 overflow: 'hidden',
             }}
         >
@@ -593,6 +491,11 @@ export function InstanceViewport({
                         <div style={{ fontSize: '12px', opacity: 0.7 }}>
                             View: {error.viewConfigId?.slice(0, 12)}...
                         </div>
+                        {error.datasetName && (
+                            <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                Dataset: {error.datasetName}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

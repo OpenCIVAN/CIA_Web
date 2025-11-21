@@ -5,75 +5,15 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Users, X } from "lucide-react";
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
-import { instanceManager } from "@Core/instances/instanceManager.js";
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
-import { RemoteInstancePlaceholder } from "@UI/react/components/workspace/RemoteInstancePlaceholder.jsx";
 
 export function WorkspaceGrid() {
     // Track instances to render
     // New structure: { key, viewConfigId, type, isRemote, remoteId, userName }
     const [instances, setInstances] = useState([]);
 
-    // Pending remote instances
-    const [pendingRemoteInstances, setPendingRemoteInstances] = useState([]);
-    const [showNotification, setShowNotification] = useState(false);
-
     const gridRef = useRef(null);
     const initialized = useRef(false);
-
-    /**
-     * Initialize instance manager
-     */
-    useEffect(() => {
-        if (!initialized.current) {
-            initialized.current = true;
-            console.log("🎨 WorkspaceGrid: Initializing...");
-
-            // IMPORTANT: Register callback FIRST, before initialization
-            console.log("📝 WorkspaceGrid: Registering callback...");
-            const cleanup = instanceManager.onRemoteInstanceChange((event) => {
-                console.log('📬 WorkspaceGrid: Received remote instance event:', event.action);
-
-                if (event.action === "add") {
-                    console.log(`   Instance: ${event.instanceId}`);
-                    console.log(`   From: ${event.instance.userName}`);
-
-                    // Add to pending
-                    setPendingRemoteInstances((prev) => {
-                        const newPending = [...prev, {
-                            instanceId: event.instanceId,
-                            userName: event.instance.userName,
-                            datasetId: event.instance.datasetId,
-                            userId: event.instance.userId, // Also store userId
-                        }];
-                        console.log(`   Total pending: ${newPending.length}`);
-                        return newPending;
-                    });
-                    setShowNotification(true);
-                }
-
-                if (event.action === "delete") {
-                    setInstances((prev) =>
-                        prev.filter((i) => i.remoteId !== event.instanceId)
-                    );
-                    setPendingRemoteInstances((prev) =>
-                        prev.filter((p) => p.instanceId !== event.instanceId)
-                    );
-                }
-            });
-
-            // NOW initialize the instance manager
-            // This starts the Y.js observer, which can now safely notify our callback
-            console.log("🎨 WorkspaceGrid: Initializing instance manager...");
-            instanceManager.initialize();
-
-            // Remove the setTimeout check for existing instances - not needed anymore
-            // The instance manager's _checkForExistingRemoteInstances() handles this
-
-            console.log("✅ WorkspaceGrid initialized");
-            return cleanup;
-        }
-    }, []);
 
     /**
      * Listen for dataset selection from FilesPanel
@@ -146,27 +86,6 @@ export function WorkspaceGrid() {
     }, [instances.length]);
 
     /**
-     * Accept remote instances
-     */
-    const handleAcceptRemoteInstances = useCallback(() => {
-        console.log(`✅ Accepting ${pendingRemoteInstances.length} remote instances`);
-
-        pendingRemoteInstances.forEach((remote) => {
-            setInstances((prev) => [...prev, {
-                key: `remote-${remote.instanceId}`,
-                datasetId: remote.datasetId,
-                isRemote: true,
-                remoteId: remote.instanceId,  // The actual instance ID from Y.js
-                userName: remote.userName,
-                userId: remote.userId,  // FIX: Include userId for RemoteInstancePlaceholder
-            }]);
-        });
-
-        setPendingRemoteInstances([]);
-        setShowNotification(false);
-    }, [pendingRemoteInstances]);
-
-    /**
      * Dismiss notification
      */
     const handleDismissNotification = useCallback(() => {
@@ -220,92 +139,6 @@ export function WorkspaceGrid() {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
-
-            {/* Remote Instance Notification */}
-            {showNotification && pendingRemoteInstances.length > 0 && (
-                <div style={{
-                    position: "absolute",
-                    top: "20px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    zIndex: 1000,
-                    minWidth: "400px",
-                    background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-                    border: "2px solid #4CAF50",
-                    borderRadius: "12px",
-                    padding: "20px",
-                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-                    animation: "slideDown 0.3s ease-out",
-                }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "12px",
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Users size={20} color="#4CAF50" />
-                            <h3 style={{ margin: 0, fontSize: "16px", color: "#fff" }}>
-                                Shared Views Available
-                            </h3>
-                        </div>
-                        <button
-                            onClick={handleDismissNotification}
-                            style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "#999",
-                                cursor: "pointer",
-                                padding: "4px",
-                            }}
-                        >
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    <div style={{ marginBottom: "16px", color: "#ccc", fontSize: "14px" }}>
-                        {pendingRemoteInstances.map((remote, idx) => (
-                            <div key={idx} style={{ marginBottom: "4px" }}>
-                                • <strong>{remote.userName}</strong> is viewing{" "}
-                                {remote.datasetId ? "a dataset" : "an empty viewport"}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                        <button
-                            onClick={handleDismissNotification}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#3a3a3a",
-                                border: "1px solid #555",
-                                borderRadius: "6px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                            }}
-                        >
-                            Dismiss
-                        </button>
-                        <button
-                            onClick={handleAcceptRemoteInstances}
-                            style={{
-                                padding: "8px 16px",
-                                background: "#4CAF50",
-                                border: "none",
-                                borderRadius: "6px",
-                                color: "#fff",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                                fontWeight: 600,
-                            }}
-                        >
-                            Open Views Now
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* Toolbar */}
             <div style={{
                 display: "flex",
@@ -415,16 +248,6 @@ export function WorkspaceGrid() {
                         if (instance.isRemote && instance.viewConfigId) {
                             const view = viewConfigurationManager.getView(instance.viewConfigId);
                             const dataset = view ? datasetManager.getDataset(view.datasetId) : null;
-
-                            if (!dataset) {
-                                return (
-                                    <RemoteInstancePlaceholder
-                                        key={instance.key}
-                                        instanceId={instance.remoteId}
-                                    // ... placeholder props
-                                    />
-                                );
-                            }
                         }
 
                         // Normal case - render with viewConfigId

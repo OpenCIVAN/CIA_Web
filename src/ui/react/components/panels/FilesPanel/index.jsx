@@ -16,7 +16,6 @@ import { useFileOperations } from './useFileOperations.js';
 import { SampleFileList } from './SampleFileList.jsx';
 import { DatasetList } from './DatasetList.jsx';
 import { FileUploadButton } from './FileUploadButton.jsx';
-import { instanceManager } from '@Core/instances/instanceManager.js';
 
 import './FilesPanel.css';
 
@@ -42,12 +41,6 @@ export function FilesPanel() {
     // Quick Access state
     const [quickAccessOpen, setQuickAccessOpen] = useState(false);
     const [quickAccessTab, setQuickAccessTab] = useState('annotations');
-
-    // Enrich datasets with instance counts
-    const datasetsWithCounts = datasets.map(dataset => ({
-        ...dataset,
-        instanceCount: instanceManager.getInstanceCountForDataset(dataset.id)
-    }));
 
     const isAnyLoading = datasets.some(d => d.isLoading);
 
