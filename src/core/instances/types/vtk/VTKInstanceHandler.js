@@ -429,11 +429,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
 
-      // Remove the placeholder now that we have real rendering
-      if (instanceData.placeholder) {
-        instanceData.placeholder.remove();
-        instanceData.placeholder = null;
-      }
+      // Placeholder was already removed by innerHTML = "" in _initializeVTKPipeline
+      instanceData.placeholder = null; // Just clear the reference
     }
 
     const { renderer, renderWindow, mapper, actor } = instanceData.sceneObjects;
@@ -1969,8 +1966,19 @@ console.log('Tools:', tools);
       `🎨 Initializing VTK rendering pipeline for ${instanceData.instanceId}`
     );
 
-    // Clear the container to ensure clean slate (removes placeholder)
-    container.innerHTML = "";
+    // ✅ Remove placeholder safely instead of using innerHTML
+    // React is managing this container, so we need to be surgical
+    if (instanceData.placeholder) {
+      try {
+        if (instanceData.placeholder.parentNode === container) {
+          container.removeChild(instanceData.placeholder);
+        }
+      } catch (e) {
+        // Ignore if already removed
+        console.warn("Placeholder already removed or not in DOM");
+      }
+      instanceData.placeholder = null;
+    }
 
     // =========================================================================
     // PHASE 1: Create the rendering core (renderer + render window)

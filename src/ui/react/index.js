@@ -45,13 +45,3 @@ export function unmountReactUI() {
     console.log("✅ React UI unmounted");
   }
 }
-
-window.addEventListener("error", (e) => {
-  if (
-    e.message ===
-    "ResizeObserver loop completed with undelivered notifications."
-  ) {
-    e.stopImmediatePropagation();
-    return false;
-  }
-});
