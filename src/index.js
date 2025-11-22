@@ -5,10 +5,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { initializePhase1 } from "@Init/appInitializer.js";
-import { Bootstrap } from "@UI/react/Bootstrap.jsx";
+import { Bootstrap } from "@UI/react/components/auth/Bootstrap.jsx";
 
 // Import global styles
-import "@UI/react/styles/global.css";
+import "@UI/react/styles/global.scss";
 
 /**
  * Check browser compatibility

@@ -7,7 +7,7 @@ import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/u
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 
-import "@UI/react/styles/bootstrap.css";
+import "@UI/react/components/auth/bootstrap.scss";
 import "@UI/react/styles/panels.css";
 
 /**

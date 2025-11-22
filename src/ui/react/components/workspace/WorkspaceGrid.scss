@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
 // WorkspaceGrid - Main container
@@ -35,23 +36,32 @@
     align-items: center;
     gap: 6px;
     padding: $spacing-sm $spacing-md;
-    background-color: $color-bg-accent;
-    border: none;
+    background-color: $color-accent-primary-glow; // Translucent green
+    border: 1px solid $color-accent-primary;
     border-radius: $radius-sm;
-    color: $color-text-primary;
+    color: $color-accent-primary;
     cursor: pointer;
     font-size: $font-size-md;
     font-weight: $font-weight-semibold;
     transition: all $transition-base;
 
     &:hover:not(:disabled) {
-      background-color: lighten($color-bg-accent, 5%);
+      // Brighter on hover with glow
+      background-color: color.adjust($color-accent-primary, $alpha: -0.75);
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+      transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
     }
 
     &:disabled {
       background-color: $color-disabled-bg;
+      border-color: $color-disabled-border;
       color: $color-disabled-text;
       cursor: not-allowed;
+      opacity: 0.5;
     }
   }
 
@@ -93,17 +103,24 @@
     align-items: center;
     gap: $spacing-sm;
     padding: 10px $spacing-xl;
-    background-color: $color-bg-accent;
-    border: none;
+    background-color: $color-accent-primary-glow; // Translucent green
+    border: 1px solid $color-accent-primary;
     border-radius: $radius-md;
-    color: $color-text-primary;
+    color: $color-accent-primary;
     cursor: pointer;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     transition: all $transition-base;
 
     &:hover {
-      background-color: lighten($color-bg-accent, 5%);
+      // Brighter on hover with glow
+      background-color: color.adjust($color-accent-primary, $alpha: -0.75);
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+      transform: translateY(-2px);
+    }
+
+    &:active {
+      transform: translateY(0);
     }
   }
 

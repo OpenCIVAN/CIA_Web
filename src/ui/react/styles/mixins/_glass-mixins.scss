@@ -1,0 +1,226 @@
+// Mixins: Glassmorphism Components
+// Reusable patterns for creating glass-like UI elements
+
+@use "sass:color";
+@use "../tokens/colors" as *;
+@use "../tokens/effects" as *;
+
+// ============================================================================
+// CORE GLASSMORPHISM MIXIN
+// ============================================================================
+
+/// Creates a glassmorphism effect with backdrop blur and translucent background
+/// @param {String} $background - Background color with alpha
+/// @param {String} $blur - Blur amount (e.g., blur(12px))
+/// @param {String} $border - Border color
+@mixin glass(
+  $background: $color-glass-medium,
+  $blur: $blur-medium,
+  $border: $color-border-default
+) {
+  background: $background;
+  backdrop-filter: $blur saturate(180%);
+  -webkit-backdrop-filter: $blur saturate(180%);
+  border: 1px solid $border;
+  box-shadow: $shadow-glass;
+}
+
+// ============================================================================
+// GLASS VARIANTS
+// ============================================================================
+
+/// Subtle glass effect (minimal transparency)
+@mixin glass-subtle {
+  @include glass($color-glass-subtle, $blur-subtle, $color-border-subtle);
+}
+
+/// Light glass effect (standard transparency)
+@mixin glass-light {
+  @include glass($color-glass-light, $blur-medium, $color-border-default);
+}
+
+/// Strong glass effect (higher transparency)
+@mixin glass-strong {
+  @include glass($color-glass-strong, $blur-strong, $color-border-medium);
+}
+
+/// Glass panel (for main UI panels)
+@mixin glass-panel {
+  @include glass($color-glass-medium, $blur-medium, $color-border-default);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-glass-lg;
+}
+
+/// Glass card (for content cards)
+@mixin glass-card {
+  @include glass($color-glass-light, $blur-medium, $color-border-default);
+  border-radius: $radius-md;
+  transition: all $transition-base;
+
+  &:hover {
+    background: $color-glass-medium;
+    border-color: $color-border-medium;
+    box-shadow: $shadow-lg;
+  }
+}
+
+// ============================================================================
+// INTERACTIVE STATES
+// ============================================================================
+
+/// Hover state for glass elements
+@mixin glass-hover {
+  background: color.adjust($color-glass-medium, $alpha: 0.02);
+  border-color: $color-hover-border;
+  box-shadow: $shadow-md;
+}
+
+/// Active/pressed state for glass elements
+@mixin glass-active {
+  background: color.adjust($color-glass-strong, $alpha: 0.02);
+  border-color: $color-active-border;
+  box-shadow: $shadow-inner;
+}
+
+/// Focus state with glow
+@mixin glass-focus {
+  outline: none;
+  border-color: $color-accent-primary;
+  box-shadow: $shadow-glass, 0 0 0 3px $color-focus-glow;
+}
+
+// ============================================================================
+// SPECIALIZED GLASS COMPONENTS
+// ============================================================================
+
+/// Glass button
+@mixin glass-button {
+  @include glass-card;
+  padding: 0.5rem 1rem;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    @include glass-hover;
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    @include glass-active;
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    @include glass-focus;
+  }
+
+  &:disabled {
+    background: $color-disabled-bg;
+    border-color: $color-disabled-border;
+    color: $color-disabled-text;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+/// Glass input field
+@mixin glass-input {
+  @include glass($color-glass-light, $blur-subtle, $color-border-default);
+  padding: 0.5rem 0.75rem;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  transition: all $transition-fast;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:hover {
+    border-color: $color-border-medium;
+  }
+
+  &:focus {
+    @include glass-focus;
+    background: $color-glass-medium;
+  }
+
+  &:disabled {
+    background: $color-disabled-bg;
+    border-color: $color-disabled-border;
+    color: $color-disabled-text;
+    cursor: not-allowed;
+  }
+}
+
+/// Glass modal backdrop
+@mixin glass-backdrop {
+  background: $color-backdrop-blur;
+  backdrop-filter: $blur-strong;
+  -webkit-backdrop-filter: $blur-strong;
+}
+
+/// Glass tooltip
+@mixin glass-tooltip {
+  @include glass($color-glass-strong, $blur-medium, $color-border-medium);
+  padding: 0.5rem 0.75rem;
+  border-radius: $radius-sm;
+  font-size: 0.875rem;
+  box-shadow: $shadow-lg;
+}
+
+// ============================================================================
+// GLOW EFFECTS
+// ============================================================================
+
+/// Accent glow (for primary buttons, active states)
+@mixin accent-glow {
+  box-shadow: $shadow-glass, $glow-accent;
+}
+
+/// Strong accent glow (for emphasis)
+@mixin accent-glow-strong {
+  box-shadow: $shadow-glass-lg, $glow-accent-strong;
+}
+
+/// Error glow (for validation errors)
+@mixin error-glow {
+  box-shadow: $shadow-glass, $glow-error;
+}
+
+// ============================================================================
+// UTILITY MIXINS
+// ============================================================================
+
+/// Scrollable glass container
+@mixin glass-scrollable {
+  @include glass-panel;
+  overflow-y: auto;
+
+  // Custom scrollbar for dark theme
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $color-glass-subtle;
+    border-radius: $radius-sm;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $color-glass-medium;
+    border-radius: $radius-sm;
+
+    &:hover {
+      background: $color-glass-strong;
+    }
+  }
+}
+
+/// Frosted glass (stronger blur, more translucent)
+@mixin frosted-glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: $blur-extreme saturate(200%);
+  -webkit-backdrop-filter: $blur-extreme saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

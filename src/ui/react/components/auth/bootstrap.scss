@@ -1,0 +1,422 @@
+// bootstrap.scss - Authentication and initialization screens with glassmorphism
+@use "sass:color";
+@use "@UI/react/styles/theme.scss" as *;
+
+// ============================================================================
+// SHARED BOOTSTRAP CONTAINER
+// ============================================================================
+
+// Base container for all bootstrap states
+%bootstrap-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: radial-gradient(
+    ellipse at center,
+    color.adjust($color-bg-primary, $lightness: 2%),
+    $color-bg-base
+  );
+  padding: $spacing-xl;
+
+  // Animated background effect
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      circle at center,
+      rgba(76, 175, 80, 0.03) 0%,
+      transparent 70%
+    );
+    animation: rotate 30s linear infinite;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Shared card styles
+%bootstrap-card {
+  @include glass-panel;
+  padding: $spacing-4xl;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  animation: slideUp $transition-slow $ease-out-expo;
+}
+
+// ============================================================================
+// ERROR STATE
+// ============================================================================
+
+.bootstrap-error {
+  @extend %bootstrap-container;
+
+  // Error-specific gradient
+  background: radial-gradient(
+    ellipse at center,
+    color.adjust($color-error, $lightness: -30%, $alpha: -0.9),
+    $color-bg-base
+  );
+}
+
+.error-card {
+  @extend %bootstrap-card;
+  border-color: $color-error-border;
+  @include error-glow;
+
+  h1 {
+    color: $color-error;
+    margin: 0 0 $spacing-lg 0;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
+  }
+
+  p {
+    color: $color-text-secondary;
+    margin: 0 0 $spacing-2xl 0;
+    line-height: $line-height-relaxed;
+    font-size: $font-size-base;
+  }
+
+  .button-group {
+    display: flex;
+    gap: $spacing-md;
+    justify-content: center;
+  }
+}
+
+.retry-button,
+.reload-button {
+  @include glass-button;
+  padding: $spacing-md $spacing-xl;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all $transition-fast;
+}
+
+.retry-button {
+  background: color.adjust($color-accent-blue, $alpha: -0.85);
+  color: $color-accent-blue;
+
+  &:hover {
+    background: color.adjust($color-accent-blue, $alpha: -0.7);
+    box-shadow: $shadow-glass, 0 0 20px $color-accent-blue-glow;
+  }
+}
+
+.reload-button {
+  background: $color-glass-medium;
+  color: $color-text-primary;
+
+  &:hover {
+    @include glass-hover;
+  }
+}
+
+// ============================================================================
+// CHECKING STATE
+// ============================================================================
+
+.bootstrap-checking {
+  @extend %bootstrap-container;
+}
+
+.checking-card {
+  @extend %bootstrap-card;
+
+  h2 {
+    color: $color-text-primary;
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+  }
+
+  p {
+    color: $color-text-tertiary;
+    margin: 0;
+    font-size: $font-size-base;
+  }
+}
+
+.checking-spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto $spacing-2xl;
+  border: 3px solid $color-border-default;
+  border-top-color: $color-accent-primary;
+  border-radius: $radius-full;
+  animation: spin 1s linear infinite;
+
+  // Add glow effect
+  box-shadow: 0 0 20px $color-accent-primary-glow;
+}
+
+// ============================================================================
+// USERNAME STATE
+// ============================================================================
+
+.bootstrap-username {
+  @extend %bootstrap-container;
+}
+
+.username-card {
+  @extend %bootstrap-card;
+
+  h1 {
+    margin: 0 0 $spacing-sm 0;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    color: $color-accent-primary;
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 20px $color-accent-primary-glow;
+  }
+
+  .subtitle {
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .description {
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+}
+
+.username-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.username-input {
+  @include glass-input;
+  padding: $spacing-lg $spacing-xl;
+  background: $color-glass-light;
+  border: 2px solid $color-border-default;
+  border-radius: $radius-lg;
+  font-size: $font-size-lg;
+  text-align: center;
+  color: $color-text-primary;
+  transition: all $transition-fast;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:hover {
+    border-color: $color-border-medium;
+    background: $color-glass-medium;
+  }
+
+  &:focus {
+    border-color: $color-accent-primary;
+    background: $color-glass-medium;
+    @include accent-glow;
+  }
+}
+
+.username-button {
+  @include glass-button;
+  padding: $spacing-lg $spacing-2xl;
+  background: color.adjust($color-accent-primary, $alpha: -0.8);
+  color: $color-accent-primary;
+  border: 2px solid $color-accent-primary;
+  border-radius: $radius-lg;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: color.adjust($color-accent-primary, $alpha: -0.6);
+    @include accent-glow-strong;
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: $color-disabled-bg;
+    color: $color-disabled-text;
+    border-color: $color-disabled-border;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.username-error {
+  margin: $spacing-md 0 0 0;
+  padding: $spacing-md;
+  background: $color-error-bg;
+  border: 1px solid $color-error-border;
+  border-radius: $radius-md;
+  color: $color-error;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+// ============================================================================
+// INITIALIZING STATE
+// ============================================================================
+
+.bootstrap-initializing {
+  @extend %bootstrap-container;
+}
+
+.initializing-card {
+  @extend %bootstrap-card;
+
+  h2 {
+    color: $color-text-primary;
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-full;
+  overflow: hidden;
+  margin-bottom: $spacing-2xl;
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(76, 175, 80, 0.1),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    $color-accent-primary,
+    color.adjust($color-accent-primary, $lightness: 10%)
+  );
+  border-radius: $radius-full;
+  transition: width $transition-slow ease-out;
+  box-shadow: 0 0 10px $color-accent-primary-glow;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.initialization-steps {
+  text-align: left;
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-top: $spacing-xl;
+}
+
+.init-step {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+
+  &.complete {
+    color: $color-success;
+  }
+
+  &.active {
+    color: $color-accent-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &.pending {
+    opacity: 0.5;
+  }
+}
+
+.step-icon {
+  font-size: $font-size-lg;
+  width: 24px;
+  text-align: center;
+}
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px $color-accent-primary-glow;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
