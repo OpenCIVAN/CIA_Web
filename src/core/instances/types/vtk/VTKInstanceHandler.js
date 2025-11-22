@@ -2054,6 +2054,7 @@ console.log('Tools:', tools);
     const actor = vtkActor.newInstance();
     actor.setMapper(mapper);
     actor.setPickable(true);
+    renderer.addActor(actor);
 
     // =========================================================================
     // PHASE 5: Set up responsive resizing
