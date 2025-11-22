@@ -463,7 +463,7 @@ export function InstanceViewport({
                         aria-expanded={isOpen}
                     >
                         {IconComponent && <IconComponent size={18} strokeWidth={2} />}
-                        <ChevronDown size={10} className="menu-indicator" />
+                        <ChevronDown size={8} className="menu-indicator" />
 
                         <div className="toolbar-tooltip">
                             <div className="tooltip-title">{tool.label}</div>

@@ -49,6 +49,7 @@ class InstanceToolsManager {
       measurements: [],
       clipPosition: 50, // For slider
       colorMap: null,
+      currentColormap: "viridis",
       opacityFunction: null,
     };
 
@@ -58,6 +59,37 @@ class InstanceToolsManager {
 
     this.instanceTools.set(instanceId, tools);
     console.log(`✅ Tools initialized for instance: ${instanceId}`);
+  }
+
+  // ==========================================================================
+  // WIDGET STATE QUERIES
+  // ==========================================================================
+
+  /**
+   * Check if a specific widget is active
+   */
+  isWidgetActive(instanceId, widgetType) {
+    switch (widgetType) {
+      case "orientation":
+        return vtkOrientationWidget.isEnabled(instanceId);
+      case "clipping":
+        return vtkPlaneWidget.isEnabled(instanceId);
+      case "ruler":
+        return vtkLineWidget.isEnabled(instanceId);
+      case "angle":
+        return vtkAngleWidget.isEnabled(instanceId);
+      default:
+        console.warn(`Unknown widget type: ${widgetType}`);
+        return false;
+    }
+  }
+
+  /**
+   * Get current colormap ID
+   */
+  getCurrentColormap(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.currentColormap || "viridis";
   }
 
   /**
@@ -441,6 +473,7 @@ class InstanceToolsManager {
 
     mapper.setLookupTable(ctf);
     tools.colorMap = ctf;
+    tools.currentColormap = preset;
 
     renderWindow.render();
     console.log(`🎨 Color map set to ${preset} for instance: ${instanceId}`);

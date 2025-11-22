@@ -2077,6 +2077,9 @@ console.log('Tools:', tools);
     actor.setPickable(true);
     renderer.addActor(actor);
 
+    // src/core/instances/types/vtk/VTKInstanceHandler.js
+    // SNIPPET: Fixed resize handling to recenter camera
+
     // =========================================================================
     // PHASE 5: Set up responsive resizing
     // =========================================================================
@@ -2085,6 +2088,9 @@ console.log('Tools:', tools);
     let lastWidth = width;
     let lastHeight = height;
     let resizeTimeout = null;
+
+    // ✅ FIX: Track if we have data loaded so we know when to reset camera
+    let hasDataLoaded = false;
 
     const resizeObserver = new ResizeObserver((entries) => {
       // Cancel any pending resize
@@ -2109,7 +2115,20 @@ console.log('Tools:', tools);
             ) {
               lastWidth = newWidth;
               lastHeight = newHeight;
+
+              // Update the canvas size
               openGLRenderWindow.setSize(newWidth, newHeight);
+
+              // ✅ FIX: Reset camera to recenter the view ONLY if we have data loaded
+              // This prevents parts of the visualization from becoming inaccessible
+              if (hasDataLoaded && renderer) {
+                renderer.resetCamera();
+                console.log(
+                  `📐 Canvas resized and camera recentered for ${instanceData.instanceId}`
+                );
+              }
+
+              // Render the scene
               renderWindow.render();
             }
           }
@@ -2117,7 +2136,11 @@ console.log('Tools:', tools);
         resizeTimeout = null;
       });
     });
+
     resizeObserver.observe(container);
+
+    // Store resizeObserver so it can be cleaned up later
+    instanceData.resizeObserver = resizeObserver;
 
     // Return all the scene objects that need to be tracked
     const sceneObjects = {
@@ -2132,8 +2155,11 @@ console.log('Tools:', tools);
       resizeObserver,
     };
 
-    // Initialize the tools manager
-    instanceTools.initializeTools(instanceData.instanceId, sceneObjects);
+    // Also add a helper function to mark when data is loaded
+    // This will be called from the loadData method after successfully loading
+    instanceData.markDataLoaded = () => {
+      hasDataLoaded = true;
+    };
 
     console.log(`✅ VTK pipeline initialized for ${instanceData.instanceId}`);
     return sceneObjects;
