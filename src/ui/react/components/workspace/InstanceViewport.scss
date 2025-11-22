@@ -14,15 +14,11 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+
   background: $color-bg-secondary;
   border-radius: $radius-md;
 
-  // Enhanced depth with multi-layer shadows
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-
-  // Subtle border for definition
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 // ============================================================================
@@ -143,7 +139,6 @@
     height: 18px;
     // FIX: Prevent icon distortion
     flex-shrink: 0;
-    right: 2px;
   }
 
   .menu-indicator {
@@ -218,6 +213,12 @@
 
 .toolbar-menu-dropdown {
   @include frosted-glass;
+  border-radius: $radius-md;
+  padding: $spacing-xs;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: dropdown-appear $transition-fast $ease-out-back;
+
+  // Default positioning (for non-portal dropdowns)
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -226,11 +227,13 @@
   max-height: 400px;
   overflow-y: auto;
   overflow-x: hidden;
-  border-radius: $radius-md;
-  padding: $spacing-xs;
-  z-index: 10000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  animation: dropdown-appear $transition-fast $ease-out-back;
+  z-index: 200;
+
+  // Portal-specific styling - MUCH higher z-index to appear over canvas
+  &--portal {
+    z-index: 99999; // Above everything including VTK canvas
+    position: fixed; // Position is set via inline style
+  }
 }
 
 @keyframes dropdown-appear {

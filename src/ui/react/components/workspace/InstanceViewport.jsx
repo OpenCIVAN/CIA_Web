@@ -1,5 +1,6 @@
 // src/ui/react/components/workspace/InstanceViewport.jsx
 import React, { useRef, useEffect, useState } from "react";
+import { createPortal } from 'react-dom';
 import { ChevronDown, Maximize2, Trash2, AlertCircle } from 'lucide-react';
 
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
@@ -34,6 +35,7 @@ export function InstanceViewport({
 
     const containerRef = useRef(null);
     const initOnce = useRef(false);
+    const menuButtonRefs = useRef(new Map()); // Track button positions for portal positioning
 
     const [actualInstanceId, setActualInstanceId] = useState(
         isRemote ? remoteInstanceId : null
@@ -46,9 +48,62 @@ export function InstanceViewport({
     const [tools, setTools] = useState([]);
     const [headerInfo, setHeaderInfo] = useState(null);
     const [openMenuId, setOpenMenuId] = useState(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
     // =========================================================================
-    // INSTANCE INITIALIZATION - PRESERVE EXACT LOGIC
+    // DROPDOWN POSITIONING & CLICK AWAY
+    // =========================================================================
+
+    useEffect(() => {
+        if (!openMenuId) return;
+
+        const updatePosition = () => {
+            const buttonElement = menuButtonRefs.current.get(openMenuId);
+            if (!buttonElement) return;
+
+            const rect = buttonElement.getBoundingClientRect();
+
+            setDropdownPosition({
+                x: rect.left,
+                y: rect.bottom + 4, // 4px gap
+                buttonWidth: rect.width
+            });
+        };
+
+        updatePosition();
+
+        // Update position on scroll or resize
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
+
+        // Click away handler - close dropdown when clicking outside
+        const handleClickAway = (e) => {
+            const buttonElement = menuButtonRefs.current.get(openMenuId);
+            const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
+
+            // Don't close if clicking the button or inside the dropdown
+            if (
+                buttonElement?.contains(e.target) ||
+                dropdownElement?.contains(e.target)
+            ) {
+                return;
+            }
+
+            setOpenMenuId(null);
+        };
+
+        // Use capture phase to catch clicks before they bubble
+        document.addEventListener('mousedown', handleClickAway, true);
+
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updatePosition);
+            document.removeEventListener('mousedown', handleClickAway, true);
+        };
+    }, [openMenuId]);
+
+    // =========================================================================
+    // INSTANCE INITIALIZATION
     // =========================================================================
 
     useEffect(() => {
@@ -349,9 +404,26 @@ export function InstanceViewport({
                     key={tool.id || `menu-${index}`}
                     className="toolbar-menu"
                     onMouseEnter={() => setOpenMenuId(tool.id)}
-                    onMouseLeave={() => setOpenMenuId(null)}
+                    onMouseLeave={(e) => {
+                        // Only close if not moving to the dropdown
+                        const relatedTarget = e.relatedTarget;
+                        const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
+
+                        if (!dropdownElement || !dropdownElement.contains(relatedTarget)) {
+                            // Small delay to allow mouse to reach dropdown
+                            setTimeout(() => {
+                                const stillHoveringDropdown = document.querySelector('.toolbar-menu-dropdown--portal:hover');
+                                if (!stillHoveringDropdown) {
+                                    setOpenMenuId(null);
+                                }
+                            }, 100);
+                        }
+                    }}
                 >
                     <button
+                        ref={(el) => {
+                            if (el) menuButtonRefs.current.set(tool.id, el);
+                        }}
                         className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
@@ -372,12 +444,32 @@ export function InstanceViewport({
                         </div>
                     </button>
 
-                    {isOpen && tool.options && tool.options.length > 0 && (
-                        <div className="toolbar-menu-dropdown">
+                    {/* RENDER DROPDOWN VIA PORTAL */}
+                    {isOpen && tool.options && tool.options.length > 0 && createPortal(
+                        <div
+                            className="toolbar-menu-dropdown toolbar-menu-dropdown--portal"
+                            style={{
+                                position: 'fixed',
+                                left: `${dropdownPosition.x}px`,
+                                top: `${dropdownPosition.y}px`,
+                                minWidth: '220px',
+                            }}
+                            onMouseEnter={() => setOpenMenuId(tool.id)}
+                            onMouseLeave={() => {
+                                // Close when mouse leaves dropdown
+                                setTimeout(() => {
+                                    const hoveringButton = menuButtonRefs.current.get(tool.id)?.matches(':hover');
+                                    if (!hoveringButton) {
+                                        setOpenMenuId(null);
+                                    }
+                                }, 100);
+                            }}
+                        >
                             {tool.options.map((option, optIndex) =>
                                 renderMenuOption(option, optIndex, tool.id)
                             )}
-                        </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
             );
