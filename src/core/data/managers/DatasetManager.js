@@ -572,6 +572,107 @@ export class DatasetManager extends EventEmitter {
     return dataset.rawFile;
   }
 
+  /**
+   * Load raw file for a dataset (TYPE-AGNOSTIC)
+   *
+   * This is a convenience method that:
+   * 1. Gets the raw file from memory if available
+   * 2. Fetches it if needed (for sample files with publicPath)
+   * 3. Returns the raw File object for the handler to parse
+   *
+   * IMPORTANT: This method is TYPE-AGNOSTIC!
+   * - It does NOT parse the file - that's the handler's job
+   * - VTK handler parses .vtp files
+   * - Plot handler parses .csv files
+   * - Image handler parses .png files
+   * - Each handler knows how to parse its own formats
+   *
+   * This method only handles file retrieval and fetching, not parsing.
+   *
+   * @param {string} datasetId - Dataset ID to load
+   * @returns {Promise<File>} The raw file object (unparsed)
+   * @throws {Error} If dataset not found or file unavailable
+   */
+  async loadFile(datasetId) {
+    const dataset = this.getDataset(datasetId);
+    if (!dataset) {
+      throw new Error(`Dataset ${datasetId} not found`);
+    }
+
+    // Check if we already have the file in memory
+    let rawFile = dataset.rawFile;
+
+    // If we don't have it, try to fetch it
+    if (!rawFile) {
+      console.log(
+        `📥 File not in memory for ${dataset.filename}, attempting fetch...`
+      );
+
+      // If dataset has a public path, we can fetch it
+      if (dataset.publicPath) {
+        console.log(`🌐 Fetching from: ${dataset.publicPath}`);
+
+        try {
+          // Update status to show we're fetching
+          dataset.setFileStatus("fetching");
+          this._emit("datasetUpdated", dataset);
+
+          const response = await fetch(dataset.publicPath);
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch ${dataset.filename}: ${response.status} ${response.statusText}`
+            );
+          }
+
+          const blob = await response.blob();
+          rawFile = new File([blob], dataset.filename, {
+            type: "application/octet-stream",
+          });
+
+          // Store it back in the dataset for future use
+          dataset.setFileStatus("available", rawFile);
+
+          // Also store in cache so we don't fetch again
+          try {
+            await this.storageProvider.storeFile(rawFile);
+            console.log(`✅ File fetched and cached successfully`);
+          } catch (cacheError) {
+            console.warn(`⚠️ File fetched but caching failed:`, cacheError);
+            // Continue anyway - we have the file in memory
+          }
+
+          // Notify that dataset was updated
+          this._emit("datasetUpdated", dataset);
+        } catch (fetchError) {
+          dataset.setFileStatus("fetch-failed");
+          this._emit("datasetUpdated", dataset);
+
+          throw new Error(
+            `Failed to fetch ${dataset.filename} from ${dataset.publicPath}: ${fetchError.message}`
+          );
+        }
+      } else {
+        // No public path - mark as needing upload
+        dataset.setFileStatus("needs-upload");
+        this._emit("datasetUpdated", dataset);
+
+        throw new Error(
+          `Dataset ${dataset.filename} is not available. ` +
+            `The file was loaded in a previous session and is no longer in cache. ` +
+            `Please re-upload this file to visualize it.`
+        );
+      }
+    }
+
+    if (!rawFile) {
+      throw new Error(`Failed to obtain file for ${dataset.filename}`);
+    }
+
+    console.log(`✅ loadPolydata: File ready for ${dataset.filename}`);
+    return rawFile;
+  }
+
   cacheParsedData(datasetId, handlerType, parsedData, metadata) {
     const dataset = this._datasets.get(datasetId);
     if (!dataset) {

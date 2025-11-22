@@ -155,20 +155,22 @@ class WorkspaceManager {
         await this._initializeHandler(instance, inferredType);
       }
 
-      // Load the actual file data
-      const polydata = await datasetManager.loadPolydata(datasetId);
-      if (!polydata) {
-        throw new Error(`Failed to load polydata for dataset ${datasetId}`);
-      }
-
-      // Tell the handler to render the data
-      await instance.handler.loadData(instance.instanceData, dataset, polydata);
+      // Load the data through the handler
+      // The handler will call datasetManager.loadFile() internally if needed
+      await instance.handler.loadData(instance.instanceData, dataset);
 
       // Update instance metadata
       instance.datasetId = datasetId;
       instance.lastActive = Date.now();
 
       console.log(`✅ Dataset loaded into instance ${instanceId}`);
+
+      // Emit event for workspace updates
+      window.dispatchEvent(
+        new CustomEvent("cia:tools-updated", {
+          detail: { instanceId },
+        })
+      );
 
       // Notify listeners so UI updates (toolbar should appear now)
       this._notifyListeners();

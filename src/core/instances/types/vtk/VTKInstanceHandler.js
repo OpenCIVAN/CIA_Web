@@ -272,19 +272,32 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * This is the power of properly architected data layers: each layer does its
    * job once, stores the result, and subsequent layers just read what they need.
    */
-  async loadData(instanceData, dataset, data) {
-    const { instanceId } = instanceData;
+  /**
+   * Load data into an existing VTK instance
+   *
+   * WORKFLOW:
+   * 1. Validate dataset and file type
+   * 2. Get raw file from DatasetManager (may trigger fetch)
+   * 3. Check for cached parsed data
+   * 4. If no cache, parse the file
+   * 5. Initialize VTK pipeline if first load
+   * 6. Update visualization
+   */
+  // Fix for the loadData method in src/core/instances/types/vtk/VTKInstanceHandler.js
+  // The issue: _initializeVTKPipeline returns sceneObjects, but assignment is missing or incorrect
 
+  async loadData(instanceData, dataset) {
     console.log(
-      `📊 VTK Handler: Loading dataset ${dataset.id} into instance ${instanceId}`
+      `🎨 VTK Handler: Loading data into instance ${instanceData.instanceId}`
     );
+    console.log(`  📋 Dataset: ${dataset.filename}`);
 
     // Validate file type
     const fileType = dataset.fileType;
 
     if (!fileType) {
       throw new Error(
-        `Dataset ${dataset.filename} is missing fileType property. ` +
+        `Dataset ${dataset.id} (${dataset.filename}) has no fileType. ` +
           `This indicates a bug in dataset creation.`
       );
     }
@@ -319,74 +332,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     } else {
       console.log(`  ⏳ Parsing ${fileType.toUpperCase()} file...`);
 
-      // Try to get the raw file
-      let rawFile = datasetManager.getRawFile(dataset.id);
-
-      // If rawFile is null, try to fetch it
-      if (!rawFile) {
-        console.log(`  📥 Raw file not in memory, attempting to fetch...`);
-
-        // Try public path first (for samples)
-        if (dataset.publicPath) {
-          console.log(`  🌐 Fetching from public path: ${dataset.publicPath}`);
-
-          try {
-            // Update status to show we're fetching
-            dataset.setFileStatus("fetching");
-            datasetManager._emit("datasetUpdated", dataset);
-
-            const response = await fetch(dataset.publicPath);
-
-            if (!response.ok) {
-              throw new Error(
-                `Failed to fetch ${dataset.filename}: ${response.status} ${response.statusText}`
-              );
-            }
-
-            const blob = await response.blob();
-            rawFile = new File([blob], dataset.filename, {
-              type: "application/octet-stream",
-            });
-
-            // Store it back in the dataset for future use
-            dataset.setFileStatus("available", rawFile);
-
-            // Also store in cache so we don't fetch again
-            try {
-              await datasetManager.storageProvider.storeFile(rawFile);
-              console.log(`  ✓ File fetched and cached successfully`);
-            } catch (cacheError) {
-              console.warn(`  ⚠️ File fetched but caching failed:`, cacheError);
-              // Continue anyway - we have the file in memory
-            }
-
-            // Notify that dataset was updated
-            datasetManager._emit("datasetUpdated", dataset);
-          } catch (fetchError) {
-            dataset.setFileStatus("fetch-failed");
-            datasetManager._emit("datasetUpdated", dataset);
-
-            throw new Error(
-              `Failed to fetch ${dataset.filename} from ${dataset.publicPath}: ${fetchError.message}`
-            );
-          }
-        } else {
-          // No public path - mark as needing upload
-          dataset.setFileStatus("needs-upload");
-          datasetManager._emit("datasetUpdated", dataset);
-
-          throw new Error(
-            `Dataset ${dataset.filename} is not available. ` +
-              `The file was loaded in a previous session and is no longer in cache. ` +
-              `Please re-upload this file to visualize it.`
-          );
-        }
-      }
-
-      // Now we should have rawFile - parse it
-      if (!rawFile) {
-        throw new Error(`Failed to obtain file for ${dataset.filename}`);
-      }
+      // Get the raw file (DatasetManager handles fetching if needed)
+      // Use loadFile() or loadPolydata() depending on what you named it
+      const rawFile = await datasetManager.loadFile(dataset.id);
 
       // Parse the file
       polydata = await this.parseVTKFile(rawFile);
@@ -417,66 +365,67 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     if (!instanceData.sceneObjects) {
       console.log(`  🎨 First data load - initializing VTK pipeline...`);
 
-      // DIAGNOSTIC: Check if stateAdapter exists before initializing pipeline
-      if (!instanceData.stateAdapter) {
-        console.error(
-          "❌ CRITICAL: stateAdapter missing before pipeline init!"
-        );
-        console.log("instanceData keys:", Object.keys(instanceData));
+      // CRITICAL FIX: Make sure to assign the returned sceneObjects!
+      const pipelineObjects = this._initializeVTKPipeline(instanceData);
+
+      // DIAGNOSTIC: Log what we got back
+      console.log(
+        `  📦 Pipeline returned:`,
+        pipelineObjects ? "objects" : "null/undefined"
+      );
+
+      if (!pipelineObjects) {
+        throw new Error("_initializeVTKPipeline returned null or undefined!");
       }
 
-      const pipelineObjects = this._initializeVTKPipeline(instanceData);
+      // Assign it to instanceData
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
 
-      // Placeholder was already removed by innerHTML = "" in _initializeVTKPipeline
-      instanceData.placeholder = null; // Just clear the reference
+      console.log(`  ✅ VTK pipeline ready`);
+
+      // DIAGNOSTIC: Verify assignment worked
+      console.log(
+        `  🔍 instanceData.sceneObjects is now:`,
+        instanceData.sceneObjects ? "assigned" : "STILL NULL!"
+      );
     }
 
-    const { renderer, renderWindow, mapper, actor } = instanceData.sceneObjects;
+    // CRITICAL: Add safety check before using sceneObjects
+    if (!instanceData.sceneObjects) {
+      throw new Error(
+        `CRITICAL ERROR: instanceData.sceneObjects is null after initialization! ` +
+          `This should never happen.`
+      );
+    }
 
-    // Load the geometry
+    // Update the visualization with new data
+    console.log(`  🔄 Updating visualization...`);
+
+    const { mapper, actor, renderer, renderWindow } = instanceData.sceneObjects;
+
+    // Safety checks for each object
+    if (!mapper) throw new Error("mapper is missing from sceneObjects!");
+    if (!actor) throw new Error("actor is missing from sceneObjects!");
+    if (!renderer) throw new Error("renderer is missing from sceneObjects!");
+    if (!renderWindow)
+      throw new Error("renderWindow is missing from sceneObjects!");
+
+    // Set the data
     mapper.setInputData(polydata);
 
-    // Add actor if not already in scene
-    const actorsInScene = renderer.getActors();
-    if (!actorsInScene.includes(actor)) {
-      renderer.addActor(actor);
-    }
-
-    // Mark that we have data
-    instanceData.hasData = true;
-
-    // Initialize reduction feature (needs sceneObjects)
-    await this.reductionFeature.initialize(instanceId, {
-      sceneObjects: instanceData.sceneObjects,
-    });
-
-    // Initialize orientation widget (starts enabled by default)
-    vtkOrientationWidget.initialize(instanceId, instanceData.sceneObjects, {
-      enabled: true,
-      corner: "BOTTOM_RIGHT",
-      viewportSize: 0.1,
-      minPixelSize: 80,
-      maxPixelSize: 280,
-    });
-
-    // Mark that orientation is active in instanceTools
-    instanceTools.initializeOrientationWidget(instanceId);
-
-    console.log(`✅ Features initialized for instance ${instanceId}`);
-
-    // Position camera and render
+    // Reset camera to frame the data
     renderer.resetCamera();
+
+    // Render
     renderWindow.render();
 
-    // Emit event so React knows tools are now available
-    console.log(
-      `📢 Emitting tools-updated event after pipeline initialization`
-    );
-    this._emitToolsUpdate(instanceId);
+    // Store dataset reference
+    instanceData.dataset = dataset;
+    instanceData.polydata = polydata;
+    instanceData.hasData = true;
 
-    console.log(`✅ VTK Handler: Dataset loaded and rendered`);
+    console.log(`✅ VTK Handler: Data loaded successfully`);
   }
 
   /**

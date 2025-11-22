@@ -422,7 +422,7 @@ description: !caps.hasData
 - `src/core/instances/types/vtk/vtkInstanceTools.js` - Backend methods
 - `src/ui/react/components/workspace/InstanceViewport.jsx` - Rendering
 - `src/ui/react/components/workspace/SliderMenuOption.jsx` - Slider component
-- `src/ui/react/components/workspace/InstanceViewport.css` - Styling
+- `src/ui/react/components/workspace/InstanceViewport.scss` - Styling
 
 ## Questions?
 
