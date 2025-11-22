@@ -1,3 +1,4 @@
+// src/ui/react/components/workspace/InstanceViewport.jsx
 import React, { useRef, useEffect, useState } from "react";
 import { createPortal } from 'react-dom';
 import {
@@ -15,22 +16,23 @@ import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridP
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
-import "@UI/react/components/workspace/InstanceViewport.scss";
+import "@UI/react/components/workspace/InstanceViewport.css";
 
 /**
  * InstanceViewport
  * 
+ * A viewport component that displays a ViewConfiguration using a handler.
+ * Instances start TYPELESS and determine their type when data is loaded.
+ * 
  * Props:
- * - viewConfigId: ViewConfiguration ID (replaces datasetId)
- * - type: Instance type ('vtk', 'plotly', etc.)
+ * - viewConfigId: ViewConfiguration ID (optional - can be null for empty instances)
  * - isRemote: Whether this is a remote instance
  * - remoteInstanceId: The instance ID from Y.js
  * - ownerUserName: Name of user who created this
  * - onDelete: Callback when instance should be deleted
  */
 export function InstanceViewport({
-    viewConfigId,
-    type = 'vtk',
+    viewConfigId = null,
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,
@@ -47,6 +49,8 @@ export function InstanceViewport({
         isRemote ? remoteInstanceId : null
     );
     const [initialized, setInitialized] = useState(false);
+    const [instanceType, setInstanceType] = useState(null);  // Type determined when data loads
+    const [hasData, setHasData] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [tools, setTools] = useState([]);
@@ -56,6 +60,7 @@ export function InstanceViewport({
 
     // =========================================================================
     // INSTANCE INITIALIZATION
+    // Creates a TYPELESS instance. Type determined when data loads.
     // =========================================================================
 
     useEffect(() => {
@@ -65,49 +70,107 @@ export function InstanceViewport({
 
         const initialize = async () => {
             try {
-                console.log(`🎨 Creating new local instance (type: ${type})`);
+                setLoading(true);
+                console.log(`🎨 Creating typeless instance (view: ${viewConfigId || 'none'})`);
 
-                // Create view configuration first (Layer 2)
-                const viewConfig = viewConfigurationManager.createView(dataset.id, {
-                    name: "My Analysis",
-                });
-
-                // Then create instance window (Layer 3)
-                const instance = instanceManager.createInstance({
-                    viewConfigurationId: viewConfig.id,
-                    type: "vtk",
-                });
+                // Create TYPELESS instance - no handler initialized yet
+                const instanceId = await workspaceManager.createInstance(
+                    containerRef.current,
+                    null,  // ✅ NO TYPE - determined when data loads
+                    { viewConfigId: viewConfigId }
+                );
 
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId);
 
-                console.log(`✅ Instance created: ${instanceId}`);
+                // Get initial header info (will show "Empty Instance")
+                const instanceHeader = workspaceManager.getInstanceHeaderInfo(instanceId);
+                setHeaderInfo(instanceHeader);
+
+                console.log(`✅ Typeless instance ${instanceId} created`);
 
             } catch (err) {
-                console.error(`❌ Failed to initialize instance:`, err);
-                setError({
-                    message: err.message || 'Initialization failed',
-                    canRetry: true,
-                });
+                console.error(`❌ Instance initialization failed:`, err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
             }
         };
 
         initialize();
-    }, [type, viewConfigId]);
+
+        // Cleanup on unmount
+        return () => {
+            if (actualInstanceId) {
+                console.log(`🧹 Cleaning up instance ${actualInstanceId}`);
+                workspaceManager.deleteInstance(actualInstanceId);
+            }
+        };
+    }, [viewConfigId]);
 
     // =========================================================================
-    // TOOLS LOADING
+    // DATA LOADING
+    // If a viewConfigId is provided, load the data after instance is created.
+    // This is where the instance determines its type!
     // =========================================================================
 
     useEffect(() => {
-        if (!initialized || !actualInstanceId) return;
+        if (!initialized || !actualInstanceId || !viewConfigId) return;
+
+        const loadViewData = async () => {
+            try {
+                console.log(`📊 Loading view ${viewConfigId} into instance ${actualInstanceId}`);
+
+                // Get the view configuration
+                const viewConfig = viewConfigurationManager.getView(viewConfigId);
+                if (!viewConfig) {
+                    console.warn(`View ${viewConfigId} not found`);
+                    return;
+                }
+
+                // If the view has a dataset, load it
+                // THIS is where instance type gets determined!
+                if (viewConfig.datasetId) {
+                    await workspaceManager.loadDataIntoInstance(
+                        actualInstanceId,
+                        viewConfig.datasetId
+                    );
+
+                    // After loading, instance now has a type!
+                    const instance = workspaceManager.getInstance(actualInstanceId);
+                    setInstanceType(instance.type);
+                    setHasData(true);
+
+                    console.log(`✅ Instance ${actualInstanceId} is now type: ${instance.type}`);
+                }
+
+            } catch (err) {
+                console.error(`❌ Failed to load view data:`, err);
+                setError(err.message);
+            }
+        };
+
+        loadViewData();
+    }, [initialized, actualInstanceId, viewConfigId]);
+
+    // =========================================================================
+    // TOOLS LOADING
+    // Tools only load AFTER instance has a type (i.e., after data is loaded)
+    // =========================================================================
+
+    useEffect(() => {
+        if (!initialized || !actualInstanceId || !instanceType) return;
 
         const loadTools = () => {
             try {
                 const toolsList = workspaceManager.getInstanceTools(actualInstanceId);
-                console.log(`🔧 Loaded ${toolsList.length} tools for instance ${actualInstanceId}`);
+                console.log(`🔧 Loaded ${toolsList.length} tools for ${instanceType} instance ${actualInstanceId}`);
                 setTools(toolsList);
+
+                // Also refresh header info
+                const updatedHeader = workspaceManager.getInstanceHeaderInfo(actualInstanceId);
+                setHeaderInfo(updatedHeader);
             } catch (err) {
                 console.warn(`⚠️ Failed to load tools:`, err);
             }
@@ -125,244 +188,188 @@ export function InstanceViewport({
 
         window.addEventListener('cia:tools-updated', handleToolsUpdate);
         return () => window.removeEventListener('cia:tools-updated', handleToolsUpdate);
-    }, [actualInstanceId, initialized]);
+    }, [actualInstanceId, initialized, instanceType]);  // ✅ Depends on instanceType!
 
     // =========================================================================
-    // VIEW CONFIGURATION LOADING
+    // EVENT HANDLERS
     // =========================================================================
 
-
-    // =========================================================================
-    // UI HELPERS
-    // =========================================================================
-
-    const getDisplayName = () => {
-        if (isRemote && ownerUserName) {
-            if (viewConfigId) {
-                try {
-                    const view = viewConfigurationManager.getView(viewConfigId);
-                    if (view) {
-                        const dataset = datasetManager.getDataset(view.datasetId);
-                        const filename = dataset?.filename || 'Unknown';
-                        return `${ownerUserName}'s view of ${filename}`;
-                    }
-                } catch (e) {
-                    return `${ownerUserName}'s view`;
-                }
-            }
-            return `${ownerUserName}'s view`;
+    const handleDelete = () => {
+        if (onDelete) {
+            onDelete();
         }
-
-        if (viewConfigId) {
-            try {
-                const view = viewConfigurationManager.getView(viewConfigId);
-                if (view) {
-                    const dataset = datasetManager.getDataset(view.datasetId);
-                    return dataset?.filename || view.name || 'View';
-                }
-            } catch (e) {
-                return `View ${viewConfigId.slice(0, 8)}`;
-            }
-        }
-
-        return `Instance ${actualInstanceId ? actualInstanceId.slice(0, 12) : 'Loading'}...`;
     };
 
-    const handleFullscreen = () => {
-        if (containerRef.current) {
-            if (containerRef.current.requestFullscreen) {
-                containerRef.current.requestFullscreen();
-            }
+    const handleMaximize = () => {
+        console.log('Maximize clicked - TODO: implement fullscreen');
+    };
+
+    const closeAllMenus = () => {
+        setOpenMenuId(null);
+        setActiveDropdown(null);
+    };
+
+    const toggleMenu = (toolId) => {
+        if (openMenuId === toolId) {
+            closeAllMenus();
+        } else {
+            setOpenMenuId(toolId);
+            setActiveDropdown(toolId);
         }
     };
 
     // =========================================================================
-    // TOOLBAR RENDERING
+    // RENDERING HELPERS
     // =========================================================================
 
-    /*
-    * Render individual menu option
-    * UPDATED to support 'custom' type for sliders
-    */
-    const renderMenuOption = (option, optIndex, menuId) => {
-        // Handle separator
-        if (option.type === 'separator') {
+    const renderMenuOption = (option, index, parentToolId) => {
+        const optionKey = `${parentToolId}-opt-${index}`;
+
+        // Handle slider options
+        if (option.type === 'slider') {
             return (
-                <div
-                    key={`menu-sep-${menuId}-${optIndex}`}
-                    className="menu-separator"
+                <SliderMenuOption
+                    key={optionKey}
+                    option={option}
+                    onUpdate={(value) => {
+                        if (option.onChange) {
+                            option.onChange(value);
+                        }
+                    }}
                 />
             );
         }
 
-        // =====================================================================
-        // HEADER (for section labels like "Quick Presets")
-        // =====================================================================
-        if (option.type === 'header') {
+        // Handle camera view grid picker
+        if (option.type === 'camera-grid') {
             return (
-                <div
-                    key={option.id || `header-${menuId}-${optIndex}`}
-                    className="menu-header"
-                >
-                    {option.label}
+                <div key={optionKey} className="camera-grid-container">
+                    <CameraViewGridPicker
+                        onViewSelect={(view) => {
+                            if (option.onChange) {
+                                option.onChange(view);
+                            }
+                            closeAllMenus();
+                        }}
+                    />
                 </div>
             );
         }
 
-        // =====================================================================
-        // ✅ CAMERA GRID - UI layer interprets the plain object
-        // =====================================================================
-        if (option.type === 'camera-grid') {
-            return (
-                <CameraViewGridPicker
-                    key={option.id}
-                    views={option.views}
-                    disabled={option.disabled}
-                    onViewChange={option.onViewSelect}
-                />
-            );
-        }
-
-        // =====================================================================
-        // ✅ POSITION GRID - For widget positioning
-        // =====================================================================
-        if (option.type === 'position-grid') {
-            return (
-                <PositionGridPicker
-                    key={option.id}
-                    positions={option.positions}
-                    currentPosition={option.currentPosition}
-                    disabled={option.disabled}
-                    onPositionChange={option.onPositionChange}
-                />
-            );
-        }
-
-        // =====================================================================
-        // ✅ COLOR SWATCH GRID - UI layer interprets the plain object
-        // =====================================================================
-        if (option.type === 'color-swatch-grid') {
-            return (
-                <ColorSwatchGrid
-                    key={option.id}
-                    colormaps={option.colormaps}
-                    currentColormap={option.currentColormap}
-                    disabled={option.disabled}
-                    onColormapChange={option.onColormapChange}
-                />
-            );
-        }
-
-        // =====================================================================
-        // ✅ SLIDER WITH PRESETS - UI layer interprets the plain object
-        // =====================================================================
-        if (option.type === 'slider-with-presets') {
-            const IconComponent = getToolIcon(option.icon);
-
+        // Handle slider with presets
+        if (option.type === 'slider-presets') {
             return (
                 <SliderWithPresets
-                    key={option.id}
-                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    key={optionKey}
                     label={option.label}
                     value={option.value}
                     min={option.min}
                     max={option.max}
                     step={option.step}
-                    formatValue={option.formatValue}
                     presets={option.presets}
-                    onChange={option.onChange}
-                    disabled={option.disabled}
-                    disabledReason={option.disabledReason}
+                    onChange={(value) => {
+                        if (option.onChange) {
+                            option.onChange(value);
+                        }
+                    }}
                 />
             );
         }
 
-        // =====================================================================
-        // SLIDER - Convert plain object to React component
-        // =====================================================================
-        if (option.type === 'slider') {
-            // Resolve icon string to React component
-            const IconComponent = getToolIcon(option.icon);
-
+        // Handle color swatch grid
+        if (option.type === 'color-grid') {
             return (
-                <SliderMenuOption
-                    key={option.id || `slider-${menuId}-${optIndex}`}
-                    icon={IconComponent ? <IconComponent size={14} /> : null}
-                    label={option.label}
-                    description={option.description}
-                    value={option.value}
-                    min={option.min}
-                    max={option.max}
-                    step={option.step}
-                    onChange={option.onChange}
-                    formatValue={option.formatValue}
-                    presets={option.presets}
-                    disabled={option.disabled}
-                />
+                <div key={optionKey} className="color-grid-container">
+                    <ColorSwatchGrid
+                        colors={option.colors}
+                        onColorSelect={(color) => {
+                            if (option.onChange) {
+                                option.onChange(color);
+                            }
+                            closeAllMenus();
+                        }}
+                    />
+                </div>
             );
         }
 
+        // Handle position grid picker
+        if (option.type === 'position-grid') {
+            return (
+                <div key={optionKey} className="position-grid-container">
+                    <PositionGridPicker
+                        onPositionSelect={(position) => {
+                            if (option.onChange) {
+                                option.onChange(position);
+                            }
+                            closeAllMenus();
+                        }}
+                    />
+                </div>
+            );
+        }
 
-        // =====================================================================
-        // BUTTON - Regular clickable option
-        // =====================================================================
-        const OptionIcon = getToolIcon(option.id, option.icon);
+        // Handle separator
+        if (option.type === 'separator') {
+            return <div key={optionKey} className="toolbar-menu-separator" />;
+        }
 
+        // Handle submenu
+        if (option.submenu) {
+            return (
+                <div key={optionKey} className="toolbar-menu-item has-submenu">
+                    <button
+                        onClick={() => {
+                            if (option.onClick) {
+                                option.onClick();
+                            }
+                        }}
+                        disabled={option.disabled}
+                    >
+                        {option.label}
+                        <ChevronDown size={12} className="submenu-indicator" />
+                    </button>
+                    <div className="toolbar-submenu">
+                        {option.submenu.map((subOption, subIndex) =>
+                            renderMenuOption(subOption, subIndex, `${parentToolId}-sub`)
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Regular menu item
         return (
             <button
-                key={option.id || `option-${menuId}-${optIndex}`}
-                onClick={(e) => {
-                    e.stopPropagation();
+                key={optionKey}
+                className="toolbar-menu-item"
+                onClick={() => {
                     if (option.onClick) {
                         option.onClick();
                     }
+                    closeAllMenus();
                 }}
-                className={`menu-option ${option.active ? 'active' : ''}`}
                 disabled={option.disabled}
-                aria-label={option.label}
             >
-                <OptionIcon size={14} className="option-icon" />
-                <div className="option-text">
-                    <span className="option-label">{option.label}</span>
-                    {option.description && (
-                        <span className="option-description">
-                            {option.description}
-                        </span>
-                    )}
-                </div>
+                {option.label}
+                {option.shortcut && (
+                    <span className="menu-shortcut">{option.shortcut}</span>
+                )}
             </button>
         );
     };
 
-    /**
-     * Render individual tool button
-     * UPDATED with smart dropdown positioning
-     */
     const renderTool = (tool, index) => {
-        // Separator
-        if (tool.type === 'separator') {
-            return (
-                <div
-                    key={`separator-${index}`}
-                    className="toolbar-separator"
-                />
-            );
-        }
-
-        const IconComponent = getToolIcon(tool.id, tool.icon);
+        const IconComponent = getToolIcon(tool.icon);
         const isOpen = openMenuId === tool.id;
 
-        // Menu with dropdown
-        if (tool.type === 'menu') {
+        // Menu button with dropdown
+        if (tool.options && tool.options.length > 0) {
             return (
-                <div
-                    key={tool.id || `menu-${index}`}
-                    className="toolbar-menu"
-                    onMouseEnter={() => setOpenMenuId(tool.id)}
-                    onMouseLeave={() => setOpenMenuId(null)}
-                >
+                <div key={tool.id || `tool-${index}`} className="toolbar-menu-wrapper">
                     <button
-                        className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
+                        onClick={() => toggleMenu(tool.id)}
+                        className={`toolbar-icon-btn has-menu ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
                         aria-haspopup="true"
@@ -432,67 +439,108 @@ export function InstanceViewport({
         >
             {/* Header */}
             <div className="instance-viewport__header">
-                <div className="instance-viewport__header-title">
-                    {getDisplayName()}
-                </div>
-                <div className="instance-viewport__header-actions">
-                    <button
-                        onClick={handleFullscreen}
-                        className="instance-viewport__header-button"
-                        title="Fullscreen"
-                    >
-                        <Maximize2 size={14} />
-                    </button>
-                    {onDelete && (
-                        <button
-                            onClick={onDelete}
-                            className="instance-viewport__header-button"
-                            title="Delete"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                <div className="instance-title-section">
+                    <h3 className="instance-title">
+                        {instanceType
+                            ? (headerInfo?.title || `${instanceType.toUpperCase()} Instance`)
+                            : 'Empty Instance'
+                        }
+                    </h3>
+                    {headerInfo?.stats && (
+                        <div className="instance-stats">
+                            {Object.entries(headerInfo.stats).map(([key, value]) => (
+                                <div key={key} className="stat">
+                                    <span className="stat-label">{key}:</span>
+                                    <span className="stat-value">{value}</span>
+                                </div>
+                            ))}
+                        </div>
                     )}
+                </div>
+
+                <div className="instance-indicators">
+                    {isRemote && (
+                        <div className="indicator">
+                            <span>👤 {ownerUserName}</span>
+                        </div>
+                    )}
+                    {!instanceType && !loading && (
+                        <div className="indicator">
+                            <span>📭 No data</span>
+                        </div>
+                    )}
+                    {loading && (
+                        <div className="indicator">
+                            <span>⏳ Loading...</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="instance-actions">
+                    <button
+                        className="action-btn"
+                        onClick={handleMaximize}
+                        title="Maximize"
+                    >
+                        <Maximize2 size={16} />
+                    </button>
+                    <button
+                        className="action-btn danger"
+                        onClick={handleDelete}
+                        title="Delete Instance"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                 </div>
             </div>
 
-            {/* Toolbar */}
-            {tools.length > 0 && (
-                <div className="instance-viewport__toolbar">
+            {/* Toolbar - ONLY shows if instance has data and type */}
+            {hasData && instanceType && tools.length > 0 && (
+                <div className="instance-toolbar">
                     {tools.map((tool, index) => renderTool(tool, index))}
                 </div>
             )}
 
-            {/* Content */}
+            {/* Error Display */}
+            {error && (
+                <div className="instance-error">
+                    <AlertCircle size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {/* Rendering Container */}
             <div
                 ref={containerRef}
-                className="instance-viewport__content"
+                className="instance-container"
                 style={{
                     flex: 1,
                     position: 'relative',
-                    backgroundColor: '#0a0a0a',
+                    overflow: 'hidden',
                 }}
-                onMouseEnter={() => actualInstanceId && setActiveInstance(actualInstanceId)}
-            >
-                {loading && (
-                    <div className="instance-viewport__loading">
-                        Loading view...
-                    </div>
-                )}
-                {error && (
-                    <div className="instance-viewport__error">
-                        <AlertCircle size={24} />
-                        <div>{error.message}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                            View: {error.viewConfigId?.slice(0, 12)}...
-                        </div>
-                        {error.datasetName && (
-                            <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                                Dataset: {error.datasetName}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                onClick={() => {
+                    if (actualInstanceId) {
+                        setActiveInstance(actualInstanceId);
+                    }
+                }}
+            />
+
+            {/* Loading Overlay */}
+            {loading && (
+                <div className="instance-loading-overlay">
+                    <div className="loading-spinner" />
+                    <p>Initializing...</p>
+                </div>
+            )}
+
+            {/* Click outside to close menus */}
+            {openMenuId && createPortal(
+                <div
+                    className="toolbar-menu-backdrop"
+                    onClick={closeAllMenus}
+                />,
+                document.body
+            )}
         </div>
     );
 }

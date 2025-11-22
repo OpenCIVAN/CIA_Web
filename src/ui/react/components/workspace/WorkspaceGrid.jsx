@@ -11,6 +11,7 @@ export function WorkspaceGrid() {
     const [instances, setInstances] = useState([]);
     const gridRef = useRef(null);
 
+    // Listen for dataset click events
     useEffect(() => {
         const handleInstanceRequest = async (event) => {
             const datasetId = event.detail?.datasetId;
@@ -29,16 +30,18 @@ export function WorkspaceGrid() {
                     return;
                 }
 
+                // Create view configuration
                 const viewConfig = viewConfigurationManager.createView(datasetId, {
                     name: `View of ${dataset.filename}`,
                 });
 
                 console.log(`📋 Created view ${viewConfig.id} for dataset ${datasetId}`);
 
+                // Add instance with the view (type will be determined when data loads)
                 setInstances((prev) => [...prev, {
                     key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     viewConfigId: viewConfig.id,
-                    type: 'vtk',
+                    // ✅ NO TYPE - instance will infer it from dataset
                     isRemote: false,
                 }]);
 
@@ -51,68 +54,60 @@ export function WorkspaceGrid() {
         return () => window.removeEventListener('cia:request-instance', handleInstanceRequest);
     }, []);
 
+    // Create empty instance button handler
     const handleCreateEmptyInstance = useCallback(() => {
         if (instances.length >= 9) {
             console.log('⚠️ Grid full - max 9 instances');
             return;
         }
 
-        console.log('➕ Creating empty instance (no view yet)');
+        console.log('➕ Creating empty instance (no type, no view)');
 
         setInstances((prev) => [...prev, {
             key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            viewConfigId: null,
-            type: null,
+            viewConfigId: null,  // No view = empty instance
+            // ✅ NO TYPE - truly generic empty instance
             isRemote: false,
         }]);
     }, [instances.length]);
 
-    const handleDeleteInstance = useCallback((key) => {
-        console.log(`🗑️ Removing instance from grid: ${key}`);
-        setInstances((prev) => prev.filter((i) => i.key !== key));
+    // Delete instance handler
+    const handleDeleteInstance = useCallback((instanceKey) => {
+        console.log(`🗑️ Deleting instance: ${instanceKey}`);
+        setInstances((prev) => prev.filter((instance) => instance.key !== instanceKey));
     }, []);
 
+    // Calculate grid layout style
     const getGridStyle = () => {
         const count = instances.length;
-        if (count === 0) return { display: "none" };
-
-        let cols = 1, rows = 1;
-        if (count === 1) { cols = 1; rows = 1; }
-        else if (count === 2) { cols = 2; rows = 1; }
-        else if (count <= 4) { cols = 2; rows = 2; }
-        else if (count <= 6) { cols = 3; rows = 2; }
-        else { cols = 3; rows = 3; }
-
-        return {
-            display: "grid",
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gridTemplateRows: `repeat(${rows}, 1fr)`,
-        };
+        if (count === 0) return {};
+        if (count === 1) return { gridTemplateColumns: '1fr', gridTemplateRows: '1fr' };
+        if (count === 2) return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr' };
+        if (count <= 4) return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
+        if (count <= 6) return { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr' };
+        return { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr 1fr' };
     };
 
     return (
         <div className="workspace-grid">
-            {/* Toolbar */}
-            <div className="workspace-grid__toolbar">
-                <span className="workspace-grid__toolbar-title">
-                    Workspace ({instances.length} instance{instances.length !== 1 ? "s" : ""})
-                    {instances.filter((i) => i.isRemote).length > 0 && (
-                        <span className="workspace-grid__toolbar-status">
-                            ({instances.filter((i) => i.isRemote).length} remote)
-                        </span>
-                    )}
-                </span>
+            {/* Header with Add Instance button */}
+            <div className="workspace-grid__header">
+                <div className="workspace-grid__title">
+                    <span>Workspace</span>
+                    <span className="workspace-grid__count">({instances.length})</span>
+                </div>
                 <button
                     className="workspace-grid__add-button"
                     onClick={handleCreateEmptyInstance}
                     disabled={instances.length >= 9}
+                    title="Add empty instance"
                 >
-                    <Plus size={16} />
+                    <Plus size={18} />
                     Add Instance
                 </button>
             </div>
 
-            {/* Empty State or Grid */}
+            {/* Empty state or grid */}
             {instances.length === 0 ? (
                 <div className="workspace-grid__empty-state">
                     <div className="workspace-grid__empty-icon">🎨</div>
@@ -137,7 +132,7 @@ export function WorkspaceGrid() {
                         <InstanceViewport
                             key={instance.key}
                             viewConfigId={instance.viewConfigId}
-                            type={instance.type}
+                            // ✅ NO TYPE PROP - instance determines its own type!
                             isRemote={instance.isRemote}
                             remoteInstanceId={instance.remoteId}
                             ownerUserName={instance.userName}
