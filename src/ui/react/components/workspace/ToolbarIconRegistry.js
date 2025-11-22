@@ -43,6 +43,7 @@ import {
   Grid,
   Grid3x3,
   CircleDot,
+  Droplet,
 
   // Navigation
   Compass,
@@ -173,6 +174,7 @@ const TOOL_ICON_MAP = {
   "grid-off": SlashedGrid,
   "grid-3x3": Grid3x3,
   points: CircleDot,
+  droplet: Droplet,
 
   // ==========================================================================
   // NAVIGATION & ORIENTATION

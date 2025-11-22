@@ -222,159 +222,48 @@ export function InstanceViewport({
     // RENDERING HELPERS
     // =========================================================================
 
-    const renderMenuOption = (option, index, parentToolId) => {
-        const optionKey = `${parentToolId}-opt-${index}`;
+    // src/ui/react/components/workspace/InstanceViewport.jsx
+    // COMPLETE FIX: Handles both renderTool and renderMenuOption properly
 
-        // Handle slider options
-        if (option.type === 'slider') {
-            return (
-                <SliderMenuOption
-                    key={optionKey}
-                    option={option}
-                    onUpdate={(value) => {
-                        if (option.onChange) {
-                            option.onChange(value);
-                        }
-                    }}
-                />
-            );
-        }
-
-        // Handle camera view grid picker
-        if (option.type === 'camera-grid') {
-            return (
-                <div key={optionKey} className="camera-grid-container">
-                    <CameraViewGridPicker
-                        onViewSelect={(view) => {
-                            if (option.onChange) {
-                                option.onChange(view);
-                            }
-                            closeAllMenus();
-                        }}
-                    />
-                </div>
-            );
-        }
-
-        // Handle slider with presets
-        if (option.type === 'slider-presets') {
-            return (
-                <SliderWithPresets
-                    key={optionKey}
-                    label={option.label}
-                    value={option.value}
-                    min={option.min}
-                    max={option.max}
-                    step={option.step}
-                    presets={option.presets}
-                    onChange={(value) => {
-                        if (option.onChange) {
-                            option.onChange(value);
-                        }
-                    }}
-                />
-            );
-        }
-
-        // Handle color swatch grid
-        if (option.type === 'color-grid') {
-            return (
-                <div key={optionKey} className="color-grid-container">
-                    <ColorSwatchGrid
-                        colors={option.colors}
-                        onColorSelect={(color) => {
-                            if (option.onChange) {
-                                option.onChange(color);
-                            }
-                            closeAllMenus();
-                        }}
-                    />
-                </div>
-            );
-        }
-
-        // Handle position grid picker
-        if (option.type === 'position-grid') {
-            return (
-                <div key={optionKey} className="position-grid-container">
-                    <PositionGridPicker
-                        onPositionSelect={(position) => {
-                            if (option.onChange) {
-                                option.onChange(position);
-                            }
-                            closeAllMenus();
-                        }}
-                    />
-                </div>
-            );
-        }
-
-        // Handle separator
-        if (option.type === 'separator') {
-            return <div key={optionKey} className="toolbar-menu-separator" />;
-        }
-
-        // Handle submenu
-        if (option.submenu) {
-            return (
-                <div key={optionKey} className="toolbar-menu-item has-submenu">
-                    <button
-                        onClick={() => {
-                            if (option.onClick) {
-                                option.onClick();
-                            }
-                        }}
-                        disabled={option.disabled}
-                    >
-                        {option.label}
-                        <ChevronDown size={12} className="submenu-indicator" />
-                    </button>
-                    <div className="toolbar-submenu">
-                        {option.submenu.map((subOption, subIndex) =>
-                            renderMenuOption(subOption, subIndex, `${parentToolId}-sub`)
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        // Regular menu item
-        return (
-            <button
-                key={optionKey}
-                className="toolbar-menu-item"
-                onClick={() => {
-                    if (option.onClick) {
-                        option.onClick();
-                    }
-                    closeAllMenus();
-                }}
-                disabled={option.disabled}
-            >
-                {option.label}
-                {option.shortcut && (
-                    <span className="menu-shortcut">{option.shortcut}</span>
-                )}
-            </button>
-        );
-    };
-
+    /**
+     * Render individual tool button (toolbar level)
+     * FIX: Only call getToolIcon when icon exists
+     */
     const renderTool = (tool, index) => {
-        const IconComponent = getToolIcon(tool.icon);
+        // Separator
+        if (tool.type === 'separator') {
+            return (
+                <div
+                    key={`separator-${index}`}
+                    className="toolbar-separator"
+                />
+            );
+        }
+
+        // ✅ FIX: Only get icon if one is specified
+        const IconComponent = (tool.icon || tool.id)
+            ? getToolIcon(tool.id, tool.icon)
+            : null;
+
         const isOpen = openMenuId === tool.id;
 
-        // Menu button with dropdown
-        if (tool.options && tool.options.length > 0) {
+        // Menu with dropdown
+        if (tool.type === 'menu') {
             return (
-                <div key={tool.id || `tool-${index}`} className="toolbar-menu-wrapper">
+                <div
+                    key={tool.id || `menu-${index}`}
+                    className="toolbar-menu"
+                    onMouseEnter={() => setOpenMenuId(tool.id)}
+                    onMouseLeave={() => setOpenMenuId(null)}
+                >
                     <button
-                        onClick={() => toggleMenu(tool.id)}
-                        className={`toolbar-icon-btn has-menu ${tool.active ? 'active' : ''}`}
+                        className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
                         aria-haspopup="true"
                         aria-expanded={isOpen}
                     >
+                        {/* ✅ FIX: Only render icon if exists */}
                         {IconComponent && <IconComponent size={18} strokeWidth={2} />}
                         <ChevronDown size={10} className="menu-indicator" />
 
@@ -409,7 +298,9 @@ export function InstanceViewport({
                 disabled={tool.disabled}
                 aria-label={tool.label}
             >
+                {/* ✅ FIX: Only render icon if exists */}
                 {IconComponent && <IconComponent size={18} strokeWidth={2} />}
+
                 <div className="toolbar-tooltip">
                     <div className="tooltip-title">{tool.label}</div>
                     {tool.description && (
@@ -423,6 +314,150 @@ export function InstanceViewport({
         );
     };
 
+    /**
+     * Render individual menu option (inside dropdown menus)
+     * FIX: Only call getToolIcon when icon property exists
+     */
+    const renderMenuOption = (option, optIndex, menuId) => {
+        // Handle separator
+        if (option.type === 'separator') {
+            return (
+                <div
+                    key={`menu-sep-${menuId}-${optIndex}`}
+                    className="menu-separator"
+                />
+            );
+        }
+
+        // Handle header
+        if (option.type === 'header') {
+            return (
+                <div
+                    key={option.id || `header-${menuId}-${optIndex}`}
+                    className="menu-header"
+                >
+                    {option.label}
+                </div>
+            );
+        }
+
+        // Handle camera grid
+        if (option.type === 'camera-grid') {
+            return (
+                <CameraViewGridPicker
+                    key={option.id || `camera-grid-${menuId}-${optIndex}`}
+                    views={option.views}
+                    disabled={option.disabled}
+                    onViewChange={option.onViewSelect}
+                />
+            );
+        }
+
+        // Handle position grid
+        if (option.type === 'position-grid') {
+            return (
+                <PositionGridPicker
+                    key={option.id || `position-grid-${menuId}-${optIndex}`}
+                    positions={option.positions}
+                    currentPosition={option.currentPosition}
+                    disabled={option.disabled}
+                    onPositionChange={option.onPositionChange}
+                />
+            );
+        }
+
+        // Handle color swatch grid
+        if (option.type === 'color-swatch-grid') {
+            return (
+                <ColorSwatchGrid
+                    key={option.id || `color-grid-${menuId}-${optIndex}`}
+                    colormaps={option.colormaps}
+                    currentColormap={option.currentColormap}
+                    disabled={option.disabled}
+                    onColormapChange={option.onColormapChange}
+                />
+            );
+        }
+
+        // Handle slider with presets
+        if (option.type === 'slider-with-presets') {
+            // ✅ FIX: Only get icon if one is specified
+            const IconComponent = option.icon ? getToolIcon(option.id, option.icon) : null;
+
+            return (
+                <SliderWithPresets
+                    key={option.id || `slider-${menuId}-${optIndex}`}
+                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    label={option.label}
+                    value={option.value}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    formatValue={option.formatValue}
+                    presets={option.presets}
+                    onChange={option.onChange}
+                    disabled={option.disabled}
+                    disabledReason={option.disabledReason}
+                />
+            );
+        }
+
+        // Handle slider
+        if (option.type === 'slider') {
+            // ✅ FIX: Only get icon if one is specified
+            const IconComponent = option.icon ? getToolIcon(option.id, option.icon) : null;
+
+            return (
+                <SliderMenuOption
+                    key={option.id || `slider-${menuId}-${optIndex}`}
+                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    label={option.label}
+                    description={option.description}
+                    value={option.value}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    onChange={option.onChange}
+                    formatValue={option.formatValue}
+                    presets={option.presets}
+                    disabled={option.disabled}
+                />
+            );
+        }
+
+        // ✅ FIX: Regular button - only get icon if specified
+        // Check if icon property exists OR if id might be a valid icon name
+        const OptionIcon = option.icon
+            ? getToolIcon(option.id, option.icon)
+            : null;
+
+        return (
+            <button
+                key={option.id || `option-${menuId}-${optIndex}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (option.onClick) {
+                        option.onClick();
+                    }
+                }}
+                className={`menu-option ${option.active ? 'active' : ''}`}
+                disabled={option.disabled}
+                aria-label={option.label}
+            >
+                {/* ✅ FIX: Only render icon if one exists */}
+                {OptionIcon && <OptionIcon size={14} className="option-icon" />}
+
+                <div className="option-text">
+                    <span className="option-label">{option.label}</span>
+                    {option.description && (
+                        <span className="option-description">
+                            {option.description}
+                        </span>
+                    )}
+                </div>
+            </button>
+        );
+    };
     // =========================================================================
     // MAIN RENDER
     // =========================================================================
