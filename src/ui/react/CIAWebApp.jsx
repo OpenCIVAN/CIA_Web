@@ -23,6 +23,7 @@ import { RightCollaborationPanel } from "@UI/react/components/collaboration/Righ
 export function CIAWebApp({ username }) {
   const [phase3Status, setPhase3Status] = useState('pending');
   const phase3Started = useRef(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
 
   // Run Phase 3 after the UI has mounted
   useEffect(() => {
@@ -51,7 +52,10 @@ export function CIAWebApp({ username }) {
   return (
     <ThreeEdgeLayout
       topBar={<TopBar username={username} />}
-      leftPanel={<FilesPanel />}
+      leftPanel={<FilesPanel
+        isCollapsed={leftPanelCollapsed}
+        onToggle={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+      />}
       centerPanel={<WorkspaceGrid />}
       rightPanel={<RightCollaborationPanel roomName={sessionManager?.getRoomId() || 'default-analytics-room'} />}
       bottomBar={<StatusBar username={username} phase3Status={phase3Status} />}
