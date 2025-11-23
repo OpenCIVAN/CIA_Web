@@ -6,22 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
-
-// Get API base URL - handle both Webpack DefinePlugin and direct browser usage
-const getApiBase = () => {
-  // Try environment variable first (if Webpack DefinePlugin is configured)
-  if (typeof __API_BASE_URL__ !== "undefined") {
-    return __API_BASE_URL__;
-  }
-  // Fallback to window config (can be set in index.html)
-  if (typeof window !== "undefined" && window.__CIA_CONFIG__?.apiBaseUrl) {
-    return window.__CIA_CONFIG__.apiBaseUrl;
-  }
-  // Default for local development
-  return "http://localhost:3001/api";
-};
-
-const API_BASE = getApiBase();
+import { config } from "@Core/config/clientConfig.js";
 
 /**
  * Hook to fetch and manage project files from the server
@@ -62,14 +47,17 @@ export function useProjectFiles(options = {}) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/projects/${projectId}/files`, {
-        signal: abortControllerRef.current.signal,
-        headers: {
-          "Content-Type": "application/json",
-          // TODO: Add auth token when implemented
-          // 'Authorization': `Bearer ${token}`
-        },
-      });
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/files`,
+        {
+          signal: abortControllerRef.current.signal,
+          headers: {
+            "Content-Type": "application/json",
+            // TODO: Add auth token when implemented
+            // 'Authorization': `Bearer ${token}`
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -130,14 +118,17 @@ export function useProjectFiles(options = {}) {
       formData.append("visibility", visibility);
       formData.append("access_level", accessLevel);
 
-      const response = await fetch(`${API_BASE}/projects/${projectId}/files`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          // Note: Don't set Content-Type for FormData, browser sets it with boundary
-          // TODO: Add auth token when implemented
-        },
-      });
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/files`,
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            // Note: Don't set Content-Type for FormData, browser sets it with boundary
+            // TODO: Add auth token when implemented
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -180,7 +171,7 @@ export function useProjectFiles(options = {}) {
       }
 
       const response = await fetch(
-        `${API_BASE}/projects/${projectId}/files/${fileId}/access`,
+        `${config.apiBaseUrl}/projects/${projectId}/files/${fileId}/access`,
         {
           method: "POST",
           headers: {
@@ -256,7 +247,7 @@ export function useAllAccessibleFiles() {
 
     try {
       // Fetch all datasets the user can see
-      const response = await fetch(`${API_BASE}/datasets`, {
+      const response = await fetch(`${config.apiBaseUrl}/datasets`, {
         headers: {
           "Content-Type": "application/json",
         },

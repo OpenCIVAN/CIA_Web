@@ -12,22 +12,7 @@
 
 import { useRef, useCallback } from "react";
 import { datasetManager } from "@Init/appInitializer.js";
-
-// Get API base URL - handle both Webpack DefinePlugin and direct browser usage
-const getApiBase = () => {
-  // Try Webpack DefinePlugin first
-  if (typeof __API_BASE_URL__ !== "undefined") {
-    return __API_BASE_URL__;
-  }
-  // Fallback to window config (can be set in index.html)
-  if (typeof window !== "undefined" && window.__CIA_CONFIG__?.apiBaseUrl) {
-    return window.__CIA_CONFIG__.apiBaseUrl;
-  }
-  // Default for local development
-  return "http://localhost:3001/api";
-};
-
-const API_BASE = getApiBase();
+import { config } from "@Core/config/clientConfig.js";
 
 /**
  * Hook providing file operations for the FilesPanel
@@ -63,7 +48,9 @@ export function useFileOperations() {
       console.log(`📂 Loading from server: ${filename} (${fileId})`);
 
       // Download file from server
-      const response = await fetch(`${API_BASE}/datasets/${fileId}/download`);
+      const response = await fetch(
+        `${config.apiBaseUrl}/datasets/${fileId}/download`
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
