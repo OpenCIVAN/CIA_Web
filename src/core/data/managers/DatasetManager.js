@@ -5,6 +5,7 @@ import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { generateDatasetId } from "@Utils/idGenerator.js";
+import { config } from "@Core/config/clientConfig.js";
 
 /**
  * DatasetManager - Format-agnostic dataset management
@@ -199,6 +200,7 @@ export class DatasetManager extends EventEmitter {
           cacheKey: serverDataset.id,
           fileStatus: "on-server",
           metadata: serverDataset.metadata || {},
+          publicPath: serverDataset.public_path || `${config.apiBaseUrl}/files/${serverDataset.id}/download`,
         });
 
         this._datasets.set(dataset.id, dataset);

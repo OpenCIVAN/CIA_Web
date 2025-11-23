@@ -301,9 +301,29 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
 
     await client.query("COMMIT");
 
+    // Fetch the full file details to return to frontend
+
+    const fileDetails = await client.query(
+      "SELECT * FROM datasets WHERE id = $1",
+
+      [fileId]
+    );
+
+    const fileData = fileDetails.rows[0];
+
     res.json({
       success: true,
-      fileId,
+      file: {
+        id: fileData.id,
+        filename: fileData.filename,
+        file_size: fileData.file_size,
+        file_type: fileData.file_type,
+        mime_type: fileData.mime_type,
+        hash: fileData.hash,
+        uploaded_by: fileData.uploaded_by,
+        uploaded_at: fileData.uploaded_at,
+      },
+      deduplicated: existingFile.rows.length > 0,
       message: "File uploaded successfully",
     });
   } catch (error) {

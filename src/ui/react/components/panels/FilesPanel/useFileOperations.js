@@ -49,7 +49,7 @@ export function useFileOperations() {
 
       // Download file from server
       const response = await fetch(
-        `${config.apiBaseUrl}/datasets/${fileId}/download`
+        `${config.apiBaseUrl}/files/${fileId}/download`
       );
 
       if (!response.ok) {

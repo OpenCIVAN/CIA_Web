@@ -65,9 +65,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    volumes:
-      - ./server:/app/server
-      - /app/node_modules
 
 volumes:
   postgres_data:

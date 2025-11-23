@@ -1,0 +1,111 @@
+#!/bin/bash
+# start.sh - Start all CIA Web services
+
+set -e  # Exit on error
+
+echo "🚀 Starting CIA Web..."
+echo ""
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# Check if Docker is running
+echo "📦 Checking Docker..."
+if ! docker info > /dev/null 2>&1; then
+    print_error "Docker is not running. Please start Docker Desktop and try again."
+    exit 1
+fi
+print_status "Docker is running"
+echo ""
+
+# Start Docker services
+echo "🐳 Starting Docker services (PostgreSQL, MinIO, API)..."
+docker-compose up -d
+
+# Wait for services to be healthy
+echo ""
+echo "⏳ Waiting for services to be healthy..."
+sleep 5
+
+# Check PostgreSQL
+echo -n "  PostgreSQL: "
+if docker exec cia-postgres pg_isready -U cia_admin -d cia_analytics > /dev/null 2>&1; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 5
+fi
+
+# Check MinIO
+echo -n "  MinIO: "
+if curl -s http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 3
+fi
+
+# Check API
+echo -n "  API: "
+MAX_RETRIES=10
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:3001/api/health > /dev/null 2>&1; then
+        print_status "Ready"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            print_error "API failed to start. Check logs with: docker-compose logs api"
+            exit 1
+        fi
+        sleep 2
+    fi
+done
+
+echo ""
+print_status "All Docker services are running!"
+echo ""
+
+# Check if npm dependencies are installed
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing npm dependencies..."
+    npm install
+    echo ""
+fi
+
+echo "🌐 Services running:"
+echo "  • PostgreSQL:  localhost:5432"
+echo "  • MinIO:       localhost:9000 (Console: localhost:9002)"
+echo "  • API:         http://localhost:3001"
+echo ""
+
+echo "📝 Next steps:"
+echo ""
+echo "  1. Start WebSocket server (for Y.js collaboration):"
+echo "     ${YELLOW}npm run websocket${NC}"
+echo ""
+echo "  2. In a separate terminal, start the frontend:"
+echo "     ${YELLOW}npm start${NC}"
+echo ""
+echo "  Or run the convenience script to start both:"
+echo "     ${YELLOW}./start-frontend.sh${NC}"
+echo ""
+
+print_status "Backend services ready!"
