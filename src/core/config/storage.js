@@ -1,5 +1,6 @@
 // src/core/config/storage.js
-
+import { config } from '@Core/config/clientConfig.js';
+export { logStorageConfig } from '@Core/config/clientConfig.js';
 import { ServerStorageProvider } from "@Core/data/providers/ServerStorageProvider.js";
 import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
 import { dataCache } from "@Services/storage/dataCache.js";
@@ -22,31 +23,16 @@ import { dataCache } from "@Services/storage/dataCache.js";
 
 // Flag to control which storage provider to use
 // Set this to false if you want to work offline or test local-only features
-export const USE_SERVER_STORAGE = true;
+export const USE_SERVER_STORAGE = config.useServerStorage;
 
 // API server configuration
 // For local development with Docker
-export const API_BASE_URL = "http://localhost:3001/api";
+export const API_BASE_URL = config.apiBaseUrl;
 
 // Session configuration
 // Fixed UUID for local development - all local users share this session
 // In production, this would be generated per collaborative workspace
-export const DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000001";
-
-/**
- * Helper to log the current storage configuration
- * Useful for debugging which storage mode is active
- */
-export function logStorageConfig() {
-  console.log("📡 Storage Configuration:");
-  console.log(
-    `   Mode: ${
-      USE_SERVER_STORAGE ? "Server (with local fallback)" : "Local only"
-    }`
-  );
-  console.log(`   API Base URL: ${API_BASE_URL}`);
-  console.log(`   Session ID: ${DEFAULT_SESSION_ID}`);
-}
+export const DEFAULT_SESSION_ID = config.defaultSessionId;
 
 /**
  * Initialize storage provider with automatic fallback

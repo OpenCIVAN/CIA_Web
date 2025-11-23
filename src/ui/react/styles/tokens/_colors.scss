@@ -195,3 +195,41 @@ $color-context-analysis: $color-accent-purple; // Analysis-related
 $color-context-collaboration: $color-accent-blue; // People/collab
 $color-context-visualization: $color-accent-pink; // Viz-related
 $color-context-system: $color-accent-orange; // System/settings
+
+// These provide semantic naming for user presence states
+
+// ============================================================================
+// USER STATUS COLORS
+// ============================================================================
+
+// Online - Active and available
+$color-status-success: #30d158; // Green (same as $color-success)
+$color-status-online: $color-status-success;
+
+// Idle - Temporarily away (auto-detected)
+$color-status-warning: #ff9f0a; // Amber/Orange
+$color-status-idle: $color-status-warning;
+
+// Away - Manually set away
+$color-status-away: rgba(255, 255, 255, 0.4); // Muted gray
+
+// Do Not Disturb - Blocking notifications
+$color-status-error: #ff453a; // Red
+$color-status-dnd: $color-status-error;
+
+// Offline - Not connected
+$color-status-offline: rgba(255, 255, 255, 0.2); // Very muted
+
+// ============================================================================
+// QUATERNARY TEXT (if not already present)
+// ============================================================================
+
+// This is used for very de-emphasized text like "last seen" timestamps
+$color-text-quaternary: rgba(255, 255, 255, 0.35);
+
+// ============================================================================
+// ACCENT HOVER STATES (if not already present)
+// ============================================================================
+
+$color-accent-blue-hover: #7cb8ff; // Lighter blue for hover
+$color-accent-primary-hover: #8ac5ff; // Should already exist but adding for safety

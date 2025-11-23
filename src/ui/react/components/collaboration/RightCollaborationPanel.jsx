@@ -13,7 +13,7 @@ import {
   EyeOff
 } from "lucide-react";
 
-import { PeoplePanel } from "@UI/react/components/collaboration/PeoplePanel.jsx";
+import { PeoplePanel } from "@UI/react/components/collaboration/PeoplePanel";
 import { TextChatPanel } from "@UI/react/components/collaboration/TextChatPanel.jsx";
 import { VoiceChatPanel } from "@UI/react/components/collaboration/VoiceChatPanel.jsx";
 
