@@ -456,6 +456,37 @@ CIA_Web/
 3. Core visualization in `src/core/`
 4. Update `src/index.js` to initialize new features
 
+### Database Management
+
+**Reset Database (with confirmation):**
+
+```bash
+./reset-database.sh
+```
+
+This will:
+
+- Stop all Docker containers
+- Delete PostgreSQL and MinIO volumes
+- Restart containers with fresh migrations
+- Seed database with 7 sample VTP files
+
+**Quick Reset (no confirmation, for rapid development):**
+
+```bash
+./reset-database-quick.sh
+```
+
+**Sample Files Included:**
+
+- Bones.vtp (27.3 MB)
+- diskout.vtp (483 KB)
+- earth.vtp (1.2 MB)
+- Lungs.vtp (10.8 MB)
+- LungVessels.vtp (28.8 MB)
+- Skull.vtp (20 MB)
+- Ventricles.vtp (16.5 MB)
+
 ### Memory Management
 
 - TensorFlow.js operations use `tf.tidy()` for automatic cleanup
