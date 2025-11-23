@@ -1,22 +1,111 @@
-// Merged from FilesPanel.css + FilesPanel.scss
+// =============================================================================
+// PRODUCTION TREE STRUCTURE STYLES
+// Complete replacement for tree section in FilesPanel.scss
+// =============================================================================
+@use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
-// ============================================================================
-// MAIN PANEL CONTAINER
-// ============================================================================
+// =============================================================================
+// PANEL STATES
+// =============================================================================
 
 .files-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   background: $color-bg-primary;
+
+  &--collapsed {
+    width: 48px;
+  }
 }
 
-// ============================================================================
-// PANEL HEADER
-// ============================================================================
+// =============================================================================
+// ACTIVITY BAR (Collapsed State)
+// =============================================================================
 
-.files-panel__panel-header {
+.activity-bar {
+  width: 48px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md 0;
+  background: $color-bg-secondary;
+  border-right: 1px solid $color-border-subtle;
+}
+
+.activity-bar__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.activity-bar-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-medium;
+    color: $color-text-secondary;
+  }
+
+  &__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: $color-accent-primary;
+    color: white;
+    font-size: 10px;
+    font-weight: $font-weight-bold;
+    padding: 2px 5px;
+    border-radius: $radius-full;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px $color-bg-secondary;
+  }
+}
+
+.activity-bar__expand {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  margin-top: auto;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// PANEL HEADER
+// =============================================================================
+
+.files-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,13 +115,17 @@
   flex-shrink: 0;
 }
 
-.files-panel__panel-title {
+.files-panel__title {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
+}
+
+.files-panel__title-icon {
+  color: $color-text-secondary;
 }
 
 .files-panel__collapse-btn {
@@ -48,11 +141,11 @@
   }
 }
 
-// ============================================================================
-// MAIN TABS (Datasets / Files)
-// ============================================================================
+// =============================================================================
+// MAIN TABS
+// =============================================================================
 
-.files-panel__main-tabs {
+.files-panel__tabs {
   display: flex;
   gap: 2px;
   padding: $spacing-xs;
@@ -61,7 +154,7 @@
   flex-shrink: 0;
 }
 
-.files-panel__main-tab {
+.files-panel__tab {
   flex: 1;
   padding: $spacing-sm $spacing-md;
   @include glass-button;
@@ -80,11 +173,11 @@
   }
 }
 
-// ============================================================================
-// MAIN CONTENT AREA
-// ============================================================================
+// =============================================================================
+// CONTENT AREA
+// =============================================================================
 
-.files-panel__main-content {
+.files-panel__content {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -99,505 +192,328 @@
   }
 }
 
-.files-panel__content {
-  flex: 1;
-  overflow-y: auto;
-  padding: $spacing-md;
-  @include glass-scrollable;
-}
-
-// ============================================================================
-// ERROR MESSAGE
-// ============================================================================
-
-.files-panel__error {
-  margin: $spacing-md $spacing-lg;
-  padding: $spacing-md;
-  background: $color-error-bg;
-  border: 1px solid $color-error-border;
-  border-radius: $radius-md;
-  color: $color-error;
-  font-size: $font-size-sm;
-}
-
-// ============================================================================
+// =============================================================================
 // DATASETS VIEW
-// ============================================================================
+// =============================================================================
 
 .files-panel__datasets-view {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  padding: $spacing-lg;
-  gap: $spacing-lg;
 }
 
-// Spawn toggle section
-.files-panel__spawn-toggle {
+// Tree container
+.files-panel__tree {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  overflow-y: auto;
+  flex: 1;
   padding: $spacing-md;
-  @include glass-card;
+  @include glass-scrollable;
+}
+
+// Hint at bottom
+.files-panel__hint {
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-accent-primary, 0.05);
+  border-top: 1px solid rgba($color-accent-primary, 0.15);
   flex-shrink: 0;
+}
+
+.files-panel__hint-text {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+
+  strong {
+    color: $color-accent-primary;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+// =============================================================================
+// TREE FOLDERS
+// =============================================================================
+
+.tree-folder {
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  &--highlighted {
+    .tree-folder__header {
+      background: rgba($color-accent-blue, 0.05);
+
+      &:hover {
+        background: rgba($color-accent-blue, 0.1);
+      }
+    }
+  }
+}
+
+.tree-folder__header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  color: $color-text-primary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $color-bg-tertiary;
+  }
+}
+
+.tree-folder__chevron {
+  display: flex;
+  align-items: center;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.tree-folder__icon {
+  display: flex;
+  align-items: center;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.tree-folder__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-folder__count {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  flex-shrink: 0;
+}
+
+.tree-folder__badge {
+  background: $color-accent-blue;
+  color: white;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 2px 6px;
+  border-radius: $radius-full;
+  min-width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tree-folder__children {
+  padding-left: $spacing-lg;
+  padding-top: $spacing-xs;
+  padding-bottom: $spacing-xs;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// =============================================================================
+// TREE DATASET (Expandable with instances)
+// =============================================================================
+
+.tree-dataset {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-dataset__row {
+  display: flex;
+  align-items: stretch;
+}
+
+.tree-dataset__chevron {
+  width: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  padding: 0;
   transition: all $transition-fast;
 
   &:hover {
-    @include glass-hover;
-  }
-
-  .toggle-label {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    font-size: $font-size-base;
     color: $color-text-primary;
-    cursor: pointer;
+    background: $color-bg-tertiary;
+  }
+}
+
+.tree-dataset__instances {
+  padding-left: calc($spacing-lg + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+// =============================================================================
+// TREE ITEMS
+// =============================================================================
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin: 0;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+  font-size: $font-size-sm;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+
+  &:hover:not(.tree-item--empty):not(:disabled) {
+    background: $color-bg-tertiary;
+    border-color: $color-border-subtle;
+    transform: translateX(2px);
   }
 
-  .toggle-hint {
-    display: block;
-    margin-top: $spacing-xs;
-    margin-left: 24px;
-    font-size: $font-size-xs;
+  &:active:not(.tree-item--empty):not(:disabled) {
+    background: $color-bg-elevated;
+    border-color: $color-border-default;
+  }
+
+  &--empty {
+    cursor: default;
     color: $color-text-tertiary;
     font-style: italic;
-  }
-}
+    justify-content: center;
+    padding: $spacing-md;
 
-.files-panel__datasets-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.files-panel__section-title {
-  margin: 0 0 $spacing-md 0;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $color-text-tertiary;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-}
-
-// ============================================================================
-// DATASET LIST
-// ============================================================================
-
-.files-panel__datasets-list {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  @include glass-scrollable;
-}
-
-.files-panel__datasets-empty {
-  text-align: center;
-  padding: $spacing-xl;
-  color: $color-text-tertiary;
-
-  p {
-    margin: 0 0 $spacing-xs 0;
-    font-size: $font-size-base;
-  }
-}
-
-.files-panel__datasets-hint {
-  font-size: $font-size-sm;
-  font-style: italic;
-}
-
-.files-panel__dataset {
-  padding: $spacing-md;
-  @include glass-card;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-align: left;
-
-  &:hover:not(:disabled) {
-    @include glass-hover;
-    border-color: $color-accent-primary;
+    &:hover {
+      background: transparent;
+      transform: none;
+    }
   }
 
-  &.fetchable {
-    border-color: $color-accent-blue;
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: wait;
-  }
-}
-
-.files-panel__dataset-info {
-  flex: 1;
-}
-
-.files-panel__dataset-name {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  font-size: $font-size-base;
-  margin-bottom: $spacing-xs;
-  color: $color-text-primary;
-}
-
-.files-panel__dataset-meta {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-}
-
-.files-panel__instance-badge {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 2px $spacing-sm;
-  background: $color-success-bg;
-  border: 1px solid $color-success-border;
-  border-radius: $radius-sm;
-  font-size: $font-size-xs;
-  color: $color-success;
-  margin-left: $spacing-sm;
-}
-
-// Refetch button
-.files-panel__refetch-btn {
-  padding: $spacing-xs $spacing-sm;
-  @include glass-button;
-  background: $color-accent-blue-glow;
-  color: $color-accent-blue;
-  border-color: $color-accent-blue;
-  border-radius: $radius-sm;
-  transition: all $transition-fast;
-  margin-left: $spacing-sm;
-
-  &:hover {
-    background: rgba(33, 150, 243, 0.25);
-    box-shadow: 0 0 20px $color-accent-blue-glow;
-  }
-}
-
-// Status icons
-.status-available {
-  color: $color-success;
-}
-.status-fetching {
-  color: $color-warning;
-}
-.status-fetchable {
-  color: $color-accent-blue;
-}
-.status-needs-upload {
-  color: $color-accent-orange;
-}
-.status-error {
-  color: $color-error;
-}
-
-// ============================================================================
-// FILES VIEW
-// ============================================================================
-
-.files-panel__files-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  padding: $spacing-lg;
-  @include glass-scrollable;
-}
-
-.files-panel__upload-section {
-  @include glass-card;
-  padding: $spacing-md;
-  margin-bottom: $spacing-md;
-}
-
-.files-panel__tabs {
-  display: flex;
-  gap: $spacing-xs;
-  margin-bottom: $spacing-md;
-}
-
-.files-panel__tab {
-  flex: 1;
-  padding: $spacing-sm $spacing-md;
-  @include glass-button;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $color-text-tertiary;
-
-  &.active {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-    border-color: $color-accent-primary;
-  }
-
-  &:hover:not(.active):not(:disabled) {
-    @include glass-hover;
-    color: $color-text-secondary;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// ============================================================================
-// UPLOAD BUTTON
-// ============================================================================
-
-.files-panel__upload-btn {
-  width: 100%;
-  padding: $spacing-sm $spacing-md;
-  @include glass-button;
-  background: $color-accent-primary-glow;
-  border: 1px solid $color-accent-primary;
-  color: $color-accent-primary;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  transition: all $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: rgba(110, 182, 255, 0.25);
-    box-shadow: 0 0 20px rgba(110, 182, 255, 0.3),
-                0 0 40px rgba(110, 182, 255, 0.15);
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    background: $color-disabled-bg;
-    border-color: $color-disabled-border;
-    color: $color-disabled-text;
-    cursor: not-allowed;
-    transform: none;
-  }
-}
-
-// ============================================================================
-// SAMPLE FILES
-// ============================================================================
-
-.files-panel__samples {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.files-panel__sample {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  @include glass-card;
-  color: $color-text-primary;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    @include glass-hover;
-    border-color: $color-accent-primary;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.files-panel__sample-info {
-  flex: 1;
-}
-
-.files-panel__sample-name {
-  font-size: $font-size-sm;
-  margin-bottom: 2px;
-}
-
-.files-panel__sample-size {
-  color: $color-text-tertiary;
-  font-size: $font-size-xs;
-}
-
-.files-panel__upload {
-  text-align: center;
-  padding: $spacing-lg 0;
-}
-
-// ============================================================================
-// QUICK ACCESS SECTION
-// ============================================================================
-
-.files-panel__quick-access {
-  flex: 1 1 50%;
-  display: flex;
-  flex-direction: column;
-  background: $color-bg-secondary;
-  border-top: 1px solid $color-border-subtle;
-  overflow: hidden;
-}
-
-.files-panel__quick-access-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-border-subtle;
-  @include glass-subtle;
-  flex-shrink: 0;
-}
-
-.files-panel__quick-access-title {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $color-text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.files-panel__quick-close-btn {
-  padding: $spacing-xs;
-  @include glass-button;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-
-  &:hover {
-    @include glass-hover;
-    color: $color-text-primary;
-  }
-}
-
-.files-panel__quick-tabs {
-  display: flex;
-  gap: 2px;
-  padding: $spacing-xs;
-  background: $color-bg-tertiary;
-  border-bottom: 1px solid $color-border-subtle;
-  flex-shrink: 0;
-}
-
-.files-panel__quick-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  @include glass-button;
-  color: $color-text-tertiary;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-
-  &:hover:not(.active) {
-    @include glass-hover;
-  }
-
-  &.active {
-    background: $color-bg-primary;
-    color: $color-accent-primary;
-    border-color: $color-accent-primary;
-  }
-}
-
-.files-panel__quick-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: $spacing-lg;
-  @include glass-scrollable;
-}
-
-.files-panel__quick-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
-  padding: $spacing-xl;
-  text-align: center;
-  color: $color-text-tertiary;
-  height: 100%;
-
-  p {
-    margin: 0;
-    font-size: $font-size-base;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-  }
-
-  span {
-    font-size: $font-size-sm;
+  &--loading {
+    cursor: default;
     color: $color-text-tertiary;
+    opacity: 0.7;
+
+    &:hover {
+      background: transparent;
+      transform: none;
+    }
+  }
+
+  &--dataset {
+    &:hover:not(:disabled) {
+      border-color: rgba($color-accent-primary, 0.3);
+      box-shadow: 0 0 12px rgba($color-accent-primary, 0.1);
+    }
+
+    &.loading {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    &.tree-item--no-chevron {
+      margin-left: 20px; // Align with items that have chevrons
+    }
+  }
+
+  &--instance {
+    padding-left: $spacing-md;
+    background: rgba($color-accent-blue, 0.05);
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.1);
+      border-color: rgba($color-accent-blue, 0.3);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
-// ============================================================================
-// QUICK ACCESS TOGGLE BUTTON
-// ============================================================================
-
-.files-panel__quick-toggle {
-  border-top: 1px solid $color-border-subtle;
-  padding: $spacing-md $spacing-lg;
-  @include glass-subtle;
+.tree-item__icon {
+  display: flex;
+  align-items: center;
+  color: $color-text-tertiary;
   flex-shrink: 0;
 }
 
-.files-panel__quick-toggle-btn {
-  width: 100%;
+.tree-item__content {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  @include glass-button;
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tree-item__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: $color-text-primary;
   font-weight: $font-weight-medium;
-
-  &:hover {
-    @include glass-hover;
-    border-color: $color-accent-primary;
-    color: $color-accent-primary;
-  }
 }
 
-// ============================================================================
-// DATASET ACTIONS (Spawn button, etc.)
-// ============================================================================
-
-.files-panel__dataset-actions {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
+.tree-item__meta {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.files-panel__spawn-btn {
-  padding: $spacing-xs;
-  @include glass-button;
-  background: $color-accent-primary-glow;
-  border: 1px solid $color-accent-primary;
+.tree-item__spinner {
+  flex-shrink: 0;
   color: $color-accent-primary;
+}
+
+.tree-item__action {
+  flex-shrink: 0;
+  padding: 4px;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all $transition-fast;
+  opacity: 0;
+
+  .tree-item:hover & {
+    opacity: 1;
+  }
 
   &:hover {
-    background: rgba(76, 175, 80, 0.25);
-    @include accent-glow;
-    transform: scale(1.1);
+    background: $color-bg-elevated;
+    border-color: $color-border-subtle;
+    color: $color-text-primary;
   }
 }
 
-// ============================================================================
+// =============================================================================
 // ANIMATIONS
-// ============================================================================
+// =============================================================================
 
 @keyframes spin {
   from {
@@ -610,12 +526,4 @@
 
 .spinner {
   animation: spin 1s linear infinite;
-}
-
-// ============================================================================
-// LIST COMPONENT (if exists)
-// ============================================================================
-
-.files-panel__list {
-  margin-top: $spacing-md;
 }
