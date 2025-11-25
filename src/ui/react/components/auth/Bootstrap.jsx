@@ -7,6 +7,7 @@ import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/u
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { toast } from "@UI/react/store/toastStore.js";
+import { ToastContainer } from "@UI/react/components/common/Toast";
 
 import "@UI/react/components/auth/Bootstrap.scss";
 
@@ -267,7 +268,26 @@ export function Bootstrap() {
 
     // Ready - render the main application
     if (bootstrapState === 'ready') {
-        return <CIAWebApp username={username} />;
+        return (
+            <>
+                {bootstrapState === 'error' && (
+                    <div className="bootstrap-error">...</div>
+                )}
+                {bootstrapState === 'checking' && (
+                    <div className="bootstrap-checking">...</div>
+                )}
+                {bootstrapState === 'username' && (
+                    <div className="bootstrap-username">...</div>
+                )}
+                {bootstrapState === 'initializing' && (
+                    <div className="bootstrap-initializing">...</div>
+                )}
+                {bootstrapState === 'ready' && (
+                    <CIAWebApp username={username} />
+                )}
+                <ToastContainer />
+            </>
+        );
     }
 
     // Fallback (shouldn't reach here)

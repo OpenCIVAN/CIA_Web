@@ -180,7 +180,7 @@ export function syncDatasetToYjs(datasetId, metadata) {
     console.log(`📤 Dataset synced to Y.js: ${metadata.name}`);
 
     // TODO (Server): When files are server-hosted:
-    // syncData.fetchUrl = `/api/datasets/${metadata.hash}`;
+    // syncData.fetchUrl = `/api/files/${datasetId}/download`;
     // This allows remote users to download instead of upload
   } catch (error) {
     console.error("❌ Failed to sync dataset to Y.js:", error);
