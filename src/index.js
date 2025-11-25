@@ -106,7 +106,7 @@ async function initializeApp() {
     }
 
     // Create or find root element
-    let rootElement = document.getElementById("root");
+    let rootElement = document.getElementById("react-root");
     if (!rootElement) {
       rootElement = document.createElement("div");
       rootElement.id = "react-root";
