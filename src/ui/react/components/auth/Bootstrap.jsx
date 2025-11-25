@@ -266,16 +266,41 @@ export function Bootstrap() {
     //   return <LicenseComponent onSuccess={checkPrerequisites} />;
     // }
 
-    // Ready - render the main application
-    if (bootstrapState === 'ready') {
-        return (
-            <>
-                <CIAWebApp username={username} />
-                <ToastContainer />
-            </>
+    // Determine the content based on state
+    let content = null;
+
+    if (bootstrapState === 'error') {
+        content = (
+            <div className="bootstrap-error">
+                {/* ... error content ... */}
+            </div>
         );
+    } else if (bootstrapState === 'checking') {
+        content = (
+            <div className="bootstrap-checking">
+                {/* ... checking content ... */}
+            </div>
+        );
+    } else if (bootstrapState === 'username') {
+        content = (
+            <div className="bootstrap-username">
+                {/* ... username content ... */}
+            </div>
+        );
+    } else if (bootstrapState === 'initializing') {
+        content = (
+            <div className="bootstrap-initializing">
+                {/* ... initializing content ... */}
+            </div>
+        );
+    } else if (bootstrapState === 'ready') {
+        content = <CIAWebApp username={username} />;
     }
 
-    // Fallback (shouldn't reach here)
-    return null;
+    return (
+        <>
+            {content}
+            <ToastContainer />
+        </>
+    );
 }
