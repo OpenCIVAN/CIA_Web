@@ -270,21 +270,7 @@ export function Bootstrap() {
     if (bootstrapState === 'ready') {
         return (
             <>
-                {bootstrapState === 'error' && (
-                    <div className="bootstrap-error">...</div>
-                )}
-                {bootstrapState === 'checking' && (
-                    <div className="bootstrap-checking">...</div>
-                )}
-                {bootstrapState === 'username' && (
-                    <div className="bootstrap-username">...</div>
-                )}
-                {bootstrapState === 'initializing' && (
-                    <div className="bootstrap-initializing">...</div>
-                )}
-                {bootstrapState === 'ready' && (
-                    <CIAWebApp username={username} />
-                )}
+                <CIAWebApp username={username} />
                 <ToastContainer />
             </>
         );
