@@ -112,26 +112,77 @@
   color: $color-text-secondary;
   cursor: pointer;
   position: relative;
+  overflow: visible;
 
   // FIX: Ensure proper icon centering
   display: flex;
   align-items: center;
   justify-content: center;
 
+  // Backlit glow effect on hover
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    background: radial-gradient(
+      ellipse at center,
+      rgba($color-accent-primary, 0.2) 0%,
+      rgba($color-accent-primary, 0.08) 40%,
+      transparent 70%
+    );
+    filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: -1;
+    pointer-events: none;
+  }
+
   &:hover {
     @include glass-hover;
     color: $color-text-primary;
+
+    &::before {
+      opacity: 1;
+    }
+
+    svg {
+      filter: drop-shadow(0 0 3px rgba($color-accent-primary, 0.5));
+    }
   }
 
   &:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+
+    &::before {
+      display: none;
+    }
   }
 
   &.active {
     background: rgba($color-accent-pink, 0.15);
-    border-color: rgba($color-accent-pink, 0.3);
+    border-color: rgba($color-accent-pink, 0.4);
     color: $color-accent-pink;
+    box-shadow:
+      0 0 15px rgba($color-accent-pink, 0.3),
+      0 0 30px rgba($color-accent-pink, 0.15),
+      inset 0 0 10px rgba($color-accent-pink, 0.1);
+
+    &::before {
+      opacity: 1;
+      background: radial-gradient(
+        ellipse at center,
+        rgba($color-accent-pink, 0.35) 0%,
+        rgba($color-accent-pink, 0.15) 40%,
+        transparent 70%
+      );
+      filter: blur(8px);
+    }
+
+    svg {
+      filter: drop-shadow(0 0 4px rgba($color-accent-pink, 0.7));
+    }
   }
 
   svg {
@@ -139,16 +190,17 @@
     height: 18px;
     // FIX: Prevent icon distortion
     flex-shrink: 0;
+    transition: filter 0.2s ease;
   }
 
   .menu-indicator {
     position: absolute;
-    bottom: 2px; // ← Changed from 4px
-    right: 2px; // ← Changed from 4px
-    width: 8px; // ← Added explicit size
-    height: 8px; // ← Added explicit size
+    bottom: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
     pointer-events: none;
-    opacity: 0.7; // ← Added for better blending
+    opacity: 0.7;
 
     svg {
       width: 100%;
@@ -297,24 +349,67 @@
   gap: $spacing-sm;
   width: 100%;
   padding: $spacing-sm;
+  padding-left: calc($spacing-sm + 4px);
   @include glass-button;
   cursor: pointer;
   border-radius: $radius-sm;
   transition: all $transition-fast;
+  position: relative;
+
+  // Glowing accent bar on hover
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: $color-accent-primary;
+    border-radius: $radius-full;
+    box-shadow: 0 0 8px rgba($color-accent-primary, 0.6);
+    transition: height 0.15s ease;
+  }
 
   &:hover {
     @include glass-hover;
+    padding-left: calc($spacing-sm + 8px);
+
+    &::before {
+      height: 60%;
+    }
+
+    .option-icon {
+      color: $color-accent-primary;
+      filter: drop-shadow(0 0 3px rgba($color-accent-primary, 0.5));
+    }
   }
 
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+
+    &::before {
+      display: none;
+    }
   }
 
   &.active {
     background: rgba($color-accent-pink, 0.15);
     border-color: rgba($color-accent-pink, 0.3);
     color: $color-accent-pink;
+    padding-left: calc($spacing-sm + 8px);
+
+    &::before {
+      height: 70%;
+      background: $color-accent-pink;
+      box-shadow: 0 0 10px rgba($color-accent-pink, 0.7);
+    }
+
+    .option-icon {
+      color: $color-accent-pink;
+      filter: drop-shadow(0 0 4px rgba($color-accent-pink, 0.6));
+    }
   }
 
   .option-icon {
@@ -322,10 +417,10 @@
     width: 14px;
     height: 14px;
     color: $color-text-secondary;
-    // FIX: Ensure icon is properly centered
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.15s ease;
   }
 
   .option-text {
@@ -445,6 +540,9 @@
 
 .camera-view-grid-container {
   padding: $spacing-sm;
+  position: relative;
+  // Reserve space for hint to prevent layout shift
+  padding-bottom: calc($spacing-sm + 28px);
 }
 
 .camera-view-grid {
@@ -516,7 +614,11 @@
 }
 
 .camera-view-hint {
-  margin-top: $spacing-sm;
+  // Absolute position to prevent layout shift
+  position: absolute;
+  bottom: $spacing-sm;
+  left: $spacing-sm;
+  right: $spacing-sm;
   padding: $spacing-xs $spacing-sm;
   background: rgba(100, 150, 255, 0.08);
   border: 1px solid rgba(100, 150, 255, 0.15);
@@ -524,6 +626,19 @@
   text-align: center;
   font-size: $font-size-xs;
   color: $color-text-secondary;
+  // Fade in animation
+  animation: hint-fade-in 0.15s ease-out;
+}
+
+@keyframes hint-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // ============================================================================

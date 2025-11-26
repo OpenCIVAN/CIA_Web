@@ -3,8 +3,8 @@
 // Children are responsible for rendering both collapsed and expanded states
 
 import React from 'react';
-import { useResizeHandler, PANEL_CONSTRAINTS } from '@UI/react/components/layout/ThreeEdgeLayout.logic';
-import '@UI/react/components/layout/ThreeEdgeLayout.scss';
+import { useResizeHandler, PANEL_CONSTRAINTS } from '@UI/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.logic.js';
+import '@UI/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss';
 
 /**
  * ResizablePanel - Generic panel wrapper with resize functionality

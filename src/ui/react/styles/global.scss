@@ -250,7 +250,7 @@ select {
   &:hover:not(:disabled) {
     background: rgba(110, 182, 255, 0.25);
     box-shadow: 0 0 20px rgba(110, 182, 255, 0.3),
-                0 0 40px rgba(110, 182, 255, 0.15);
+      0 0 40px rgba(110, 182, 255, 0.15);
     transform: translateY(-1px);
   }
 }
@@ -409,6 +409,9 @@ select {
 .color-swatch-grid-container {
   padding: $spacing-sm;
   min-width: 200px;
+  position: relative;
+  // Reserve space for hint to prevent layout shift
+  padding-bottom: calc($spacing-sm + 28px);
 }
 
 .color-swatch-grid {
@@ -485,7 +488,11 @@ select {
 }
 
 .color-swatch-hint {
-  margin-top: $spacing-sm;
+  // Absolute position to prevent layout shift
+  position: absolute;
+  bottom: $spacing-sm;
+  left: $spacing-sm;
+  right: $spacing-sm;
   padding: $spacing-xs $spacing-sm;
   background: $color-success-bg;
   border: 1px solid $color-success-border;
@@ -493,6 +500,20 @@ select {
   font-size: $font-size-xs;
   text-align: center;
   color: $color-success;
+  // Fade in animation
+  animation: hint-fade-in 0.15s ease-out;
+}
+
+@keyframes hint-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {

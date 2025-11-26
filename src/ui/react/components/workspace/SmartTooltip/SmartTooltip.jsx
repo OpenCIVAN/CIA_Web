@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-// import './SmartTooltip.css';
+import './SmartTooltip.scss';
 
 /**
  * Smart tooltip that positions itself to avoid viewport edges

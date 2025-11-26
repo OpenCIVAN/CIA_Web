@@ -1,5 +1,4 @@
 // src/ui/react/components/workspace/CameraViewGridPicker.jsx
-// Create this as a NEW FILE
 
 import React, { useState } from 'react';
 import {

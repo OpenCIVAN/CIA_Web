@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Plus } from "lucide-react";
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
-import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
+import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport";
 
 import './WorkspaceGrid.scss';
 

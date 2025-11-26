@@ -8,10 +8,10 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { FilesPanel } from "@UI/react/components/panels/FilesPanel";
-import { WorkspaceGrid } from "@UI/react/components/workspace/WorkspaceGrid.jsx";
-import { TopBar } from "@UI/react/components/layout/TopBar.jsx";
-import { StatusBar } from "@UI/react/components/layout/StatusBar.jsx";
-import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel.jsx"
+import { WorkspaceGrid } from "@UI/react/components/workspace/WorkspaceGrid";
+import { TopBar } from "@UI/react/components/layout/TopBar";
+import { StatusBar } from "@UI/react/components/layout/StatusBar";
+import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel"
 
 /**
  * Main Application Component

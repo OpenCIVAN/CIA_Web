@@ -17,7 +17,7 @@ import {
     AlertCircle
 } from "lucide-react";
 
-import { UserAvatar } from "./UserAvatar.jsx";
+import { UserAvatar } from "@UI/react/components/collaboration/PeoplePanel";
 
 import "./CreateRoomModal.scss";
 

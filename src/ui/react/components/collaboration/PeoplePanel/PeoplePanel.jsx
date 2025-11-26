@@ -34,9 +34,9 @@ import {
 } from "lucide-react";
 
 import { usePeoplePanel } from "./usePeoplePanel.js";
-import { CreateRoomModal } from "./CreateRoomModal.jsx";
-import { UserStatusEditor } from "./UserStatusEditor.jsx";
-import { UserAvatar } from "./UserAvatar.jsx";
+import { CreateRoomModal } from "./CreateRoomModal";
+import { UserStatusEditor } from "./UserStatusEditor";
+import { UserAvatar } from "./UserAvatar";
 
 import "./PeoplePanel.scss";
 

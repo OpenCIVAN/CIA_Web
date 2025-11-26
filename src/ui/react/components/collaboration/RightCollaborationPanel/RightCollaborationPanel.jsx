@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 
 import { PeoplePanel } from "@UI/react/components/collaboration/PeoplePanel";
-import { TextChatPanel } from "@UI/react/components/collaboration/TextChatPanel.jsx";
-import { VoiceChatPanel } from "@UI/react/components/collaboration/VoiceChatPanel.jsx";
+import { TextChatPanel } from "@UI/react/components/collaboration/TextChatPanel";
+import { VoiceChatPanel } from "@UI/react/components/collaboration/VoiceChatPanel";
 
 import './RightCollaborationPanel.scss';
 

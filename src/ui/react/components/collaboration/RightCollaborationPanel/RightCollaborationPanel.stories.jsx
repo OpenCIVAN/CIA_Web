@@ -22,7 +22,7 @@ jest.mock("@UI/react/components/collaboration/PeoplePanel", () => ({
     ),
 }));
 
-jest.mock("@UI/react/components/collaboration/TextChatPanel.jsx", () => ({
+jest.mock("@UI/react/components/collaboration/TextChatPanel", () => ({
     TextChatPanel: () => (
         <div style={{ padding: "16px", color: "#808080", height: "100%", display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>

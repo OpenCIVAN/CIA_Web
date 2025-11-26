@@ -1,7 +1,7 @@
 // Reusable component to overlay two Lucide icons
 
 import React from 'react';
-import './IconOverlay.css';
+import './IconOverlay.scss';
 
 /**
  * IconOverlay

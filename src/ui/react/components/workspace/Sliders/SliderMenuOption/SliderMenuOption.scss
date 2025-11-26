@@ -1,4 +1,5 @@
 // src/ui/react/components/workspace/SliderMenuOption.scss
+@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -110,7 +111,7 @@
     background: linear-gradient(
       90deg,
       $color-accent-pink,
-      lighten($color-accent-pink, 10%)
+      color.adjust($color-accent-pink, $lightness: 10%)
     );
     border-radius: $radius-full 0 0 $radius-full;
     pointer-events: none;
@@ -171,7 +172,7 @@
     background: linear-gradient(
       90deg,
       $color-accent-pink,
-      lighten($color-accent-pink, 10%)
+      color.adjust($color-accent-pink, $lightness: 10%)
     );
     border-radius: $radius-full 0 0 $radius-full;
   }

@@ -1,4 +1,5 @@
 // src/ui/react/components/workspace/SliderWithPresets.scss
+@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -141,7 +142,7 @@
     background: linear-gradient(
       90deg,
       $color-accent-primary,
-      lighten($color-accent-primary, 10%)
+      color.adjust($color-accent-primary, $lightness: 10%)
     );
     border-radius: $radius-full 0 0 $radius-full;
     pointer-events: none;
@@ -202,7 +203,7 @@
     background: linear-gradient(
       90deg,
       $color-accent-primary,
-      lighten($color-accent-primary, 10%)
+      color.adjust($color-accent-primary, $lightness: 10%)
     );
     border-radius: $radius-full 0 0 $radius-full;
   }
@@ -223,12 +224,13 @@
 
 .slider-presets-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-top: $spacing-xs;
 }
 
 .preset-btn {
-  flex: 1;
+  flex: 1 1 auto;
   padding: $spacing-xs $spacing-sm;
   @include glass-button;
   color: $color-text-secondary;
@@ -237,10 +239,10 @@
   border-radius: $radius-sm;
   cursor: pointer;
   transition: all $transition-fast;
-  min-width: 0;
+  min-width: fit-content;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  // Don't truncate - show full preset values
+  text-align: center;
 
   &:hover:not(:disabled):not(.active) {
     @include glass-hover;

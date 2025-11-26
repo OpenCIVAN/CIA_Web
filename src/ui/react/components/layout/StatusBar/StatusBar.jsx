@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { getDatasetManager } from "@UI/react/hooks/useDatasetManager.js";
-import "@UI/react/components/layout/StatusBar.scss";
+import "./StatusBar.scss";
 
 export function StatusBar({ phase, ready }) {
     const [instanceCount, setInstanceCount] = useState(0);

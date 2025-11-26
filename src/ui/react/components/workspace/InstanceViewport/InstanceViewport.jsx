@@ -1,20 +1,20 @@
 // src/ui/react/components/workspace/InstanceViewport.jsx
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from 'react-dom';
-import { ChevronDown, Maximize2, Trash2, AlertCircle } from 'lucide-react';
+import { ChevronDown, Maximize2, Trash2, AlertCircle, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
 
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
-import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption.jsx';
-import { CameraViewGridPicker } from '@UI/react/components/workspace/CameraViewGridPicker.jsx';
-import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPresets.jsx';
-import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid.jsx';
-import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridPicker.jsx';
+import { SliderMenuOption } from '@UI/react/components/workspace/Sliders/SliderMenuOption';
+import { CameraViewGridPicker } from '@UI/react/components/workspace/Pickers/CameraViewGridPicker';
+import { SliderWithPresets } from '@UI/react/components/workspace/Sliders/SliderWithPresets';
+import { ColorSwatchGrid } from '@UI/react/components/workspace/Pickers/ColorSwatchGrid';
+import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/PositionGridPicker';
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
-import "@UI/react/components/workspace/InstanceViewport.scss";
+import "./InstanceViewport.scss";
 
 /**
  * InstanceViewport
@@ -36,6 +36,7 @@ export function InstanceViewport({
     const containerRef = useRef(null);
     const initOnce = useRef(false);
     const menuButtonRefs = useRef(new Map()); // Track button positions for portal positioning
+    const toolbarHideTimeout = useRef(null);
 
     const [actualInstanceId, setActualInstanceId] = useState(
         isRemote ? remoteInstanceId : null
@@ -49,6 +50,18 @@ export function InstanceViewport({
     const [headerInfo, setHeaderInfo] = useState(null);
     const [openMenuId, setOpenMenuId] = useState(null);
     const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
+
+    // Auto-hide toolbar state
+    const [toolbarVisible, setToolbarVisible] = useState(false);
+    const [toolbarPinned, setToolbarPinned] = useState(false);
+
+    // Status bar info
+    const [statusInfo, setStatusInfo] = useState({
+        zoomLevel: 100,
+        cameraMode: 'orbit',
+        dataPoints: null,
+        dimensions: null
+    });
 
     // =========================================================================
     // DROPDOWN POSITIONING & CLICK AWAY
@@ -64,41 +77,41 @@ export function InstanceViewport({
             const rect = buttonElement.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-            
+
             // Get toolbar bounds to avoid overlap
             const toolbar = buttonElement.closest('.instance-viewport__toolbar');
             const toolbarRect = toolbar?.getBoundingClientRect();
-            
+
             // Estimate dropdown size (will be adjusted by actual element)
             const dropdownWidth = 260;
             const dropdownHeight = 240;
-            
+
             let x, y;
-            
+
             // STRATEGY 1: Try positioning to the LEFT of the toolbar
             x = rect.left - dropdownWidth - 12; // 12px gap
             y = toolbarRect ? toolbarRect.top : rect.top;
-            
+
             // If no room on left, try RIGHT side
             if (x < 10) {
                 x = rect.right + 12;
             }
-            
+
             // If STILL no room, position BELOW toolbar (fallback)
             if (x + dropdownWidth > viewportWidth - 10) {
                 x = rect.left;
                 y = rect.bottom + 8;
             }
-            
+
             // Ensure dropdown stays within viewport vertically
             if (y < 10) {
                 y = 10;
             }
-            
+
             if (y + dropdownHeight > viewportHeight - 10) {
                 y = viewportHeight - dropdownHeight - 10;
             }
-            
+
             setDropdownPosition({ x, y, buttonWidth: rect.width });
         };
 
@@ -112,7 +125,7 @@ export function InstanceViewport({
         const handleClickAway = (e) => {
             const buttonElement = menuButtonRefs.current.get(openMenuId);
             const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
-            
+
             // Don't close if clicking the button or inside the dropdown
             if (
                 buttonElement?.contains(e.target) ||
@@ -120,7 +133,7 @@ export function InstanceViewport({
             ) {
                 return;
             }
-            
+
             setOpenMenuId(null);
         };
 
@@ -157,7 +170,7 @@ export function InstanceViewport({
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId);
-                
+
                 // Activate the view to mark it as in use
                 if (viewConfigId) {
                     viewConfigurationManager.activateView(viewConfigId);
@@ -304,6 +317,78 @@ export function InstanceViewport({
     };
 
     // =========================================================================
+    // TOOLBAR VISIBILITY (Auto-hide feature)
+    // =========================================================================
+
+    const showToolbar = useCallback(() => {
+        if (toolbarHideTimeout.current) {
+            clearTimeout(toolbarHideTimeout.current);
+            toolbarHideTimeout.current = null;
+        }
+        setToolbarVisible(true);
+    }, []);
+
+    const hideToolbar = useCallback(() => {
+        if (toolbarPinned || openMenuId) return; // Don't hide if pinned or menu open
+
+        toolbarHideTimeout.current = setTimeout(() => {
+            setToolbarVisible(false);
+        }, 800); // Delay before hiding
+    }, [toolbarPinned, openMenuId]);
+
+    const toggleToolbarPin = useCallback(() => {
+        setToolbarPinned(prev => !prev);
+    }, []);
+
+    // Keep toolbar visible when menu is open
+    useEffect(() => {
+        if (openMenuId) {
+            showToolbar();
+        }
+    }, [openMenuId, showToolbar]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (toolbarHideTimeout.current) {
+                clearTimeout(toolbarHideTimeout.current);
+            }
+        };
+    }, []);
+
+    // =========================================================================
+    // STATUS BAR HELPERS
+    // =========================================================================
+
+    const getDataInfo = () => {
+        if (!hasData || !viewConfigId) return null;
+
+        try {
+            const view = viewConfigurationManager.getView(viewConfigId);
+            if (view?.datasetId) {
+                const dataset = datasetManager.getDataset(view.datasetId);
+                if (dataset) {
+                    return {
+                        points: dataset.pointCount || dataset.numPoints,
+                        dimensions: dataset.dimensions,
+                        type: dataset.type || instanceType
+                    };
+                }
+            }
+        } catch (e) {
+            return null;
+        }
+        return null;
+    };
+
+    const formatNumber = (num) => {
+        if (!num) return '—';
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+        return num.toString();
+    };
+
+    // =========================================================================
     // TOOLBAR RENDERING
     // =========================================================================
 
@@ -445,7 +530,7 @@ export function InstanceViewport({
                         // Only close if not moving to the dropdown
                         const relatedTarget = e.relatedTarget;
                         const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
-                        
+
                         if (!dropdownElement || !dropdownElement.contains(relatedTarget)) {
                             // Small delay to allow mouse to reach dropdown
                             setTimeout(() => {
@@ -538,9 +623,16 @@ export function InstanceViewport({
     // MAIN RENDER - NO INLINE STYLES
     // =========================================================================
 
+    const dataInfo = getDataInfo();
+
     return (
         <div className="instance-viewport">
-            <div className="instance-viewport__header">
+            {/* Header with hover zone for auto-hide toolbar */}
+            <div
+                className="instance-viewport__header"
+                onMouseEnter={showToolbar}
+                onMouseLeave={hideToolbar}
+            >
                 <div className="instance-viewport__header-title">
                     {getDisplayName()}
                 </div>
@@ -564,9 +656,27 @@ export function InstanceViewport({
                 </div>
             </div>
 
+            {/* Auto-hide toolbar - slides down from header */}
             {tools.length > 0 && (
-                <div className="instance-viewport__toolbar">
+                <div
+                    className={`instance-viewport__toolbar instance-viewport__toolbar--autohide ${toolbarVisible || toolbarPinned ? 'visible' : ''
+                        } ${toolbarPinned ? 'pinned' : ''}`}
+                    onMouseEnter={showToolbar}
+                    onMouseLeave={hideToolbar}
+                >
                     {tools.map((tool, index) => renderTool(tool, index))}
+
+                    {/* Pin button */}
+                    <button
+                        className={`toolbar-pin-btn ${toolbarPinned ? 'active' : ''}`}
+                        onClick={toggleToolbarPin}
+                        title={toolbarPinned ? 'Unpin toolbar' : 'Pin toolbar'}
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2v8M12 18v4M5 12h14" />
+                            {toolbarPinned && <circle cx="12" cy="12" r="3" fill="currentColor" />}
+                        </svg>
+                    </button>
                 </div>
             )}
 
@@ -587,6 +697,60 @@ export function InstanceViewport({
                     </div>
                 )}
             </div>
+
+            {/* Status bar at bottom */}
+            {hasData && (
+                <div className="instance-viewport__statusbar">
+                    <div className="statusbar__section statusbar__section--left">
+                        {instanceType && (
+                            <span className="statusbar__badge statusbar__badge--type">
+                                {instanceType}
+                            </span>
+                        )}
+                        {dataInfo?.points && (
+                            <span className="statusbar__info">
+                                <span className="statusbar__label">Points:</span>
+                                <span className="statusbar__value">{formatNumber(dataInfo.points)}</span>
+                            </span>
+                        )}
+                        {dataInfo?.dimensions && (
+                            <span className="statusbar__info">
+                                <span className="statusbar__label">Dims:</span>
+                                <span className="statusbar__value">
+                                    {Array.isArray(dataInfo.dimensions)
+                                        ? dataInfo.dimensions.join(' × ')
+                                        : dataInfo.dimensions}
+                                </span>
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="statusbar__section statusbar__section--center">
+                        {/* Zoom controls */}
+                        <div className="statusbar__controls">
+                            <button className="statusbar__control-btn" title="Zoom out">
+                                <ZoomOut size={12} />
+                            </button>
+                            <span className="statusbar__zoom-level">
+                                {statusInfo.zoomLevel}%
+                            </span>
+                            <button className="statusbar__control-btn" title="Zoom in">
+                                <ZoomIn size={12} />
+                            </button>
+                            <button className="statusbar__control-btn" title="Reset view">
+                                <RotateCcw size={12} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="statusbar__section statusbar__section--right">
+                        <span className="statusbar__info statusbar__info--mode">
+                            <Move size={10} />
+                            <span>{statusInfo.cameraMode}</span>
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,6 +1,6 @@
 // CLEAN PATTERN: Map semantic icon names, not tool IDs
 
-import { createSlashedIcon } from "@UI/react/components/common/IconOverlay.jsx";
+import { createSlashedIcon } from "@UI/react/components/common/IconOverlay";
 
 import {
   // Geometry & 3D
