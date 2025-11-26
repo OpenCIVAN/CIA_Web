@@ -39,18 +39,6 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
-echo "Starting WebSocket server (Y.js collaboration)..."
-npm run websocket &
-WEBSOCKET_PID=$!
-sleep 2
-
-if kill -0 $WEBSOCKET_PID 2>/dev/null; then
-    print_status "WebSocket server running on ws://localhost:9001 (PID: $WEBSOCKET_PID)"
-else
-    echo "Failed to start WebSocket server"
-    exit 1
-fi
-
 echo ""
 echo "Starting Webpack dev server..."
 npm start &
@@ -59,11 +47,10 @@ WEBPACK_PID=$!
 echo ""
 print_status "Frontend services started!"
 echo ""
-echo "  • WebSocket (Y.js): ws://localhost:9001"
 echo "  • Frontend:         http://localhost:8080"
 echo ""
-echo "Press Ctrl+C to stop both services"
+echo "Press Ctrl+C to stop services"
 echo ""
 
-# Wait for both processes
+# Wait for processes
 wait

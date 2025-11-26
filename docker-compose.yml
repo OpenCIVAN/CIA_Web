@@ -66,26 +66,26 @@ services:
       minio:
         condition: service_healthy
 
-yjs:
-  build:
-    context: .
-    dockerfile: server/yjs/Dockerfile
-  container_name: cia-yjs
-  environment:
-    HOST: 0.0.0.0
-    PORT: 9001
-  # Future: Add persistence
-  # YPERSISTENCE: ./yjs-data
-  ports:
-    - "9001:9001"
-  # Future: Add volume for persistence
-  # volumes:
-  #   - yjs_data:/app/yjs-data
-  healthcheck:
-    test: ["CMD", "nc", "-z", "localhost", "9001"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
+  yjs:
+    build:
+      context: .
+      dockerfile: server/yjs/Dockerfile
+    container_name: cia-yjs
+    environment:
+      HOST: 0.0.0.0
+      PORT: 9001
+    # Future: Add persistence
+    # YPERSISTENCE: ./yjs-data
+    ports:
+      - "9001:9001"
+    # Future: Add volume for persistence
+    # volumes:
+    #   - yjs_data:/app/yjs-data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9001"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:

@@ -35,7 +35,7 @@ print_status "Docker is running"
 echo ""
 
 # Start Docker services
-echo "🐳 Starting Docker services (PostgreSQL, MinIO, API)..."
+echo "🐳 Starting Docker services (PostgreSQL, MinIO, API, Y.js)..."
 docker-compose up -d
 
 # Wait for services to be healthy
@@ -79,6 +79,16 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     fi
 done
 
+# Check Y.js WebSocket
+echo -n "  Y.js WebSocket: "
+if nc -z localhost 9001 2>/dev/null; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 3
+fi
+
+
 echo ""
 print_status "All Docker services are running!"
 echo ""
@@ -91,21 +101,19 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "🌐 Services running:"
-echo "  • PostgreSQL:  localhost:5432"
-echo "  • MinIO:       localhost:9000 (Console: localhost:9002)"
-echo "  • API:         http://localhost:3001"
+echo "  • PostgreSQL:     localhost:5432"
+echo "  • MinIO:          localhost:9000 (Console: localhost:9002)"
+echo "  • API:            http://localhost:3001"
+echo "  • Y.js WebSocket: ws://localhost:9001"
 echo ""
 
 echo "📝 Next steps:"
 echo ""
-echo "  1. Start WebSocket server (for Y.js collaboration):"
-echo "     ${YELLOW}npm run websocket${NC}"
-echo ""
-echo "  2. In a separate terminal, start the frontend:"
+echo "  Start the frontend:"
 echo "     ${YELLOW}npm start${NC}"
 echo ""
-echo "  Or run the convenience script to start both:"
-echo "     ${YELLOW}./start-frontend.sh${NC}"
+echo "  Or use the convenience script:"
+echo "     ${YELLOW}./scripts/start-frontend.sh${NC}"
 echo ""
 
 print_status "Backend services ready!"
