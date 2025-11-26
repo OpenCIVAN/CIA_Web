@@ -4,7 +4,8 @@
 // Networking Constants
 // ----------------------------------------------------------------------------
 export const NETWORK_CONFIG = {
-  WEBSOCKET_URL: "ws://localhost:8080",
+  // In development, this connects to the docker yjs service
+  WEBSOCKET_URL: process.env.YJS_WEBSOCKET_URL || "ws://localhost:9001",
   ROOM_NAME: "vtk-room",
   CURSOR_UPDATE_THROTTLE: 50, // ms
   STALE_CURSOR_THRESHOLD: 30000, // ms
