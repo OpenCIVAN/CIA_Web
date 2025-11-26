@@ -55,7 +55,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-const PORT = 8080;
+const PORT = process.env.PORT || 9001;
 server.listen(PORT, () => {
   console.log(`🔄 Yjs relay server running on ws://localhost:${PORT}`);
   console.log(`   Ready to relay messages between clients`);

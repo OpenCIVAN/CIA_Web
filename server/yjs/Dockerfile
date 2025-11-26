@@ -2,11 +2,10 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install y-websocket
-RUN npm install y-websocket
+# Copy package files and install only ws dependency
+COPY server.js .
+RUN npm init -y && npm install ws
 
-# Expose WebSocket port
 EXPOSE 9001
 
-# Run the server
-CMD ["npx", "y-websocket"]
+CMD ["node", "server.js"]

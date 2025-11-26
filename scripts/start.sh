@@ -7,10 +7,10 @@ echo "🚀 Starting CIA Web..."
 echo ""
 
 # Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+GREEN="$(echo -e '\033[0;32m')"
+YELLOW="$(echo -e '\033[1;33m')"
+RED="$(echo -e '\033[0;31m')"
+NC="$(echo -e '\033[0m')" # No Color
 
 # Function to print colored output
 print_status() {

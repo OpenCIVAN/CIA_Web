@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const fs = require("fs");
+const webpack = require("webpack");
 
 module.exports = {
   entry: "./src/index.js",
@@ -82,6 +83,14 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/index.html",
       filename: "index.html",
+    }),
+    new webpack.DefinePlugin({
+      "process.env.YJS_WEBSOCKET_URL": JSON.stringify(
+        process.env.YJS_WEBSOCKET_URL || "ws://localhost:9001"
+      ),
+      "process.env.NODE_ENV": JSON.stringify(
+        process.env.NODE_ENV || "development"
+      ),
     }),
   ],
   // Ignore controller.html
