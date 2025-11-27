@@ -529,8 +529,12 @@ export class DatasetManager extends EventEmitter {
    */
   // In DatasetManager.js, update the loadDataset method
 
-  async loadDataset(file, publicPath = null, userId = null) {
+  async loadDataset(file, publicPath = null, options = {}) {
     console.log(`📦 DatasetManager: Loading dataset "${file.name}"`);
+
+    // Extract options
+    const { serverId = null, serverMetadata = null } = options;
+    let userId = options.userId || null;
 
     // Use current user if not specified
     if (!userId) {
@@ -567,6 +571,11 @@ export class DatasetManager extends EventEmitter {
           // Update the dataset object with the new file reference
           existing.rawFile = file;
           existing.setFileStatus("available", file);
+
+          // Update serverId if provided (linking local dataset to server)
+          if (serverId && !existing.serverId) {
+            existing.serverId = serverId;
+          }
 
           // If publicPath was provided, update it (in case it changed)
           if (publicPath && publicPath !== existing.publicPath) {
@@ -613,6 +622,7 @@ export class DatasetManager extends EventEmitter {
       // STEP 6: Create dataset metadata
       const dataset = new Dataset({
         id: generateDatasetId(),
+        serverId: serverId,
         filename: file.name,
         fileType: fileType,
         hash: hash,
@@ -624,6 +634,7 @@ export class DatasetManager extends EventEmitter {
           fileSize: file.size,
           uploadedBy: userId,
           uploadedAt: Date.now(),
+          ...serverMetadata,
         },
       });
 
