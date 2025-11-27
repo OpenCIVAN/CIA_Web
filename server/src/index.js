@@ -1,14 +1,19 @@
 // server/src/index.js
-// Main API server for CIA Web
+// Main API server for CIA Web v2.0
+// Server-authoritative architecture with WebSocket broadcast
 
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const { Pool } = require("pg");
 const Minio = require("minio");
 const { authenticate, optionalAuth } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
+const wsManager = require("./services/websocket");
+const { auditLogger, auditMiddleware } = require("./services/audit");
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // ============================================================================
@@ -62,6 +67,16 @@ const BUCKET_NAME = process.env.MINIO_BUCKET || "cia-files";
 })();
 
 // ============================================================================
+// INITIALIZE SERVICES
+// ============================================================================
+
+// Initialize WebSocket manager
+wsManager.initialize(server);
+
+// Initialize audit logger
+auditLogger.initialize(pool);
+
+// ============================================================================
 // MIDDLEWARE
 // ============================================================================
 
@@ -75,10 +90,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Make pool and minio client available to routes
+// Audit middleware - adds req.audit() helper
+app.use(auditMiddleware);
+
+// Make pool, minio, and services available to routes
 app.locals.pool = pool;
 app.locals.minioClient = minioClient;
 app.locals.bucketName = BUCKET_NAME;
+app.locals.wsManager = wsManager;
+app.locals.auditLogger = auditLogger;
 
 // Auth routes (no auth required for these)
 app.use("/api/auth", authRouter);
@@ -87,49 +107,26 @@ app.use("/api/auth", authRouter);
 // ROUTES
 // ============================================================================
 
+// Legacy routes (keeping for backward compatibility during migration)
 const projectsRouter = require("./routes/projects");
-// Projects routes - use optionalAuth for now (will require auth later)
 app.use("/api/projects", optionalAuth, projectsRouter);
 
-// Standalone files route for downloads
-app.get("/api/files/:id/download", optionalAuth, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { pool, minioClient, bucketName } = req.app.locals;
+// v2.0 Routes - Server-authority architecture
+const filesRouter = require("./routes/files");
+const annotationsRouter = require("./routes/annotations");
+const viewsRouter = require("./routes/views");
+const computeRouter = require("./routes/compute");
 
-    // Get file metadata
-    const result = await pool.query("SELECT * FROM datasets WHERE id = $1", [
-      id,
-    ]);
+app.use("/api/files", optionalAuth, filesRouter);
+app.use("/api/annotations", optionalAuth, annotationsRouter);
+app.use("/api/views", optionalAuth, viewsRouter);
+app.use("/api/compute", optionalAuth, computeRouter);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "File not found" });
-    }
+// Note: /api/files/:id/download is now handled by filesRouter
 
-    const file = result.rows[0];
-
-    // If it's a public sample file, serve from public directory
-    if (file.public_path) {
-      return res.sendFile(file.public_path, { root: process.cwd() });
-    }
-
-    // Otherwise, fetch from MinIO
-    const dataStream = await minioClient.getObject(
-      bucketName,
-      file.storage_key
-    );
-
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${file.filename}"`
-    );
-
-    dataStream.pipe(res);
-  } catch (error) {
-    next(error);
-  }
-});
+// ============================================================================
+// HEALTH & STATUS ENDPOINTS
+// ============================================================================
 
 // Health check
 app.get("/api/health", async (req, res) => {
@@ -137,8 +134,17 @@ app.get("/api/health", async (req, res) => {
     await pool.query("SELECT 1");
     res.json({
       status: "healthy",
-      database: "connected",
-      minio: "connected",
+      version: "2.0.0",
+      architecture: "server-authority",
+      services: {
+        database: "connected",
+        minio: "connected",
+        websocket: {
+          connected: true,
+          clients: wsManager.getClientCount(),
+        },
+        audit: "active",
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -149,12 +155,65 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
+// Server status (more detailed)
+app.get("/api/status", optionalAuth, async (req, res) => {
+  try {
+    const dbStatus = await pool.query(
+      "SELECT NOW() as time, current_database() as db"
+    );
+
+    res.json({
+      server: {
+        version: "2.0.0",
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        nodeVersion: process.version,
+      },
+      database: {
+        connected: true,
+        time: dbStatus.rows[0].time,
+        name: dbStatus.rows[0].db,
+      },
+      websocket: {
+        totalClients: wsManager.getClientCount(),
+        rooms: wsManager.rooms.size,
+      },
+      audit: {
+        bufferSize: auditLogger.buffer.length,
+        orgConfigsCached: auditLogger.orgConfigs.size,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to get status",
+      details: error.message,
+    });
+  }
+});
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);
+
+  // Log errors to audit (for forensic level)
+  if (req.audit && err.status !== 404) {
+    req
+      .audit({
+        action: "error:unhandled",
+        entityType: "request",
+        entityId: null,
+        details: {
+          path: req.path,
+          method: req.method,
+          error: err.message,
+        },
+      })
+      .catch(() => {}); // Don't let audit errors break error handling
+  }
+
   res.status(err.status || 500).json({
     error: err.message || "Internal server error",
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
@@ -162,11 +221,42 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================================
+// GRACEFUL SHUTDOWN
+// ============================================================================
+
+async function shutdown(signal) {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
+
+  // Shutdown WebSocket
+  wsManager.shutdown();
+  console.log("WebSocket server closed");
+
+  // Flush and shutdown audit logger
+  await auditLogger.shutdown();
+
+  // Close database pool
+  await pool.end();
+  console.log("Database pool closed");
+
+  console.log("Graceful shutdown complete");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// ============================================================================
 // START SERVER
 // ============================================================================
 
-app.listen(PORT, () => {
-  console.log(`🚀 CIA Web API server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 CIA Web API server v2.0 running on port ${PORT}`);
+  console.log(`   Architecture: Server-Authority`);
   console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(
     `   Database: ${process.env.DB_HOST || "localhost"}:${
@@ -178,6 +268,7 @@ app.listen(PORT, () => {
       process.env.MINIO_PORT || 9000
     }`
   );
+  console.log(`   WebSocket: ws://localhost:${PORT}/ws`);
 });
 
-module.exports = app;
+module.exports = { app, server, pool };
