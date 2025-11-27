@@ -1,5 +1,10 @@
 // src/init/appInitializer.js
 // Application initialization - three-phase startup
+//
+// v2.0 ARCHITECTURE:
+// - Server is source of truth for datasets, views, annotations
+// - Y.js is used only for presence (cursors, avatars, view presence)
+// - WebSocket broadcasts keep clients in sync without polling
 import {
   yViews,
   yDatasets,
@@ -22,6 +27,7 @@ import {
   clearAllYjsDatasets,
 } from "@Collaboration/yjs/yjsObservers.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+import { config } from "@Core/config/clientConfig.js";
 
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
@@ -67,14 +73,21 @@ export async function initializePhase1() {
     await datasetManager.initialize();
     console.log("  ✓ Dataset manager ready");
 
-    // Sync from server if we're in server mode
-    if (storageMode === "server") {
+    // v2.0: Sync from server API (primary source of truth)
+    if (storageMode === "server" || config.useServerStorage) {
       try {
-        await datasetManager.syncDatasetsFromServer();
+        console.log("  📡 Fetching datasets from server API...");
+        await fetchDatasetsFromServer();
         console.log("  ✓ Synced datasets from server");
       } catch (error) {
-        console.warn("  ⚠️ Failed to sync from server:", error.message);
+        console.warn("  ⚠️ Failed to fetch from server:", error.message);
         console.warn("  Continuing with local datasets only...");
+        // Fallback to legacy sync method
+        try {
+          await datasetManager.syncDatasetsFromServer();
+        } catch (legacyError) {
+          console.warn("  ⚠️ Legacy sync also failed:", legacyError.message);
+        }
       }
     }
 
@@ -103,23 +116,29 @@ export async function initializePhase1() {
     }
 
     // STEP 6: Y.js provider
-    // Required for real-time collaboration
-    console.log("🔗 Initializing Y.js provider...");
+    // Required for real-time presence (cursors, avatars)
+    // NOTE v2.0: Y.js is now for presence only, not state sync
+    console.log("🔗 Initializing Y.js provider (presence only)...");
     if (typeof initializeYjsProvider === "function") {
       initializeYjsProvider();
-      console.log("✅ Y.js provider connected");
+      console.log("✅ Y.js provider connected (presence layer)");
     } else {
-      throw new Error("Y.js provider is required for collaboration");
+      throw new Error("Y.js provider is required for presence");
     }
 
-    // Sync existing datasets now that Y.js is ready
-    console.log("🔄 Syncing existing datasets to Y.js...");
+    // DEPRECATED v2.0: Y.js state sync
+    // State comes from server now, not Y.js
+    // Keeping this for backward compatibility during migration
+    console.log(
+      "⚠️ DEPRECATED: Syncing datasets to Y.js (for backward compatibility)..."
+    );
     datasetManager.syncAllDatasetsToYjs();
+    console.log("   Note: In v2.0, state should come from server API");
 
     // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
-    console.log("🔗 Initializing view configuration sync...");
+    console.log("🔗 Initializing view configuration manager...");
     viewConfigurationManager.initialize();
-    console.log("✅ View configuration sync ready");
+    console.log("✅ View configuration manager ready");
 
     // STEP 8: Debug helpers
     setupDebugHelpers();
@@ -472,3 +491,125 @@ function setupDebugHelpers() {
 export function getAnnotationManager() {
   return annotationManager;
 }
+
+// ============================================================================
+// v2.0 SERVER SYNC FUNCTIONS
+// These fetch state from the server API (source of truth)
+// ============================================================================
+
+/**
+ * Fetch datasets from server API
+ * This is the v2.0 way of getting datasets - server is source of truth
+ */
+async function fetchDatasetsFromServer() {
+  const projectId = sessionManager.getProjectId?.() || config.defaultSessionId;
+
+  const response = await fetch(
+    `${config.apiBaseUrl}/files?projectId=${projectId}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Server returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const serverFiles = data.files || [];
+
+  console.log(`    Found ${serverFiles.length} file(s) on server`);
+
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  for (const serverFile of serverFiles) {
+    // Check if we already have this dataset locally
+    const existingLocal = datasetManager.getDataset(serverFile.id);
+    if (existingLocal) {
+      skippedCount++;
+      continue;
+    }
+
+    // Check by hash if we have the same file under different ID
+    const existingByHash = await datasetManager.findDatasetByHash(
+      serverFile.hash
+    );
+    if (existingByHash) {
+      // Update the existing dataset with server ID
+      existingByHash.serverId = serverFile.id;
+      skippedCount++;
+      continue;
+    }
+
+    // Add the dataset from server
+    await datasetManager._addDatasetFromServer(serverFile);
+    addedCount++;
+  }
+
+  console.log(`    Added ${addedCount}, skipped ${skippedCount} existing`);
+  return {
+    total: serverFiles.length,
+    added: addedCount,
+    skipped: skippedCount,
+  };
+}
+
+/**
+ * Fetch views from server API
+ * This is the v2.0 way of getting view configurations
+ */
+async function fetchViewsFromServer() {
+  const projectId = sessionManager.getProjectId?.() || config.defaultSessionId;
+
+  const response = await fetch(
+    `${config.apiBaseUrl}/views?projectId=${projectId}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Server returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const serverViews = data.views || [];
+
+  console.log(`    Found ${serverViews.length} view(s) on server`);
+
+  let addedCount = 0;
+  for (const serverView of serverViews) {
+    // Check if we already have this view
+    const existing = viewConfigurationManager.getView?.(serverView.id);
+    if (!existing) {
+      viewConfigurationManager.addViewFromServer?.(serverView);
+      addedCount++;
+    }
+  }
+
+  return { total: serverViews.length, added: addedCount };
+}
+
+/**
+ * Fetch annotations from server API
+ * This is the v2.0 way of getting annotations
+ */
+async function fetchAnnotationsFromServer(fileId = null) {
+  const projectId = sessionManager.getProjectId?.() || config.defaultSessionId;
+
+  let url = `${config.apiBaseUrl}/annotations?projectId=${projectId}`;
+  if (fileId) {
+    url += `&fileId=${fileId}`;
+  }
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Server returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.annotations || [];
+}
+
+// Export for use by other modules
+export {
+  fetchDatasetsFromServer,
+  fetchViewsFromServer,
+  fetchAnnotationsFromServer,
+};

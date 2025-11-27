@@ -5,6 +5,15 @@
 const express = require("express");
 const router = express.Router();
 const crypto = require("crypto");
+const {
+  workerRegistry,
+  WORKER_TYPES,
+  OPERATION_WORKER_MAP,
+  handleWorkerRegistration,
+  handleWorkerHeartbeat,
+  handleWorkerDeregistration,
+} = require("../services/workerRegistry");
+const { compute: log } = require("../utils/logger");
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -495,18 +504,50 @@ router.delete("/cache/:id", async (req, res, next) => {
  * List available computation operations
  */
 router.get("/operations", (req, res) => {
-  // This would be dynamically populated based on registered workers
-  const operations = [
+  // Get supported operations from worker registry
+  const supportedOps = workerRegistry.getSupportedOperations();
+
+  // Static operation definitions (could be moved to worker registry)
+  const operationDefs = [
     {
-      name: "decimation",
-      description: "Reduce mesh polygon count",
-      category: "mesh",
+      name: "decimate-point-cloud",
+      description: "Reduce point cloud point count",
+      category: "point_cloud",
       params: {
         targetReduction: { type: "number", min: 0, max: 0.99, default: 0.5 },
       },
     },
     {
-      name: "smooth",
+      name: "point-cloud-to-mesh",
+      description: "Convert point cloud to mesh surface",
+      category: "point_cloud",
+      params: {
+        method: {
+          type: "string",
+          enum: ["poisson", "ball-pivot"],
+          default: "poisson",
+        },
+      },
+    },
+    {
+      name: "extract-isosurface",
+      description: "Extract isosurface from volume",
+      category: "isosurface",
+      params: {
+        isovalue: { type: "number" },
+        field: { type: "string" },
+      },
+    },
+    {
+      name: "decimate-mesh",
+      description: "Reduce mesh polygon count",
+      category: "decimation",
+      params: {
+        targetReduction: { type: "number", min: 0, max: 0.99, default: 0.5 },
+      },
+    },
+    {
+      name: "smooth-mesh",
       description: "Smooth mesh surface",
       category: "mesh",
       params: {
@@ -515,7 +556,7 @@ router.get("/operations", (req, res) => {
       },
     },
     {
-      name: "clip",
+      name: "clip-mesh",
       description: "Clip mesh with plane",
       category: "mesh",
       params: {
@@ -524,34 +565,90 @@ router.get("/operations", (req, res) => {
       },
     },
     {
-      name: "isosurface",
-      description: "Extract isosurface from volume",
-      category: "volume",
+      name: "compute-bounds",
+      description: "Calculate data bounding box",
+      category: "general",
+      params: {},
+    },
+    {
+      name: "compute-histogram",
+      description: "Calculate field histogram",
+      category: "general",
       params: {
-        isovalue: { type: "number" },
         field: { type: "string" },
-      },
-    },
-    {
-      name: "slice",
-      description: "Extract slice from volume",
-      category: "volume",
-      params: {
-        origin: { type: "array", items: "number", length: 3 },
-        normal: { type: "array", items: "number", length: 3 },
-      },
-    },
-    {
-      name: "statistics",
-      description: "Calculate data statistics",
-      category: "analysis",
-      params: {
-        fields: { type: "array", items: "string" },
+        bins: { type: "integer", default: 100 },
       },
     },
   ];
 
-  res.json({ operations });
+  // Filter to only supported operations
+  const operations = operationDefs.filter((op) =>
+    supportedOps.includes(op.name)
+  );
+
+  res.json({
+    operations,
+    workerStatus: workerRegistry.getStatus(),
+  });
+});
+
+// ============================================================================
+// WORKER REGISTRY ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/compute/workers
+ * Get status of all registered workers
+ */
+router.get("/workers", (req, res) => {
+  const status = workerRegistry.getStatus();
+  res.json(status);
+});
+
+/**
+ * POST /api/compute/workers/register
+ * Self-registration endpoint for workers
+ */
+router.post("/workers/register", (req, res) => {
+  const { id, type, url, capabilities } = req.body;
+
+  if (!id || !type || !url) {
+    return res.status(400).json({
+      error: "Missing required fields",
+      required: ["id", "type", "url"],
+    });
+  }
+
+  const result = handleWorkerRegistration({ id, type, url, capabilities });
+
+  if (result.success) {
+    log.info(`Worker self-registered: ${id}`);
+    res.json(result);
+  } else {
+    res.status(400).json(result);
+  }
+});
+
+/**
+ * POST /api/compute/workers/:id/heartbeat
+ * Heartbeat endpoint for workers
+ */
+router.post("/workers/:id/heartbeat", (req, res) => {
+  const { id } = req.params;
+
+  const result = handleWorkerHeartbeat(id);
+  res.json(result);
+});
+
+/**
+ * DELETE /api/compute/workers/:id
+ * Deregistration endpoint for workers
+ */
+router.delete("/workers/:id", (req, res) => {
+  const { id } = req.params;
+
+  const result = handleWorkerDeregistration(id);
+  res.json(result);
 });
 
 // ============================================================================

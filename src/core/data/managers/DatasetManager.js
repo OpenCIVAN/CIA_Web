@@ -1,10 +1,10 @@
 // src/core/data/managers/DatasetManager.js
+// v2.0: Server-authoritative - IDs must come from server
 import { EventEmitter } from "events"; // Node.js events
 
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
-import { generateDatasetId } from "@Utils/idGenerator.js";
 import { config } from "@Core/config/clientConfig.js";
 
 /**
@@ -397,23 +397,25 @@ export class DatasetManager extends EventEmitter {
   // ==================== DATASET MANAGEMENT ====================
 
   /**
-   * Add a new dataset from a file (UPDATED WITH FILE TYPE)
+   * Add a new dataset from a file (v2.0 SERVER-AUTHORITATIVE)
    *
-   * This is the primary entry point for creating datasets. It now properly
-   * extracts and stores the file type as part of the dataset's core metadata.
+   * This is the primary entry point for creating datasets. The flow uploads
+   * to the server first to get a server-generated ID, ensuring consistency.
    *
    * The flow:
    * 1. Extract file type from filename
    * 2. Validate it's a supported type (optional but recommended)
-   * 3. Store the file in cache
-   * 4. Create Dataset object WITH fileType set
-   * 5. Persist everything
+   * 3. Upload to server to get server-generated ID
+   * 4. Store file locally for immediate use
+   * 5. Create Dataset object with server-provided ID
+   * 6. Persist everything
    *
    * @param {File} file - The file object from user input
    * @param {string} userId - ID of the user adding this dataset
+   * @param {object} options - Optional: { projectId, orgId }
    * @returns {Promise<Dataset>} - The created dataset
    */
-  async addDataset(file, userId) {
+  async addDataset(file, userId, options = {}) {
     console.log(`📦 DatasetManager: Adding dataset "${file.name}"`);
 
     try {
@@ -429,36 +431,66 @@ export class DatasetManager extends EventEmitter {
         );
       }
 
-      // STEP 3: Generate hash and store file using YOUR storageProvider
+      // STEP 3: Generate hash for duplicate detection
       const hash = await this.generateFileHash(file);
-      const storageResult = await this.storageProvider.storeFile(file);
-      console.log(`  ✓ File stored: ${hash.substring(0, 16)}...`);
+      console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
 
-      // STEP 4: Create the Dataset object with fileType
+      // STEP 4: Check for existing dataset with same hash locally
+      const existingLocal = await this.findDatasetByHash(hash);
+      if (existingLocal) {
+        console.log(
+          `  📋 Found existing local dataset with same hash: ${existingLocal.id}`
+        );
+        // Update with new file reference
+        existingLocal.rawFile = file;
+        existingLocal.setFileStatus("available", file);
+        this._emit("datasetUpdated", existingLocal);
+        return existingLocal;
+      }
+
+      // STEP 5: Upload to server to get server-generated ID
+      console.log(`  📤 Uploading to server...`);
+      const serverResponse = await this._uploadFileToServer(file, options);
+
+      if (!serverResponse || !serverResponse.file || !serverResponse.file.id) {
+        throw new Error("Server did not return a valid file ID");
+      }
+
+      const serverFile = serverResponse.file;
+      console.log(`  ✓ Server assigned ID: ${serverFile.id}`);
+
+      // STEP 6: Store file locally for immediate use
+      const storageResult = await this.storageProvider.storeFile(file);
+      console.log(`  ✓ File stored locally`);
+
+      // STEP 7: Create the Dataset object with server-provided ID
       const dataset = new Dataset({
-        id: generateDatasetId(),
+        id: serverFile.id, // SERVER-PROVIDED ID
+        serverId: serverFile.id,
         filename: file.name,
-        fileType: fileType,
-        hash: hash,
-        storageKey: storageResult || hash,
+        fileType: serverFile.file_type || fileType,
+        hash: serverFile.hash || hash,
+        storageKey: serverFile.storage_key || storageResult || hash,
+        publicPath: `${config.apiBaseUrl}/files/${serverFile.id}/download`,
         userId: userId,
+        rawFile: file, // Keep reference for immediate use
         metadata: {
           fileSize: file.size,
           uploadedBy: userId,
-          uploadedAt: Date.now(),
+          uploadedAt: serverFile.uploaded_at || Date.now(),
         },
       });
 
-      // STEP 5: Store in memory
+      // STEP 8: Store in memory
       this._datasets.set(dataset.id, dataset);
 
-      // STEP 6: Persist to IndexedDB
+      // STEP 9: Persist to IndexedDB
       await this._persistDataset(dataset);
 
-      // STEP 7: Sync to Y.js
+      // STEP 10: Sync to Y.js (for presence/awareness, not state)
       this._syncDatasetMetadataToYjs(dataset);
 
-      // STEP 8: Notify listeners
+      // STEP 11: Notify listeners
       this._emit("datasetAdded", dataset);
 
       console.log(
@@ -471,6 +503,56 @@ export class DatasetManager extends EventEmitter {
       console.error("📦 DatasetManager: Failed to add dataset:", error);
       throw error;
     }
+  }
+
+  /**
+   * Upload file to server API
+   * @private
+   * @param {File} file - The file to upload
+   * @param {object} options - { projectId, orgId }
+   * @returns {Promise<object>} Server response with file metadata including ID
+   */
+  async _uploadFileToServer(file, options = {}) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (options.projectId) {
+      formData.append("projectId", options.projectId);
+    }
+    if (options.orgId) {
+      formData.append("orgId", options.orgId);
+    }
+
+    const response = await fetch(`${config.apiBaseUrl}/files`, {
+      method: "POST",
+      body: formData,
+      // Note: Don't set Content-Type header - browser sets it with boundary for FormData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+
+      // Handle duplicate file case
+      if (response.status === 409 && errorData.existingFile) {
+        console.log(
+          `  📋 Server found duplicate: ${errorData.existingFile.id}`
+        );
+        // Return the existing file info as if it was just uploaded
+        return {
+          success: true,
+          file: errorData.existingFile,
+          duplicate: true,
+        };
+      }
+
+      throw new Error(
+        errorData.message ||
+          errorData.error ||
+          `Upload failed: ${response.status}`
+      );
+    }
+
+    return await response.json();
   }
 
   getDataset(datasetId) {
@@ -517,23 +599,26 @@ export class DatasetManager extends EventEmitter {
   }
 
   /**
-   * Load a dataset file (UPDATED WITH FILE TYPE)
+   * Load a dataset file (v2.0 SERVER-AUTHORITATIVE)
    *
    * This is the bridge method that handles the complete loading workflow.
-   * It now also ensures fileType is properly set when loading datasets.
+   * For new files, it uploads to server first to get a server-generated ID.
    *
    * @param {File} file - The file to load
    * @param {string} publicPath - Optional public URL for sample files
-   * @param {string} userId - User loading the file
+   * @param {object} options - { serverId, serverMetadata, userId, projectId, orgId }
    * @returns {Promise<string>} - The dataset ID
    */
-  // In DatasetManager.js, update the loadDataset method
-
   async loadDataset(file, publicPath = null, options = {}) {
     console.log(`📦 DatasetManager: Loading dataset "${file.name}"`);
 
     // Extract options
-    const { serverId = null, serverMetadata = null } = options;
+    const {
+      serverId = null,
+      serverMetadata = null,
+      projectId,
+      orgId,
+    } = options;
     let userId = options.userId || null;
 
     // Use current user if not specified
@@ -616,29 +701,57 @@ export class DatasetManager extends EventEmitter {
         );
       }
 
-      // STEP 5: Store the raw file
+      // STEP 5: Determine dataset ID
+      // If serverId provided (from server sync), use it
+      // Otherwise, upload to server to get a new ID
+      let datasetId = serverId;
+      let serverFile = null;
+
+      if (!datasetId) {
+        // Upload to server to get server-generated ID
+        console.log(`  📤 Uploading to server...`);
+        const serverResponse = await this._uploadFileToServer(file, {
+          projectId,
+          orgId,
+        });
+
+        if (
+          !serverResponse ||
+          !serverResponse.file ||
+          !serverResponse.file.id
+        ) {
+          throw new Error("Server did not return a valid file ID");
+        }
+
+        serverFile = serverResponse.file;
+        datasetId = serverFile.id;
+        console.log(`  ✓ Server assigned ID: ${datasetId}`);
+      }
+
+      // STEP 6: Store the raw file locally
       const storageResult = await this.storageProvider.storeFile(file);
 
-      // STEP 6: Create dataset metadata
+      // STEP 7: Create dataset metadata with server-provided ID
       const dataset = new Dataset({
-        id: generateDatasetId(),
-        serverId: serverId,
+        id: datasetId, // SERVER-PROVIDED ID
+        serverId: datasetId,
         filename: file.name,
-        fileType: fileType,
-        hash: hash,
-        publicPath: publicPath,
-        storageKey: storageResult || hash, // storageResult IS the key, not storageResult.key
+        fileType: serverFile?.file_type || fileType,
+        hash: serverFile?.hash || hash,
+        publicPath:
+          publicPath || `${config.apiBaseUrl}/files/${datasetId}/download`,
+        storageKey: serverFile?.storage_key || storageResult || hash,
         userId: userId,
         rawFile: file, // Keep reference for immediate use
         metadata: {
           fileSize: file.size,
           uploadedBy: userId,
-          uploadedAt: Date.now(),
+          uploadedAt: serverFile?.uploaded_at || Date.now(),
           ...serverMetadata,
         },
       });
 
-      // STEP 7: Try to extract quick metadata (optional, non-blocking)
+      // STEP 8: Try to extract quick metadata (optional, non-blocking)
       try {
         const quickMetadata = await this.extractQuickMetadataUsingHandlers(
           file,
@@ -653,15 +766,15 @@ export class DatasetManager extends EventEmitter {
         console.warn(`  ⚠️ Could not extract quick metadata:`, error.message);
       }
 
-      // STEP 8: Store and sync
+      // STEP 9: Store and sync
       this._datasets.set(dataset.id, dataset);
       await this._persistDataset(dataset);
       this._syncDatasetMetadataToYjs(dataset);
 
-      // STEP 9: Notify listeners
+      // STEP 10: Notify listeners
       this._emit("datasetAdded", dataset);
 
-      // STEP 10: Emit datasetLoaded event
+      // STEP 11: Emit datasetLoaded event
       this._emit("datasetLoaded", {
         datasetId: dataset.id,
         dataset: dataset,
@@ -988,16 +1101,45 @@ export class DatasetManager extends EventEmitter {
 
   // ==================== ANNOTATION MANAGEMENT ====================
 
-  async addAnnotation(datasetId, annotationConfig, userId) {
+  /**
+   * Add an annotation to a dataset (v2.0 SERVER-AUTHORITATIVE)
+   *
+   * Creates annotation on server first to get server-generated ID,
+   * then creates local Annotation object with that ID.
+   *
+   * @param {string} datasetId - The dataset to annotate
+   * @param {object} annotationConfig - Annotation configuration
+   * @param {string} userId - User creating the annotation
+   * @param {object} options - { projectId }
+   * @returns {Promise<Annotation>} The created annotation
+   */
+  async addAnnotation(datasetId, annotationConfig, userId, options = {}) {
     const dataset = this.getDataset(datasetId);
     if (!dataset) {
       throw new Error(`Dataset ${datasetId} not found`);
     }
 
+    // Create annotation on server first to get ID
+    console.log(`📦 DatasetManager: Creating annotation on server...`);
+    const serverAnnotation = await this._createAnnotationOnServer(
+      datasetId,
+      annotationConfig,
+      options
+    );
+
+    if (!serverAnnotation || !serverAnnotation.id) {
+      throw new Error("Server did not return a valid annotation ID");
+    }
+
+    console.log(`  ✓ Server assigned annotation ID: ${serverAnnotation.id}`);
+
+    // Create local Annotation with server-provided ID
     const annotation = new Annotation({
+      id: serverAnnotation.id, // SERVER-PROVIDED ID
       ...annotationConfig,
       datasetId,
       createdBy: userId,
+      createdAt: serverAnnotation.created_at || Date.now(),
     });
 
     dataset.addAnnotation(annotation);
@@ -1008,6 +1150,48 @@ export class DatasetManager extends EventEmitter {
       `📦 DatasetManager: Added annotation ${annotation.id} to dataset ${datasetId}`
     );
     return annotation;
+  }
+
+  /**
+   * Create annotation on server API
+   * @private
+   * @param {string} fileId - The dataset/file ID
+   * @param {object} annotationConfig - Annotation configuration
+   * @param {object} options - { projectId }
+   * @returns {Promise<object>} Server response with annotation including ID
+   */
+  async _createAnnotationOnServer(fileId, annotationConfig, options = {}) {
+    const response = await fetch(`${config.apiBaseUrl}/annotations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileId,
+        projectId: options.projectId,
+        type: annotationConfig.type || "point",
+        coordinates: annotationConfig.position ||
+          annotationConfig.coordinates || [0, 0, 0],
+        position: annotationConfig.position,
+        normal: annotationConfig.normal,
+        text: annotationConfig.text,
+        properties: annotationConfig.metadata,
+        metadata: annotationConfig.metadata,
+        visibility: annotationConfig.visibility || "public",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message ||
+          errorData.error ||
+          `Failed to create annotation: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result.annotation;
   }
 
   async removeAnnotation(datasetId, annotationId) {

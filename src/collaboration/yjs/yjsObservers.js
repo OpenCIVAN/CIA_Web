@@ -1,10 +1,29 @@
 // src/collaboration/yjs/yjsObservers.js
 // Y.js observers that watch for remote changes and update local state
+//
+// v2.0 ARCHITECTURE: Most observers are now DEPRECATED
+// ============================================================================
+// In v2.0, persistent state comes from SERVER via REST API + WebSocket:
+// - Datasets → fetched from /api/files, updates via WebSocket
+// - Annotations → fetched from /api/annotations, updates via WebSocket
+// - Views → fetched from /api/views, updates via WebSocket
+//
+// Y.js observers are only used for PRESENCE:
+// - Cursor positions (initializeCursorObserver)
+// - VR avatars (initializeAvatarObserver)
+// - View presence (who's viewing what)
+//
+// The legacy state observers below are kept for backward compatibility
+// but are marked as deprecated and will be removed in a future version.
+// ============================================================================
 
 import {
   yDatasets,
   yInstances,
   yAnnotations,
+  yCursors,
+  yAvatars,
+  yViewPresence,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { dataCache } from "@Services/storage/dataCache.js";
@@ -426,12 +445,137 @@ export function initializeAnnotationObserver() {
   console.log("✅ Annotation observer initialized");
 }
 
-// ----------------------------------------------------------------------------
-// Initialize All Observers
-// ----------------------------------------------------------------------------
-export function initializeAllObservers() {
-  console.log("🔗 Setting up Y.js observers");
+// ============================================================================
+// v2.0 PRESENCE OBSERVERS (Active)
+// These are the only observers that should be actively used
+// ============================================================================
 
+/**
+ * Initialize cursor presence observer
+ * Watches for remote cursor updates and notifies listeners
+ */
+let cursorChangeCallbacks = [];
+export function onCursorChange(callback) {
+  cursorChangeCallbacks.push(callback);
+  return () => {
+    cursorChangeCallbacks = cursorChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeCursorObserver() {
+  console.log("🔍 Setting up cursor presence observer");
+
+  yCursors.observe((event) => {
+    const myId = getUserId();
+
+    event.changes.keys.forEach((change, cursorUserId) => {
+      // Skip own cursor
+      if (cursorUserId === myId) return;
+
+      const cursorData = yCursors.get(cursorUserId);
+      cursorChangeCallbacks.forEach((cb) => {
+        try {
+          cb({ action: change.action, userId: cursorUserId, data: cursorData });
+        } catch (error) {
+          console.error("❌ Cursor observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  console.log("✅ Cursor observer initialized");
+}
+
+/**
+ * Initialize VR avatar presence observer
+ * Watches for remote avatar updates
+ */
+let avatarChangeCallbacks = [];
+export function onAvatarChange(callback) {
+  avatarChangeCallbacks.push(callback);
+  return () => {
+    avatarChangeCallbacks = avatarChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeAvatarObserver() {
+  console.log("🔍 Setting up avatar presence observer");
+
+  yAvatars.observe((event) => {
+    const myId = getUserId();
+
+    event.changes.keys.forEach((change, avatarUserId) => {
+      // Skip own avatar
+      if (avatarUserId === myId) return;
+
+      const avatarData = yAvatars.get(avatarUserId);
+      avatarChangeCallbacks.forEach((cb) => {
+        try {
+          cb({ action: change.action, userId: avatarUserId, data: avatarData });
+        } catch (error) {
+          console.error("❌ Avatar observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  console.log("✅ Avatar observer initialized");
+}
+
+/**
+ * Initialize view presence observer
+ * Tracks who is viewing which view configuration
+ */
+let viewPresenceChangeCallbacks = [];
+export function onViewPresenceChange(callback) {
+  viewPresenceChangeCallbacks.push(callback);
+  return () => {
+    viewPresenceChangeCallbacks = viewPresenceChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeViewPresenceObserver() {
+  console.log("🔍 Setting up view presence observer");
+
+  yViewPresence.observe((event) => {
+    event.changes.keys.forEach((change, viewId) => {
+      const presenceData = yViewPresence.get(viewId);
+      viewPresenceChangeCallbacks.forEach((cb) => {
+        try {
+          cb({ action: change.action, viewId, data: presenceData });
+        } catch (error) {
+          console.error("❌ View presence observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  console.log("✅ View presence observer initialized");
+}
+
+// ============================================================================
+// Initialize All Observers
+// ============================================================================
+export function initializeAllObservers() {
+  console.log("🔗 Setting up Y.js observers (v2.0 - presence focused)");
+
+  // v2.0 Active observers (presence only)
+  initializeCursorObserver();
+  initializeAvatarObserver();
+  initializeViewPresenceObserver();
+
+  // DEPRECATED: State observers - kept for backward compatibility only
+  // In v2.0, state comes from server via WebSocket broadcast
+  // These will be removed once server sync is fully implemented
+  console.log(
+    "⚠️ Initializing deprecated state observers for backward compatibility..."
+  );
   initializeDatasetObserver();
   initializeInstanceObserver();
   initializeAnnotationObserver();

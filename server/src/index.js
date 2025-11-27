@@ -117,11 +117,13 @@ const filesRouter = require("./routes/files");
 const annotationsRouter = require("./routes/annotations");
 const viewsRouter = require("./routes/views");
 const computeRouter = require("./routes/compute");
+const workspaceAnnotationsRouter = require("./routes/workspaceAnnotations");
 
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
 app.use("/api/compute", optionalAuth, computeRouter);
+app.use("/api/workspace-annotations", optionalAuth, workspaceAnnotationsRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
 
