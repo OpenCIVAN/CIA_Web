@@ -71,17 +71,17 @@ export function WorkspaceGrid() {
                     }
                     console.log(`📋 Using existing view ${viewConfigId}`);
                 } else if (duplicateViewId) {
-                    // Duplicate an existing view
+                    // Duplicate an existing view (async - server creates it first)
                     const sourceView = viewConfigurationManager.getView(duplicateViewId);
                     if (!sourceView) {
                         console.error(`❌ Source view ${duplicateViewId} not found for duplication`);
                         return;
                     }
-                    viewConfig = viewConfigurationManager.duplicateView(duplicateViewId);
+                    viewConfig = await viewConfigurationManager.duplicateView(duplicateViewId);
                     console.log(`📋 Duplicated view ${duplicateViewId} to ${viewConfig.id}`);
                 } else {
-                    // Create new view
-                    viewConfig = viewConfigurationManager.createView(datasetId, {
+                    // Create new view (async - server creates it first)
+                    viewConfig = await viewConfigurationManager.createView(datasetId, {
                         name: `View of ${dataset.filename}`,
                     });
                     console.log(`📋 Created new view ${viewConfig.id} for dataset ${datasetId}`);

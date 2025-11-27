@@ -393,6 +393,49 @@ export class ViewConfigurationManager {
   }
 
   /**
+   * Duplicate an existing view configuration
+   * v2.0: Creates a new view on server with copied settings
+   *
+   * @param {string} sourceViewId - The view to duplicate
+   * @param {Object} overrides - Optional configuration overrides
+   * @returns {Promise<ViewConfiguration>} The new duplicated view
+   */
+  async duplicateView(sourceViewId, overrides = {}) {
+    const sourceView = this._viewConfigs.get(sourceViewId);
+    if (!sourceView) {
+      throw new Error(`Source view ${sourceViewId} not found`);
+    }
+
+    // Create new view with source settings
+    const newViewConfig = {
+      name: overrides.name || `${sourceView.name} (copy)`,
+      description: overrides.description || sourceView.description,
+      camera: overrides.camera || sourceView.camera,
+      filters: overrides.filters || [...(sourceView.filters || [])],
+      widgets: overrides.widgets || [...(sourceView.widgets || [])],
+      colorMaps: overrides.colorMaps || sourceView.colorMaps,
+      annotationsVisible:
+        overrides.annotationsVisible ?? sourceView.annotationsVisible,
+      visibility: overrides.visibility || "private",
+      isShared: overrides.isShared || false,
+      forkedFrom: {
+        viewId: sourceViewId,
+        viewName: sourceView.name,
+        ownerUserId: sourceView.ownerUserId,
+        ownerUserName: sourceView.ownerUserName,
+        timestamp: Date.now(),
+      },
+    };
+
+    // Use createView to handle server creation
+    const newView = await this.createView(sourceView.datasetId, newViewConfig);
+
+    console.log(`📋 Duplicated view ${sourceViewId} to ${newView.id}`);
+
+    return newView;
+  }
+
+  /**
    * Get a view configuration by ID
    */
   getView(viewId) {
@@ -437,6 +480,86 @@ export class ViewConfigurationManager {
         view.ownerUserId !== userId &&
         view.sharedWith.some((s) => s.userId === userId)
     );
+  }
+
+  // ===========================================================================
+  // VIEW ACTIVATION TRACKING
+  // ===========================================================================
+
+  /**
+   * Mark a view as active (an instance is using it)
+   * Called when an InstanceViewport mounts with this view
+   *
+   * @param {string} viewId - The view being activated
+   */
+  activateView(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) {
+      console.warn(`Cannot activate view ${viewId}: not found`);
+      return;
+    }
+
+    view.activeInstanceCount = (view.activeInstanceCount || 0) + 1;
+    view.lastActiveTimestamp = Date.now();
+    view.status = "active";
+
+    console.log(
+      `📊 View ${viewId} activated (${view.activeInstanceCount} instance(s))`
+    );
+
+    this._syncToServer(view);
+    this._emit("viewUpdated", view);
+  }
+
+  /**
+   * Mark a view as no longer active (instance was closed)
+   * Called when an InstanceViewport unmounts
+   *
+   * @param {string} viewId - The view being deactivated
+   */
+  deactivateView(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) {
+      return; // View may have been deleted
+    }
+
+    view.activeInstanceCount = Math.max(0, (view.activeInstanceCount || 1) - 1);
+    view.lastActiveTimestamp = Date.now();
+
+    // If no instances remain, mark as inactive (but don't delete)
+    if (view.activeInstanceCount === 0) {
+      view.status = "inactive";
+      console.log(`📊 View ${viewId} deactivated (no instances remaining)`);
+    } else {
+      console.log(
+        `📊 View ${viewId} has ${view.activeInstanceCount} instance(s) remaining`
+      );
+    }
+
+    this._syncToServer(view);
+    this._emit("viewUpdated", view);
+  }
+
+  /**
+   * Check if a view has any active instances
+   *
+   * @param {string} viewId - The view to check
+   * @returns {boolean} Whether the view has active instances
+   */
+  isViewActive(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    return view && view.activeInstanceCount > 0;
+  }
+
+  /**
+   * Get count of active instances for a view
+   *
+   * @param {string} viewId - The view to check
+   * @returns {number} Number of active instances
+   */
+  getActiveInstanceCount(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    return view?.activeInstanceCount || 0;
   }
 
   /**

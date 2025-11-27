@@ -206,6 +206,11 @@ export function InstanceViewport({
                 console.log(`🧹 Cleaning up instance ${instanceIdRef.current}`);
                 workspaceManager.deleteInstance(instanceIdRef.current);
             }
+
+            // Deactivate the view to update instance count
+            if (viewConfigId) {
+                viewConfigurationManager.deactivateView(viewConfigId);
+            }
         };
     }, [viewConfigId]); // Removed actualInstanceId - not needed, initOnce guards re-init
 

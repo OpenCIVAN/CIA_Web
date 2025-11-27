@@ -156,6 +156,7 @@ router.post("/", async (req, res, next) => {
       annotationsVisible = true,
       visibility = "private",
       isShared = false,
+      forkedFrom,
     } = req.body;
 
     if (!fileId) {
@@ -182,9 +183,9 @@ router.post("/", async (req, res, next) => {
         name, description,
         camera, filters, widgets, color_maps,
         annotations_visible, visibility, is_shared,
-        owner_user_id, saved_by_user
+        owner_user_id, saved_by_user, forked_from
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, $14)
       RETURNING *
     `,
       [
@@ -201,6 +202,7 @@ router.post("/", async (req, res, next) => {
         visibility,
         isShared,
         user.id,
+        forkedFrom ? JSON.stringify(forkedFrom) : null,
       ]
     );
 
@@ -217,9 +219,21 @@ router.post("/", async (req, res, next) => {
       });
     }
 
-    // Broadcast to project if shared
-    if (projectId && isShared && wsManager) {
-      wsManager.viewCreated(projectId, view);
+    // Broadcast view creation to all clients in project
+    // (for multi-client sync, not just shared views)
+    if (wsManager) {
+      if (projectId) {
+        wsManager.viewCreated(projectId, view);
+      } else {
+        // Find project from file access
+        const projects = await pool.query(
+          "SELECT project_id FROM file_project_access WHERE file_id = $1",
+          [fileId]
+        );
+        for (const row of projects.rows) {
+          wsManager.viewCreated(row.project_id, view);
+        }
+      }
     }
 
     res.status(201).json({
@@ -263,9 +277,18 @@ router.put("/:id", async (req, res, next) => {
       "filters",
       "widgets",
       "color_maps",
+      "cursor_config",
+      "annotation_display",
       "annotations_visible",
       "visibility",
       "is_shared",
+      "status",
+      "active_instance_count",
+      "links",
+      "broadcast",
+      "following",
+      "snapshots",
+      "applied_presets",
     ];
 
     const setClauses = [];
@@ -280,10 +303,21 @@ router.put("/:id", async (req, res, next) => {
       if (updates[bodyField] !== undefined) {
         let value = updates[bodyField];
         // JSON fields need stringification
-        if (
-          ["camera", "filters", "widgets", "colorMaps"].includes(bodyField) &&
-          typeof value === "object"
-        ) {
+        const jsonFields = [
+          "camera",
+          "filters",
+          "widgets",
+          "colorMaps",
+          "color_maps",
+          "cursor_config",
+          "annotation_display",
+          "links",
+          "broadcast",
+          "following",
+          "snapshots",
+          "applied_presets",
+        ];
+        if (jsonFields.includes(bodyField) && typeof value === "object") {
           value = JSON.stringify(value);
         }
         setClauses.push(`${dbField} = $${paramIndex++}`);
@@ -324,9 +358,12 @@ router.put("/:id", async (req, res, next) => {
       });
     }
 
-    // Broadcast update if shared
-    if (view.is_shared && wsManager) {
-      // Find projects containing this file
+    // Broadcast update to all clients in the project
+    // Even private views need sync for the owner across devices
+    if (wsManager && view.project_id) {
+      wsManager.viewUpdated(view.project_id, view);
+    } else if (wsManager && view.dataset_id) {
+      // Fallback: find project from file access table
       const projects = await pool.query(
         "SELECT project_id FROM file_project_access WHERE file_id = $1",
         [view.dataset_id]
