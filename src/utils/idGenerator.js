@@ -17,7 +17,6 @@ export function generateId(prefix = "id") {
   return `${prefix}_${timestamp}_${random}`;
 }
 
-
 // ============================================================================
 // Layer 1: Data
 // ============================================================================
@@ -74,7 +73,6 @@ export function generateWidgetId() {
   return generateId("widget");
 }
 
-
 // ============================================================================
 // Layer 3: Instances (ephemeral, but still need IDs)
 // ============================================================================
@@ -109,7 +107,6 @@ export function generateGridSlotId() {
 export function generateWorkspaceLayoutId() {
   return generateId("layout");
 }
-
 
 // ============================================================================
 // Organization
@@ -155,7 +152,6 @@ export function generateTextChatId() {
   return generateId("textchat");
 }
 
-
 // ============================================================================
 // Logging
 // ============================================================================
@@ -167,7 +163,48 @@ export function generateLogId() {
   return generateId("log");
 }
 
+// ============================================================================
+// Canvas Content
+// ============================================================================
+/**
+ * Generate a note ID (local, pending server confirmation)
+ * @returns {string} Note ID
+ */
+export function generateNoteId() {
+  return generateId("note");
+}
 
+/**
+ * Generate an image ID (local, pending server confirmation)
+ * @returns {string} Image ID
+ */
+export function generateImageId() {
+  return generateId("image");
+}
+
+/**
+ * Generate a canvas ID
+ * @returns {string} Canvas ID
+ */
+export function generateCanvasId() {
+  return generateId("canvas");
+}
+
+/**
+ * Generate a placement ID
+ * @returns {string} Placement ID
+ */
+export function generatePlacementId() {
+  return generateId("placement");
+}
+
+/**
+ * Generate a subset ID (local, pending server confirmation)
+ * @returns {string} Subset ID
+ */
+export function generateSubsetId() {
+  return generateId("subset");
+}
 
 // ============================================================================
 // Utility

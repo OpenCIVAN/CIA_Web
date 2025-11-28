@@ -3,7 +3,7 @@ import React from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import "./TopBar.scss";
 
-export function TopBar({ username }) {
+export function TopBar({ username, canvasMode, onToggleCanvasMode }) {
     const roomId = sessionManager.getRoomId();
 
     return (
@@ -17,11 +17,20 @@ export function TopBar({ username }) {
                 <span className="room-indicator">
                     Room: <strong>{roomId}</strong>
                 </span>
+                {onToggleCanvasMode && (
+                    <button
+                        className={`top-bar__canvas-toggle ${canvasMode ? 'active' : ''}`}
+                        onClick={onToggleCanvasMode}
+                        title={canvasMode ? 'Switch to Classic Grid' : 'Switch to New Canvas'}
+                    >
+                        {canvasMode ? 'New Canvas' : 'Classic Grid'}
+                    </button>
+                )}
             </div>
 
             <div className="top-bar__user">
                 <span className="user-indicator">
-                    👤 {username}
+                    {username}
                 </span>
             </div>
         </div>

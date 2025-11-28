@@ -7,3 +7,14 @@
 // Canvas System
 export { CanvasManager, canvasManager } from "./CanvasManager.js";
 export { SubsetManager, subsetManager } from "./SubsetManager.js";
+
+// Content Management
+export {
+  ContentHandler,
+  NoteHandler,
+  ImageHandler,
+  contentManager,
+} from "./ContentManager.js";
+
+// Workspace Hierarchy
+export { workspaceManager } from "./WorkspaceManager.js";

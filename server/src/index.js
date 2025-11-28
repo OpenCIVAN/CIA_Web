@@ -119,11 +119,24 @@ const viewsRouter = require("./routes/views");
 const computeRouter = require("./routes/compute");
 const workspaceAnnotationsRouter = require("./routes/workspaceAnnotations");
 
+// Canvas system routes
+const canvasesRouter = require("./routes/canvases");
+const workspacesRouter = require("./routes/workspaces");
+const subsetsRouter = require("./routes/subsets");
+const contentRouter = require("./routes/content");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
 app.use("/api/compute", optionalAuth, computeRouter);
 app.use("/api/workspace-annotations", optionalAuth, workspaceAnnotationsRouter);
+
+// Canvas system endpoints
+app.use("/api/canvases", optionalAuth, canvasesRouter);
+app.use("/api/workspaces", optionalAuth, workspacesRouter);
+app.use("/api/subsets", optionalAuth, subsetsRouter);
+app.use("/api/content", optionalAuth, contentRouter);
+app.use("/api/placements", optionalAuth, canvasesRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
 

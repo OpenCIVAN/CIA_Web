@@ -573,6 +573,225 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
+-- CANVAS SYSTEM (Workspaces, Canvases, Placements, Subsets, Notes, Images)
+-- ============================================================================
+
+-- Workspaces - Container for canvases with hierarchy (Personal, Project, Breakout)
+CREATE TABLE workspaces (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL DEFAULT 'Untitled Workspace',
+    description TEXT,
+    type VARCHAR(20) NOT NULL DEFAULT 'personal' CHECK (type IN ('personal', 'project', 'breakout')),
+
+    -- Hierarchy
+    parent_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+
+    -- Ownership
+    owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id),
+
+    -- State
+    is_archived BOOLEAN DEFAULT FALSE,
+    archived_at TIMESTAMPTZ,
+
+    -- Breakout specific
+    expires_at TIMESTAMPTZ,
+    auto_merge BOOLEAN DEFAULT FALSE,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_workspaces_owner ON workspaces(owner_id);
+CREATE INDEX idx_workspaces_project ON workspaces(project_id);
+CREATE INDEX idx_workspaces_type ON workspaces(type);
+
+-- Workspace members for shared workspaces
+CREATE TABLE workspace_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission VARCHAR(20) NOT NULL DEFAULT 'viewer' CHECK (permission IN ('owner', 'editor', 'viewer')),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(workspace_id, user_id)
+);
+
+CREATE INDEX idx_workspace_members_workspace ON workspace_members(workspace_id);
+CREATE INDEX idx_workspace_members_user ON workspace_members(user_id);
+
+-- Canvases - Infinite pinboard of placements
+CREATE TABLE canvases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+
+    name VARCHAR(255) NOT NULL DEFAULT 'Untitled Canvas',
+
+    -- Dimensions (can grow infinitely, this is the initial/current size)
+    dimensions JSONB NOT NULL DEFAULT '{"rows": 3, "cols": 3}',
+
+    -- Viewport state (optional, for persistence)
+    viewport JSONB DEFAULT '{"row": 0, "col": 0, "rows": 3, "cols": 3}',
+
+    -- Ownership (for personal canvases)
+    ownership JSONB NOT NULL DEFAULT '{"type": "personal", "ownerId": null}',
+
+    -- State
+    is_active BOOLEAN DEFAULT TRUE,
+
+    -- Timestamps
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_canvases_workspace ON canvases(workspace_id);
+CREATE INDEX idx_canvases_project ON canvases(project_id);
+
+-- Placements - Positioned items on canvas (views, notes, images)
+CREATE TABLE placements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+
+    -- Position
+    row_index INT NOT NULL DEFAULT 0,
+    col_index INT NOT NULL DEFAULT 0,
+    row_span INT NOT NULL DEFAULT 1 CHECK (row_span BETWEEN 1 AND 3),
+    col_span INT NOT NULL DEFAULT 1 CHECK (col_span BETWEEN 1 AND 3),
+
+    -- Content reference
+    content_type VARCHAR(20) NOT NULL DEFAULT 'empty' CHECK (content_type IN ('view', 'note', 'image', 'empty')),
+    content_id UUID, -- References view_configurations, notes, or images depending on type
+
+    -- Timestamps
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_placements_canvas ON placements(canvas_id);
+CREATE INDEX idx_placements_content ON placements(content_type, content_id);
+CREATE INDEX idx_placements_position ON placements(canvas_id, row_index, col_index);
+
+-- Subsets - Saved selections for focus mode
+CREATE TABLE subsets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+
+    name VARCHAR(255) NOT NULL DEFAULT 'Untitled Focus Group',
+    description TEXT,
+
+    -- Selection
+    placement_ids UUID[] DEFAULT '{}',
+
+    -- Attached content
+    attached_notes UUID[] DEFAULT '{}',
+    attached_images UUID[] DEFAULT '{}',
+
+    -- Visibility
+    visibility VARCHAR(20) NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'shared', 'public')),
+    shared_with UUID[] DEFAULT '{}', -- User IDs
+
+    -- Timestamps
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_subsets_canvas ON subsets(canvas_id);
+CREATE INDEX idx_subsets_project ON subsets(project_id);
+CREATE INDEX idx_subsets_visibility ON subsets(visibility);
+
+-- Notes - Text annotations on canvas
+CREATE TABLE notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+
+    -- Content
+    title VARCHAR(255) DEFAULT '',
+    content TEXT DEFAULT '',
+    format VARCHAR(20) DEFAULT 'markdown' CHECK (format IN ('markdown', 'plain', 'rich')),
+
+    -- Position (if placed directly on canvas)
+    position JSONB, -- { x, y } or null
+    width INT DEFAULT 1,
+    height INT DEFAULT 1,
+
+    -- Styling
+    color VARCHAR(20) DEFAULT 'default',
+    pinned BOOLEAN DEFAULT FALSE,
+
+    -- Visibility
+    visibility VARCHAR(20) DEFAULT 'private' CHECK (visibility IN ('private', 'shared', 'public')),
+
+    -- Timestamps
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_notes_canvas ON notes(canvas_id);
+
+-- Canvas Images - Image attachments on canvas
+CREATE TABLE canvas_images (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+
+    -- Storage
+    storage_key VARCHAR(500), -- MinIO key
+    original_name VARCHAR(255),
+    mime_type VARCHAR(100) DEFAULT 'image/png',
+    file_size BIGINT DEFAULT 0,
+
+    -- Dimensions
+    natural_width INT DEFAULT 0,
+    natural_height INT DEFAULT 0,
+
+    -- Position (if placed directly on canvas)
+    position JSONB, -- { x, y } or null
+    width INT DEFAULT 1,
+    height INT DEFAULT 1,
+
+    -- Display
+    fit VARCHAR(20) DEFAULT 'contain' CHECK (fit IN ('contain', 'cover', 'fill')),
+    caption TEXT DEFAULT '',
+    alt_text TEXT DEFAULT '',
+
+    -- Visibility
+    visibility VARCHAR(20) DEFAULT 'private' CHECK (visibility IN ('private', 'shared', 'public')),
+
+    -- Timestamps
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_canvas_images_canvas ON canvas_images(canvas_id);
+
+-- Apply updated_at triggers to canvas system tables
+CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_canvases_updated_at BEFORE UPDATE ON canvases
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_placements_updated_at BEFORE UPDATE ON placements
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_subsets_updated_at BEFORE UPDATE ON subsets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_canvas_images_updated_at BEFORE UPDATE ON canvas_images
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
 -- SEED DATA
 -- ============================================================================
 

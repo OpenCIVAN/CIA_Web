@@ -83,3 +83,31 @@
     @include glass-hover;
   }
 }
+
+// Canvas mode toggle
+.top-bar__canvas-toggle {
+  margin-left: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  color: $color-accent-primary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: $font-weight-medium;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+
+  &.active {
+    background: $color-accent-primary;
+    color: #fff;
+    border-color: $color-accent-primary;
+    box-shadow: 0 0 12px $color-accent-primary-glow;
+  }
+}

@@ -10,8 +10,18 @@
 // - WorkspaceCanvas: Infinite pinboard of placements
 // - CanvasPlacement: Positioned item on canvas
 // - Subset: Saved selection for focus mode
+// - Note: Text annotations on canvas
+// - CanvasImage: Image attachments on canvas
+// - Workspace: Container for canvases with hierarchy
 
 // Canvas System
 export { WorkspaceCanvas } from "./WorkspaceCanvas.js";
 export { CanvasPlacement, PlacementContentType } from "./CanvasPlacement.js";
 export { Subset, SubsetVisibility } from "./Subset.js";
+
+// Content Types
+export { Note } from "./Note.js";
+export { CanvasImage } from "./CanvasImage.js";
+
+// Workspace Hierarchy
+export { Workspace, WorkspaceType, WorkspacePermission } from "./Workspace.js";

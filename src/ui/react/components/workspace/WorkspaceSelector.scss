@@ -1,0 +1,318 @@
+// src/ui/react/components/workspace/WorkspaceSelector.scss
+// Styles for WorkspaceSelector component
+
+.workspace-selector {
+  position: relative;
+
+  // Trigger button
+  &__trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--selector-bg, #252538);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 200px;
+
+    &:hover {
+      border-color: var(--border-hover, #444);
+      background: var(--selector-hover, #2a2a40);
+    }
+  }
+
+  &__icon {
+    font-size: 1rem;
+  }
+
+  &__name {
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__type {
+    padding: 2px 6px;
+    background: var(--type-bg, #3b3b5c);
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    color: var(--text-muted, #888);
+  }
+
+  &__placeholder {
+    flex: 1;
+    text-align: left;
+    color: var(--text-muted, #888);
+  }
+
+  &__arrow {
+    font-size: 0.625rem;
+    color: var(--text-muted, #888);
+  }
+
+  // Dropdown
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 280px;
+    background: var(--dropdown-bg, #1e1e2e);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  &__section {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color, #333);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__section-header {
+    padding: 4px 12px 8px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #888);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #ccc);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+
+    &:hover {
+      background: var(--item-hover, rgba(255, 255, 255, 0.05));
+      color: var(--text-primary, #fff);
+    }
+
+    &.active {
+      background: var(--item-active, rgba(99, 102, 241, 0.15));
+      color: var(--text-primary, #fff);
+    }
+  }
+
+  &__item-icon {
+    font-size: 1rem;
+  }
+
+  &__item-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__item-members {
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+  }
+
+  &__actions {
+    padding: 8px;
+  }
+
+  &__create-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--create-bg, #3b3b5c);
+    border: 1px dashed var(--border-color, #555);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #ccc);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--create-hover, #4b4b6c);
+      border-style: solid;
+      color: var(--text-primary, #fff);
+    }
+  }
+}
+
+// Create workspace dialog
+.create-workspace-dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--dialog-bg, #1e1e2e);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 12px;
+  overflow: hidden;
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, #333);
+
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      color: var(--text-primary, #fff);
+    }
+
+    button {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: var(--text-muted, #888);
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text-primary, #fff);
+      }
+    }
+  }
+
+  &__body {
+    padding: 20px;
+  }
+
+  &__field {
+    margin-bottom: 16px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary, #ccc);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--input-bg, #1a1a2e);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--text-primary, #fff);
+
+      &:focus {
+        outline: none;
+        border-color: var(--accent-color, #6366f1);
+      }
+
+      &::placeholder {
+        color: var(--text-muted, #666);
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+  }
+
+  &__type-options {
+    display: flex;
+    gap: 8px;
+
+    button {
+      flex: 1;
+      padding: 12px;
+      background: var(--type-btn-bg, #252538);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--text-secondary, #ccc);
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        border-color: var(--border-hover, #444);
+      }
+
+      &.active {
+        background: var(--type-btn-active, rgba(99, 102, 241, 0.15));
+        border-color: var(--accent-color, #6366f1);
+        color: var(--text-primary, #fff);
+      }
+    }
+  }
+
+  &__footer {
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color, #333);
+    background: var(--footer-bg, #1a1a2e);
+
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:first-child {
+        background: var(--secondary-bg, #3b3b5c);
+        color: var(--text-secondary, #ccc);
+
+        &:hover {
+          background: var(--secondary-hover, #4b4b6c);
+        }
+      }
+
+      &:last-child {
+        background: var(--primary-color, #6366f1);
+        color: #fff;
+
+        &:hover:not(:disabled) {
+          background: var(--primary-hover, #5558e3);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}
