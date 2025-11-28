@@ -1,0 +1,719 @@
+// src/core/data/managers/CanvasManager.js
+// Manages WorkspaceCanvas instances and server synchronization
+//
+// ARCHITECTURE:
+// - Server is source of truth for all canvas state
+// - Local cache for performance, but server always wins conflicts
+// - WebSocket broadcasts keep clients in sync
+// - All mutations go through server API
+
+import { WorkspaceCanvas } from "@Core/data/models/WorkspaceCanvas.js";
+import { CanvasPlacement } from "@Core/data/models/CanvasPlacement.js";
+
+/**
+ * CanvasManager - Manages workspace canvases with server sync
+ *
+ * Responsibilities:
+ * - CRUD operations for canvases via REST API
+ * - Local caching of loaded canvases
+ * - Event emission for UI updates
+ * - WebSocket broadcast integration
+ */
+export class CanvasManager {
+  constructor(options = {}) {
+    // Configuration
+    this._apiBaseUrl = options.apiBaseUrl || "/api";
+    this._sessionManager = options.sessionManager || null;
+
+    // Local cache
+    this._canvases = new Map(); // canvasId -> WorkspaceCanvas
+    this._activeCanvasId = null;
+
+    // Event listeners
+    this._listeners = {
+      canvasLoaded: [],
+      canvasCreated: [],
+      canvasUpdated: [],
+      canvasDeleted: [],
+      placementAdded: [],
+      placementUpdated: [],
+      placementRemoved: [],
+      activeCanvasChanged: [],
+      error: [],
+    };
+
+    // Bind methods for WebSocket handlers
+    this.handleServerBroadcast = this.handleServerBroadcast.bind(this);
+  }
+
+  // ===========================================================================
+  // INITIALIZATION
+  // ===========================================================================
+
+  /**
+   * Initialize the canvas manager
+   * @param {Object} options - { apiBaseUrl, sessionManager }
+   */
+  initialize(options = {}) {
+    if (options.apiBaseUrl) this._apiBaseUrl = options.apiBaseUrl;
+    if (options.sessionManager) this._sessionManager = options.sessionManager;
+
+    console.log("CanvasManager: Initialized");
+  }
+
+  /**
+   * Set the session manager (for auth tokens)
+   * @param {Object} sessionManager
+   */
+  setSessionManager(sessionManager) {
+    this._sessionManager = sessionManager;
+  }
+
+  // ===========================================================================
+  // CANVAS CRUD
+  // ===========================================================================
+
+  /**
+   * Load a canvas by ID
+   * @param {string} canvasId
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async loadCanvas(canvasId) {
+    // Check cache first
+    if (this._canvases.has(canvasId)) {
+      return this._canvases.get(canvasId);
+    }
+
+    try {
+      const response = await this._fetch(`/canvases/${canvasId}`);
+      const data = await response.json();
+
+      const canvas = new WorkspaceCanvas(data);
+      this._canvases.set(canvas.id, canvas);
+      this._emit("canvasLoaded", { canvas });
+
+      return canvas;
+    } catch (error) {
+      this._emit("error", { operation: "loadCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get or create personal canvas for current user
+   * @param {string} projectId
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async getPersonalCanvas(projectId) {
+    const userId = this._getUserId();
+
+    // Check cache for existing personal canvas
+    const cached = Array.from(this._canvases.values()).find(
+      (c) =>
+        c.projectId === projectId &&
+        c.ownership.type === "personal" &&
+        c.ownership.ownerId === userId
+    );
+    if (cached) return cached;
+
+    try {
+      // Try to fetch from server
+      const response = await this._fetch(
+        `/projects/${projectId}/canvases?type=personal`
+      );
+      const data = await response.json();
+
+      if (data.canvases && data.canvases.length > 0) {
+        const canvas = new WorkspaceCanvas(data.canvases[0]);
+        this._canvases.set(canvas.id, canvas);
+        return canvas;
+      }
+
+      // Create new personal canvas
+      return this.createCanvas(projectId, {
+        name: "My Workspace",
+        ownership: { type: "personal", ownerId: userId },
+      });
+    } catch (error) {
+      this._emit("error", { operation: "getPersonalCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get or create project room canvas
+   * @param {string} projectId
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async getProjectCanvas(projectId) {
+    // Check cache
+    const cached = Array.from(this._canvases.values()).find(
+      (c) => c.projectId === projectId && c.ownership.type === "project"
+    );
+    if (cached) return cached;
+
+    try {
+      const response = await this._fetch(
+        `/projects/${projectId}/canvases?type=project`
+      );
+      const data = await response.json();
+
+      if (data.canvases && data.canvases.length > 0) {
+        const canvas = new WorkspaceCanvas(data.canvases[0]);
+        this._canvases.set(canvas.id, canvas);
+        return canvas;
+      }
+
+      // Create project canvas (usually done by project creator)
+      return this.createCanvas(projectId, {
+        name: "Project Room",
+        ownership: { type: "project", ownerId: projectId },
+      });
+    } catch (error) {
+      this._emit("error", { operation: "getProjectCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new canvas
+   * @param {string} projectId
+   * @param {Object} options - { name, ownership, dimensions }
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async createCanvas(projectId, options = {}) {
+    const userId = this._getUserId();
+
+    const payload = {
+      name: options.name || "Untitled Workspace",
+      ownership: options.ownership || { type: "personal", ownerId: userId },
+      dimensions: options.dimensions || { rows: 3, cols: 3 },
+    };
+
+    try {
+      const response = await this._fetch(`/projects/${projectId}/canvases`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      const canvas = new WorkspaceCanvas(data);
+
+      this._canvases.set(canvas.id, canvas);
+      this._emit("canvasCreated", { canvas });
+
+      return canvas;
+    } catch (error) {
+      this._emit("error", { operation: "createCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update canvas metadata (name, dimensions)
+   * @param {string} canvasId
+   * @param {Object} updates - { name, dimensions }
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async updateCanvas(canvasId, updates) {
+    try {
+      const response = await this._fetch(`/canvases/${canvasId}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+
+      const data = await response.json();
+      const canvas = new WorkspaceCanvas(data);
+
+      this._canvases.set(canvas.id, canvas);
+      this._emit("canvasUpdated", { canvas, updates });
+
+      return canvas;
+    } catch (error) {
+      this._emit("error", { operation: "updateCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a canvas
+   * @param {string} canvasId
+   * @returns {Promise<void>}
+   */
+  async deleteCanvas(canvasId) {
+    try {
+      await this._fetch(`/canvases/${canvasId}`, {
+        method: "DELETE",
+      });
+
+      const canvas = this._canvases.get(canvasId);
+      this._canvases.delete(canvasId);
+
+      if (this._activeCanvasId === canvasId) {
+        this._activeCanvasId = null;
+      }
+
+      this._emit("canvasDeleted", { canvasId, canvas });
+    } catch (error) {
+      this._emit("error", { operation: "deleteCanvas", error });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // PLACEMENT CRUD
+  // ===========================================================================
+
+  /**
+   * Add a placement to a canvas
+   * @param {string} canvasId
+   * @param {Object} placementData - { row, col, rowSpan, colSpan, content }
+   * @returns {Promise<CanvasPlacement>}
+   */
+  async addPlacement(canvasId, placementData) {
+    try {
+      const response = await this._fetch(`/canvases/${canvasId}/placements`, {
+        method: "POST",
+        body: JSON.stringify(placementData),
+      });
+
+      const data = await response.json();
+      const placement = new CanvasPlacement(data);
+
+      // Update local cache
+      const canvas = this._canvases.get(canvasId);
+      if (canvas) {
+        canvas.placements.push(placement);
+      }
+
+      this._emit("placementAdded", { canvasId, placement });
+
+      return placement;
+    } catch (error) {
+      this._emit("error", { operation: "addPlacement", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update a placement (move, resize, change content)
+   * @param {string} placementId
+   * @param {Object} updates - { row, col, rowSpan, colSpan, content }
+   * @returns {Promise<CanvasPlacement>}
+   */
+  async updatePlacement(placementId, updates) {
+    try {
+      const response = await this._fetch(`/placements/${placementId}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+
+      const data = await response.json();
+      const placement = new CanvasPlacement(data);
+
+      // Update local cache
+      for (const canvas of this._canvases.values()) {
+        const idx = canvas.placements.findIndex((p) => p.id === placementId);
+        if (idx !== -1) {
+          canvas.placements[idx] = placement;
+          this._emit("placementUpdated", { canvasId: canvas.id, placement });
+          break;
+        }
+      }
+
+      return placement;
+    } catch (error) {
+      this._emit("error", { operation: "updatePlacement", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Move a placement to a new position
+   * @param {string} placementId
+   * @param {number} newRow
+   * @param {number} newCol
+   * @returns {Promise<CanvasPlacement>}
+   */
+  async movePlacement(placementId, newRow, newCol) {
+    return this.updatePlacement(placementId, { row: newRow, col: newCol });
+  }
+
+  /**
+   * Resize a placement
+   * @param {string} placementId
+   * @param {number} rowSpan
+   * @param {number} colSpan
+   * @returns {Promise<CanvasPlacement>}
+   */
+  async resizePlacement(placementId, rowSpan, colSpan) {
+    return this.updatePlacement(placementId, { rowSpan, colSpan });
+  }
+
+  /**
+   * Remove a placement from a canvas
+   * @param {string} placementId
+   * @returns {Promise<void>}
+   */
+  async removePlacement(placementId) {
+    try {
+      await this._fetch(`/placements/${placementId}`, {
+        method: "DELETE",
+      });
+
+      // Update local cache
+      for (const canvas of this._canvases.values()) {
+        const idx = canvas.placements.findIndex((p) => p.id === placementId);
+        if (idx !== -1) {
+          const removed = canvas.placements.splice(idx, 1)[0];
+          this._emit("placementRemoved", {
+            canvasId: canvas.id,
+            placement: removed,
+          });
+          break;
+        }
+      }
+    } catch (error) {
+      this._emit("error", { operation: "removePlacement", error });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // ACTIVE CANVAS MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Set the active canvas
+   * @param {string} canvasId
+   */
+  setActiveCanvas(canvasId) {
+    const previousId = this._activeCanvasId;
+    this._activeCanvasId = canvasId;
+
+    if (previousId !== canvasId) {
+      this._emit("activeCanvasChanged", {
+        previousId,
+        canvasId,
+        canvas: this._canvases.get(canvasId),
+      });
+    }
+  }
+
+  /**
+   * Get the active canvas
+   * @returns {WorkspaceCanvas|null}
+   */
+  getActiveCanvas() {
+    return this._activeCanvasId
+      ? this._canvases.get(this._activeCanvasId)
+      : null;
+  }
+
+  /**
+   * Get active canvas ID
+   * @returns {string|null}
+   */
+  getActiveCanvasId() {
+    return this._activeCanvasId;
+  }
+
+  // ===========================================================================
+  // QUERIES
+  // ===========================================================================
+
+  /**
+   * Get a canvas from cache
+   * @param {string} canvasId
+   * @returns {WorkspaceCanvas|null}
+   */
+  getCanvas(canvasId) {
+    return this._canvases.get(canvasId) || null;
+  }
+
+  /**
+   * Get all cached canvases
+   * @returns {WorkspaceCanvas[]}
+   */
+  getAllCanvases() {
+    return Array.from(this._canvases.values());
+  }
+
+  /**
+   * Get canvases for a project
+   * @param {string} projectId
+   * @returns {WorkspaceCanvas[]}
+   */
+  getCanvasesForProject(projectId) {
+    return this.getAllCanvases().filter((c) => c.projectId === projectId);
+  }
+
+  /**
+   * Get placements visible in viewport
+   * @param {string} canvasId
+   * @param {Object} viewport - { row, col, rows, cols }
+   * @returns {CanvasPlacement[]}
+   */
+  getVisiblePlacements(canvasId, viewport) {
+    const canvas = this._canvases.get(canvasId);
+    if (!canvas) return [];
+
+    return canvas.getPlacementsInViewport(viewport);
+  }
+
+  /**
+   * Find a placement by ID across all canvases
+   * @param {string} placementId
+   * @returns {{ canvas: WorkspaceCanvas, placement: CanvasPlacement }|null}
+   */
+  findPlacement(placementId) {
+    for (const canvas of this._canvases.values()) {
+      const placement = canvas.getPlacementById(placementId);
+      if (placement) {
+        return { canvas, placement };
+      }
+    }
+    return null;
+  }
+
+  // ===========================================================================
+  // WEBSOCKET BROADCAST HANDLING
+  // ===========================================================================
+
+  /**
+   * Handle server broadcast events
+   * Called by serverSync service when canvas-related events arrive
+   * @param {Object} message - { type, canvasId, placement, ... }
+   */
+  handleServerBroadcast(message) {
+    console.log("CanvasManager: Received broadcast", message.type);
+
+    switch (message.type) {
+      case "canvas:created":
+        this._handleCanvasCreated(message);
+        break;
+
+      case "canvas:updated":
+        this._handleCanvasUpdated(message);
+        break;
+
+      case "canvas:deleted":
+        this._handleCanvasDeleted(message);
+        break;
+
+      case "placement:added":
+        this._handlePlacementAdded(message);
+        break;
+
+      case "placement:updated":
+        this._handlePlacementUpdated(message);
+        break;
+
+      case "placement:removed":
+        this._handlePlacementRemoved(message);
+        break;
+
+      default:
+        console.warn("CanvasManager: Unknown broadcast type", message.type);
+    }
+  }
+
+  _handleCanvasCreated(message) {
+    const canvas = new WorkspaceCanvas(message.canvas);
+    this._canvases.set(canvas.id, canvas);
+    this._emit("canvasCreated", { canvas, source: "broadcast" });
+  }
+
+  _handleCanvasUpdated(message) {
+    const canvas = this._canvases.get(message.canvasId);
+    if (canvas) {
+      Object.assign(canvas, message.updates);
+      this._emit("canvasUpdated", {
+        canvas,
+        updates: message.updates,
+        source: "broadcast",
+      });
+    }
+  }
+
+  _handleCanvasDeleted(message) {
+    const canvas = this._canvases.get(message.canvasId);
+    this._canvases.delete(message.canvasId);
+    this._emit("canvasDeleted", {
+      canvasId: message.canvasId,
+      canvas,
+      source: "broadcast",
+    });
+  }
+
+  _handlePlacementAdded(message) {
+    const canvas = this._canvases.get(message.canvasId);
+    if (canvas) {
+      const placement = new CanvasPlacement(message.placement);
+      canvas.placements.push(placement);
+      this._emit("placementAdded", {
+        canvasId: message.canvasId,
+        placement,
+        source: "broadcast",
+      });
+    }
+  }
+
+  _handlePlacementUpdated(message) {
+    const canvas = this._canvases.get(message.canvasId);
+    if (canvas) {
+      const idx = canvas.placements.findIndex(
+        (p) => p.id === message.placement.id
+      );
+      if (idx !== -1) {
+        canvas.placements[idx] = new CanvasPlacement(message.placement);
+        this._emit("placementUpdated", {
+          canvasId: message.canvasId,
+          placement: canvas.placements[idx],
+          source: "broadcast",
+        });
+      }
+    }
+  }
+
+  _handlePlacementRemoved(message) {
+    const canvas = this._canvases.get(message.canvasId);
+    if (canvas) {
+      const idx = canvas.placements.findIndex(
+        (p) => p.id === message.placementId
+      );
+      if (idx !== -1) {
+        const removed = canvas.placements.splice(idx, 1)[0];
+        this._emit("placementRemoved", {
+          canvasId: message.canvasId,
+          placement: removed,
+          source: "broadcast",
+        });
+      }
+    }
+  }
+
+  // ===========================================================================
+  // EVENT HANDLING
+  // ===========================================================================
+
+  /**
+   * Subscribe to events
+   * @param {string} event
+   * @param {Function} callback
+   * @returns {Function} Unsubscribe function
+   */
+  on(event, callback) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(callback);
+    return () => this.off(event, callback);
+  }
+
+  /**
+   * Unsubscribe from events
+   */
+  off(event, callback) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(
+        (cb) => cb !== callback
+      );
+    }
+  }
+
+  /**
+   * Emit event
+   */
+  _emit(event, data) {
+    if (this._listeners[event]) {
+      this._listeners[event].forEach((cb) => {
+        try {
+          cb(data);
+        } catch (error) {
+          console.error(`CanvasManager event error (${event}):`, error);
+        }
+      });
+    }
+  }
+
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
+
+  /**
+   * Get current user ID from session manager
+   */
+  _getUserId() {
+    if (this._sessionManager?.getUserId) {
+      return this._sessionManager.getUserId();
+    }
+    // Fallback for dev
+    return "dev-user-001";
+  }
+
+  /**
+   * Get auth token
+   */
+  _getToken() {
+    if (this._sessionManager?.getToken) {
+      return this._sessionManager.getToken();
+    }
+    return null;
+  }
+
+  /**
+   * Make authenticated API request
+   */
+  async _fetch(endpoint, options = {}) {
+    const url = `${this._apiBaseUrl}${endpoint}`;
+    const token = this._getToken();
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = new Error(
+        `API error: ${response.status} ${response.statusText}`
+      );
+      error.status = response.status;
+      error.response = response;
+      throw error;
+    }
+
+    return response;
+  }
+
+  // ===========================================================================
+  // CLEANUP
+  // ===========================================================================
+
+  /**
+   * Clear all cached canvases
+   */
+  clearCache() {
+    this._canvases.clear();
+    this._activeCanvasId = null;
+  }
+
+  /**
+   * Dispose of the manager
+   */
+  dispose() {
+    this.clearCache();
+    Object.keys(this._listeners).forEach((event) => {
+      this._listeners[event] = [];
+    });
+  }
+}
+
+// Singleton instance
+export const canvasManager = new CanvasManager();

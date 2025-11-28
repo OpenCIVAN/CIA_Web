@@ -1,0 +1,642 @@
+// src/core/data/managers/SubsetManager.js
+// Manages Subset instances and focus mode
+//
+// ARCHITECTURE:
+// - Subsets are saved selections of canvas placements
+// - Activating a subset enters "focus mode" (viewport replacement)
+// - Server is source of truth for subset data
+// - Integrates with CanvasManager for placement references
+
+import { Subset } from "@Core/data/models/Subset.js";
+
+/**
+ * SubsetManager - Manages subsets and focus mode
+ *
+ * Responsibilities:
+ * - CRUD operations for subsets via REST API
+ * - Focus mode activation/deactivation
+ * - Visibility and sharing management
+ * - WebSocket broadcast integration
+ */
+export class SubsetManager {
+  constructor(options = {}) {
+    // Configuration
+    this._apiBaseUrl = options.apiBaseUrl || "/api";
+    this._sessionManager = options.sessionManager || null;
+    this._canvasManager = options.canvasManager || null;
+
+    // Local cache
+    this._subsets = new Map(); // subsetId -> Subset
+
+    // Focus mode state
+    this._activeSubsetId = null;
+    this._previousViewport = null; // Saved viewport before focus mode
+
+    // Selection mode state (for creating subsets)
+    this._selectionMode = false;
+    this._selectedPlacementIds = new Set();
+
+    // Event listeners
+    this._listeners = {
+      subsetLoaded: [],
+      subsetCreated: [],
+      subsetUpdated: [],
+      subsetDeleted: [],
+      focusModeEntered: [],
+      focusModeExited: [],
+      selectionChanged: [],
+      error: [],
+    };
+
+    // Bind methods
+    this.handleServerBroadcast = this.handleServerBroadcast.bind(this);
+  }
+
+  // ===========================================================================
+  // INITIALIZATION
+  // ===========================================================================
+
+  /**
+   * Initialize the subset manager
+   */
+  initialize(options = {}) {
+    if (options.apiBaseUrl) this._apiBaseUrl = options.apiBaseUrl;
+    if (options.sessionManager) this._sessionManager = options.sessionManager;
+    if (options.canvasManager) this._canvasManager = options.canvasManager;
+
+    console.log("SubsetManager: Initialized");
+  }
+
+  /**
+   * Set dependencies
+   */
+  setCanvasManager(canvasManager) {
+    this._canvasManager = canvasManager;
+  }
+
+  // ===========================================================================
+  // SUBSET CRUD
+  // ===========================================================================
+
+  /**
+   * Load subsets for a canvas
+   * @param {string} canvasId
+   * @returns {Promise<Subset[]>}
+   */
+  async loadSubsetsForCanvas(canvasId) {
+    try {
+      const response = await this._fetch(`/canvases/${canvasId}/subsets`);
+      const data = await response.json();
+
+      const subsets = (data.subsets || []).map((s) => new Subset(s));
+
+      // Update cache
+      subsets.forEach((subset) => {
+        this._subsets.set(subset.id, subset);
+      });
+
+      this._emit("subsetLoaded", { canvasId, subsets });
+
+      return subsets;
+    } catch (error) {
+      this._emit("error", { operation: "loadSubsetsForCanvas", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get a subset by ID
+   * @param {string} subsetId
+   * @returns {Promise<Subset>}
+   */
+  async getSubset(subsetId) {
+    // Check cache
+    if (this._subsets.has(subsetId)) {
+      return this._subsets.get(subsetId);
+    }
+
+    try {
+      const response = await this._fetch(`/subsets/${subsetId}`);
+      const data = await response.json();
+
+      const subset = new Subset(data);
+      this._subsets.set(subset.id, subset);
+
+      return subset;
+    } catch (error) {
+      this._emit("error", { operation: "getSubset", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new subset from selection
+   * @param {string} canvasId
+   * @param {Object} options - { name, description, placementIds }
+   * @returns {Promise<Subset>}
+   */
+  async createSubset(canvasId, options = {}) {
+    const canvas = this._canvasManager?.getCanvas(canvasId);
+    const projectId = canvas?.projectId;
+
+    const payload = {
+      name: options.name || "Untitled Focus Group",
+      description: options.description || "",
+      placementIds:
+        options.placementIds || Array.from(this._selectedPlacementIds),
+    };
+
+    try {
+      const response = await this._fetch(`/canvases/${canvasId}/subsets`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      const subset = new Subset(data);
+
+      this._subsets.set(subset.id, subset);
+
+      // Clear selection after creating subset
+      this.clearSelection();
+
+      this._emit("subsetCreated", { canvasId, subset });
+
+      return subset;
+    } catch (error) {
+      this._emit("error", { operation: "createSubset", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update a subset
+   * @param {string} subsetId
+   * @param {Object} updates - { name, description, visibility, sharedWith }
+   * @returns {Promise<Subset>}
+   */
+  async updateSubset(subsetId, updates) {
+    try {
+      const response = await this._fetch(`/subsets/${subsetId}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+
+      const data = await response.json();
+      const subset = new Subset(data);
+
+      this._subsets.set(subset.id, subset);
+      this._emit("subsetUpdated", { subset, updates });
+
+      return subset;
+    } catch (error) {
+      this._emit("error", { operation: "updateSubset", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Add placements to a subset
+   * @param {string} subsetId
+   * @param {string[]} placementIds
+   * @returns {Promise<Subset>}
+   */
+  async addPlacementsToSubset(subsetId, placementIds) {
+    const subset = this._subsets.get(subsetId);
+    if (!subset) throw new Error("Subset not found");
+
+    const newPlacementIds = [...subset.placementIds, ...placementIds];
+    return this.updateSubset(subsetId, { placementIds: newPlacementIds });
+  }
+
+  /**
+   * Remove placements from a subset
+   * @param {string} subsetId
+   * @param {string[]} placementIds
+   * @returns {Promise<Subset>}
+   */
+  async removePlacementsFromSubset(subsetId, placementIds) {
+    const subset = this._subsets.get(subsetId);
+    if (!subset) throw new Error("Subset not found");
+
+    const newPlacementIds = subset.placementIds.filter(
+      (id) => !placementIds.includes(id)
+    );
+    return this.updateSubset(subsetId, { placementIds: newPlacementIds });
+  }
+
+  /**
+   * Delete a subset
+   * @param {string} subsetId
+   * @returns {Promise<void>}
+   */
+  async deleteSubset(subsetId) {
+    // Exit focus mode if this subset is active
+    if (this._activeSubsetId === subsetId) {
+      this.exitFocusMode();
+    }
+
+    try {
+      await this._fetch(`/subsets/${subsetId}`, {
+        method: "DELETE",
+      });
+
+      const subset = this._subsets.get(subsetId);
+      this._subsets.delete(subsetId);
+
+      this._emit("subsetDeleted", { subsetId, subset });
+    } catch (error) {
+      this._emit("error", { operation: "deleteSubset", error });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // FOCUS MODE
+  // ===========================================================================
+
+  /**
+   * Enter focus mode with a subset
+   * @param {string} subsetId
+   * @param {Object} currentViewport - { row, col, rows, cols } to save
+   */
+  enterFocusMode(subsetId, currentViewport) {
+    const subset = this._subsets.get(subsetId);
+    if (!subset) {
+      console.error(
+        "SubsetManager: Cannot enter focus mode - subset not found"
+      );
+      return;
+    }
+
+    // Save current viewport for return
+    this._previousViewport = { ...currentViewport };
+    this._activeSubsetId = subsetId;
+
+    console.log(
+      `SubsetManager: Entering focus mode with subset "${subset.name}"`
+    );
+
+    this._emit("focusModeEntered", {
+      subset,
+      previousViewport: this._previousViewport,
+      layout: subset.calculateFocusLayout(),
+    });
+  }
+
+  /**
+   * Exit focus mode, return to previous viewport
+   * @returns {{ viewport: Object }|null} Previous viewport to restore
+   */
+  exitFocusMode() {
+    if (!this._activeSubsetId) {
+      console.warn("SubsetManager: Not in focus mode");
+      return null;
+    }
+
+    const subset = this._subsets.get(this._activeSubsetId);
+    const viewport = this._previousViewport;
+
+    this._activeSubsetId = null;
+    this._previousViewport = null;
+
+    console.log("SubsetManager: Exiting focus mode");
+
+    this._emit("focusModeExited", {
+      subset,
+      viewport,
+    });
+
+    return { viewport };
+  }
+
+  /**
+   * Check if currently in focus mode
+   * @returns {boolean}
+   */
+  isInFocusMode() {
+    return this._activeSubsetId !== null;
+  }
+
+  /**
+   * Get active subset (if in focus mode)
+   * @returns {Subset|null}
+   */
+  getActiveSubset() {
+    return this._activeSubsetId
+      ? this._subsets.get(this._activeSubsetId)
+      : null;
+  }
+
+  /**
+   * Get placements for the active subset
+   * @returns {CanvasPlacement[]}
+   */
+  getActiveFocusPlacements() {
+    const subset = this.getActiveSubset();
+    if (!subset || !this._canvasManager) return [];
+
+    const canvas = this._canvasManager.getCanvas(subset.canvasId);
+    if (!canvas) return [];
+
+    return subset.placementIds
+      .map((id) => canvas.getPlacementById(id))
+      .filter(Boolean);
+  }
+
+  // ===========================================================================
+  // SELECTION MODE (for creating subsets)
+  // ===========================================================================
+
+  /**
+   * Enter selection mode
+   */
+  enterSelectionMode() {
+    this._selectionMode = true;
+    this._selectedPlacementIds.clear();
+    this._emit("selectionChanged", { mode: "enter", selected: [] });
+  }
+
+  /**
+   * Exit selection mode
+   * @param {boolean} clearSelection - Whether to clear selected items
+   */
+  exitSelectionMode(clearSelection = true) {
+    this._selectionMode = false;
+    if (clearSelection) {
+      this._selectedPlacementIds.clear();
+    }
+    this._emit("selectionChanged", {
+      mode: "exit",
+      selected: Array.from(this._selectedPlacementIds),
+    });
+  }
+
+  /**
+   * Check if in selection mode
+   */
+  isInSelectionMode() {
+    return this._selectionMode;
+  }
+
+  /**
+   * Toggle placement selection
+   * @param {string} placementId
+   */
+  toggleSelection(placementId) {
+    if (this._selectedPlacementIds.has(placementId)) {
+      this._selectedPlacementIds.delete(placementId);
+    } else {
+      this._selectedPlacementIds.add(placementId);
+    }
+
+    this._emit("selectionChanged", {
+      mode: "toggle",
+      placementId,
+      selected: Array.from(this._selectedPlacementIds),
+    });
+  }
+
+  /**
+   * Add placement to selection
+   * @param {string} placementId
+   */
+  addToSelection(placementId) {
+    this._selectedPlacementIds.add(placementId);
+    this._emit("selectionChanged", {
+      mode: "add",
+      placementId,
+      selected: Array.from(this._selectedPlacementIds),
+    });
+  }
+
+  /**
+   * Remove placement from selection
+   * @param {string} placementId
+   */
+  removeFromSelection(placementId) {
+    this._selectedPlacementIds.delete(placementId);
+    this._emit("selectionChanged", {
+      mode: "remove",
+      placementId,
+      selected: Array.from(this._selectedPlacementIds),
+    });
+  }
+
+  /**
+   * Clear all selections
+   */
+  clearSelection() {
+    this._selectedPlacementIds.clear();
+    this._emit("selectionChanged", { mode: "clear", selected: [] });
+  }
+
+  /**
+   * Get selected placement IDs
+   * @returns {string[]}
+   */
+  getSelectedPlacementIds() {
+    return Array.from(this._selectedPlacementIds);
+  }
+
+  /**
+   * Check if placement is selected
+   * @param {string} placementId
+   * @returns {boolean}
+   */
+  isSelected(placementId) {
+    return this._selectedPlacementIds.has(placementId);
+  }
+
+  // ===========================================================================
+  // QUERIES
+  // ===========================================================================
+
+  /**
+   * Get all subsets for a canvas
+   * @param {string} canvasId
+   * @returns {Subset[]}
+   */
+  getSubsetsForCanvas(canvasId) {
+    return Array.from(this._subsets.values()).filter(
+      (s) => s.canvasId === canvasId
+    );
+  }
+
+  /**
+   * Get subsets visible to current user
+   * @param {string} canvasId
+   * @returns {Subset[]}
+   */
+  getVisibleSubsets(canvasId) {
+    const userId = this._getUserId();
+    return this.getSubsetsForCanvas(canvasId).filter((s) =>
+      s.canUserView(userId)
+    );
+  }
+
+  /**
+   * Get subsets that include a specific placement
+   * @param {string} placementId
+   * @returns {Subset[]}
+   */
+  getSubsetsForPlacement(placementId) {
+    return Array.from(this._subsets.values()).filter((s) =>
+      s.hasPlacement(placementId)
+    );
+  }
+
+  // ===========================================================================
+  // WEBSOCKET BROADCAST HANDLING
+  // ===========================================================================
+
+  /**
+   * Handle server broadcast events
+   */
+  handleServerBroadcast(message) {
+    console.log("SubsetManager: Received broadcast", message.type);
+
+    switch (message.type) {
+      case "subset:created":
+        this._handleSubsetCreated(message);
+        break;
+
+      case "subset:updated":
+        this._handleSubsetUpdated(message);
+        break;
+
+      case "subset:deleted":
+        this._handleSubsetDeleted(message);
+        break;
+
+      default:
+        // Ignore unknown types
+        break;
+    }
+  }
+
+  _handleSubsetCreated(message) {
+    const subset = new Subset(message.subset);
+    this._subsets.set(subset.id, subset);
+    this._emit("subsetCreated", { subset, source: "broadcast" });
+  }
+
+  _handleSubsetUpdated(message) {
+    const subset = new Subset(message.subset);
+    this._subsets.set(subset.id, subset);
+    this._emit("subsetUpdated", { subset, source: "broadcast" });
+  }
+
+  _handleSubsetDeleted(message) {
+    const subset = this._subsets.get(message.subsetId);
+    this._subsets.delete(message.subsetId);
+
+    // Exit focus mode if this was the active subset
+    if (this._activeSubsetId === message.subsetId) {
+      this._activeSubsetId = null;
+      this._previousViewport = null;
+    }
+
+    this._emit("subsetDeleted", {
+      subsetId: message.subsetId,
+      subset,
+      source: "broadcast",
+    });
+  }
+
+  // ===========================================================================
+  // EVENT HANDLING
+  // ===========================================================================
+
+  on(event, callback) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(callback);
+    return () => this.off(event, callback);
+  }
+
+  off(event, callback) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(
+        (cb) => cb !== callback
+      );
+    }
+  }
+
+  _emit(event, data) {
+    if (this._listeners[event]) {
+      this._listeners[event].forEach((cb) => {
+        try {
+          cb(data);
+        } catch (error) {
+          console.error(`SubsetManager event error (${event}):`, error);
+        }
+      });
+    }
+  }
+
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
+
+  _getUserId() {
+    if (this._sessionManager?.getUserId) {
+      return this._sessionManager.getUserId();
+    }
+    return "dev-user-001";
+  }
+
+  _getToken() {
+    if (this._sessionManager?.getToken) {
+      return this._sessionManager.getToken();
+    }
+    return null;
+  }
+
+  async _fetch(endpoint, options = {}) {
+    const url = `${this._apiBaseUrl}${endpoint}`;
+    const token = this._getToken();
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = new Error(`API error: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+
+    return response;
+  }
+
+  // ===========================================================================
+  // CLEANUP
+  // ===========================================================================
+
+  clearCache() {
+    this._subsets.clear();
+    this._activeSubsetId = null;
+    this._previousViewport = null;
+    this._selectedPlacementIds.clear();
+    this._selectionMode = false;
+  }
+
+  dispose() {
+    this.clearCache();
+    Object.keys(this._listeners).forEach((event) => {
+      this._listeners[event] = [];
+    });
+  }
+}
+
+// Singleton instance
+export const subsetManager = new SubsetManager();
