@@ -7,11 +7,11 @@
 // =============================================================================
 
 .people-panel {
-  --status-online: #{$color-status-success};
-  --status-idle: #{$color-status-warning};
+  --status-online: #{$color-success};
+  --status-idle: #{$color-warning};
   --status-away: #{$color-text-tertiary};
-  --status-dnd: #{$color-status-error};
-  --status-offline: #{$color-text-quaternary};
+  --status-dnd: #{$color-error};
+  --status-offline: #{$color-text-muted};
 }
 
 // =============================================================================
@@ -66,17 +66,17 @@
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   background: transparent;
-  border: 1px solid rgba($color-status-error, 0.3);
+  border: 1px solid rgba($color-error, 0.3);
   border-radius: $radius-sm;
-  color: $color-status-error;
+  color: $color-error;
   font-size: $font-size-xs;
   cursor: pointer;
   transition: all $transition-fast;
   flex-shrink: 0;
 
   &:hover {
-    background: rgba($color-status-error, 0.1);
-    border-color: $color-status-error;
+    background: rgba($color-error, 0.1);
+    border-color: $color-error;
   }
 }
 
@@ -312,7 +312,7 @@
 }
 
 .people-panel__crown {
-  color: $color-status-warning;
+  color: $color-warning;
   flex-shrink: 0;
 }
 
@@ -327,7 +327,7 @@
 
 .people-panel__user-last-seen {
   font-size: $font-size-xs;
-  color: $color-text-quaternary;
+  color: $color-text-muted;
   padding-left: calc(10px + $spacing-xs);
 }
 
@@ -344,7 +344,7 @@
   flex-shrink: 0;
 
   .indicator--voice {
-    color: $color-status-success;
+    color: $color-success;
   }
 
   .indicator--muted {
@@ -524,12 +524,12 @@
 
   &--leave {
     background: transparent;
-    border: 1px solid rgba($color-status-error, 0.3);
-    color: $color-status-error;
+    border: 1px solid rgba($color-error, 0.3);
+    color: $color-error;
 
     &:hover {
-      background: rgba($color-status-error, 0.1);
-      border-color: $color-status-error;
+      background: rgba($color-error, 0.1);
+      border-color: $color-error;
     }
   }
 

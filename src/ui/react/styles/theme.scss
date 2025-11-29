@@ -15,6 +15,7 @@
 // ============================================================================
 
 @forward "./mixins/glass-mixins";
+@forward "./mixins/etched-mixins";
 
 // For internal use within this file
 @use "./tokens/colors" as *;

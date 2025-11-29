@@ -1,95 +1,108 @@
-// Design Tokens: Colors - macOS-Inspired Scientific Theme
-// Semi-transparent glassmorphism with subtle colorful accents
-// Professional for scientists while being visually engaging
+// Design Tokens: Colors - CIA Web Moonlight Theme
+// =============================================================================
+// 
+// This is the primary color palette for CIA Web.
+// 
+// Design principles:
+// - True black backgrounds for OLED optimization and visual depth
+// - Vibrant moonlight pastel accents - saturated but easy on eyes
+// - Apple-inspired status colors optimized for dark mode
+// - Semantic tool colors for consistent feature identification
+// - Collaboration features highlighted with pink accent
+// - Starred/bookmarked items use warm amber
+//
+// To use: @use "theme" as *; then reference variables like $color-accent-blue
 
 // ============================================================================
-// BASE COLORS - More translucent
+// BASE COLORS - True Black Foundation
 // ============================================================================
 
-// Background layers (more transparent for real glassmorphism)
-$color-bg-base: #000000; // Deep black base
-$color-bg-primary: #0f0f0f; // Slightly lighter
-$color-bg-secondary: #1a1a1a; // Elevated surface
-$color-bg-tertiary: #222222; // More elevated
-$color-bg-elevated: #2a2a2a; // Highest elevation
+// Background layers (darkest to lightest)
+$color-bg-base: #000000;      // True black - deepest layer
+$color-bg-primary: #0f0f0f;   // Primary surfaces
+$color-bg-secondary: #1a1a1a; // Elevated surfaces
+$color-bg-tertiary: #222222;  // More elevated
+$color-bg-elevated: #2a2a2a;  // Highest elevation (modals, dropdowns)
 
-// Glassmorphism surfaces (MORE transparent)
-$color-glass-subtle: rgba(255, 255, 255, 0.02); // Very subtle
-$color-glass-light: rgba(255, 255, 255, 0.04); // Light glass
-$color-glass-medium: rgba(255, 255, 255, 0.06); // Medium glass
-$color-glass-strong: rgba(255, 255, 255, 0.09); // Strong glass
-$color-glass-panel: rgba(30, 30, 30, 0.7); // macOS-style panel
+// Glassmorphism surfaces (translucent layers)
+$color-glass-subtle: rgba(255, 255, 255, 0.02);
+$color-glass-light: rgba(255, 255, 255, 0.04);
+$color-glass-medium: rgba(255, 255, 255, 0.06);
+$color-glass-strong: rgba(255, 255, 255, 0.10);
+$color-glass-panel: rgba(30, 30, 30, 0.85);  // Panel backgrounds with blur
 
 // ============================================================================
-// BORDERS - Colorful accents
+// BORDERS - Subtle White Overlays
 // ============================================================================
 
 $color-border-subtle: rgba(255, 255, 255, 0.04);
 $color-border-default: rgba(255, 255, 255, 0.08);
 $color-border-medium: rgba(255, 255, 255, 0.12);
-$color-border-strong: rgba(255, 255, 255, 0.18);
-
-// Colorful border accents (like macOS window edges)
-$color-border-accent-blue: rgba(10, 132, 255, 0.3);
-$color-border-accent-purple: rgba(175, 82, 222, 0.3);
-$color-border-accent-pink: rgba(255, 55, 95, 0.3);
-$color-border-accent-teal: rgba(90, 200, 250, 0.3);
-$color-border-accent-orange: rgba(255, 159, 10, 0.3);
+$color-border-strong: rgba(255, 255, 255, 0.20);
+$color-border-accent: rgba(96, 165, 250, 0.4);  // For focused/selected elements
 
 // ============================================================================
-// TEXT - Crisp
+// TEXT - High Contrast Hierarchy
 // ============================================================================
 
-$color-text-primary: rgba(255, 255, 255, 0.95);
-$color-text-secondary: rgba(255, 255, 255, 0.7);
-$color-text-tertiary: rgba(255, 255, 255, 0.5);
-$color-text-muted: rgba(255, 255, 255, 0.3);
-$color-text-disabled: rgba(255, 255, 255, 0.2);
+$color-text-primary: rgba(255, 255, 255, 0.95);   // Headings, important text
+$color-text-secondary: rgba(255, 255, 255, 0.70); // Body text
+$color-text-tertiary: rgba(255, 255, 255, 0.50);  // Labels, hints
+$color-text-muted: rgba(255, 255, 255, 0.30);     // Disabled, metadata
+$color-text-disabled: rgba(255, 255, 255, 0.20);  // Disabled controls
 
 // ============================================================================
-// ACCENT COLORS - Desaturated pastels with subtle glow
+// ACCENT COLORS - Moonlight Pastels
 // ============================================================================
 
-// Primary accent - Cyan-blue (scientific, trustworthy)
-$color-accent-primary: #6eb6ff;
-$color-accent-primary-hover: #8ac5ff;
-$color-accent-primary-active: #5aa7f0;
-$color-accent-primary-glow: rgba(110, 182, 255, 0.15);
+// Primary accent - Blue (main UI elements, selections, focus)
+$color-accent-primary: #60a5fa;
+$color-accent-primary-hover: #78b5fb;
+$color-accent-primary-active: #4a95f0;
+$color-accent-primary-glow: rgba(96, 165, 250, 0.15);
 
-// Secondary accents - Moonlight palette
-$color-accent-blue: #60a5fa; // Electric blue - desaturated
-$color-accent-blue-glow: rgba(96, 165, 250, 0.2);
+// Blue - Electric blue (files, navigation, links)
+$color-accent-blue: #60a5fa;
+$color-accent-blue-glow: rgba(96, 165, 250, 0.20);
 
-$color-accent-purple: #c084fc; // Soft purple - lavender shifted
+// Purple - Soft lavender (filters, analysis, VTK)
+$color-accent-purple: #c084fc;
 $color-accent-purple-glow: rgba(192, 132, 252, 0.18);
 
-$color-accent-pink: #fb7185; // Rose pink - sophisticated
+// Pink - Rose (sharing, collaboration, notifications)
+$color-accent-pink: #fb7185;
 $color-accent-pink-glow: rgba(251, 113, 133, 0.18);
 
-$color-accent-orange: #fbbf24; // Amber - warm but not harsh
-$color-accent-orange-glow: rgba(251, 191, 36, 0.18);
+// Amber - Warm gold (starred, bookmarks, warnings)
+$color-accent-amber: #fbbf24;
+$color-accent-amber-glow: rgba(251, 191, 36, 0.18);
 
-$color-accent-green: #34d399; // Emerald - scientific green
+// Orange - Alias for amber (backwards compatibility)
+$color-accent-orange: $color-accent-amber;
+$color-accent-orange-glow: $color-accent-amber-glow;
+
+// Green - Emerald (active states, loaded, success)
+$color-accent-green: #34d399;
 $color-accent-green-glow: rgba(52, 211, 153, 0.18);
 
-$color-accent-indigo: #a78bfa; // Violet - deeper purple
-$color-accent-indigo-glow: rgba(167, 139, 250, 0.18);
-
-// Aliases for compatibility
-$color-accent-teal: #7dd3fc; // Sky blue
+// Teal/Sky - Light cyan (datasets, secondary nav)
+$color-accent-teal: #7dd3fc;
 $color-accent-teal-glow: rgba(125, 211, 252, 0.18);
-
 $color-accent-sky: $color-accent-teal;
 $color-accent-sky-glow: $color-accent-teal-glow;
 
-$color-accent-amber: $color-accent-orange;
-$color-accent-amber-glow: $color-accent-orange-glow;
-
+// Indigo/Violet - Deep purple (annotations, special tools)
+$color-accent-indigo: #a78bfa;
+$color-accent-indigo-glow: rgba(167, 139, 250, 0.18);
 $color-accent-violet: $color-accent-indigo;
 $color-accent-violet-glow: $color-accent-indigo-glow;
 
+// Cyan - For backwards compatibility
+$color-accent-cyan: $color-accent-teal;
+$color-accent-cyan-glow: $color-accent-teal-glow;
+
 // ============================================================================
-// STATUS COLORS
+// STATUS COLORS - Apple-Inspired
 // ============================================================================
 
 $color-success: #30d158;
@@ -112,14 +125,14 @@ $color-info-border: rgba(10, 132, 255, 0.25);
 // INTERACTIVE STATES
 // ============================================================================
 
-$color-hover-bg: rgba(255, 255, 255, 0.05);
+$color-hover-bg: rgba(255, 255, 255, 0.04);
 $color-hover-border: rgba(255, 255, 255, 0.15);
 
 $color-active-bg: rgba(255, 255, 255, 0.08);
-$color-active-border: rgba(255, 255, 255, 0.2);
+$color-active-border: rgba(255, 255, 255, 0.20);
 
-$color-focus-ring: rgba(90, 200, 250, 0.5); // Teal focus ring
-$color-focus-glow: rgba(90, 200, 250, 0.15);
+$color-focus-ring: rgba(96, 165, 250, 0.4);
+$color-focus-glow: rgba(96, 165, 250, 0.2);
 
 $color-disabled-bg: rgba(255, 255, 255, 0.02);
 $color-disabled-text: rgba(255, 255, 255, 0.15);
@@ -129,107 +142,124 @@ $color-disabled-border: rgba(255, 255, 255, 0.04);
 // OVERLAY & BACKDROP
 // ============================================================================
 
-$color-overlay-light: rgba(0, 0, 0, 0.4);
-$color-overlay-medium: rgba(0, 0, 0, 0.6);
-$color-overlay-heavy: rgba(0, 0, 0, 0.8);
-
-$color-backdrop-blur: rgba(10, 10, 10, 0.75); // More transparent for blur
-
-// ============================================================================
-// TOOL-SPECIFIC COLORS (colorful categorization)
-// ============================================================================
-
-$color-tool-files: #0a84ff; // Blue
-$color-tool-visualize: #af52de; // Purple
-$color-tool-analyze: #ff9f0a; // Orange
-$color-tool-transform: #30d158; // Green
-$color-tool-annotate: #ff375f; // Pink
-$color-tool-measure: #5ac8fa; // Teal
+$color-overlay-light: rgba(0, 0, 0, 0.5);
+$color-overlay-medium: rgba(0, 0, 0, 0.7);
+$color-overlay-heavy: rgba(0, 0, 0, 0.85);
+$color-backdrop-blur: rgba(15, 15, 15, 0.85);
 
 // ============================================================================
-// GRADIENT BORDERS
+// SEMANTIC: WORKSPACE TYPES
 // ============================================================================
 
-// For use with border-image or as background with clip-path
-$gradient-border-vibrant: linear-gradient(
-  135deg,
-  rgba(90, 200, 250, 0.6),
-  // Teal
-  rgba(175, 82, 222, 0.6),
-  // Purple
-  rgba(255, 55, 95, 0.6) // Pink
-);
-
-$gradient-border-cool: linear-gradient(
-  135deg,
-  rgba(10, 132, 255, 0.5),
-  // Blue
-  rgba(90, 200, 250, 0.5),
-  // Teal
-  rgba(94, 92, 230, 0.5) // Indigo
-);
-
-$gradient-border-warm: linear-gradient(
-  135deg,
-  rgba(255, 159, 10, 0.5),
-  // Orange
-  rgba(255, 55, 95, 0.5),
-  // Pink
-  rgba(175, 82, 222, 0.5) // Purple
-);
-
-$gradient-border-subtle: linear-gradient(
-  135deg,
-  rgba(255, 255, 255, 0.1),
-  rgba(255, 255, 255, 0.05),
-  rgba(255, 255, 255, 0.1)
-);
+$color-workspace-personal: $color-accent-green;
+$color-workspace-project: $color-accent-blue;
+$color-workspace-breakout: $color-accent-purple;
 
 // ============================================================================
-// CONTEXT COLORS (for different panel types)
+// SEMANTIC: TOOL/TAB COLORS
 // ============================================================================
 
-// Use these for top borders or accent strips on cards
-$color-context-data: $color-accent-teal; // Data-related
-$color-context-analysis: $color-accent-purple; // Analysis-related
-$color-context-collaboration: $color-accent-blue; // People/collab
-$color-context-visualization: $color-accent-pink; // Viz-related
-$color-context-system: $color-accent-orange; // System/settings
+$color-tool-files: $color-accent-blue;
+$color-tool-datasets: $color-accent-teal;
+$color-tool-instance: $color-accent-orange;
+$color-tool-layout: $color-accent-green;
+$color-tool-annotations: $color-accent-pink;
+$color-tool-cursors: $color-accent-amber;
+$color-tool-filters: $color-accent-indigo;
+$color-tool-bookmarks: $color-accent-purple;
 
-// These provide semantic naming for user presence states
-
-// ============================================================================
-// USER STATUS COLORS
-// ============================================================================
-
-// Online - Active and available
-$color-status-success: #30d158; // Green (same as $color-success)
-$color-status-online: $color-status-success;
-
-// Idle - Temporarily away (auto-detected)
-$color-status-warning: #ff9f0a; // Amber/Orange
-$color-status-idle: $color-status-warning;
-
-// Away - Manually set away
-$color-status-away: rgba(255, 255, 255, 0.4); // Muted gray
-
-// Do Not Disturb - Blocking notifications
-$color-status-error: #ff453a; // Red
-$color-status-dnd: $color-status-error;
-
-// Offline - Not connected
-$color-status-offline: rgba(255, 255, 255, 0.2); // Very muted
+// Legacy aliases
+$color-tool-files: $color-accent-blue;
+$color-tool-visualize: $color-accent-purple;
+$color-tool-analyze: $color-accent-orange;
+$color-tool-transform: $color-accent-green;
+$color-tool-annotate: $color-accent-pink;
+$color-tool-measure: $color-accent-teal;
 
 // ============================================================================
-// QUATERNARY TEXT (if not already present)
+// SEMANTIC: FILE TYPES
 // ============================================================================
 
-// This is used for very de-emphasized text like "last seen" timestamps
-$color-text-quaternary: rgba(255, 255, 255, 0.35);
+$color-filetype-nifti: $color-accent-blue;
+$color-filetype-dicom: $color-accent-teal;
+$color-filetype-vtk: $color-accent-purple;
+$color-filetype-folder: $color-accent-amber;
+$color-filetype-default: $color-text-muted;
 
 // ============================================================================
-// ACCENT HOVER STATES (if not already present)
+// SEMANTIC: INSTANCE/VIEW COLORS
 // ============================================================================
 
-$color-accent-blue-hover: #7cb8ff; // Lighter blue for hover
-$color-accent-primary-hover: #8ac5ff; // Should already exist but adding for safety
+// Colors for differentiating multiple open views
+$color-instance-1: $color-accent-blue;
+$color-instance-2: $color-accent-green;
+$color-instance-3: $color-accent-teal;
+$color-instance-4: $color-accent-pink;
+$color-instance-5: $color-accent-purple;
+$color-instance-6: $color-accent-amber;
+
+// Named aliases for clarity
+$color-instance-blue: $color-accent-blue;
+$color-instance-green: $color-accent-green;
+$color-instance-teal: $color-accent-teal;
+$color-instance-pink: $color-accent-pink;
+$color-instance-purple: $color-accent-purple;
+$color-instance-amber: $color-accent-amber;
+
+// ============================================================================
+// CSS CUSTOM PROPERTIES EXPORT
+// ============================================================================
+
+// Use this mixin in global.scss to export CSS variables for JS interop
+// Example: background: rgba(var(--color-accent-blue-rgb), 0.5);
+
+@mixin export-css-variables {
+  :root {
+    // Backgrounds
+    --color-bg-base: #{$color-bg-base};
+    --color-bg-primary: #{$color-bg-primary};
+    --color-bg-secondary: #{$color-bg-secondary};
+    --color-bg-tertiary: #{$color-bg-tertiary};
+    --color-bg-elevated: #{$color-bg-elevated};
+
+    // Text
+    --color-text-primary: #{$color-text-primary};
+    --color-text-secondary: #{$color-text-secondary};
+    --color-text-tertiary: #{$color-text-tertiary};
+    --color-text-muted: #{$color-text-muted};
+
+    // Borders
+    --color-border-subtle: #{$color-border-subtle};
+    --color-border-default: #{$color-border-default};
+    --color-border-medium: #{$color-border-medium};
+    --color-border-strong: #{$color-border-strong};
+
+    // Accents (hex values)
+    --color-accent-primary: #{$color-accent-primary};
+    --color-accent-blue: #{$color-accent-blue};
+    --color-accent-purple: #{$color-accent-purple};
+    --color-accent-pink: #{$color-accent-pink};
+    --color-accent-amber: #{$color-accent-amber};
+    --color-accent-green: #{$color-accent-green};
+    --color-accent-teal: #{$color-accent-teal};
+    --color-accent-indigo: #{$color-accent-indigo};
+
+    // Accents (RGB for rgba() usage with CSS variables)
+    --color-accent-blue-rgb: 96, 165, 250;
+    --color-accent-purple-rgb: 192, 132, 252;
+    --color-accent-pink-rgb: 251, 113, 133;
+    --color-accent-amber-rgb: 251, 191, 36;
+    --color-accent-green-rgb: 52, 211, 153;
+    --color-accent-teal-rgb: 125, 211, 252;
+    --color-accent-indigo-rgb: 167, 139, 250;
+
+    // Status
+    --color-success: #{$color-success};
+    --color-warning: #{$color-warning};
+    --color-error: #{$color-error};
+    --color-info: #{$color-info};
+
+    // Glass
+    --color-glass-panel: #{$color-glass-panel};
+  }
+}

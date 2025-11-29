@@ -19,8 +19,8 @@
       &::before {
         background: linear-gradient(
           90deg,
-          rgba($color-status-error, 0.3),
-          rgba($color-status-error, 0.15)
+          rgba($color-error, 0.3),
+          rgba($color-error, 0.15)
         );
       }
     }
@@ -29,12 +29,12 @@
       cursor: not-allowed;
 
       &::-webkit-slider-thumb {
-        background: $color-status-error;
+        background: $color-error;
         cursor: not-allowed;
       }
 
       &::-moz-range-thumb {
-        background: $color-status-error;
+        background: $color-error;
         cursor: not-allowed;
       }
     }
@@ -82,9 +82,9 @@
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: $color-status-error;
-  background: rgba($color-status-error, 0.15);
-  border: 1px solid rgba($color-status-error, 0.3);
+  color: $color-error;
+  background: rgba($color-error, 0.15);
+  border: 1px solid rgba($color-error, 0.3);
   border-radius: $radius-sm;
 }
 
@@ -268,10 +268,10 @@
 
 .slider-disabled-reason {
   font-size: $font-size-xs;
-  color: $color-status-error;
+  color: $color-error;
   text-align: center;
   padding: $spacing-xs;
-  background: rgba($color-status-error, 0.08);
+  background: rgba($color-error, 0.08);
   border-radius: $radius-sm;
   margin-top: $spacing-xs;
 }

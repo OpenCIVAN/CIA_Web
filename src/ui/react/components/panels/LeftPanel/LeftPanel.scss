@@ -1,0 +1,614 @@
+// src/ui/react/components/panels/LeftPanel/LeftPanel.scss
+// Styles for the unified left panel with activity bar
+// Uses design tokens and etched mixins for consistent styling
+//
+// Layout Structure:
+// - Activity bar: Fixed 48px width, always visible
+// - Content panel: Fills remaining space (flex: 1)
+// - When collapsed: ResizablePanel sets total width to 48px, only activity bar shows
+
+@use "theme" as *;
+
+// =============================================================================
+// PANEL CONTAINER
+// =============================================================================
+
+.left-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: $color-bg-base;
+  overflow: hidden;
+}
+
+// =============================================================================
+// ACTIVITY BAR - Fixed width, always visible
+// =============================================================================
+
+.left-panel__activity-bar {
+  width: 48px;
+  min-width: 48px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-sm 0;
+  gap: $spacing-xs;
+  background: $color-bg-primary;
+  border-right: 1px solid $color-border-subtle;
+}
+
+.left-panel__activity-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.left-panel__activity-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Default etched state
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  &:hover:not(.active) {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+    color: $color-text-secondary;
+  }
+
+  // Active state with color accent
+  &.active {
+    box-shadow: 0 0 10px var(--glow-color);
+
+    // Color variants based on data-color attribute
+    &[data-color="blue"] {
+      --glow-color: #{rgba($color-accent-blue, 0.2)};
+      background: rgba($color-accent-blue, 0.15);
+      border: 1px solid rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="teal"] {
+      --glow-color: #{rgba($color-accent-teal, 0.2)};
+      background: rgba($color-accent-teal, 0.15);
+      border: 1px solid rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+
+    &[data-color="orange"] {
+      --glow-color: #{rgba($color-accent-orange, 0.2)};
+      background: rgba($color-accent-orange, 0.15);
+      border: 1px solid rgba($color-accent-orange, 0.4);
+      color: $color-accent-orange;
+    }
+
+    &[data-color="green"] {
+      --glow-color: #{rgba($color-accent-green, 0.2)};
+      background: rgba($color-accent-green, 0.15);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="pink"] {
+      --glow-color: #{rgba($color-accent-pink, 0.2)};
+      background: rgba($color-accent-pink, 0.15);
+      border: 1px solid rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+
+    &[data-color="amber"] {
+      --glow-color: #{rgba($color-accent-amber, 0.2)};
+      background: rgba($color-accent-amber, 0.15);
+      border: 1px solid rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
+    }
+
+    &[data-color="indigo"] {
+      --glow-color: #{rgba($color-accent-indigo, 0.2)};
+      background: rgba($color-accent-indigo, 0.15);
+      border: 1px solid rgba($color-accent-indigo, 0.4);
+      color: $color-accent-indigo;
+    }
+
+    &[data-color="purple"] {
+      --glow-color: #{rgba($color-accent-purple, 0.2)};
+      background: rgba($color-accent-purple, 0.15);
+      border: 1px solid rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+  }
+}
+
+// "Soon" badge for unimplemented tabs
+.left-panel__activity-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  font-size: 7px;
+  font-weight: $font-weight-bold;
+  padding: 1px 3px;
+  background: $color-accent-pink;
+  color: $color-bg-base;
+  border-radius: $radius-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.left-panel__activity-spacer {
+  flex: 1;
+}
+
+// =============================================================================
+// CONTENT PANEL - Fills remaining space
+// =============================================================================
+
+.left-panel__content {
+  flex: 1;
+  min-width: 0; // Allow shrinking
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: $color-glass-panel;
+  backdrop-filter: $blur-strong saturate(200%);
+  overflow: hidden;
+
+  // Left accent border based on active tab color
+  &[data-color="blue"] {
+    border-left: 2px solid rgba($color-accent-blue, 0.4);
+  }
+
+  &[data-color="teal"] {
+    border-left: 2px solid rgba($color-accent-teal, 0.4);
+  }
+
+  &[data-color="orange"] {
+    border-left: 2px solid rgba($color-accent-orange, 0.4);
+  }
+
+  &[data-color="green"] {
+    border-left: 2px solid rgba($color-accent-green, 0.4);
+  }
+
+  &[data-color="pink"] {
+    border-left: 2px solid rgba($color-accent-pink, 0.4);
+  }
+
+  &[data-color="amber"] {
+    border-left: 2px solid rgba($color-accent-amber, 0.4);
+  }
+
+  &[data-color="indigo"] {
+    border-left: 2px solid rgba($color-accent-indigo, 0.4);
+  }
+
+  &[data-color="purple"] {
+    border-left: 2px solid rgba($color-accent-purple, 0.4);
+  }
+}
+
+// =============================================================================
+// PLACEHOLDER CONTENT
+// =============================================================================
+
+.left-panel__placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-muted;
+}
+
+.left-panel__placeholder-icon {
+  margin-bottom: $spacing-md;
+  opacity: 0.5;
+
+  // Color variants
+  &[data-color="blue"] {
+    color: $color-accent-blue;
+  }
+  &[data-color="teal"] {
+    color: $color-accent-teal;
+  }
+  &[data-color="orange"] {
+    color: $color-accent-orange;
+  }
+  &[data-color="green"] {
+    color: $color-accent-green;
+  }
+  &[data-color="pink"] {
+    color: $color-accent-pink;
+  }
+  &[data-color="amber"] {
+    color: $color-accent-amber;
+  }
+  &[data-color="indigo"] {
+    color: $color-accent-indigo;
+  }
+  &[data-color="purple"] {
+    color: $color-accent-purple;
+  }
+}
+
+.left-panel__placeholder-title {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.left-panel__placeholder-text {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  max-width: 200px;
+}
+
+// =============================================================================
+// SHARED PANEL HEADER (used by tab content components)
+// =============================================================================
+
+.panel-header {
+  @include etched-bar;
+  padding: $spacing-sm $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-secondary;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__action-btn {
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-xs;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+// =============================================================================
+// SHARED SEARCH BAR
+// =============================================================================
+
+.panel-search {
+  padding: $spacing-sm $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+
+  &__wrapper {
+    @include panel-search-input;
+  }
+}
+
+// =============================================================================
+// SHARED TOOLBAR
+// =============================================================================
+
+.panel-toolbar {
+  padding: 5px $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+
+  &__group {
+    @include view-mode-group;
+  }
+
+  &__toggle {
+    @include view-mode-button;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__info {
+    font-size: 9px;
+    color: $color-text-muted;
+
+    strong {
+      color: $color-accent-green;
+    }
+  }
+}
+
+// =============================================================================
+// FILTER TOGGLES
+// =============================================================================
+
+.filter-toggle {
+  @include filter-toggle;
+}
+
+// =============================================================================
+// SHARED FOOTER
+// =============================================================================
+
+.panel-footer {
+  @include panel-footer;
+
+  &__btn {
+    @include footer-action-button;
+
+    &--primary {
+      flex: 1;
+    }
+
+    &--icon {
+      flex: none;
+      padding: 7px $spacing-md;
+    }
+  }
+}
+
+// =============================================================================
+// SECTION HEADERS (collapsible tree sections)
+// =============================================================================
+
+.tree-section {
+  display: flex;
+  flex-direction: column;
+
+  &--expanded {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &--collapsed {
+    flex: none;
+  }
+
+  &--docked {
+    border-top: 1px solid $color-border-subtle;
+    flex: none;
+    max-height: 180px;
+  }
+}
+
+.tree-section__header {
+  @include section-header;
+}
+
+.tree-section__content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.tree-section__empty {
+  padding: $spacing-lg;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+}
+
+// =============================================================================
+// TREE ITEMS (files and datasets)
+// =============================================================================
+
+.tree-item {
+  @include tree-item;
+
+  &--folder {
+    font-weight: $font-weight-medium;
+
+    .item-name {
+      color: $color-text-primary;
+    }
+  }
+
+  &--file {
+    cursor: grab;
+  }
+
+  &--view {
+    margin-left: 20px;
+    border-radius: 0 $radius-sm $radius-sm 0;
+  }
+
+  &--loading {
+    opacity: 0.7;
+  }
+
+  &--empty {
+    justify-content: center;
+    color: $color-text-muted;
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+// =============================================================================
+// FILE TYPE ICONS
+// =============================================================================
+
+.file-icon {
+  &--nifti {
+    color: $color-accent-blue;
+  }
+  &--dicom {
+    color: $color-accent-teal;
+  }
+  &--vtk {
+    color: $color-accent-purple;
+  }
+  &--folder {
+    color: $color-accent-amber;
+  }
+  &--default {
+    color: $color-text-muted;
+  }
+}
+
+// =============================================================================
+// GRID VIEW (thumbnails)
+// =============================================================================
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+}
+
+.file-card {
+  @include grid-thumbnail-card;
+}
+
+// =============================================================================
+// STATUS INDICATORS
+// =============================================================================
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+
+    &--active {
+      background: $color-accent-green;
+    }
+    &--inactive {
+      background: $color-text-muted;
+    }
+    &--shared {
+      background: $color-accent-pink;
+    }
+    &--loading {
+      background: $color-accent-amber;
+      animation: pulse 1s ease-in-out infinite;
+    }
+  }
+}
+
+// =============================================================================
+// BADGES
+// =============================================================================
+
+.badge {
+  font-size: 8px;
+  font-weight: $font-weight-semibold;
+  padding: 1px 5px;
+  border-radius: $radius-full;
+
+  &--count {
+    background: rgba($color-accent-purple, 0.15);
+    color: $color-accent-purple;
+  }
+
+  &--new {
+    background: $color-accent-pink;
+    color: $color-bg-base;
+  }
+
+  &--workspace {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-muted;
+  }
+}
+
+// =============================================================================
+// STAR BUTTON
+// =============================================================================
+
+.star-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: $color-text-muted;
+  transition: all $transition-fast;
+
+  &:hover {
+    color: $color-accent-amber;
+  }
+
+  &--starred {
+    color: $color-accent-amber;
+  }
+}
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

@@ -197,7 +197,7 @@ $avatar-font-lg: 18px;
     height: 10px;
     border-radius: $radius-full;
     border: 2px solid $color-bg-primary;
-    background: var(--status-color, $color-status-success);
+    background: var(--status-color, $color-success);
   }
 
   &.user-avatar--xs::after {

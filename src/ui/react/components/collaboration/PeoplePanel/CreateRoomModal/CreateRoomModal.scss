@@ -125,7 +125,7 @@
     }
 
     &.error {
-      border-color: $color-status-error;
+      border-color: $color-error;
     }
   }
 }
@@ -135,7 +135,7 @@
   align-items: center;
   gap: $spacing-xs;
   font-size: $font-size-xs;
-  color: $color-status-error;
+  color: $color-error;
 
   svg {
     flex-shrink: 0;
@@ -276,9 +276,9 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-status-error, 0.15);
-    border-color: rgba($color-status-error, 0.3);
-    color: $color-status-error;
+    background: rgba($color-error, 0.15);
+    border-color: rgba($color-error, 0.3);
+    color: $color-error;
   }
 }
 
@@ -369,7 +369,7 @@
     color: white;
 
     &:hover {
-      background: $color-accent-blue-hover;
+      background: $color-accent-primary-hover;
     }
 
     &:disabled {

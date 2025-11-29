@@ -7,10 +7,10 @@
 // =============================================================================
 
 .user-status-editor {
-  --status-online: #{$color-status-success};
-  --status-idle: #{$color-status-warning};
+  --status-online: #{$color-success};
+  --status-idle: #{$color-warning};
   --status-away: #{$color-text-tertiary};
-  --status-dnd: #{$color-status-error};
+  --status-dnd: #{$color-error};
 }
 
 // =============================================================================
@@ -210,7 +210,7 @@
 
 .user-status-editor__char-count {
   font-size: $font-size-xs;
-  color: $color-text-quaternary;
+  color: $color-text-muted;
   text-align: right;
 }
 
@@ -303,7 +303,7 @@
     color: white;
 
     &:hover {
-      background: $color-accent-blue-hover;
+      background: $color-accent-primary-hover;
     }
   }
 }
@@ -314,8 +314,8 @@
 
 .user-status-editor__audit-note {
   padding: $spacing-sm $spacing-lg;
-  background: rgba($color-status-warning, 0.08);
-  border-top: 1px solid rgba($color-status-warning, 0.2);
+  background: rgba($color-warning, 0.08);
+  border-top: 1px solid rgba($color-warning, 0.2);
 
   span {
     font-size: $font-size-xs;

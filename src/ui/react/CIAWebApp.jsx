@@ -8,6 +8,7 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
+import { LeftPanel } from '@UI/react/components/panels/LeftPanel';
 import { FilesPanel } from "@UI/react/components/panels/FilesPanel";
 import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/WorkspaceGrid";
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
@@ -43,6 +44,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
 
   // Workspace state
   const { workspaces, currentWorkspace, selectWorkspace } = useWorkspaces({ userId });
+  const workspaceId = 'personal';
 
   // View mode state (Desktop/VR)
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
@@ -196,7 +198,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       }
 
       // Main panels
-      leftPanel={<FilesPanel />}
+      leftPanel={<LeftPanel workspaceId={workspaceId} />}
       centerPanel={renderCenterPanel()}
       rightPanel={<RightCollaborationPanel />}
 

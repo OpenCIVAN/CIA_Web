@@ -1,0 +1,423 @@
+// src/ui/react/components/panels/LeftPanel/tabs/_tabs.scss
+// Shared and tab-specific styles for left panel content tabs
+// Import this in LeftPanel.scss or include in component-level imports
+
+@use "theme" as *;
+
+// =============================================================================
+// TAB CONTAINERS - Must fill available space
+// =============================================================================
+
+.files-tab,
+.datasets-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  &__sections {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+// =============================================================================
+// FILTER PANEL (expandable filters)
+// =============================================================================
+
+.panel-filters {
+  padding: $spacing-sm $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+  }
+
+  &__clear {
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    font-size: 8px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0 $spacing-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// CONTEXT MENU
+// =============================================================================
+
+.context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-dropdown - 1;
+}
+
+.context-menu {
+  position: fixed;
+  background: $color-glass-panel;
+  backdrop-filter: $blur-strong saturate(200%);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  padding: $spacing-xs;
+  min-width: 160px;
+  z-index: $z-dropdown;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    cursor: pointer;
+    text-align: left;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-primary;
+    }
+  }
+
+  &__divider {
+    border-top: 1px solid $color-border-subtle;
+    margin: $spacing-xs 0;
+  }
+}
+
+// =============================================================================
+// FILTER TOGGLE BUTTON (with color variants)
+// =============================================================================
+
+.filter-toggle {
+  padding: 3px 6px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Default (inactive) state
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  opacity: 0.6;
+
+  &:hover:not(.active) {
+    opacity: 0.8;
+    color: $color-text-secondary;
+  }
+
+  // Active state with color variants
+  &.active {
+    opacity: 1;
+
+    &[data-color="green"],
+    &:not([data-color]) {
+      background: rgba($color-accent-green, 0.15);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+      box-shadow: 0 0 10px rgba($color-accent-green, 0.2);
+    }
+
+    &[data-color="muted"] {
+      background: rgba($color-text-muted, 0.15);
+      border: 1px solid rgba($color-text-muted, 0.4);
+      color: $color-text-secondary;
+      box-shadow: none;
+    }
+
+    &[data-color="pink"] {
+      background: rgba($color-accent-pink, 0.15);
+      border: 1px solid rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+      box-shadow: 0 0 10px rgba($color-accent-pink, 0.2);
+    }
+
+    &[data-color="blue"] {
+      background: rgba($color-accent-blue, 0.15);
+      border: 1px solid rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+      box-shadow: 0 0 10px rgba($color-accent-blue, 0.2);
+    }
+
+    &[data-color="purple"] {
+      background: rgba($color-accent-purple, 0.15);
+      border: 1px solid rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+      box-shadow: 0 0 10px rgba($color-accent-purple, 0.2);
+    }
+  }
+
+  .count {
+    font-size: 9px;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+// =============================================================================
+// VIEW-SPECIFIC STYLES
+// =============================================================================
+
+.view-shared-by {
+  color: $color-text-muted;
+  font-size: 9px;
+}
+
+.view-indicators {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.indicator-icon {
+  &--shared {
+    color: $color-accent-pink;
+  }
+
+  &--saved {
+    color: $color-accent-amber;
+  }
+}
+
+// =============================================================================
+// TREE ITEM MORE BUTTON
+// =============================================================================
+
+.tree-item__more-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: $color-text-muted;
+  border-radius: $radius-xs;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// FILES GRID (Thumbnail View)
+// =============================================================================
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+}
+
+.file-card {
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  cursor: grab;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-border-medium;
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    background: rgba($color-accent-blue, 0.1);
+    border-color: rgba($color-accent-blue, 0.4);
+  }
+
+  .thumbnail {
+    aspect-ratio: 4/3;
+    background: $color-bg-base;
+    border-radius: $radius-sm;
+    margin-bottom: $spacing-xs;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    &__preview {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .thumbnail-actions {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: flex;
+    gap: 2px;
+    transition: opacity $transition-fast;
+  }
+
+  .thumbnail-action {
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: $radius-xs;
+    padding: 3px;
+    cursor: pointer;
+    color: $color-text-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: $color-text-primary;
+    }
+  }
+
+  .file-name {
+    font-size: 9px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-size {
+    font-size: 8px;
+    color: $color-text-muted;
+  }
+}
+
+// =============================================================================
+// FOOTER DROPZONE STATE
+// =============================================================================
+
+.panel-footer__dropzone {
+  flex: 1;
+  padding: $spacing-md;
+  border: 2px dashed $color-accent-blue;
+  border-radius: $radius-sm;
+  text-align: center;
+  color: $color-accent-blue;
+  font-size: $font-size-xs;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+// =============================================================================
+// TOOLBAR VIEW MODE GROUP
+// =============================================================================
+
+.panel-toolbar__group {
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
+}
+
+.panel-toolbar__toggle {
+  padding: 3px;
+  border-radius: $radius-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Default state
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  &:hover:not(.active) {
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.4);
+    color: $color-accent-blue;
+    box-shadow: 0 0 10px rgba($color-accent-blue, 0.2);
+  }
+}
+
+// =============================================================================
+// SELECTION INDICATOR
+// =============================================================================
+
+.selection-indicator {
+  padding: 5px $spacing-sm;
+  background: rgba($color-accent-blue, 0.1);
+  border-bottom: 1px solid rgba($color-accent-blue, 0.3);
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+
+  &__text {
+    font-size: $font-size-xs;
+    color: $color-accent-blue;
+    flex: 1;
+  }
+
+  &__clear {
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    font-size: 9px;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// HINT BAR (bottom tips)
+// =============================================================================
+
+.panel-hint {
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-accent-primary, 0.05);
+  border-top: 1px solid rgba($color-accent-primary, 0.15);
+  flex-shrink: 0;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+
+  strong {
+    color: $color-accent-primary;
+    font-weight: $font-weight-semibold;
+  }
+}
