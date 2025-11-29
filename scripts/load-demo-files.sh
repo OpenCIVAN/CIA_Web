@@ -1,16 +1,18 @@
 #!/bin/bash
 # load-demo-files.sh
-# Uploads demo VTP files to MinIO via the API for testing/demos
+# Uploads demo VTP files to the API with "Examples" folder organization
 
 set -e
 
 API_URL="${API_URL:-http://localhost:3001}"
 PROJECT_ID="00000000-0000-0000-0000-000000000001"
 VTP_DIR="public/vtp_files"
+FOLDER_NAME="Examples"
 
 echo "📦 Loading demo files into CIA Web..."
 echo "   API: $API_URL"
 echo "   Project: $PROJECT_ID"
+echo "   Folder: $FOLDER_NAME"
 echo ""
 
 if [ ! -d "$VTP_DIR" ]; then
@@ -48,6 +50,7 @@ for file in "$VTP_DIR"/*.vtp; do
 
         response=$(curl -s -X POST "$API_URL/api/projects/$PROJECT_ID/files" \
             -F "file=@$file" \
+            -F "folder=$FOLDER_NAME" \
             -F "uploadedBy=demo@cia-web.local" 2>&1)
 
         if echo "$response" | grep -q '"success":true'; then

@@ -71,6 +71,8 @@ export class InstanceTypeHandler {
    *     extension: 'vtp',
    *     mimeType: 'application/vnd.vtk.polydata+xml',
    *     displayName: 'VTK PolyData',
+   *     icon: "box",           // Lucide icon name
+   *     color: "#c084fc",    // Hex color for this type
    *     capabilities: {
    *       canRender: true,
    *       canExtractMetadata: true,

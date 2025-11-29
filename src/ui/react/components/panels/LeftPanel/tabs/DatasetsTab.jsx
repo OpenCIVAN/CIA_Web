@@ -32,6 +32,7 @@ import {
     Save,
     Star,
 } from 'lucide-react';
+import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 
 // =============================================================================
 // DATASET TYPE UTILITIES
@@ -63,8 +64,8 @@ function ViewItem({ view, isInSharedSection = false }) {
         <div
             className={`tree-item tree-item--view ${isActive ? 'active' : ''}`}
             style={{
-                background: isActive 
-                    ? `rgba(var(--view-color-rgb, 96,165,250), 0.08)` 
+                background: isActive
+                    ? `rgba(var(--view-color-rgb, 96,165,250), 0.08)`
                     : isHovered ? 'rgba(255,255,255,0.02)' : 'transparent',
                 borderLeftColor: isActive ? view.instanceColor : 'transparent',
                 opacity: inDifferentWorkspace && isInSharedSection ? 0.7 : 1,
@@ -74,8 +75,8 @@ function ViewItem({ view, isInSharedSection = false }) {
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Status dot */}
-            <Circle 
-                size={8} 
+            <Circle
+                size={8}
                 fill={isActive ? view.instanceColor : 'none'}
                 style={{ color: isActive ? view.instanceColor : 'var(--color-text-muted)' }}
             />
@@ -92,8 +93,8 @@ function ViewItem({ view, isInSharedSection = false }) {
             <div className="view-indicators">
                 {/* Shared badge (in Active section) */}
                 {view.isShared && !isInSharedSection && (
-                    <Users 
-                        size={9} 
+                    <Users
+                        size={9}
                         className="indicator-icon indicator-icon--shared"
                         title={view.sharedBy ? `From ${view.sharedBy}` : `Shared with ${view.sharedWith?.length}`}
                     />
@@ -179,9 +180,9 @@ function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection =
 
             {/* Views under this dataset */}
             {isExpanded && views.map(view => (
-                <ViewItem 
-                    key={view.id} 
-                    view={view} 
+                <ViewItem
+                    key={view.id}
+                    view={view}
                     isInSharedSection={isInSharedSection}
                 />
             ))}
@@ -218,7 +219,7 @@ function Section({
             </div>
 
             {expanded && (
-                <div 
+                <div
                     className="tree-section__content"
                     style={maxHeight ? { maxHeight } : undefined}
                 >
@@ -269,95 +270,56 @@ export function DatasetsPanelContent({ workspaceId }) {
     // Dataset expansion state
     const [expandedDatasets, setExpandedDatasets] = useState(new Set(['ds1', 'ds2', 'ds3']));
 
-    // Sample data - in real app, this comes from useDatasets hook
-    const datasets = useMemo(() => [
-        {
-            id: 'ds1',
-            name: 'Brain_Scan_001.nii',
-            type: 'nifti',
-            annotations: 5,
+    // Get datasets from DatasetManager
+    const loadedDatasets = useDatasets();
+
+    // Transform to UI format with views
+    const datasets = useMemo(() => {
+        return loadedDatasets.map(ds => ({
+            id: ds.id,
+            name: ds.name,
+            type: getDatasetType(ds.name),
+            annotations: ds.annotations?.length || 0,
             views: [
-                { 
-                    id: 'v1', 
-                    name: 'Main Analysis', 
-                    workspace: 'personal', 
-                    status: 'active', 
-                    instanceColor: '#60a5fa', 
-                    filters: ['Threshold', 'Clip'], 
-                    savedByUser: true, 
-                    isShared: false 
-                },
-                { 
-                    id: 'v2', 
-                    name: 'Shared Overview', 
-                    workspace: 'project', 
-                    workspaceName: 'Project',
-                    status: 'active', 
-                    instanceColor: '#34d399', 
-                    filters: [], 
-                    isShared: true, 
-                    sharedBy: null, 
-                    sharedWith: ['Dr. Smith'] 
-                },
-                { 
-                    id: 'v3', 
-                    name: 'Old View', 
-                    workspace: null, 
-                    status: 'inactive', 
-                    filters: ['Sagittal'], 
-                    lastActive: '2h ago' 
-                },
-            ]
-        },
-        {
-            id: 'ds2',
-            name: 'CT_Overlay.dcm',
-            type: 'dicom',
-            annotations: 2,
-            views: [
-                { 
-                    id: 'v4', 
-                    name: 'Default View', 
-                    workspace: 'personal', 
-                    status: 'active', 
-                    instanceColor: '#7dd3fc', 
-                    filters: [], 
-                    isShared: false 
-                },
-            ]
-        },
-        {
-            id: 'ds3',
-            name: 'Tumor_Segmentation.vtk',
-            type: 'vtk',
-            annotations: 12,
-            views: [
-                { 
-                    id: 'v5', 
-                    name: "Dr. Smith's Analysis", 
-                    workspace: 'personal', 
-                    status: 'active', 
-                    instanceColor: '#fb7185', 
-                    filters: ['Colormap', 'Opacity'], 
-                    isShared: true, 
-                    sharedBy: 'Dr. Smith' 
-                },
-            ]
-        },
-    ], []);
+                // For now, create a default view per dataset
+                // TODO: Connect to ViewConfigurationManager for real views
+                {
+                    id: `view-${ds.id}`,
+                    name: 'Default View',
+                    workspace: workspaceId || 'personal',
+                    status: ds.hasPolydata || ds.isAnalyzed ? 'active' : 'inactive',
+                    instanceColor: '#60a5fa',
+                    filters: [],
+                    isShared: false,
+                }
+            ],
+        }));
+    }, [loadedDatasets, workspaceId]);
+
+    // Helper to determine dataset type from filename
+    const getDatasetType = (filename) => {
+        if (!filename) return 'other';
+        const name = filename.toLowerCase();
+        if (name.endsWith('.nii') || name.endsWith('.nii.gz')) return 'nifti';
+        if (name.endsWith('.dcm')) return 'dicom';
+        if (name.endsWith('.vtp') || name.endsWith('.vtk')) return 'vtk';
+        return 'other';
+    };
+
 
     // View filtering functions
-    const getActiveViews = useCallback((ds) => 
-        ds.views.filter(v => v.workspace === 'personal' && v.status === 'active'),
-    []);
+    const getActiveViews = useCallback((ds) =>
+        ds.views.filter(v => v.status === 'active'),
+        []);
 
-    const getInactiveViews = useCallback((ds) => 
+    const getInactiveViews = useCallback((ds) =>
         ds.views.filter(v => v.status === 'inactive'),
-    []);
+        []);
 
-    const getSharedViews = useCallback((ds) => 
+    const getSharedViews = useCallback((ds) =>
         ds.views.filter(v => v.isShared && v.sharedBy),
-    []);
+        []);
+
 
     // Count totals
     const counts = useMemo(() => ({
@@ -406,7 +368,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                         placeholder="Search datasets & views..."
                     />
                     {searchQuery && (
-                        <button 
+                        <button
                             className="clear-button"
                             onClick={() => setSearchQuery('')}
                         >

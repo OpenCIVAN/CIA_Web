@@ -71,6 +71,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         extension: "vtp",
         mimeType: "application/vnd.vtk.polydata+xml",
         displayName: "VTK PolyData (XML)",
+        icon: "box", // Lucide icon name
+        color: "#c084fc", // Hex color for this type
         capabilities: {
           canRender: true,
           canExtractMetadata: true, // We can read XML headers quickly
@@ -82,6 +84,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         extension: "vti",
         mimeType: "application/vnd.vtk.imagedata+xml",
         displayName: "VTK Image Data (XML)",
+        icon: "box", // Lucide icon name
+        color: "#c084fc", // Hex color for this type
         capabilities: {
           canRender: true,
           canExtractMetadata: true,
@@ -93,6 +97,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         extension: "vtu",
         mimeType: "application/vnd.vtk.unstructuredgrid+xml",
         displayName: "VTK Unstructured Grid (XML)",
+        icon: "box", // Lucide icon name
+        color: "#c084fc", // Hex color for this type
         capabilities: {
           canRender: true,
           canExtractMetadata: true,
@@ -104,6 +110,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         extension: "vtk",
         mimeType: "application/vnd.vtk",
         displayName: "VTK Legacy Format",
+        icon: "box", // Lucide icon name
+        color: "#c084fc", // Hex color for this type
         capabilities: {
           canRender: true,
           canExtractMetadata: false, // Legacy format is harder to parse quickly
@@ -115,6 +123,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         extension: "stl",
         mimeType: "model/stl",
         displayName: "STL Model",
+        icon: "box", // Lucide icon name
+        color: "#c084fc", // Hex color for this type
         capabilities: {
           canRender: true,
           canExtractMetadata: false, // Could implement later

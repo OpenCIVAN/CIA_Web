@@ -421,3 +421,54 @@
     font-weight: $font-weight-semibold;
   }
 }
+
+// =============================================================================
+// LOADING & ERROR STATES
+// =============================================================================
+
+.panel-loading {
+  padding: $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+.panel-error {
+  padding: $spacing-md;
+  margin: $spacing-sm;
+  background: rgba($color-error, 0.1);
+  border: 1px solid rgba($color-error, 0.3);
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+
+  button {
+    margin-top: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: $radius-sm;
+    color: inherit;
+    cursor: pointer;
+    font-size: $font-size-xs;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+// =============================================================================
+// FILE ICON - Handler-agnostic
+// =============================================================================
+
+.file-icon--visualizable {
+  color: $color-accent-blue;
+}

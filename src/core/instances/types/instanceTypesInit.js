@@ -61,6 +61,10 @@ export function registerInstanceTypes() {
   );
 }
 
+export function getFileTypeDisplayInfo(fileType) {
+  return instanceTypeRegistry.getFileTypeDisplayInfo(fileType);
+}
+
 /**
  * getRegisteredTypes
  *

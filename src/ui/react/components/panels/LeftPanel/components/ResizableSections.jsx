@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import './ResizableSections.scss';
 
 // =============================================================================
 // SECTION HEADER

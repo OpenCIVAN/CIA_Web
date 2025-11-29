@@ -37,6 +37,7 @@ import {
     Eye,
     Info,
     Pencil,
+    Loader,
 } from 'lucide-react';
 
 import {
@@ -44,24 +45,47 @@ import {
     ResizableSection,
     useSectionStates
 } from '../components/ResizableSections';
+import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
+import { instanceTypeRegistry } from '@Core/instances/types/instanceTypeRegistry.js';
+import { getHandlerForFileType, getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
+import * as LucideIcons from 'lucide-react';
+
 
 // =============================================================================
-// FILE TYPE UTILITIES
+// FILE UTILITIES (Type-agnostic) - MUST BE HERE, BEFORE COMPONENTS
 // =============================================================================
 
-const getFileTypeConfig = (type) => {
-    switch (type) {
-        case 'nifti':
-            return { icon: Box, colorClass: 'file-icon--nifti' };
-        case 'dicom':
-            return { icon: Database, colorClass: 'file-icon--dicom' };
-        case 'vtk':
-            return { icon: FileCode, colorClass: 'file-icon--vtk' };
-        case 'folder':
-            return { icon: Folder, colorClass: 'file-icon--folder' };
-        default:
-            return { icon: FileText, colorClass: 'file-icon--default' };
+const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    const mb = bytes / (1024 * 1024);
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
+};
+
+const canVisualize = (fileType) => {
+    if (!fileType) return false;
+    return getHandlerForFileType(fileType) !== null;
+};
+
+const getFileTypeConfig = (file) => {
+    if (file.isFolder) {
+        return { icon: LucideIcons.Folder, colorClass: 'file-icon--folder', color: null };
     }
+
+    const displayInfo = getFileTypeDisplayInfo(file.fileType);
+
+    if (displayInfo) {
+        // Get icon component from Lucide by name
+        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
+        const IconComponent = LucideIcons[iconName] || LucideIcons.Box;
+
+        return {
+            icon: IconComponent,
+            color: displayInfo.color,  // Use inline style for color
+            colorClass: null,
+        };
+    }
+
+    return { icon: LucideIcons.FileText, colorClass: 'file-icon--default', color: null };
 };
 
 // =============================================================================
@@ -106,7 +130,7 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
 
 function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, expandedFolders, onToggleFolder }) {
     const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass } = getFileTypeConfig(file.type);
+    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
     const isFolder = file.type === 'folder';
     const isExpanded = expandedFolders?.has(file.id);
 
@@ -129,7 +153,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
                 ) : (
                     <GripVertical size={10} className="drag-handle" style={{ opacity: isHovered ? 0.6 : 0 }} />
                 )}
-                <TypeIcon size={14} className={`item-icon ${colorClass}`} />
+                <TypeIcon size={14} style={color ? { color } : undefined} className={colorClass || ''} />
                 <span className="item-name">{file.name}</span>
                 {!isFolder && (isHovered || file.starred) && (
                     <button className={`star-btn ${file.starred ? 'star-btn--starred' : ''}`} onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
@@ -152,7 +176,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
 
 function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu }) {
     const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass } = getFileTypeConfig(file.type);
+    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
 
     if (file.type === 'folder') return null;
 
@@ -169,10 +193,10 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
             <div className="thumbnail">
                 {file.thumbnail ? (
                     <div className="thumbnail__preview" style={{ background: `linear-gradient(135deg, var(--thumbnail-color, rgba(96,165,250,0.2)) 0%, transparent 100%)` }}>
-                        <TypeIcon size={20} className={colorClass} style={{ opacity: 0.7 }} />
+                        <TypeIcon size={20} style={color ? { color, opacity: 0.7 } : { opacity: 0.7 }} className={colorClass || ''} />
                     </div>
                 ) : (
-                    <TypeIcon size={20} className={colorClass} style={{ opacity: 0.5 }} />
+                    <TypeIcon size={20} style={color ? { color, opacity: 0.5 } : { opacity: 0.5 }} className={colorClass || ''} />
                 )}
                 <div className="thumbnail-actions" style={{ opacity: isHovered ? 1 : 0 }}>
                     <button className="thumbnail-action" onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
@@ -212,63 +236,57 @@ export function FilesPanelContent({ workspaceId }) {
     const [contextMenu, setContextMenu] = useState(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    // Sample data
-    const files = useMemo(() => [
-        {
-            id: 1, name: 'Patient_Scans', type: 'folder', starred: true, children: [
-                { id: 11, name: 'Brain_Scan_001.nii', type: 'nifti', size: '245 MB', starred: true, thumbnail: true, loaded: true },
-                { id: 12, name: 'Brain_Scan_002.nii', type: 'nifti', size: '238 MB', starred: false, thumbnail: true },
-                { id: 13, name: 'CT_Overlay.dcm', type: 'dicom', size: '180 MB', starred: false, thumbnail: true },
-            ]
-        },
-        {
-            id: 2, name: 'Segmentations', type: 'folder', starred: false, children: [
-                { id: 21, name: 'Tumor_Mask.nii', type: 'nifti', size: '45 MB', starred: false, thumbnail: true },
-                { id: 22, name: 'Vessel_Network.vtk', type: 'vtk', size: '12 MB', starred: true, thumbnail: true },
-            ]
-        },
-        { id: 3, name: 'Reference_Atlas.nii', type: 'nifti', size: '320 MB', starred: true, thumbnail: true },
-        { id: 4, name: 'Study_Protocol.pdf', type: 'other', size: '2.4 MB', starred: false, thumbnail: false },
-    ], []);
+    // Fetch files from server
+    const { files: serverFiles, isLoading, error, refetch, uploadFile } = useProjectFiles();
 
-    // Derived data
+    // Transform server files to UI format
+    const files = useMemo(() => {
+        if (!serverFiles || serverFiles.length === 0) return [];
+
+        return serverFiles.map(file => ({
+            id: file.id,
+            name: file.name || file.filename,
+            fileType: file.fileType,  // Pass through server-provided type
+            size: formatFileSize(file.size),
+            starred: false,
+            loaded: false,
+            thumbnail: canVisualize(file.fileType),
+            date: file.uploadedAt,
+            isFolder: false,
+        }));
+    }, [serverFiles]);
+
     const starredFiles = useMemo(() => {
-        const getStarred = (items) => {
-            let result = [];
-            items.forEach(item => {
-                if (item.starred && item.type !== 'folder') result.push(item);
-                if (item.children) result = [...result, ...getStarred(item.children)];
-            });
-            return result;
-        };
-        return getStarred(files);
+        return files.filter(f => f.starred);
     }, [files]);
+
 
     const recentFiles = useMemo(() => {
-        const getFlat = (items) => {
-            let result = [];
-            items.forEach(item => {
-                if (item.type !== 'folder') result.push(item);
-                if (item.children) result = [...result, ...getFlat(item.children)];
-            });
-            return result;
-        };
-        return getFlat(files).slice(0, 4);
+        // Sort by date and take most recent 4
+        return [...files]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 4);
     }, [files]);
+
 
     const loadedCount = useMemo(() => {
-        const countLoaded = (items) => {
-            let count = 0;
-            items.forEach(item => {
-                if (item.loaded) count++;
-                if (item.children) count += countLoaded(item.children);
-            });
-            return count;
-        };
-        return countLoaded(files);
+        return files.filter(f => f.loaded).length;
     }, [files]);
 
-    const fileTypes = ['nifti', 'dicom', 'vtk'];
+
+    // Get all supported file types from registered handlers
+    const supportedFileTypes = useMemo(() => {
+        const handlers = instanceTypeRegistry.getAvailableHandlers();
+        const types = new Set();
+
+        handlers.forEach(({ handler }) => {
+            const supported = handler.getSupportedFileTypes();
+            supported.forEach(t => types.add(t.extension));
+        });
+
+        return Array.from(types);
+    }, []);
+
 
     // Handlers
     const toggleFolder = useCallback((id) => {
@@ -347,19 +365,44 @@ export function FilesPanelContent({ workspaceId }) {
                 <span className="panel-toolbar__info"><strong>{loadedCount}</strong> loaded</span>
             </div>
 
+            {/* Loading indicator */}
+            {isLoading && (
+                <div className="panel-loading">
+                    <Loader size={16} className="spin" />
+                    <span>Loading files...</span>
+                </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+                <div className="panel-error">
+                    <span>Failed to load files: {error}</span>
+                    <button onClick={refetch}>Retry</button>
+                </div>
+            )}
+
             {/* Filters panel */}
             {showFilters && (
                 <div className="panel-filters">
                     <div className="panel-filters__row">
-                        {fileTypes.map(type => (
-                            <button key={type} className={`filter-toggle ${activeFilters.types.includes(type) ? 'active' : ''}`} onClick={() => toggleTypeFilter(type)}>
+                        {supportedFileTypes.map(type => (
+                            <button
+                                key={type}
+                                className={`filter-toggle ${activeFilters.types.includes(type) ? 'active' : ''}`}
+                                onClick={() => toggleTypeFilter(type)}
+                            >
                                 {type.toUpperCase()}
                             </button>
                         ))}
-                        {activeFilters.types.length > 0 && <button className="panel-filters__clear" onClick={() => setActiveFilters({ types: [] })}>Clear</button>}
+                        {activeFilters.types.length > 0 && (
+                            <button className="panel-filters__clear" onClick={() => setActiveFilters({ types: [] })}>
+                                Clear
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
+
 
             {/* Resizable Sections */}
             <ResizableSectionsContainer
@@ -398,7 +441,29 @@ export function FilesPanelContent({ workspaceId }) {
                     <div className="panel-footer__dropzone"><Upload size={16} /><span>Drop to upload</span></div>
                 ) : (
                     <>
-                        <button className="panel-footer__btn panel-footer__btn--primary"><Upload size={11} /><span>Upload</span></button>
+                        <button
+                            className="panel-footer__btn panel-footer__btn--primary"
+                            onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.vtp,.vtk,.nii,.nii.gz,.dcm';
+                                input.onchange = async (e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        try {
+                                            await uploadFile(file);
+                                            refetch();
+                                        } catch (err) {
+                                            console.error('Upload failed:', err);
+                                        }
+                                    }
+                                };
+                                input.click();
+                            }}
+                        >
+                            <Upload size={11} /><span>Upload</span>
+                        </button>
+
                         <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh"><RefreshCw size={11} /></button>
                     </>
                 )}

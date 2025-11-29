@@ -78,7 +78,7 @@ class InstanceTypeRegistry {
     return handler;
   }
 
-    /**
+  /**
    * Find the best handler for a specific file type
    *
    * Queries all registered handlers to find the one that can handle this file type.
@@ -184,6 +184,36 @@ class InstanceTypeRegistry {
     }
 
     return compatible;
+  }
+
+  /**
+   * Get display info for a file type
+   * Queries handlers for icon, color, and display name
+   *
+   * @param {string} fileType - File extension
+   * @returns {Object|null} { icon, color, displayName } or null
+   */
+  getFileTypeDisplayInfo(fileType) {
+    if (!fileType) return null;
+    const normalizedType = fileType.toLowerCase();
+
+    for (const handler of this.handlers.values()) {
+      const supportedTypes = handler.getSupportedFileTypes();
+      const typeConfig = supportedTypes.find(
+        (t) => t.extension.toLowerCase() === normalizedType
+      );
+
+      if (typeConfig) {
+        return {
+          icon: typeConfig.icon || "file",
+          color: typeConfig.color || null,
+          displayName: typeConfig.displayName || fileType.toUpperCase(),
+          handlerType: handler.getType(),
+        };
+      }
+    }
+
+    return null;
   }
 
   /**
