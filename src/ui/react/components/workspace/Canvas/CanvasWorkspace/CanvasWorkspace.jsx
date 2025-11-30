@@ -1,4 +1,4 @@
-// src/ui/react/components/workspace/CanvasWorkspace.jsx
+// src/ui/react/components/workspace/Canvas/CanvasWorkspace/CanvasWorkspace.jsx
 // Integration component for the new canvas system
 //
 // This wraps CanvasGrid with workspace selection and subset management
@@ -11,9 +11,7 @@ import { WorkspaceSelector } from '@UI/react/components/workspace';
 import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel.jsx';
 import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay.jsx';
 
-import { useCanvas } from '@UI/react/hooks/';
-import { useSubsets } from '@UI/react/hooks/';
-import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
+import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspace as log } from '@Utils/logger.js';
 
@@ -48,34 +46,34 @@ export function CanvasWorkspace({ userId, projectId }) {
         exitFocusMode,
     } = useSubsets(activeCanvasId);
 
-    // Load initial workspace
+    // Load initial workspace/canvas
     useEffect(() => {
         const loadWorkspace = async () => {
-            // Try to get or create personal workspace
-            let workspace = workspaceManager.getPersonalWorkspace(userId);
-
-            if (!workspace) {
-                workspace = await workspaceManager.createPersonalWorkspace(userId);
+            if (!projectId) {
+                log.warn('No projectId provided to CanvasWorkspace');
+                return;
             }
 
-            setActiveWorkspace(workspace);
+            try {
+                log.debug(`Loading canvases for project: ${projectId}`);
 
-            // Load or create a canvas for this workspace
-            if (workspace.canvasIds.length > 0) {
-                setActiveCanvasId(workspace.activeCanvasId || workspace.canvasIds[0]);
-            } else {
-                // Create default canvas
-                const newCanvas = await canvasManager.createCanvas(workspace.getEffectiveId(), {
-                    name: 'Main Canvas',
-                });
-                setActiveCanvasId(newCanvas.getEffectiveId());
+                // Get or create personal canvas from server
+                const personalCanvas = await canvasManager.getPersonalCanvas(projectId);
+
+                if (personalCanvas) {
+                    log.debug(`Got personal canvas: ${personalCanvas.id}`);
+                    setActiveCanvasId(personalCanvas.id);
+                    setActiveWorkspace({ type: 'personal', canvasId: personalCanvas.id });
+                }
+            } catch (error) {
+                log.error('Failed to load workspace:', error);
             }
         };
 
-        if (userId) {
+        if (projectId) {
             loadWorkspace();
         }
-    }, [userId]);
+    }, [projectId, userId]);
 
     // Handle workspace change
     const handleWorkspaceChange = useCallback((workspace) => {

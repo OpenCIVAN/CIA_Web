@@ -15,6 +15,8 @@ class ServerSyncService {
     this.handlers = new Map();
     this.datasetManager = null;
     this.viewConfigurationManager = null;
+    this.canvasManager = null;
+    this.subsetManager = null;
   }
 
   initialize(datasetManager, viewConfigurationManager = null) {
@@ -30,6 +32,22 @@ class ServerSyncService {
    */
   setViewConfigurationManager(viewConfigurationManager) {
     this.viewConfigurationManager = viewConfigurationManager;
+  }
+
+  /**
+   * Set the CanvasManager reference
+   * Called by appInitializer after CanvasManager is initialized
+   */
+  setCanvasManager(canvasManager) {
+    this.canvasManager = canvasManager;
+  }
+
+  /**
+   * Set the SubsetManager reference
+   * Called by appInitializer after SubsetManager is initialized
+   */
+  setSubsetManager(subsetManager) {
+    this.subsetManager = subsetManager;
   }
 
   connect() {
@@ -141,6 +159,66 @@ class ServerSyncService {
           "view:deleted",
           msg
         );
+      }
+    });
+
+    // Canvas events - forward to CanvasManager
+    this.on("canvas:created", (msg) => {
+      log.info(`Canvas created: ${msg.canvas?.name || msg.canvasId}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("canvas:updated", (msg) => {
+      log.info(`Canvas updated: ${msg.canvasId}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("canvas:deleted", (msg) => {
+      log.info(`Canvas deleted: ${msg.canvasId}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+
+    // Placement events - forward to CanvasManager
+    this.on("placement:added", (msg) => {
+      log.info(`Placement added to canvas ${msg.canvasId}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("placement:updated", (msg) => {
+      log.info(`Placement updated: ${msg.placement?.id}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("placement:removed", (msg) => {
+      log.info(`Placement removed: ${msg.placementId}`);
+      if (this.canvasManager) {
+        this.canvasManager.handleServerBroadcast(msg);
+      }
+    });
+
+    // Subset events - forward to SubsetManager
+    this.on("subset:created", (msg) => {
+      log.info(`Subset created: ${msg.subset?.name || msg.subsetId}`);
+      if (this.subsetManager) {
+        this.subsetManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("subset:updated", (msg) => {
+      log.info(`Subset updated: ${msg.subsetId}`);
+      if (this.subsetManager) {
+        this.subsetManager.handleServerBroadcast(msg);
+      }
+    });
+    this.on("subset:deleted", (msg) => {
+      log.info(`Subset deleted: ${msg.subsetId}`);
+      if (this.subsetManager) {
+        this.subsetManager.handleServerBroadcast(msg);
       }
     });
 

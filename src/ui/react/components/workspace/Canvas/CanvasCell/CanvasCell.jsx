@@ -9,6 +9,7 @@
 
 import React, { memo } from 'react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
+import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
 import './CanvasCell.scss';
 
 /**
@@ -68,10 +69,11 @@ export const CanvasCell = memo(function CanvasCell({
         switch (contentType) {
             case PlacementContentType.VIEW:
                 return (
-                    <ViewPlaceholder
+                    <ViewContent
                         viewId={placement.content.viewConfigurationId}
                         rowSpan={rowSpan}
                         colSpan={colSpan}
+                        placementId={placement.id}
                     />
                 );
 
@@ -149,27 +151,16 @@ export const CanvasCell = memo(function CanvasCell({
 });
 
 /**
- * ViewPlaceholder - Placeholder for view content
- * In real implementation, this would render an InstanceWindow
+ * ViewContent - Renders an InstanceViewport for view placements
  */
-function ViewPlaceholder({ viewId, rowSpan, colSpan }) {
+function ViewContent({ viewId, rowSpan, colSpan, placementId }) {
     return (
-        <div className="canvas-cell__view-placeholder">
-            <div className="canvas-cell__view-header">
-                <span className="canvas-cell__view-icon">📊</span>
-                <span className="canvas-cell__view-title">View</span>
-            </div>
-            <div className="canvas-cell__view-body">
-                <div className="canvas-cell__view-preview">
-                    {/* Placeholder for actual VTK/visualization rendering */}
-                    <div className="canvas-cell__preview-box">
-                        <span>View: {viewId?.slice(0, 8)}...</span>
-                        <span className="canvas-cell__preview-size">
-                            {colSpan}×{rowSpan}
-                        </span>
-                    </div>
-                </div>
-            </div>
+        <div className="canvas-cell__view-content">
+            <InstanceViewport
+                viewConfigId={viewId}
+                isRemote={false}
+                currentSpan={`${colSpan}x${rowSpan}`}
+            />
         </div>
     );
 }

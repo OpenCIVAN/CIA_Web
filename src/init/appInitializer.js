@@ -9,6 +9,8 @@ import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { initializeStorageProvider } from "@Core/config/storage.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { subsetManager } from "@Core/data/managers/SubsetManager.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
@@ -159,7 +161,30 @@ export async function initializePhase1() {
       }
     }
 
-    // STEP 8: Debug helpers
+    // STEP 8: Initialize Canvas system managers
+    log.debug("Initializing canvas managers...");
+    canvasManager.initialize({
+      apiBaseUrl: config.apiBaseUrl,
+      sessionManager: sessionManager,
+    });
+    subsetManager.initialize({
+      apiBaseUrl: config.apiBaseUrl,
+      sessionManager: sessionManager,
+      canvasManager: canvasManager,
+    });
+    log.debug("Canvas managers initialized");
+
+    // Wire up CanvasManager to receive WebSocket broadcasts
+    try {
+      const { serverSync } = await import("@Services/serverSync.js");
+      serverSync.setCanvasManager(canvasManager);
+      serverSync.setSubsetManager(subsetManager);
+      log.debug("CanvasManager wired to server sync");
+    } catch (error) {
+      log.warn("Failed to wire CanvasManager to server sync:", error.message);
+    }
+
+    // STEP 9: Debug helpers
     setupDebugHelpers();
     log.debug("Debug helpers available");
 

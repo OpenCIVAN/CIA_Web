@@ -113,7 +113,7 @@ router.get("/:id", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const userId = getUserId(req);
-    const { pool } = req.app.locals;
+    const { pool, wsManager } = req.app.locals;
     const { workspace_id, project_id, name, dimensions, ownership } = req.body;
 
     if (!workspace_id) {
@@ -134,7 +134,19 @@ router.post("/", async (req, res, next) => {
       ]
     );
 
-    res.status(201).json(result.rows[0]);
+    const canvas = result.rows[0];
+
+    // Broadcast to project
+    if (project_id && wsManager) {
+      wsManager.broadcast(project_id, {
+        type: "canvas:created",
+        canvasId: canvas.id,
+        canvas,
+        userId,
+      });
+    }
+
+    res.status(201).json(canvas);
   } catch (error) {
     next(error);
   }
@@ -148,7 +160,7 @@ router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = getUserId(req);
-    const { pool } = req.app.locals;
+    const { pool, wsManager } = req.app.locals;
     const { name, dimensions, viewport } = req.body;
 
     const result = await pool.query(
@@ -171,7 +183,20 @@ router.put("/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Canvas not found" });
     }
 
-    res.json(result.rows[0]);
+    const canvas = result.rows[0];
+
+    // Broadcast to project
+    if (canvas.project_id && wsManager) {
+      wsManager.broadcast(canvas.project_id, {
+        type: "canvas:updated",
+        canvasId: canvas.id,
+        canvas,
+        updates: { name, dimensions, viewport },
+        userId,
+      });
+    }
+
+    res.json(canvas);
   } catch (error) {
     next(error);
   }
@@ -184,7 +209,14 @@ router.put("/:id", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { pool } = req.app.locals;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+
+    // First get canvas to find project_id for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [id]
+    );
 
     const result = await pool.query(
       `UPDATE canvases SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id`,
@@ -193,6 +225,16 @@ router.delete("/:id", async (req, res, next) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Canvas not found" });
+    }
+
+    // Broadcast to project
+    const projectId = canvasResult.rows[0]?.project_id;
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "canvas:deleted",
+        canvasId: id,
+        userId,
+      });
     }
 
     res.json({ success: true, id });
@@ -236,7 +278,7 @@ router.post("/:id/placements", async (req, res, next) => {
   try {
     const { id: canvas_id } = req.params;
     const userId = getUserId(req);
-    const { pool } = req.app.locals;
+    const { pool, wsManager } = req.app.locals;
     const {
       row_index,
       col_index,
@@ -262,7 +304,26 @@ router.post("/:id/placements", async (req, res, next) => {
       ]
     );
 
-    res.status(201).json(result.rows[0]);
+    const placement = result.rows[0];
+
+    // Get project_id from canvas for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [canvas_id]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "placement:added",
+        canvasId: canvas_id,
+        placement,
+        userId,
+      });
+    }
+
+    res.status(201).json(placement);
   } catch (error) {
     next(error);
   }
@@ -275,7 +336,8 @@ router.post("/:id/placements", async (req, res, next) => {
 router.put("/placements/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { pool } = req.app.locals;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
     const {
       row_index,
       col_index,
@@ -303,7 +365,26 @@ router.put("/placements/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Placement not found" });
     }
 
-    res.json(result.rows[0]);
+    const placement = result.rows[0];
+
+    // Get project_id from canvas for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [placement.canvas_id]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "placement:updated",
+        canvasId: placement.canvas_id,
+        placement,
+        userId,
+      });
+    }
+
+    res.json(placement);
   } catch (error) {
     next(error);
   }
@@ -316,15 +397,39 @@ router.put("/placements/:id", async (req, res, next) => {
 router.delete("/placements/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { pool } = req.app.locals;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
 
-    const result = await pool.query(
-      `DELETE FROM placements WHERE id = $1 RETURNING id`,
+    // First get the placement to find canvas_id
+    const placementResult = await pool.query(
+      `SELECT canvas_id FROM placements WHERE id = $1`,
       [id]
     );
 
-    if (result.rows.length === 0) {
+    if (placementResult.rows.length === 0) {
       return res.status(404).json({ error: "Placement not found" });
+    }
+
+    const canvasId = placementResult.rows[0].canvas_id;
+
+    // Get project_id from canvas for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [canvasId]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    // Delete the placement
+    await pool.query(`DELETE FROM placements WHERE id = $1`, [id]);
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "placement:removed",
+        canvasId,
+        placementId: id,
+        userId,
+      });
     }
 
     res.json({ success: true, id });
