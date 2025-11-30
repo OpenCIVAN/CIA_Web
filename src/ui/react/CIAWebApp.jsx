@@ -1,6 +1,6 @@
 // src/ui/react/CIAWebApp.jsx
 // Main Application Component
-// Updated: Added view mode (Desktop/VR) state management
+// Updated: Added view mode (Desktop/VR) and layout mode state management
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ui as log } from "@Utils/logger.js";
@@ -16,13 +16,15 @@ import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
 import { RightPanel } from "@UI/react/components/panels/RightPanel";
 import { SecondaryTopBar } from "@UI/react/components/layout/SecondaryTopBar";
-import { SecondaryBottomBar, VIEW_MODES } from "@UI/react/components/layout/SecondaryBottomBar";
+import { SecondaryBottomBar } from "@UI/react/components/layout/SecondaryBottomBar";
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
 import {
+  VIEW_MODES,
   useWebXRAvailability,
   useViewModeKeyboardShortcut,
   useGlobalKeyboardShortcuts,
 } from "@UI/react/components/controls/ViewModeToggle";
+import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 
 /**
  * Main Application Component
@@ -49,6 +51,9 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
   // View mode state (Desktop/VR)
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
   const { vrAvailable, vrUnavailableReason } = useWebXRAvailability();
+
+  // Layout mode state (Normal/Isolation/Subset)
+  const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
 
   // Workspace selector state (for keyboard shortcut)
   const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
@@ -186,6 +191,9 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
           username={username}
           canvasMode={canvasMode}
           onToggleCanvasMode={() => setCanvasMode(!canvasMode)}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          vrAvailable={vrAvailable}
         />
       }
       secondaryTopBar={
@@ -206,9 +214,8 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       secondaryBottomBar={
         <SecondaryBottomBar
           currentWorkspace={currentWorkspace}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          vrAvailable={vrAvailable}
+          layoutMode={layoutMode}
+          onLayoutModeChange={setLayoutMode}
         />
       }
       bottomBar={<StatusBar />}

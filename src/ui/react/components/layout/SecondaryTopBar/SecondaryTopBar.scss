@@ -136,7 +136,7 @@
   }
 
   // -------------------------------------------------------------------------
-  // Dropdown Panel
+  // Dropdown Panel - Glassmorphism styling
   // -------------------------------------------------------------------------
   &__dropdown {
     position: absolute;
@@ -145,11 +145,13 @@
     margin-top: $spacing-xs;
     min-width: 240px;
     max-width: 320px;
-    background: $color-bg-elevated;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid $color-border-medium;
     border-radius: $radius-md;
     z-index: $z-modal;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
     overflow: hidden;
   }
 
@@ -234,12 +236,15 @@
   }
 
   &__label {
+    padding: $spacing-xs $spacing-sm;
     font-size: 9px;
+    font-weight: 600;
     color: $color-text-muted;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: $spacing-xs $spacing-md;
-    font-weight: $font-weight-medium;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
   }
 
   &__item {
@@ -256,8 +261,8 @@
     transition: all $transition-fast;
     text-align: left;
 
-    &:hover {
-      background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.1);
+    &:hover:not(&--selected) {
+      background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.08);
     }
 
     &--selected {

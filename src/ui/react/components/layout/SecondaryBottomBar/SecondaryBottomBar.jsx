@@ -1,6 +1,5 @@
 // src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.jsx
-// Secondary bar above StatusBar with canvas position, workspace info, and voice controls
-// Note: ViewModeToggle has been moved to TopBar
+// Secondary bar above StatusBar with layout mode toggle, canvas position, workspace info, and voice controls
 // Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
 
 import React, { useState } from 'react';
@@ -21,6 +20,7 @@ import {
 
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
 import { WORKSPACE_TYPES } from '../SecondaryTopBar/SecondaryTopBar.logic.js';
+import { LayoutModeToggle, LAYOUT_MODES } from '../../controls/LayoutModeToggle';
 import {
     SecondaryBar,
     SecondaryBarZone,
@@ -255,7 +255,7 @@ function VoiceControls({
  * SecondaryBottomBar - Main component
  *
  * Layout:
- * - Left Zone: (Reserved - ViewModeToggle moved to TopBar)
+ * - Left Zone: Layout Mode Toggle (Normal/Isolation/Subset)
  * - Center Zone: Canvas position, workspace indicator, instance count
  * - Right Zone: Voice controls
  */
@@ -281,6 +281,10 @@ export function SecondaryBottomBar({
     // Stats
     instanceCount = 0,
     instances = [],
+
+    // Layout mode props
+    layoutMode = LAYOUT_MODES.NORMAL,
+    onLayoutModeChange,
 
     // Panel dimensions (passed from ThreeEdgeLayout)
     leftPanelWidth = 280,
@@ -310,13 +314,17 @@ export function SecondaryBottomBar({
 
     return (
         <SecondaryBar position="bottom" height={28}>
-            {/* Left Zone - Reserved for future use */}
+            {/* Left Zone - Layout Mode Toggle */}
             <SecondaryBarZone
                 position="left"
                 panelWidth={leftPanelWidth}
                 panelOpen={leftPanelOpen}
             >
-                {/* ViewModeToggle moved to TopBar */}
+                <LayoutModeToggle
+                    mode={layoutMode}
+                    onModeChange={onLayoutModeChange}
+                    compact={!leftPanelOpen}
+                />
             </SecondaryBarZone>
 
             {/* Center Zone - Canvas position, workspace, instances */}

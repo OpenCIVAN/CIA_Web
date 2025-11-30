@@ -1,3 +1,5 @@
+import { ui as log } from "@Utils/logger.js";
+
 /**
  * GridLayoutPreview Component
  *
@@ -220,7 +222,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                     onExternalDrop?.(viewItem, { row, col });
                 }
             } catch (err) {
-                console.error('Failed to parse dropped ViewItem:', err);
+                log.error('Failed to parse dropped ViewItem:', err);
             }
         }
 

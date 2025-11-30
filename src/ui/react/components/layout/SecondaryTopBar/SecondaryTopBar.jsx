@@ -6,9 +6,6 @@ import React, { useRef } from 'react';
 import {
     ChevronDown,
     Search,
-    Grid3X3,
-    Maximize2,
-    Layers,
     Plus,
     RotateCcw,
     Link2,
@@ -21,7 +18,7 @@ import {
     Mic,
 } from 'lucide-react';
 
-import { useSecondaryTopBar, VIEW_MODES, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
+import { useSecondaryTopBar, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
 import {
     SecondaryBar,
     SecondaryBarZone,
@@ -181,40 +178,6 @@ function WorkspaceGroup({ label, workspaces, currentId, onSelect }) {
 }
 
 /**
- * ViewModeButtons - Toggle between Normal, Isolation, and Subset views
- */
-function ViewModeButtons({ viewMode, onModeChange }) {
-    return (
-        <div className="view-mode-buttons">
-            <button
-                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.NORMAL ? 'view-mode-buttons__btn--active' : ''}`}
-                onClick={() => onModeChange(VIEW_MODES.NORMAL)}
-                title="Normal View"
-            >
-                <Grid3X3 size={12} />
-                <span>Normal</span>
-            </button>
-            <button
-                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.ISOLATION ? 'view-mode-buttons__btn--active' : ''}`}
-                onClick={() => onModeChange(VIEW_MODES.ISOLATION)}
-                title="Isolation Mode"
-            >
-                <Maximize2 size={12} />
-                <span>Isolation</span>
-            </button>
-            <button
-                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.SUBSET ? 'view-mode-buttons__btn--active' : ''}`}
-                onClick={() => onModeChange(VIEW_MODES.SUBSET)}
-                title="Subset Mode"
-            >
-                <Layers size={12} />
-                <span>Subset</span>
-            </button>
-        </div>
-    );
-}
-
-/**
  * WorkspacePresence - Shows users in current workspace with Portal popover
  * Uses PortalPopover to render popover at document.body level, escaping overflow constraints
  */
@@ -314,8 +277,10 @@ function WorkspacePresence({
  *
  * Layout:
  * - Left Zone: Workspace selector dropdown
- * - Center Zone: View mode buttons, layout actions, sharing
+ * - Center Zone: Layout actions (Add Cell, Reset Layout), sharing (Link Views, Share)
  * - Right Zone: Workspace presence (users in this workspace)
+ *
+ * Note: Layout mode toggle (Normal/Isolation/Subset) has been moved to SecondaryBottomBar
  */
 export function SecondaryTopBar({
     // Workspace data
@@ -326,10 +291,6 @@ export function SecondaryTopBar({
     // Controlled workspace selector state (for keyboard shortcuts)
     workspaceSelectorOpen,
     onWorkspaceSelectorOpenChange,
-
-    // View mode
-    initialViewMode = VIEW_MODES.NORMAL,
-    onViewModeChange,
 
     // Actions
     onAddCell,
@@ -345,15 +306,12 @@ export function SecondaryTopBar({
 }) {
     const {
         workspace,
-        viewMode,
         presence,
         actions,
     } = useSecondaryTopBar({
         workspaces,
         initialWorkspaceId,
-        initialViewMode,
         onWorkspaceChange,
-        onViewModeChange,
         onAddCell: onAddCell,
         onResetLayout: onResetLayout,
         onLinkViews: onLinkViews,
@@ -405,16 +363,8 @@ export function SecondaryTopBar({
                 />
             </SecondaryBarZone>
 
-            {/* Center Zone - Workspace Controls */}
+            {/* Center Zone - Layout Actions & Sharing */}
             <SecondaryBarZone position="center">
-                {/* View Mode Toggle */}
-                <ViewModeButtons
-                    viewMode={viewMode.viewMode}
-                    onModeChange={viewMode.setViewMode}
-                />
-
-                <SecondaryBarDivider />
-
                 {/* Layout Actions */}
                 <button
                     className="secondary-bar-action"

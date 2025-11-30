@@ -3,6 +3,7 @@
 // Separates business logic from presentation (headless pattern)
 
 import { useState, useEffect, useCallback } from "react";
+import { ui as log } from "@Utils/logger.js";
 
 /**
  * Panel dimension constraints
@@ -197,7 +198,7 @@ function loadLayoutState() {
     const saved = localStorage.getItem("ciaLayoutState");
     return saved ? JSON.parse(saved) : null;
   } catch (error) {
-    console.error("Failed to load layout state:", error);
+    log.error("Failed to load layout state:", error);
     return null;
   }
 }
@@ -211,6 +212,6 @@ function saveLayoutState(state) {
   try {
     localStorage.setItem("ciaLayoutState", JSON.stringify(state));
   } catch (error) {
-    console.error("Failed to save layout state:", error);
+    log.error("Failed to save layout state:", error);
   }
 }
