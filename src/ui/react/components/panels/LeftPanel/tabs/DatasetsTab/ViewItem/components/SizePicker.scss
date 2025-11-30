@@ -1,0 +1,176 @@
+@use "theme" as *;
+
+.size-picker {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  z-index: $z-popover;
+  min-width: 160px;
+
+  // Animation
+  animation: size-picker-in 0.15s ease-out;
+
+  @keyframes size-picker-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  // Presets grid
+  &__presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-xs;
+  }
+
+  &__preset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: $spacing-xs;
+    border: 1px solid transparent;
+    background: $color-glass-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+      border-color: $color-border-default;
+    }
+
+    &--selected {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+    }
+  }
+
+  &__preset-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 1), 8px);
+    grid-template-rows: repeat(var(--rows, 1), 8px);
+    gap: 2px;
+  }
+
+  &__preset-cell {
+    background: $color-text-muted;
+    border-radius: 1px;
+    opacity: 0.5;
+
+    .size-picker__preset--selected & {
+      background: $color-accent-blue;
+      opacity: 1;
+    }
+  }
+
+  &__preset-label {
+    font-size: 10px;
+    color: $color-text-tertiary;
+    font-family: $font-family-mono;
+
+    .size-picker__preset--selected & {
+      color: $color-accent-blue;
+    }
+  }
+
+  // Custom toggle
+  &__custom-toggle {
+    padding: $spacing-xs $spacing-sm;
+    border: none;
+    background: transparent;
+    color: $color-text-tertiary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+    text-align: left;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      color: $color-accent-blue;
+    }
+  }
+
+  // Custom inputs
+  &__custom {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  &__custom-inputs {
+    display: flex;
+    align-items: flex-end;
+    gap: $spacing-xs;
+  }
+
+  &__custom-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      font-size: 9px;
+      color: $color-text-muted;
+    }
+
+    input {
+      width: 48px;
+      padding: $spacing-xs;
+      background: $color-bg-primary;
+      border: 1px solid $color-border-default;
+      border-radius: $radius-sm;
+      font-size: $font-size-sm;
+      font-family: $font-family-mono;
+      color: $color-text-primary;
+      text-align: center;
+      outline: none;
+
+      &:focus {
+        border-color: $color-accent-blue;
+        box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+      }
+    }
+  }
+
+  &__custom-x {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    padding-bottom: $spacing-xs;
+  }
+
+  &__apply {
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.25);
+    }
+  }
+}

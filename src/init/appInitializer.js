@@ -42,8 +42,7 @@ export let viewConfigurationManager = null;
  * No user authentication required yet.
  */
 export async function initializePhase1() {
-  log.info("Phase 1: Core Services Initialization");
-  log.info("==================================");
+  log.info("Phase 1: Core Services Initialization\n=====================================");
 
   try {
     // STEP 1: Register instance types
@@ -211,8 +210,7 @@ export async function initializePhase1() {
  * User must be authenticated before this phase runs.
  */
 export async function initializePhase2() {
-  log.info("Phase 2: User Services Initialization");
-  log.info("=====================================");
+  log.info("Phase 2: User Services Initialization\n=====================================");
 
   try {
     // STEP 1: Wait for Y.js to sync
@@ -334,8 +332,9 @@ export async function initializePhase2() {
  * - Analytics and telemetry
  */
 export async function initializePhase3() {
-  log.info("Phase 3: Enhanced Systems (Currently Disabled)");
-  log.info("================================================");
+  log.info(
+    "Phase 3: Enhanced Systems (Currently Disabled)\n====================================="
+  );
   log.debug("Phase 3 is disabled until enhancement systems are implemented");
   log.debug("See comments in appInitializer.js for details");
 

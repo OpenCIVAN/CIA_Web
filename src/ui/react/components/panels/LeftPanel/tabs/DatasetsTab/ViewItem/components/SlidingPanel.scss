@@ -1,0 +1,107 @@
+@use "theme" as *;
+
+.sliding-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: rgba($color-bg-secondary, 0.85);
+  backdrop-filter: $blur-medium;
+  border: 1px solid $color-border-default;
+  border-top: none;
+  border-radius: 0 0 $radius-md $radius-md;
+  box-shadow: $shadow-lg;
+  z-index: $z-dropdown;
+
+  // Colored accent border on left
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--view-color, $color-accent-blue);
+    border-radius: 0 0 0 $radius-md;
+  }
+
+  // Animation
+  animation: slide-panel-in 0.15s ease-out;
+
+  @keyframes slide-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Tooltip row
+  &__tooltip {
+    min-height: 18px;
+    font-size: 10px;
+    color: $color-text-muted;
+    padding-left: $spacing-xs;
+    transition: color $transition-fast;
+  }
+
+  // Actions row
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding-left: $spacing-xs;
+  }
+
+  // Linked parent info
+  &__linked-parent {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    padding-left: calc($spacing-xs + $spacing-sm);
+    background: $color-glass-subtle;
+    border-radius: $radius-sm;
+  }
+
+  &__linked-label {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__linked-name {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+  }
+
+  // Link properties
+  &__link-properties {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding-left: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  &__link-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
