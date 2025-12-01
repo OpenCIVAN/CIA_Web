@@ -17,12 +17,16 @@ export function WorkspaceGrid() {
     const [highlightedInstanceKey, setHighlightedInstanceKey] = useState(null);
 
     // Listen for dataset click events
+    // Note: DatasetsTab dispatches 'cia:request-instance' with viewId property
     useEffect(() => {
         const handleInstanceRequest = async (event) => {
             const datasetId = event.detail?.datasetId;
-            const viewConfigId = event.detail?.viewConfigId;
+            // Support both viewConfigId and viewId (for compatibility with DatasetsTab)
+            const viewConfigId = event.detail?.viewConfigId || event.detail?.viewId;
             const spawnNew = event.detail?.spawnNew;
             const duplicateViewId = event.detail?.duplicateViewId;
+
+            log.debug('Instance request received:', { datasetId, viewConfigId, spawnNew });
 
             if (!datasetId || typeof datasetId !== 'string') {
                 log.error('Invalid dataset ID:', datasetId);
@@ -36,8 +40,11 @@ export function WorkspaceGrid() {
                     return;
                 }
 
-                // Check if we should reuse an existing instance
-                if (viewConfigId && !spawnNew) {
+                // Check if this is a placeholder view (needs real view creation)
+                const isPlaceholder = viewConfigId && viewConfigId.startsWith('placeholder-');
+
+                // Check if we should reuse an existing instance (not for placeholders)
+                if (viewConfigId && !isPlaceholder && !spawnNew) {
                     // Find existing instance with this view
                     const existingInstance = instances.find(inst => inst.viewConfigId === viewConfigId);
                     if (existingInstance) {
@@ -52,16 +59,24 @@ export function WorkspaceGrid() {
                 // Handle view duplication
                 if (duplicateViewId) {
                     log.debug(`Duplicating view ${duplicateViewId}`);
-                    const newViewConfig = await viewConfigurationManager.duplicateViewConfiguration(duplicateViewId);
+                    const newViewConfig = await viewConfigurationManager.duplicateView(duplicateViewId);
                     if (newViewConfig) {
                         addInstance(datasetId, newViewConfig.id);
                     }
                     return;
                 }
 
+                // If we have a real (non-placeholder) viewConfigId, use it
+                if (viewConfigId && !isPlaceholder && !spawnNew) {
+                    log.debug(`Opening existing view ${viewConfigId}`);
+                    addInstance(datasetId, viewConfigId);
+                    return;
+                }
+
                 // Create new view configuration for new instance
-                const newViewConfig = await viewConfigurationManager.createViewConfiguration(datasetId, {
-                    name: `View of ${dataset.fileName}`,
+                log.debug(`Creating new view for dataset ${datasetId}`);
+                const newViewConfig = await viewConfigurationManager.createView(datasetId, {
+                    name: `View of ${dataset.filename || dataset.fileName || 'Unknown'}`,
                     instanceType: dataset.metadata?.defaultInstanceType || 'vtk'
                 });
 
@@ -73,9 +88,14 @@ export function WorkspaceGrid() {
             }
         };
 
+        // Listen for both event names for compatibility
         window.addEventListener('cia:create-instance', handleInstanceRequest);
-        return () => window.removeEventListener('cia:create-instance', handleInstanceRequest);
-    }, [instances]);
+        window.addEventListener('cia:request-instance', handleInstanceRequest);
+        return () => {
+            window.removeEventListener('cia:create-instance', handleInstanceRequest);
+            window.removeEventListener('cia:request-instance', handleInstanceRequest);
+        };
+    }, [instances, addInstance]);
 
     // Add a new instance to the grid
     const addInstance = useCallback((datasetId, viewConfigId) => {
@@ -106,7 +126,7 @@ export function WorkspaceGrid() {
 
         // Also delete the view configuration if it exists
         if (viewConfigId) {
-            viewConfigurationManager.deleteViewConfiguration(viewConfigId);
+            viewConfigurationManager.deleteView(viewConfigId);
         }
     }, []);
 

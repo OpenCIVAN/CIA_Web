@@ -7,6 +7,19 @@ import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { datasetManager } from "@Init/appInitializer.js";
 import { instance as log } from "@Utils/logger.js";
 
+// ============================================================================
+// INSTANCE COLORS - For visual differentiation of instances
+// ============================================================================
+
+const INSTANCE_COLORS = [
+  { name: "blue", hex: "#60a5fa" },
+  { name: "green", hex: "#34d399" },
+  { name: "purple", hex: "#c084fc" },
+  { name: "pink", hex: "#fb7185" },
+  { name: "amber", hex: "#fbbf24" },
+  { name: "teal", hex: "#7dd3fc" },
+];
+
 // ViewConfigurations (Layer 2) are the collaborative unit
 
 // ============================================================================
@@ -45,6 +58,7 @@ class WorkspaceManager {
     this.activeInstanceId = null;
     this._initialized = false;
     this.listeners = new Set();
+    this._colorIndex = 0; // Track color assignment
 
     log.debug("WorkspaceManager created (type-agnostic)");
   }
@@ -85,6 +99,9 @@ class WorkspaceManager {
     log.debug(`Creating ${type || "typeless"} instance: ${instanceId}`);
 
     try {
+      // Assign a color to this instance
+      const color = this._getNextColor();
+
       // Create instance metadata (handler will be initialized later if needed)
       const instance = {
         instanceId,
@@ -94,6 +111,8 @@ class WorkspaceManager {
         instanceData: null, // Will be set when handler initializes
         datasetId: datasetId || null,
         viewConfigId: viewConfigId || null,
+        color: color, // Assigned color for visual differentiation
+        colorIndex: this._colorIndex - 1, // Store the index for reference
         createdAt: Date.now(),
         lastActive: Date.now(),
       };
@@ -203,6 +222,26 @@ class WorkspaceManager {
       log.error(`Failed to load dataset into instance ${instanceId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Get the next color in the rotation
+   * @private
+   */
+  _getNextColor() {
+    const color = INSTANCE_COLORS[this._colorIndex % INSTANCE_COLORS.length];
+    this._colorIndex++;
+    return color;
+  }
+
+  /**
+   * Get the color assigned to an instance
+   * @param {string} instanceId - Instance ID
+   * @returns {Object|null} Color object with name and hex, or null if not found
+   */
+  getInstanceColor(instanceId) {
+    const instance = this.getInstance(instanceId);
+    return instance ? instance.color : null;
   }
 
   /**

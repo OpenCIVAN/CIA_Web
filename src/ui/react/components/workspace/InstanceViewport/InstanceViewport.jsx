@@ -1,7 +1,12 @@
-// src/ui/react/components/workspace/InstanceViewport.jsx
+// src/ui/react/components/workspace/InstanceViewport/InstanceViewport.jsx
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from 'react-dom';
-import { ChevronDown, Maximize2, Trash2, AlertCircle, ZoomIn, ZoomOut, RotateCcw, Move, LayoutGrid } from 'lucide-react';
+import {
+    ChevronDown, Maximize2, Minimize2, Trash2, AlertCircle, ZoomIn, ZoomOut,
+    RotateCcw, Move, LayoutGrid, Wrench, MoreHorizontal, Settings,
+    Glasses, Box, BarChart3, Layers, MousePointer2, Scan, Minus, Plus,
+    Pencil, Eye, Palette, Users, Undo2, Redo2, Copy, X
+} from 'lucide-react';
 
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
@@ -15,13 +20,452 @@ import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/Posit
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
+import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
+import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
+
 import "./InstanceViewport.scss";
+
+// ============================================================================
+// INSTANCE TYPE ICONS
+// ============================================================================
+
+const INSTANCE_TYPE_ICONS = {
+    vtk: Box,
+    chart: BarChart3,
+    plot: BarChart3,
+    image: Layers,
+    default: Box,
+};
+
+const getInstanceTypeIcon = (type) => {
+    return INSTANCE_TYPE_ICONS[type] || INSTANCE_TYPE_ICONS.default;
+};
+
+// ============================================================================
+// SUB-COMPONENTS
+// ============================================================================
+
+/**
+ * TopToolbar - Overlay toolbar at top of content area
+ * Slides down on hover, contains tiered tool display
+ */
+function TopToolbar({
+    tools,
+    uiMode,
+    visible,
+    pinned,
+    onTogglePin,
+    openMenuId,
+    setOpenMenuId,
+    dropdownPosition,
+    menuButtonRefs,
+    onShowToolbar,
+    onHideToolbar,
+    renderTool,
+    onOpenInstanceTools,
+}) {
+    const tierConfig = getTierConfig(uiMode);
+
+    return (
+        <div
+            className={`instance-viewport__toolbar-overlay ${visible || pinned ? 'instance-viewport__toolbar-overlay--visible' : ''} ${pinned ? 'instance-viewport__toolbar-overlay--pinned' : ''}`}
+            onMouseEnter={onShowToolbar}
+            onMouseLeave={onHideToolbar}
+        >
+            <div className="instance-toolbar">
+                {/* Tool Groups */}
+                <div className="instance-toolbar__groups">
+                    {tools.map((tool, index) => renderTool(tool, index))}
+                </div>
+
+                {/* History Tools (Undo/Redo) */}
+                {tierConfig.showHistoryButtons && (
+                    <div className="instance-toolbar__history">
+                        <div className="instance-toolbar__separator" />
+                        <button
+                            className="instance-toolbar__tool-button"
+                            title="Undo (Ctrl+Z)"
+                        >
+                            <Undo2 size={16} />
+                        </button>
+                        <button
+                            className="instance-toolbar__tool-button"
+                            title="Redo (Ctrl+Shift+Z)"
+                        >
+                            <Redo2 size={16} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Global Tools - Always visible */}
+                <div className="instance-toolbar__global-tools">
+                    <div className="instance-toolbar__separator" />
+                    <button
+                        className="instance-toolbar__tool-button instance-toolbar__tool-button--primary"
+                        onClick={onOpenInstanceTools}
+                        title="Instance Tools (I)"
+                    >
+                        <Wrench size={16} />
+                    </button>
+                    <button
+                        className="instance-toolbar__tool-button"
+                        title="More options"
+                    >
+                        <MoreHorizontal size={16} />
+                    </button>
+                </div>
+
+                {/* Pin Button */}
+                <button
+                    className={`instance-toolbar__pin-button ${pinned ? 'active' : ''}`}
+                    onClick={onTogglePin}
+                    title={pinned ? 'Unpin toolbar' : 'Pin toolbar'}
+                >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2v8M12 18v4M5 12h14" />
+                        {pinned && <circle cx="12" cy="12" r="3" fill="currentColor" />}
+                    </svg>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * BottomNavBar - Navigation bar at bottom of content area
+ * Slides up on focus/click, contains zoom and navigation controls
+ */
+function BottomNavBar({
+    visible,
+    zoomLevel,
+    onZoomIn,
+    onZoomOut,
+    onZoomChange,
+    onFit,
+    onOneToOne,
+    onResetView,
+    navMode,
+    onNavModeChange,
+}) {
+    return (
+        <div className={`instance-viewport__navbar-overlay ${visible ? 'instance-viewport__navbar-overlay--visible' : ''}`}>
+            <div className="instance-navbar">
+                {/* Navigation Mode Buttons */}
+                <div className="instance-navbar__nav-buttons">
+                    <button
+                        className={`instance-navbar__nav-button ${navMode === 'pan' ? 'active' : ''}`}
+                        onClick={() => onNavModeChange('pan')}
+                        title="Pan"
+                    >
+                        <Move size={16} />
+                    </button>
+                    <button
+                        className={`instance-navbar__nav-button ${navMode === 'zoom' ? 'active' : ''}`}
+                        onClick={() => onNavModeChange('zoom')}
+                        title="Zoom"
+                    >
+                        <ZoomIn size={16} />
+                    </button>
+                    <button
+                        className={`instance-navbar__nav-button ${navMode === 'rotate' ? 'active' : ''}`}
+                        onClick={() => onNavModeChange('rotate')}
+                        title="Rotate"
+                    >
+                        <RotateCcw size={16} />
+                    </button>
+                </div>
+
+                {/* Zoom Display with +/- */}
+                <div className="instance-navbar__zoom-display">
+                    <button
+                        className="instance-navbar__zoom-button"
+                        onClick={() => onZoomChange(zoomLevel - 10)}
+                        title="Zoom out 10%"
+                    >
+                        <Minus size={12} />
+                    </button>
+                    <span className="instance-navbar__zoom-value">{zoomLevel}%</span>
+                    <button
+                        className="instance-navbar__zoom-button"
+                        onClick={() => onZoomChange(zoomLevel + 10)}
+                        title="Zoom in 10%"
+                    >
+                        <Plus size={12} />
+                    </button>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="instance-navbar__quick-actions">
+                    <button
+                        className="instance-navbar__action-button"
+                        onClick={onOneToOne}
+                        title="1:1 Scale"
+                    >
+                        1:1
+                    </button>
+                    <button
+                        className="instance-navbar__action-button"
+                        onClick={onFit}
+                        title="Fit to view"
+                    >
+                        <Scan size={14} />
+                        Fit
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * CornerControls - Fallback controls for small viewports
+ * Shows three buttons in top-right corner
+ */
+function CornerControls({
+    onOpenInstanceTools,
+    onVRMode,
+    onSettings,
+    constraintMessage,
+}) {
+    return (
+        <div className="instance-viewport__corner-controls">
+            <button
+                className="instance-viewport__corner-button"
+                onClick={onOpenInstanceTools}
+                title="Instance Tools"
+            >
+                <Wrench size={16} />
+            </button>
+            <button
+                className="instance-viewport__corner-button"
+                onClick={onVRMode}
+                title="VR Mode"
+            >
+                <Glasses size={16} />
+            </button>
+            <button
+                className="instance-viewport__corner-button"
+                onClick={onSettings}
+                title="Settings"
+            >
+                <Settings size={16} />
+            </button>
+        </div>
+    );
+}
+
+/**
+ * GearOnlyDropdown - Minimal controls for super tiny viewports
+ * Single gear button with dropdown
+ */
+function GearOnlyDropdown({
+    open,
+    onToggle,
+    onOpenInstanceTools,
+    onVRMode,
+    onMaximize,
+    onDuplicate,
+    onClose,
+}) {
+    return (
+        <div className="instance-viewport__gear-dropdown">
+            <button
+                className={`instance-viewport__gear-button ${open ? 'active' : ''}`}
+                onClick={onToggle}
+                title="Options"
+            >
+                <Settings size={16} />
+            </button>
+            {open && (
+                <div className="instance-viewport__gear-menu">
+                    <button
+                        className="instance-viewport__gear-item instance-viewport__gear-item--primary"
+                        onClick={onOpenInstanceTools}
+                    >
+                        <Wrench size={14} />
+                        Instance Tools
+                    </button>
+                    <button className="instance-viewport__gear-item" onClick={onVRMode}>
+                        <Glasses size={14} />
+                        VR Mode
+                    </button>
+                    <button className="instance-viewport__gear-item" onClick={onMaximize}>
+                        <Maximize2 size={14} />
+                        Maximize
+                    </button>
+                    <button className="instance-viewport__gear-item" onClick={onDuplicate}>
+                        <Copy size={14} />
+                        Duplicate
+                    </button>
+                    <div className="instance-viewport__gear-separator" />
+                    <button className="instance-viewport__gear-item instance-viewport__gear-item--danger" onClick={onClose}>
+                        <X size={14} />
+                        Close
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * TooSmallNotice - Subtle banner for undersized viewports
+ */
+function TooSmallNotice({ constraintMessage, onOpenTools }) {
+    if (!constraintMessage) return null;
+
+    return (
+        <div className="instance-viewport__size-notice">
+            <span className="instance-viewport__size-notice-text">
+                {constraintMessage}
+            </span>
+            <button
+                className="instance-viewport__size-notice-button"
+                onClick={onOpenTools}
+            >
+                Tools
+            </button>
+        </div>
+    );
+}
+
+/**
+ * HeaderBar - Always visible header with instance info
+ */
+function HeaderBar({
+    displayName,
+    instanceType,
+    instanceColor,
+    isFullscreen,
+    onFullscreen,
+    onDelete,
+    onChangeSpan,
+    currentSpan,
+    showSpanPicker,
+    setShowSpanPicker,
+    spanPickerRef,
+    onShowToolbar,
+    onHideToolbar,
+}) {
+    const TypeIcon = getInstanceTypeIcon(instanceType);
+
+    return (
+        <div
+            className="instance-viewport__header"
+            onMouseEnter={onShowToolbar}
+            onMouseLeave={onHideToolbar}
+        >
+            <div className="instance-viewport__header-info">
+                {/* Color dot */}
+                {instanceColor && (
+                    <span
+                        className="instance-viewport__header-color-dot"
+                        style={{ backgroundColor: instanceColor.hex }}
+                    />
+                )}
+                {/* Type icon */}
+                {instanceType && (
+                    <TypeIcon size={14} className="instance-viewport__header-type-icon" />
+                )}
+                {/* Label */}
+                <span className="instance-viewport__header-title">
+                    {displayName}
+                </span>
+            </div>
+            <div className="instance-viewport__header-actions">
+                {/* Span size picker */}
+                {onChangeSpan && (
+                    <div className="span-picker-wrapper" ref={spanPickerRef}>
+                        <button
+                            onClick={() => setShowSpanPicker(!showSpanPicker)}
+                            className={`instance-viewport__header-button ${showSpanPicker ? 'active' : ''}`}
+                            title={`Window size: ${currentSpan}`}
+                        >
+                            <LayoutGrid size={14} />
+                        </button>
+                        {showSpanPicker && (
+                            <div className="span-picker-dropdown">
+                                <div className="span-picker-grid">
+                                    {[
+                                        { id: '1x1', label: '1x1', cols: 1, rows: 1 },
+                                        { id: '2x1', label: '2x1', cols: 2, rows: 1 },
+                                        { id: '1x2', label: '1x2', cols: 1, rows: 2 },
+                                        { id: '2x2', label: '2x2', cols: 2, rows: 2 },
+                                    ].map((size) => (
+                                        <button
+                                            key={size.id}
+                                            className={`span-picker-option ${currentSpan === size.id ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onChangeSpan(size.id);
+                                                setShowSpanPicker(false);
+                                            }}
+                                            title={size.label}
+                                        >
+                                            <div className="span-preview" style={{
+                                                gridTemplateColumns: `repeat(2, 1fr)`,
+                                                gridTemplateRows: `repeat(2, 1fr)`
+                                            }}>
+                                                <div className={`span-cell active`} style={{
+                                                    gridColumn: `span ${size.cols}`,
+                                                    gridRow: `span ${size.rows}`
+                                                }} />
+                                                {size.id !== '2x2' && <div className="span-cell" />}
+                                                {size.id === '1x1' && (
+                                                    <>
+                                                        <div className="span-cell" />
+                                                        <div className="span-cell" />
+                                                    </>
+                                                )}
+                                                {size.id === '2x1' && <div className="span-cell" style={{ gridColumn: 'span 2' }} />}
+                                                {size.id === '1x2' && <div className="span-cell" />}
+                                            </div>
+                                            <span className="span-label">{size.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Settings dropdown button */}
+                <button
+                    className="instance-viewport__header-button"
+                    title="Settings"
+                >
+                    <Settings size={14} />
+                </button>
+
+                <button
+                    onClick={onFullscreen}
+                    className="instance-viewport__header-button"
+                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                >
+                    {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+                {onDelete && (
+                    <button
+                        onClick={onDelete}
+                        className="instance-viewport__header-button instance-viewport__header-button--danger"
+                        title="Delete"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 /**
  * InstanceViewport
- * 
+ *
  * A viewport component that displays a ViewConfiguration using a handler.
- * Instances start TYPELESS and determine their type when data is loaded.
+ * Features overlay toolbars with size constraints and graceful degradation.
  */
 export function InstanceViewport({
     viewConfigId = null,
@@ -33,20 +477,27 @@ export function InstanceViewport({
     currentSpan = '1x1'
 }) {
     // =========================================================================
-    // STATE
+    // REFS
     // =========================================================================
 
     const containerRef = useRef(null);
+    const viewportRef = useRef(null);
     const initOnce = useRef(false);
-    const instanceIdRef = useRef(null); // Track instanceId for cleanup
-    const menuButtonRefs = useRef(new Map()); // Track button positions for portal positioning
+    const instanceIdRef = useRef(null);
+    const menuButtonRefs = useRef(new Map());
     const toolbarHideTimeout = useRef(null);
+    const spanPickerRef = useRef(null);
+
+    // =========================================================================
+    // STATE
+    // =========================================================================
 
     const [actualInstanceId, setActualInstanceId] = useState(
         isRemote ? remoteInstanceId : null
     );
     const [initialized, setInitialized] = useState(false);
     const [instanceType, setInstanceType] = useState(null);
+    const [instanceColor, setInstanceColor] = useState(null);
     const [hasData, setHasData] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -55,21 +506,40 @@ export function InstanceViewport({
     const [openMenuId, setOpenMenuId] = useState(null);
     const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
-    // Auto-hide toolbar state
+    // Toolbar visibility state
     const [toolbarVisible, setToolbarVisible] = useState(false);
     const [toolbarPinned, setToolbarPinned] = useState(false);
 
-    // Status bar info
-    const [statusInfo, setStatusInfo] = useState({
-        zoomLevel: 100,
-        cameraMode: 'orbit',
-        dataPoints: null,
-        dimensions: null
-    });
+    // Bottom nav bar state
+    const [navbarVisible, setNavbarVisible] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Zoom and navigation state
+    const [zoomLevel, setZoomLevel] = useState(100);
+    const [navMode, setNavMode] = useState('orbit');
 
     // Span picker state
     const [showSpanPicker, setShowSpanPicker] = useState(false);
-    const spanPickerRef = useRef(null);
+
+    // Gear dropdown state (for gear-only mode)
+    const [gearDropdownOpen, setGearDropdownOpen] = useState(false);
+
+    // Fullscreen state
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // =========================================================================
+    // SIZE TRACKING
+    // =========================================================================
+
+    const {
+        width,
+        height,
+        uiMode,
+        constraintReason,
+        constraintMessage,
+        isConstrained,
+        showFullToolbars
+    } = useInstanceSize(viewportRef);
 
     // =========================================================================
     // DROPDOWN POSITIONING & CLICK AWAY
@@ -86,18 +556,16 @@ export function InstanceViewport({
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            // Get toolbar bounds to avoid overlap
-            const toolbar = buttonElement.closest('.instance-viewport__toolbar');
+            const toolbar = buttonElement.closest('.instance-toolbar');
             const toolbarRect = toolbar?.getBoundingClientRect();
 
-            // Estimate dropdown size (will be adjusted by actual element)
             const dropdownWidth = 260;
             const dropdownHeight = 240;
 
             let x, y;
 
-            // STRATEGY 1: Try positioning to the LEFT of the toolbar
-            x = rect.left - dropdownWidth - 12; // 12px gap
+            // Try positioning to the LEFT of the toolbar
+            x = rect.left - dropdownWidth - 12;
             y = toolbarRect ? toolbarRect.top : rect.top;
 
             // If no room on left, try RIGHT side
@@ -105,17 +573,14 @@ export function InstanceViewport({
                 x = rect.right + 12;
             }
 
-            // If STILL no room, position BELOW toolbar (fallback)
+            // If STILL no room, position BELOW toolbar
             if (x + dropdownWidth > viewportWidth - 10) {
                 x = rect.left;
                 y = rect.bottom + 8;
             }
 
             // Ensure dropdown stays within viewport vertically
-            if (y < 10) {
-                y = 10;
-            }
-
+            if (y < 10) y = 10;
             if (y + dropdownHeight > viewportHeight - 10) {
                 y = viewportHeight - dropdownHeight - 10;
             }
@@ -125,16 +590,13 @@ export function InstanceViewport({
 
         updatePosition();
 
-        // Update position on scroll or resize
         window.addEventListener('scroll', updatePosition, true);
         window.addEventListener('resize', updatePosition);
 
-        // Click away handler - close dropdown when clicking outside
         const handleClickAway = (e) => {
             const buttonElement = menuButtonRefs.current.get(openMenuId);
             const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
 
-            // Don't close if clicking the button or inside the dropdown
             if (
                 buttonElement?.contains(e.target) ||
                 dropdownElement?.contains(e.target)
@@ -145,7 +607,6 @@ export function InstanceViewport({
             setOpenMenuId(null);
         };
 
-        // Use capture phase to catch clicks before they bubble
         document.addEventListener('mousedown', handleClickAway, true);
 
         return () => {
@@ -175,13 +636,15 @@ export function InstanceViewport({
                     { viewConfigId: viewConfigId }
                 );
 
-                // Store in ref for cleanup (avoids stale closure)
                 instanceIdRef.current = instanceId;
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId);
 
-                // Activate the view to mark it as in use
+                // Get the assigned color
+                const color = workspaceManager.getInstanceColor(instanceId);
+                setInstanceColor(color);
+
                 if (viewConfigId) {
                     viewConfigurationManager.activateView(viewConfigId);
                 }
@@ -189,7 +652,7 @@ export function InstanceViewport({
                 const instanceHeader = workspaceManager.getInstanceHeaderInfo(instanceId);
                 setHeaderInfo(instanceHeader);
 
-                log.info(`Typeless instance ${instanceId} created`);
+                log.info(`Typeless instance ${instanceId} created with color ${color?.name}`);
 
             } catch (err) {
                 log.error(`Instance initialization failed:`, err);
@@ -202,18 +665,16 @@ export function InstanceViewport({
         initialize();
 
         return () => {
-            // Use ref instead of state to get the correct instanceId
             if (instanceIdRef.current) {
                 log.debug(`Cleaning up instance ${instanceIdRef.current}`);
                 workspaceManager.deleteInstance(instanceIdRef.current);
             }
 
-            // Deactivate the view to update instance count
             if (viewConfigId) {
                 viewConfigurationManager.deactivateView(viewConfigId);
             }
         };
-    }, [viewConfigId]); // Removed actualInstanceId - not needed, initOnce guards re-init
+    }, [viewConfigId]);
 
     // =========================================================================
     // DATA LOADING
@@ -324,16 +785,30 @@ export function InstanceViewport({
         return `Instance ${actualInstanceId ? actualInstanceId.slice(0, 12) : 'Loading'}...`;
     };
 
-    const handleFullscreen = () => {
-        if (containerRef.current) {
-            if (containerRef.current.requestFullscreen) {
-                containerRef.current.requestFullscreen();
-            }
+    const handleFullscreen = useCallback(() => {
+        if (!viewportRef.current) return;
+
+        if (document.fullscreenElement === viewportRef.current) {
+            // Exit fullscreen
+            document.exitFullscreen?.();
+        } else {
+            // Enter fullscreen
+            viewportRef.current.requestFullscreen?.();
         }
-    };
+    }, []);
+
+    // Listen for fullscreen changes (e.g., user presses Esc)
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(document.fullscreenElement === viewportRef.current);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
 
     // =========================================================================
-    // TOOLBAR VISIBILITY (Auto-hide feature)
+    // TOOLBAR VISIBILITY
     // =========================================================================
 
     const showToolbar = useCallback(() => {
@@ -345,11 +820,11 @@ export function InstanceViewport({
     }, []);
 
     const hideToolbar = useCallback(() => {
-        if (toolbarPinned || openMenuId) return; // Don't hide if pinned or menu open
+        if (toolbarPinned || openMenuId) return;
 
         toolbarHideTimeout.current = setTimeout(() => {
             setToolbarVisible(false);
-        }, 800); // Delay before hiding
+        }, 800);
     }, [toolbarPinned, openMenuId]);
 
     const toggleToolbarPin = useCallback(() => {
@@ -372,7 +847,75 @@ export function InstanceViewport({
         };
     }, []);
 
-    // Close span picker on click outside
+    // =========================================================================
+    // NAVBAR VISIBILITY (focus-based)
+    // =========================================================================
+
+    const handleFocus = useCallback(() => {
+        setIsFocused(true);
+        setNavbarVisible(true);
+        if (actualInstanceId) {
+            setActiveInstance(actualInstanceId);
+        }
+    }, [actualInstanceId]);
+
+    const handleBlur = useCallback(() => {
+        setIsFocused(false);
+        // Delay hiding navbar to allow for interaction
+        setTimeout(() => {
+            setNavbarVisible(false);
+        }, 300);
+    }, []);
+
+    // =========================================================================
+    // ZOOM CONTROLS
+    // =========================================================================
+
+    const handleZoomChange = useCallback((newZoom) => {
+        const clampedZoom = Math.max(10, Math.min(500, newZoom));
+        setZoomLevel(clampedZoom);
+        // TODO: Apply zoom to actual view
+    }, []);
+
+    const handleZoomIn = useCallback(() => {
+        handleZoomChange(zoomLevel + 10);
+    }, [zoomLevel, handleZoomChange]);
+
+    const handleZoomOut = useCallback(() => {
+        handleZoomChange(zoomLevel - 10);
+    }, [zoomLevel, handleZoomChange]);
+
+    const handleFit = useCallback(() => {
+        setZoomLevel(100);
+        // TODO: Fit view to content
+    }, []);
+
+    const handleOneToOne = useCallback(() => {
+        setZoomLevel(100);
+        // TODO: Set 1:1 scale
+    }, []);
+
+    const handleResetView = useCallback(() => {
+        setZoomLevel(100);
+        setNavMode('orbit');
+        // TODO: Reset camera
+    }, []);
+
+    // =========================================================================
+    // INSTANCE TOOLS PANEL
+    // =========================================================================
+
+    const handleOpenInstanceTools = useCallback(() => {
+        // TODO: Emit event to open Instance Tools panel in left sidebar
+        window.dispatchEvent(new CustomEvent('cia:open-instance-tools', {
+            detail: { instanceId: actualInstanceId }
+        }));
+    }, [actualInstanceId]);
+
+    // =========================================================================
+    // SPAN PICKER CLICK OUTSIDE
+    // =========================================================================
+
     useEffect(() => {
         if (!showSpanPicker) return;
 
@@ -387,39 +930,25 @@ export function InstanceViewport({
     }, [showSpanPicker]);
 
     // =========================================================================
-    // STATUS BAR HELPERS
+    // GEAR DROPDOWN CLICK OUTSIDE
     // =========================================================================
 
-    const getDataInfo = () => {
-        if (!hasData || !viewConfigId) return null;
+    useEffect(() => {
+        if (!gearDropdownOpen) return;
 
-        try {
-            const view = viewConfigurationManager.getView(viewConfigId);
-            if (view?.datasetId) {
-                const dataset = datasetManager.getDataset(view.datasetId);
-                if (dataset) {
-                    return {
-                        points: dataset.pointCount || dataset.numPoints,
-                        dimensions: dataset.dimensions,
-                        type: dataset.type || instanceType
-                    };
-                }
+        const handleClickOutside = (e) => {
+            const gearDropdown = document.querySelector('.instance-viewport__gear-dropdown');
+            if (gearDropdown && !gearDropdown.contains(e.target)) {
+                setGearDropdownOpen(false);
             }
-        } catch (e) {
-            return null;
-        }
-        return null;
-    };
+        };
 
-    const formatNumber = (num) => {
-        if (!num) return '—';
-        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-        return num.toString();
-    };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [gearDropdownOpen]);
 
     // =========================================================================
-    // TOOLBAR RENDERING
+    // TOOL RENDERING
     // =========================================================================
 
     const renderMenuOption = (option, optIndex, menuId) => {
@@ -542,7 +1071,7 @@ export function InstanceViewport({
             return (
                 <div
                     key={`separator-${index}`}
-                    className="toolbar-separator"
+                    className="instance-toolbar__separator"
                 />
             );
         }
@@ -557,12 +1086,10 @@ export function InstanceViewport({
                     className="toolbar-menu"
                     onMouseEnter={() => setOpenMenuId(tool.id)}
                     onMouseLeave={(e) => {
-                        // Only close if not moving to the dropdown
                         const relatedTarget = e.relatedTarget;
                         const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
 
                         if (!dropdownElement || !dropdownElement.contains(relatedTarget)) {
-                            // Small delay to allow mouse to reach dropdown
                             setTimeout(() => {
                                 const stillHoveringDropdown = document.querySelector('.toolbar-menu-dropdown--portal:hover');
                                 if (!stillHoveringDropdown) {
@@ -576,16 +1103,16 @@ export function InstanceViewport({
                         ref={(el) => {
                             if (el) menuButtonRefs.current.set(tool.id, el);
                         }}
-                        className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
+                        className={`instance-toolbar__tool-button ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
                         aria-haspopup="true"
                         aria-expanded={isOpen}
                     >
-                        {IconComponent && <IconComponent size={18} strokeWidth={2} />}
-                        <ChevronDown size={8} className="menu-indicator" />
+                        {IconComponent && <IconComponent size={16} strokeWidth={2} />}
+                        <ChevronDown size={8} className="instance-toolbar__menu-indicator" />
 
-                        <div className="toolbar-tooltip">
+                        <div className="instance-toolbar__tooltip">
                             <div className="tooltip-title">{tool.label}</div>
                             {tool.description && (
                                 <div className="tooltip-desc">{tool.description}</div>
@@ -596,7 +1123,6 @@ export function InstanceViewport({
                         </div>
                     </button>
 
-                    {/* RENDER DROPDOWN VIA PORTAL */}
                     {isOpen && tool.options && tool.options.length > 0 && createPortal(
                         <div
                             className="toolbar-menu-dropdown toolbar-menu-dropdown--portal"
@@ -608,7 +1134,6 @@ export function InstanceViewport({
                             }}
                             onMouseEnter={() => setOpenMenuId(tool.id)}
                             onMouseLeave={() => {
-                                // Close when mouse leaves dropdown
                                 setTimeout(() => {
                                     const hoveringButton = menuButtonRefs.current.get(tool.id)?.matches(':hover');
                                     if (!hoveringButton) {
@@ -631,12 +1156,12 @@ export function InstanceViewport({
             <button
                 key={tool.id || `tool-${index}`}
                 onClick={tool.onClick}
-                className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
+                className={`instance-toolbar__tool-button ${tool.active ? 'active' : ''}`}
                 disabled={tool.disabled}
                 aria-label={tool.label}
             >
-                {IconComponent && <IconComponent size={18} strokeWidth={2} />}
-                <div className="toolbar-tooltip">
+                {IconComponent && <IconComponent size={16} strokeWidth={2} />}
+                <div className="instance-toolbar__tooltip">
                     <div className="tooltip-title">{tool.label}</div>
                     {tool.description && (
                         <div className="tooltip-desc">{tool.description}</div>
@@ -650,119 +1175,58 @@ export function InstanceViewport({
     };
 
     // =========================================================================
-    // MAIN RENDER - NO INLINE STYLES
+    // RENDER
     // =========================================================================
 
-    const dataInfo = getDataInfo();
+    const displayName = getDisplayName();
 
     return (
-        <div className="instance-viewport">
-            {/* Header with hover zone for auto-hide toolbar */}
-            <div
-                className="instance-viewport__header"
-                onMouseEnter={showToolbar}
-                onMouseLeave={hideToolbar}
-            >
-                <div className="instance-viewport__header-title">
-                    {getDisplayName()}
-                </div>
-                <div className="instance-viewport__header-actions">
-                    {/* Span size picker */}
-                    {onChangeSpan && (
-                        <div className="span-picker-wrapper" ref={spanPickerRef}>
-                            <button
-                                onClick={() => setShowSpanPicker(!showSpanPicker)}
-                                className={`instance-viewport__header-button ${showSpanPicker ? 'active' : ''}`}
-                                title={`Window size: ${currentSpan}`}
-                            >
-                                <LayoutGrid size={14} />
-                            </button>
-                            {showSpanPicker && (
-                                <div className="span-picker-dropdown">
-                                    <div className="span-picker-grid">
-                                        {[
-                                            { id: '1x1', label: '1×1', cols: 1, rows: 1 },
-                                            { id: '2x1', label: '2×1', cols: 2, rows: 1 },
-                                            { id: '1x2', label: '1×2', cols: 1, rows: 2 },
-                                            { id: '2x2', label: '2×2', cols: 2, rows: 2 },
-                                        ].map((size) => (
-                                            <button
-                                                key={size.id}
-                                                className={`span-picker-option ${currentSpan === size.id ? 'active' : ''}`}
-                                                onClick={() => {
-                                                    onChangeSpan(size.id);
-                                                    setShowSpanPicker(false);
-                                                }}
-                                                title={size.label}
-                                            >
-                                                <div className="span-preview" style={{
-                                                    gridTemplateColumns: `repeat(2, 1fr)`,
-                                                    gridTemplateRows: `repeat(2, 1fr)`
-                                                }}>
-                                                    <div className={`span-cell active`} style={{
-                                                        gridColumn: `span ${size.cols}`,
-                                                        gridRow: `span ${size.rows}`
-                                                    }} />
-                                                    {size.id !== '2x2' && <div className="span-cell" />}
-                                                    {size.id === '1x1' && (
-                                                        <>
-                                                            <div className="span-cell" />
-                                                            <div className="span-cell" />
-                                                        </>
-                                                    )}
-                                                    {size.id === '2x1' && <div className="span-cell" style={{ gridColumn: 'span 2' }} />}
-                                                    {size.id === '1x2' && <div className="span-cell" />}
-                                                </div>
-                                                <span className="span-label">{size.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    <button
-                        onClick={handleFullscreen}
-                        className="instance-viewport__header-button"
-                        title="Fullscreen"
-                    >
-                        <Maximize2 size={14} />
-                    </button>
-                    {onDelete && (
-                        <button
-                            onClick={onDelete}
-                            className="instance-viewport__header-button"
-                            title="Delete"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Auto-hide toolbar - slides down from header */}
-            {tools.length > 0 && (
-                <div
-                    className={`instance-viewport__toolbar instance-viewport__toolbar--autohide ${toolbarVisible || toolbarPinned ? 'visible' : ''} ${toolbarPinned ? 'pinned' : ''}`}
-                    onMouseEnter={showToolbar}
-                    onMouseLeave={hideToolbar}
-                >
-                    {tools.map((tool, index) => renderTool(tool, index))}
-
-                    {/* Pin button */}
-                    <button
-                        className={`toolbar-pin-btn ${toolbarPinned ? 'active' : ''}`}
-                        onClick={toggleToolbarPin}
-                        title={toolbarPinned ? 'Unpin toolbar' : 'Pin toolbar'}
-                    >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 2v8M12 18v4M5 12h14" />
-                            {toolbarPinned && <circle cx="12" cy="12" r="3" fill="currentColor" />}
-                        </svg>
-                    </button>
-                </div>
+        <div
+            ref={viewportRef}
+            className={`instance-viewport instance-viewport--${uiMode}`}
+            tabIndex={0}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+        >
+            {/* Header - Always visible for normal viewports */}
+            {showFullToolbars && (
+                <HeaderBar
+                    displayName={displayName}
+                    instanceType={instanceType}
+                    instanceColor={instanceColor}
+                    isFullscreen={isFullscreen}
+                    onFullscreen={handleFullscreen}
+                    onDelete={onDelete}
+                    onChangeSpan={onChangeSpan}
+                    currentSpan={currentSpan}
+                    showSpanPicker={showSpanPicker}
+                    setShowSpanPicker={setShowSpanPicker}
+                    spanPickerRef={spanPickerRef}
+                    onShowToolbar={showToolbar}
+                    onHideToolbar={hideToolbar}
+                />
             )}
 
+            {/* Top Toolbar - Overlay that slides down on hover */}
+            {showFullToolbars && tools.length > 0 && (
+                <TopToolbar
+                    tools={tools}
+                    uiMode={uiMode}
+                    visible={toolbarVisible}
+                    pinned={toolbarPinned}
+                    onTogglePin={toggleToolbarPin}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    dropdownPosition={dropdownPosition}
+                    menuButtonRefs={menuButtonRefs}
+                    onShowToolbar={showToolbar}
+                    onHideToolbar={hideToolbar}
+                    renderTool={renderTool}
+                    onOpenInstanceTools={handleOpenInstanceTools}
+                />
+            )}
+
+            {/* Content Area */}
             <div
                 ref={containerRef}
                 className="instance-viewport__content"
@@ -781,58 +1245,49 @@ export function InstanceViewport({
                 )}
             </div>
 
-            {/* Status bar at bottom */}
-            {hasData && (
-                <div className="instance-viewport__statusbar">
-                    <div className="statusbar__section statusbar__section--left">
-                        {instanceType && (
-                            <span className="statusbar__badge statusbar__badge--type">
-                                {instanceType}
-                            </span>
-                        )}
-                        {dataInfo?.points && (
-                            <span className="statusbar__info">
-                                <span className="statusbar__label">Points:</span>
-                                <span className="statusbar__value">{formatNumber(dataInfo.points)}</span>
-                            </span>
-                        )}
-                        {dataInfo?.dimensions && (
-                            <span className="statusbar__info">
-                                <span className="statusbar__label">Dims:</span>
-                                <span className="statusbar__value">
-                                    {Array.isArray(dataInfo.dimensions)
-                                        ? dataInfo.dimensions.join(' × ')
-                                        : dataInfo.dimensions}
-                                </span>
-                            </span>
-                        )}
-                    </div>
+            {/* Bottom Nav Bar - Overlay that slides up on focus */}
+            {showFullToolbars && hasData && (
+                <BottomNavBar
+                    visible={navbarVisible || isFocused}
+                    zoomLevel={zoomLevel}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    onZoomChange={handleZoomChange}
+                    onFit={handleFit}
+                    onOneToOne={handleOneToOne}
+                    onResetView={handleResetView}
+                    navMode={navMode}
+                    onNavModeChange={setNavMode}
+                />
+            )}
 
-                    <div className="statusbar__section statusbar__section--center">
-                        {/* Zoom controls */}
-                        <div className="statusbar__controls">
-                            <button className="statusbar__control-btn" title="Zoom out">
-                                <ZoomOut size={12} />
-                            </button>
-                            <span className="statusbar__zoom-level">
-                                {statusInfo.zoomLevel}%
-                            </span>
-                            <button className="statusbar__control-btn" title="Zoom in">
-                                <ZoomIn size={12} />
-                            </button>
-                            <button className="statusbar__control-btn" title="Reset view">
-                                <RotateCcw size={12} />
-                            </button>
-                        </div>
-                    </div>
+            {/* Corner Controls - For small viewports */}
+            {uiMode === 'corner-controls' && (
+                <>
+                    <CornerControls
+                        onOpenInstanceTools={handleOpenInstanceTools}
+                        onVRMode={() => { }}
+                        onSettings={() => { }}
+                        constraintMessage={constraintMessage}
+                    />
+                    <TooSmallNotice
+                        constraintMessage={constraintMessage}
+                        onOpenTools={handleOpenInstanceTools}
+                    />
+                </>
+            )}
 
-                    <div className="statusbar__section statusbar__section--right">
-                        <span className="statusbar__info statusbar__info--mode">
-                            <Move size={10} />
-                            <span>{statusInfo.cameraMode}</span>
-                        </span>
-                    </div>
-                </div>
+            {/* Gear Only Dropdown - For super tiny viewports */}
+            {uiMode === 'gear-only' && (
+                <GearOnlyDropdown
+                    open={gearDropdownOpen}
+                    onToggle={() => setGearDropdownOpen(!gearDropdownOpen)}
+                    onOpenInstanceTools={handleOpenInstanceTools}
+                    onVRMode={() => { }}
+                    onMaximize={handleFullscreen}
+                    onDuplicate={() => { }}
+                    onClose={onDelete}
+                />
             )}
         </div>
     );
