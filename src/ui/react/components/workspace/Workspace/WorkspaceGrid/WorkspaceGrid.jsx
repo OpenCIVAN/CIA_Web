@@ -9,12 +9,102 @@ import { workspace as log } from "@Utils/logger.js";
 
 import './WorkspaceGrid.scss';
 
+// localStorage key for workspace persistence
+const WORKSPACE_STORAGE_KEY = 'cia_workspace_state';
+
+/**
+ * Get raw saved workspace state from localStorage (without validation)
+ * Validation happens later once viewConfigurationManager is ready
+ */
+function getRawWorkspaceState() {
+    try {
+        const saved = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+        if (!saved) return [];
+
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed;
+    } catch (error) {
+        log.error('Failed to load workspace state:', error);
+        return [];
+    }
+}
+
+/**
+ * Validate saved instances - filter out those whose views no longer exist
+ */
+function validateSavedInstances(instances) {
+    return instances.filter(inst => {
+        // Empty instances (no viewConfigId) are always valid
+        if (!inst.viewConfigId) return true;
+
+        // Check if the view still exists
+        const view = viewConfigurationManager?.getView(inst.viewConfigId);
+        if (!view) {
+            log.debug(`View ${inst.viewConfigId} no longer exists, removing from saved state`);
+            return false;
+        }
+        return true;
+    });
+}
+
+/**
+ * Save workspace state to localStorage
+ */
+function saveWorkspaceState(instances) {
+    try {
+        // Only save the essential data needed to restore instances
+        const toSave = instances.map(inst => ({
+            key: inst.key,
+            datasetId: inst.datasetId,
+            viewConfigId: inst.viewConfigId,
+            span: inst.span || '1x1',
+        }));
+
+        localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(toSave));
+        log.debug(`Saved ${toSave.length} instance(s) to workspace state`);
+    } catch (error) {
+        log.error('Failed to save workspace state:', error);
+    }
+}
+
 export function WorkspaceGrid() {
+    // Start with empty, then restore from localStorage after views are loaded
     const [instances, setInstances] = useState([]);
+    const [isRestored, setIsRestored] = useState(false);
     const gridRef = useRef(null);
 
     // Track highlighted instance for visual feedback
     const [highlightedInstanceKey, setHighlightedInstanceKey] = useState(null);
+
+    // Restore workspace state after views are loaded from server
+    useEffect(() => {
+        if (isRestored) return;
+
+        // Wait a tick for viewConfigurationManager to be fully initialized
+        const restoreTimeout = setTimeout(() => {
+            const rawState = getRawWorkspaceState();
+            if (rawState.length > 0) {
+                const validInstances = validateSavedInstances(rawState);
+                if (validInstances.length > 0) {
+                    log.info(`Restoring ${validInstances.length} instance(s) from saved workspace`);
+                    setInstances(validInstances);
+                }
+            }
+            setIsRestored(true);
+        }, 100);
+
+        return () => clearTimeout(restoreTimeout);
+    }, [isRestored]);
+
+    // Save workspace state to localStorage whenever instances change
+    useEffect(() => {
+        // Don't save until initial restore is complete
+        if (!isRestored) return;
+
+        saveWorkspaceState(instances);
+    }, [instances, isRestored]);
 
     // Listen for dataset click events
     // Note: DatasetsTab dispatches 'cia:request-instance' with viewId property
