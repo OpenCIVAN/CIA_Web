@@ -1,0 +1,155 @@
+// src/ui/react/components/panels/RightPanel/RightActivityBar.scss
+// Styling for the right activity bar icons
+// Mirrors LeftActivityBar styling with activity bar on the right
+
+@use "theme" as *;
+
+.right-activity-bar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: $color-bg-secondary;
+  padding: $spacing-xs 0;
+}
+
+.right-activity-bar__tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-xs;
+}
+
+.right-activity-bar__tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Default etched state
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  &:hover:not(.active) {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+    color: $color-text-secondary;
+  }
+
+  // Active state with color accent and glow
+  &.active {
+    box-shadow: 0 0 10px var(--glow-color);
+
+    // Color variants
+    &[data-color="pink"] {
+      --glow-color: #{rgba($color-accent-pink, 0.2)};
+      background: rgba($color-accent-pink, 0.15);
+      border: 1px solid rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+
+    &[data-color="purple"] {
+      --glow-color: #{rgba($color-accent-purple, 0.2)};
+      background: rgba($color-accent-purple, 0.15);
+      border: 1px solid rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+
+    &[data-color="blue"] {
+      --glow-color: #{rgba($color-accent-blue, 0.2)};
+      background: rgba($color-accent-blue, 0.15);
+      border: 1px solid rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="green"] {
+      --glow-color: #{rgba($color-accent-green, 0.2)};
+      background: rgba($color-accent-green, 0.15);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="teal"] {
+      --glow-color: #{rgba($color-accent-teal, 0.2)};
+      background: rgba($color-accent-teal, 0.15);
+      border: 1px solid rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+
+    &[data-color="red"] {
+      --glow-color: #{rgba($color-accent-red, 0.2)};
+      background: rgba($color-accent-red, 0.15);
+      border: 1px solid rgba($color-accent-red, 0.4);
+      color: $color-accent-red;
+    }
+
+    &[data-color="amber"] {
+      --glow-color: #{rgba($color-accent-amber, 0.2)};
+      background: rgba($color-accent-amber, 0.15);
+      border: 1px solid rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
+    }
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// "Soon" badge for unimplemented tabs
+.right-activity-bar__badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  font-size: 7px;
+  font-weight: $font-weight-bold;
+  padding: 1px 3px;
+  background: $color-accent-pink;
+  color: $color-bg-base;
+  border-radius: $radius-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+// Divider between tab groups
+.right-activity-bar__divider {
+  width: 24px;
+  height: 1px;
+  background: $color-border-subtle;
+  margin: $spacing-xs 0;
+}
+
+// Spacer pushes bottom section down
+.right-activity-bar__spacer {
+  flex: 1;
+}
+
+// Bottom section with toggle button
+.right-activity-bar__bottom {
+  padding: $spacing-xs;
+  border-top: 1px solid $color-border-subtle;
+  display: flex;
+  justify-content: center;
+}
+
+// Toggle button styling
+.right-activity-bar__toggle {
+  // Inherits from .right-activity-bar__tab
+}

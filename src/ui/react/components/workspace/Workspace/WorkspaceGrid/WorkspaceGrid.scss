@@ -91,9 +91,17 @@
 }
 
 .workspace-grid__empty-icon {
-  font-size: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: $spacing-md;
-  opacity: 0.6;
+  color: $color-text-muted;
+  opacity: 0.5;
+
+  svg {
+    width: 64px;
+    height: 64px;
+  }
 }
 
 .workspace-grid__empty-title {

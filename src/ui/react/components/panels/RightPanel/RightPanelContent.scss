@@ -1,0 +1,100 @@
+// src/ui/react/components/panels/RightPanel/RightPanelContent.scss
+// Styling for the right panel content area
+// Mirrors LeftPanelContent styling
+
+@use "theme" as *;
+
+.right-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: $color-glass-panel;
+  backdrop-filter: $blur-strong saturate(200%);
+  overflow: hidden;
+
+  // Left accent border based on active tab color
+  &[data-color="pink"] {
+    border-left: 2px solid rgba($color-accent-pink, 0.4);
+  }
+
+  &[data-color="purple"] {
+    border-left: 2px solid rgba($color-accent-purple, 0.4);
+  }
+
+  &[data-color="blue"] {
+    border-left: 2px solid rgba($color-accent-blue, 0.4);
+  }
+
+  &[data-color="green"] {
+    border-left: 2px solid rgba($color-accent-green, 0.4);
+  }
+
+  &[data-color="teal"] {
+    border-left: 2px solid rgba($color-accent-teal, 0.4);
+  }
+
+  &[data-color="red"] {
+    border-left: 2px solid rgba($color-accent-red, 0.4);
+  }
+
+  &[data-color="amber"] {
+    border-left: 2px solid rgba($color-accent-amber, 0.4);
+  }
+}
+
+// =============================================================================
+// PLACEHOLDER CONTENT
+// =============================================================================
+
+.right-panel-content__placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-muted;
+}
+
+.right-panel-content__placeholder-icon {
+  margin-bottom: $spacing-md;
+  opacity: 0.5;
+
+  // Color variants
+  &[data-color="pink"] {
+    color: $color-accent-pink;
+  }
+  &[data-color="purple"] {
+    color: $color-accent-purple;
+  }
+  &[data-color="blue"] {
+    color: $color-accent-blue;
+  }
+  &[data-color="green"] {
+    color: $color-accent-green;
+  }
+  &[data-color="teal"] {
+    color: $color-accent-teal;
+  }
+  &[data-color="red"] {
+    color: $color-accent-red;
+  }
+  &[data-color="amber"] {
+    color: $color-accent-amber;
+  }
+}
+
+.right-panel-content__placeholder-title {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.right-panel-content__placeholder-text {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  max-width: 200px;
+}

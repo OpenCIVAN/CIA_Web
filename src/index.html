@@ -35,22 +35,30 @@
     }
 
     .loading-logo {
-      font-size: 48px;
+      width: 64px;
+      height: 64px;
       margin-bottom: 20px;
       animation: pulse 2s ease-in-out infinite;
+    }
+
+    .loading-logo svg {
+      width: 100%;
+      height: 100%;
     }
 
     .loading-text {
       font-size: 18px;
       color: #4CAF50;
       margin-bottom: 30px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
     }
 
     .loading-spinner {
       width: 40px;
       height: 40px;
-      border: 4px solid #333;
-      border-top: 4px solid #4CAF50;
+      border: 3px solid rgba(76, 175, 80, 0.2);
+      border-top: 3px solid #4CAF50;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -58,7 +66,7 @@
     .loading-status {
       margin-top: 20px;
       font-size: 14px;
-      color: #999;
+      color: #808080;
       text-align: center;
       max-width: 400px;
     }
@@ -82,7 +90,7 @@
       }
 
       50% {
-        opacity: 0.8;
+        opacity: 0.7;
         transform: scale(1.05);
       }
     }
@@ -92,8 +100,17 @@
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <div class="loading-logo">🎨</div>
-    <div class="loading-text">CIA Web App</div>
+    <div class="loading-logo">
+      <!-- Lucide Layers3 icon - represents layered data visualization -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.5" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path
+          d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+        <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+        <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+      </svg>
+    </div>
+    <div class="loading-text">CIA Web</div>
     <div class="loading-spinner"></div>
     <div class="loading-status" id="loading-status">
       Initializing...

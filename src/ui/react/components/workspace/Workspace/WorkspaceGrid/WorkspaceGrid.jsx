@@ -1,6 +1,6 @@
 // src/ui/react/components/workspace/WorkspaceGrid.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 
 import { generateGridSlotId } from "@Utils/idGenerator.js";
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
@@ -37,7 +37,6 @@ export function WorkspaceGrid() {
                 }
 
                 // Check if we should reuse an existing instance
-
                 if (viewConfigId && !spawnNew) {
                     // Find existing instance with this view
                     const existingInstance = instances.find(inst => inst.viewConfigId === viewConfigId);
@@ -45,177 +44,102 @@ export function WorkspaceGrid() {
                         log.debug(`Highlighting existing instance for view ${viewConfigId}`);
                         // Highlight the instance
                         setHighlightedInstanceKey(existingInstance.key);
-
-                        // Scroll to it if needed
-                        setTimeout(() => {
-                            const element = document.querySelector(`[data-instance-key="${existingInstance.key}"]`);
-                            if (element) {
-                                element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }
-                        }, 100);
-
-                        // Remove highlight after animation
-                        setTimeout(() => setHighlightedInstanceKey(null), 2000);
-
-                        return; // Don't create a new instance
+                        setTimeout(() => setHighlightedInstanceKey(null), 1500);
+                        return;
                     }
                 }
 
-                // Check if there's already an active view for this dataset
-                let viewConfig = null;
-                if (viewConfigId) {
-                    // Use existing view
-                    viewConfig = viewConfigurationManager.getView(viewConfigId);
-                    if (!viewConfig) {
-                        log.error(`View ${viewConfigId} not found`);
-                        return;
+                // Handle view duplication
+                if (duplicateViewId) {
+                    log.debug(`Duplicating view ${duplicateViewId}`);
+                    const newViewConfig = await viewConfigurationManager.duplicateViewConfiguration(duplicateViewId);
+                    if (newViewConfig) {
+                        addInstance(datasetId, newViewConfig.id);
                     }
-                    log.debug(`Using existing view ${viewConfigId}`);
-                } else if (duplicateViewId) {
-                    // Duplicate an existing view (async - server creates it first)
-                    const sourceView = viewConfigurationManager.getView(duplicateViewId);
-                    if (!sourceView) {
-                        log.error(`Source view ${duplicateViewId} not found for duplication`);
-                        return;
-                    }
-                    viewConfig = await viewConfigurationManager.duplicateView(duplicateViewId);
-                    log.debug(`Duplicated view ${duplicateViewId} to ${viewConfig.id}`);
-                } else {
-                    // Create new view (async - server creates it first)
-                    viewConfig = await viewConfigurationManager.createView(datasetId, {
-                        name: `View of ${dataset.filename}`,
-                    });
-                    log.debug(`Created new view ${viewConfig.id} for dataset ${datasetId}`);
+                    return;
                 }
-                // Add instance with the view (type will be determined when data loads)
-                setInstances((prev) => [...prev, {
-                    key: generateGridSlotId(),
-                    viewConfigId: viewConfig.id,
-                    isRemote: false,
-                }]);
 
+                // Create new view configuration for new instance
+                const newViewConfig = await viewConfigurationManager.createViewConfiguration(datasetId, {
+                    name: `View of ${dataset.fileName}`,
+                    instanceType: dataset.metadata?.defaultInstanceType || 'vtk'
+                });
+
+                if (newViewConfig) {
+                    addInstance(datasetId, newViewConfig.id);
+                }
             } catch (error) {
-                log.error('Failed to create instance:', error);
+                log.error('Failed to handle instance request:', error);
             }
         };
 
-
-
-        window.addEventListener('cia:request-instance', handleInstanceRequest);
-
-        return () => window.removeEventListener('cia:request-instance', handleInstanceRequest);
-
+        window.addEventListener('cia:create-instance', handleInstanceRequest);
+        return () => window.removeEventListener('cia:create-instance', handleInstanceRequest);
     }, [instances]);
 
-    // Listen for view deletion events to close corresponding instances
-    useEffect(() => {
-        const handleViewDeletion = (event) => {
-            const viewConfigId = event.detail?.viewConfigId;
-
-            if (!viewConfigId) {
-                log.error('Invalid viewConfigId for deletion');
-                return;
-            }
-
-            // Find and remove instances with this viewConfigId
-            const instancesToRemove = instances.filter(inst => inst.viewConfigId === viewConfigId);
-
-            if (instancesToRemove.length > 0) {
-                log.debug(`Closing ${instancesToRemove.length} instance(s) for deleted view ${viewConfigId}`);
-                setInstances((prev) => prev.filter((instance) => instance.viewConfigId !== viewConfigId));
-            }
-        };
-
-        window.addEventListener('cia:delete-view-instance', handleViewDeletion);
-        return () => window.removeEventListener('cia:delete-view-instance', handleViewDeletion);
-    }, [instances]);
-
-    // Create empty instance button handler
-    const handleCreateEmptyInstance = useCallback(() => {
-        if (instances.length >= 9) {
-            log.warn('Grid full - max 9 instances');
-            return;
-        }
-
-        log.debug('Creating empty instance (no type, no view)');
-
-        setInstances((prev) => [...prev, {
+    // Add a new instance to the grid
+    const addInstance = useCallback((datasetId, viewConfigId) => {
+        const newInstance = {
             key: generateGridSlotId(),
-            viewConfigId: null,
-            isRemote: false,
-        }]);
-    }, [instances.length]);
+            datasetId,
+            viewConfigId,
+            span: '1x1'
+        };
 
-    // Delete instance handler
-    const handleDeleteInstance = useCallback((instanceKey, viewConfigId) => {
-        log.debug(`Deleting instance: ${instanceKey}`);
-
-        // Deactivate the view before removing the instance
-        if (viewConfigId) {
-            try {
-                viewConfigurationManager.deactivateView(viewConfigId);
-                log.debug(`View ${viewConfigId} deactivated (moved to inactive)`);
-            } catch (error) {
-                log.error(`Failed to deactivate view ${viewConfigId}:`, error);
+        setInstances(prev => {
+            if (prev.length >= 9) {
+                log.warn('Maximum instances reached (9)');
+                return prev;
             }
-        }
-        setInstances((prev) => prev.filter((instance) => instance.key !== instanceKey));
+            return [...prev, newInstance];
+        });
     }, []);
 
-    // Get CSS class for grid layout based on instance count
-    const getGridLayoutClass = () => {
-        const count = instances.length;
-        if (count === 0) return '';
-        if (count === 1) return 'grid-layout-1';
-        if (count === 2) return 'grid-layout-2';
-        if (count <= 4) return 'grid-layout-4';
-        if (count <= 6) return 'grid-layout-6';
-        return 'grid-layout-9';
-    };
+    // Handle creating an empty instance
+    const handleCreateEmptyInstance = useCallback(() => {
+        addInstance(null, null);
+    }, [addInstance]);
 
-    // Get CSS class for bento cell span
-    const getSpanClass = (span) => {
-        const spanClasses = {
-            '1x1': '',
-            '2x1': 'grid-span-col-2',   // Wide
-            '1x2': 'grid-span-row-2',   // Tall
-            '2x2': 'grid-span-2x2',     // Large square
-        };
-        return spanClasses[span] || '';
-    };
+    // Handle deleting an instance
+    const handleDeleteInstance = useCallback((key, viewConfigId) => {
+        setInstances(prev => prev.filter(inst => inst.key !== key));
 
-    // Change instance span size
-    const handleChangeSpan = useCallback((instanceKey, newSpan) => {
-        setInstances((prev) => prev.map((instance) =>
-            instance.key === instanceKey
-                ? { ...instance, span: newSpan }
-                : instance
+        // Also delete the view configuration if it exists
+        if (viewConfigId) {
+            viewConfigurationManager.deleteViewConfiguration(viewConfigId);
+        }
+    }, []);
+
+    // Handle changing instance span
+    const handleChangeSpan = useCallback((key, newSpan) => {
+        setInstances(prev => prev.map(inst =>
+            inst.key === key ? { ...inst, span: newSpan } : inst
         ));
     }, []);
 
+    // Calculate grid layout class based on instance count
+    const getGridLayoutClass = () => {
+        const count = instances.length;
+        if (count <= 1) return 'grid-1';
+        if (count <= 2) return 'grid-2';
+        if (count <= 4) return 'grid-4';
+        if (count <= 6) return 'grid-6';
+        return 'grid-9';
+    };
+
+    // Get span class for an instance
+    const getSpanClass = (span) => {
+        if (!span || span === '1x1') return '';
+        return `span-${span.replace('x', '-')}`;
+    };
+
     return (
         <div className="workspace-grid">
-            {/* Header with Add Instance button */}
-            <div className="workspace-grid__header">
-                <div className="workspace-grid__title">
-                    <span>Workspace</span>
-                    <span className="workspace-grid__count">({instances.length})</span>
-                </div>
-                <button
-                    className="workspace-grid__add-button"
-                    onClick={handleCreateEmptyInstance}
-                    disabled={instances.length >= 9}
-                    title="Add empty instance"
-                >
-                    <Plus size={18} />
-                    Add Instance
-                </button>
-            </div>
-
-            {/* Empty state or grid */}
             {instances.length === 0 ? (
                 <div className="workspace-grid__empty-state">
-                    <div className="workspace-grid__empty-icon">🎨</div>
+                    <div className="workspace-grid__empty-icon">
+                        <Layers size={64} strokeWidth={1} />
+                    </div>
                     <div className="workspace-grid__empty-title">
                         No visualization windows open
                     </div>

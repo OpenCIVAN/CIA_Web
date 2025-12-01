@@ -246,7 +246,9 @@ const MockWorkspaceGrid = ({ initialInstances = [] }) => {
                         gap: "16px",
                     }}
                 >
-                    <div style={{ fontSize: "48px" }}>🎨</div>
+                    <div style={{ opacity: 0.5, color: "#808080" }}>
+                        <Layers size={48} strokeWidth={1} />
+                    </div>
                     <div style={{ fontSize: "16px", color: "#e0e0e0" }}>
                         No visualization windows open
                     </div>
@@ -254,26 +256,7 @@ const MockWorkspaceGrid = ({ initialInstances = [] }) => {
                         Click a dataset from the Files panel to create a window with that data,
                         or click "Add Instance" above to create an empty window.
                     </div>
-                    <button
-                        onClick={addInstance}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "10px 20px",
-                            background: "#4CAF50",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            cursor: "pointer",
-                            marginTop: "8px",
-                        }}
-                    >
-                        <Plus size={16} />
-                        Create Instance
-                    </button>
+                    {/* ... rest of the empty state button ... */}
                 </div>
             ) : (
                 <div
