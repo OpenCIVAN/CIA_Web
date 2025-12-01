@@ -1,7 +1,7 @@
 // src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.jsx
 // Main layout orchestrator for the three-edge panel system
 // Provides left panel, center workspace, and right panel with resize capabilities
-// Updated: Added secondary bar slots with zone-aligned layout
+// UPDATED: Secondary bars now span BETWEEN activity bars, not full width
 
 import React, { useMemo } from 'react';
 import { ResizablePanel } from '@UI/react/components/layout/ResizablePanel';
@@ -21,7 +21,20 @@ import './ThreeEdgeLayout.scss';
  * - Drag-to-resize with constraints
  * - State persists across sessions
  * - Smooth animations
- * - Secondary bars with zones aligned to panel widths
+ * - Secondary bars span BETWEEN activity bars (not full width)
+ * 
+ * Layout Structure:
+ * ┌──────────────────────────────────────────────────────────────┐
+ * │                         TOP BAR                              │
+ * ├────────┬───────────────────────────────────────────┬─────────┤
+ * │        │            SECONDARY TOP BAR              │         │
+ * │  LEFT  ├───────────────────────────────────────────┤  RIGHT  │
+ * │ PANEL  │              CENTER PANEL                 │  PANEL  │
+ * │        ├───────────────────────────────────────────┤         │
+ * │        │           SECONDARY BOTTOM BAR            │         │
+ * ├────────┴───────────────────────────────────────────┴─────────┤
+ * │                        BOTTOM BAR                            │
+ * └──────────────────────────────────────────────────────────────┘
  * 
  * @example
  * <ThreeEdgeLayout
@@ -97,21 +110,14 @@ export function ThreeEdgeLayout({
     return (
         <LayoutContext.Provider value={contextValue}>
             <div className="three-edge-layout">
-                {/* Top Bar (Header) */}
+                {/* Top Bar (Header) - Full width */}
                 {topBar && (
                     <div className="three-edge-layout__top">
                         {topBar}
                     </div>
                 )}
 
-                {/* Secondary Top Bar (Workspace selector, controls) */}
-                {secondaryTopBar && (
-                    <div className="three-edge-layout__secondary-top">
-                        {renderSecondaryBar(secondaryTopBar, 'top')}
-                    </div>
-                )}
-
-                {/* Main Content Area */}
+                {/* Main Content Area - Contains panels and secondary bars */}
                 <div className="three-edge-layout__main">
                     {/* Left Panel */}
                     <ResizablePanel
@@ -124,9 +130,26 @@ export function ThreeEdgeLayout({
                         {leftPanel}
                     </ResizablePanel>
 
-                    {/* Center Panel (Workspace) */}
-                    <div className="three-edge-layout__center">
-                        {centerPanel}
+                    {/* Center Column - Secondary bars + workspace */}
+                    <div className="three-edge-layout__center-column">
+                        {/* Secondary Top Bar */}
+                        {secondaryTopBar && (
+                            <div className="three-edge-layout__secondary-top">
+                                {renderSecondaryBar(secondaryTopBar, 'top')}
+                            </div>
+                        )}
+
+                        {/* Center Panel (Workspace) */}
+                        <div className="three-edge-layout__center">
+                            {centerPanel}
+                        </div>
+
+                        {/* Secondary Bottom Bar */}
+                        {secondaryBottomBar && (
+                            <div className="three-edge-layout__secondary-bottom">
+                                {renderSecondaryBar(secondaryBottomBar, 'bottom')}
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Panel */}
@@ -141,14 +164,7 @@ export function ThreeEdgeLayout({
                     </ResizablePanel>
                 </div>
 
-                {/* Secondary Bottom Bar (Canvas position, voice controls) */}
-                {secondaryBottomBar && (
-                    <div className="three-edge-layout__secondary-bottom">
-                        {renderSecondaryBar(secondaryBottomBar, 'bottom')}
-                    </div>
-                )}
-
-                {/* Bottom Bar (Status) */}
+                {/* Bottom Bar (Status) - Full width */}
                 {bottomBar && (
                     <div className="three-edge-layout__bottom">
                         {bottomBar}

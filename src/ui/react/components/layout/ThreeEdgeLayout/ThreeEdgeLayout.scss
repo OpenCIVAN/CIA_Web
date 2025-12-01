@@ -1,12 +1,12 @@
 // src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss
-// Updated: Added secondary bar slots with zone-aligned layout
+// UPDATED: Secondary bars now span between activity bars, not full width
 // Uses design tokens for consistency
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// THREE EDGE LAYOUT
+// THREE EDGE LAYOUT - Main Container
 // =============================================================================
 
 .three-edge-layout {
@@ -19,25 +19,16 @@
 }
 
 // =============================================================================
-// TOP BARS
+// TOP BAR - Full Width Header
 // =============================================================================
 
-// Primary top bar (header)
 .three-edge-layout__top {
   flex-shrink: 0;
   z-index: $z-fixed;
 }
 
-// Secondary top bar (workspace selector, controls)
-.three-edge-layout__secondary-top {
-  flex-shrink: 0;
-  z-index: $z-sticky;
-  background: $color-bg-tertiary;
-  border-bottom: 1px solid $color-border-default;
-}
-
 // =============================================================================
-// MAIN CONTENT AREA
+// MAIN CONTENT AREA - Horizontal flex with panels
 // =============================================================================
 
 .three-edge-layout__main {
@@ -48,18 +39,31 @@
   position: relative;
 }
 
-// Center panel (workspace)
-.three-edge-layout__center {
+// =============================================================================
+// CENTER COLUMN - Contains secondary bars + workspace
+// =============================================================================
+// This wrapper ensures secondary bars span only between the side panels
+
+.three-edge-layout__center-column {
   flex: 1;
   min-width: 0; // Critical for flexbox children
   min-height: 0; // Critical for nested flex layouts
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: $color-bg-base;
 }
 
 // =============================================================================
-// BOTTOM BARS
+// SECONDARY BARS - Span between activity bars
 // =============================================================================
+
+// Secondary top bar (workspace selector, controls)
+.three-edge-layout__secondary-top {
+  flex-shrink: 0;
+  z-index: $z-sticky;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-default;
+}
 
 // Secondary bottom bar (canvas position, voice controls)
 .three-edge-layout__secondary-bottom {
@@ -69,7 +73,22 @@
   border-top: 1px solid $color-border-default;
 }
 
-// Primary bottom bar (status)
+// =============================================================================
+// CENTER PANEL - Workspace area
+// =============================================================================
+
+.three-edge-layout__center {
+  flex: 1;
+  min-width: 0; // Critical for flexbox children
+  min-height: 0; // Critical for nested flex layouts
+  overflow: hidden;
+  background: $color-bg-base;
+}
+
+// =============================================================================
+// BOTTOM BAR - Full Width Status
+// =============================================================================
+
 .three-edge-layout__bottom {
   flex-shrink: 0;
   z-index: $z-fixed;
@@ -158,104 +177,20 @@
 // SECONDARY BAR SHARED STYLES
 // =============================================================================
 // These styles are shared between SecondaryTopBar and SecondaryBottomBar
-// Individual bar components should import their own SCSS files
+// The actual content styling is in SecondaryBarZone.scss
 
 .secondary-bar {
   display: flex;
   align-items: center;
   width: 100%;
+  background: $color-bg-tertiary;
+  flex-shrink: 0;
 
-  // Zone system - left/center/right zones that align with panels
-  &__zone {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    transition: width $transition-base;
-
-    &--left {
-      flex-shrink: 0;
-      border-right: 1px solid $color-border-default;
-      padding: 0 $spacing-sm;
-    }
-
-    &--center {
-      flex: 1;
-      min-width: 0;
-      padding: 0 $spacing-md;
-      justify-content: center;
-    }
-
-    &--right {
-      flex-shrink: 0;
-      border-left: 1px solid $color-border-default;
-      padding: 0 $spacing-sm;
-      justify-content: flex-end;
-    }
+  &--top {
+    border-bottom: 1px solid $color-border-default;
   }
 
-  &__divider {
-    width: 1px;
-    height: 16px;
-    background: $color-border-default;
-    margin: 0 $spacing-sm;
-    flex-shrink: 0;
-  }
-}
-
-// =============================================================================
-// RESPONSIVE ADJUSTMENTS
-// =============================================================================
-
-@media (max-width: 1024px) {
-  .three-edge-layout__main {
-    // Stack panels on smaller screens if needed
-  }
-
-  // Reduce secondary bar zone minimum widths on tablets
-  .secondary-bar__zone {
-    &--left,
-    &--right {
-      min-width: 120px;
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  // Mobile: panels become overlays or drawers
-  .resizable-panel {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    z-index: $z-modal;
-
-    &--left {
-      left: 0;
-    }
-
-    &--right {
-      right: 0;
-    }
-
-    &--collapsed {
-      transform: translateX(-100%);
-
-      &.resizable-panel--right {
-        transform: translateX(100%);
-      }
-    }
-  }
-
-  // Secondary bars become simpler on mobile
-  .secondary-bar {
-    &__zone {
-      &--left,
-      &--right {
-        display: none; // Hide zone controls on mobile
-      }
-
-      &--center {
-        padding: 0 $spacing-sm;
-      }
-    }
+  &--bottom {
+    border-top: 1px solid $color-border-default;
   }
 }
