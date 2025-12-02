@@ -11,6 +11,7 @@
 // - Footer anchored to bottom
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ui as log } from "@Utils/logger.js";
 import {
     FolderOpen,
@@ -151,7 +152,7 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
         }
     };
 
-    return (
+    return createPortal(
         <>
             <div className="context-menu-backdrop" onClick={onClose} />
             <div className="context-menu" style={{ top: y, left: x }} onClick={(e) => e.stopPropagation()}>
@@ -210,7 +211,8 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
                     )
                 )}
             </div>
-        </>
+        </>,
+        document.body
     );
 }
 
@@ -218,7 +220,7 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
 // FILE ITEM - LIST VIEW
 // =============================================================================
 
-function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, expandedFolders, onToggleFolder }) {
+function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, expandedFolders, onToggleFolder }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
     const isFolder = file.type === 'folder';
@@ -250,11 +252,16 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
                         <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
                     </button>
                 )}
+                {!isFolder && isHovered && (
+                    <button className="menu-btn" onClick={(e) => onMenuClick?.(e, file)} title="More actions">
+                        <MoreHorizontal size={12} />
+                    </button>
+                )}
                 {file.loaded && <Circle size={6} fill="currentColor" className="status-indicator__dot--active" />}
                 <span className="item-meta">{isFolder ? `${file.children?.length || 0}` : file.size}</span>
             </div>
             {isFolder && isExpanded && file.children?.map(child => (
-                <FileItemList key={child.id} file={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} onStar={onStar} onDragStart={onDragStart} onContextMenu={onContextMenu} expandedFolders={expandedFolders} onToggleFolder={onToggleFolder} />
+                <FileItemList key={child.id} file={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} onStar={onStar} onDragStart={onDragStart} onContextMenu={onContextMenu} onMenuClick={onMenuClick} expandedFolders={expandedFolders} onToggleFolder={onToggleFolder} />
             ))}
         </>
     );
@@ -264,7 +271,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
 // FILE ITEM - GRID VIEW
 // =============================================================================
 
-function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu }) {
+function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
 
@@ -291,6 +298,9 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
                 <div className="thumbnail-actions" style={{ opacity: isHovered ? 1 : 0 }}>
                     <button className="thumbnail-action" onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
                         <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
+                    </button>
+                    <button className="thumbnail-action" onClick={(e) => onMenuClick?.(e, file)} title="More actions">
+                        <MoreHorizontal size={10} />
                     </button>
                 </div>
             </div>
@@ -335,7 +345,7 @@ export function FilesPanelContent({
     const [isDragOver, setIsDragOver] = useState(false);
 
     // Fetch files from server (hook call)
-    const { files: hookFiles, isLoading: hookLoading, error: hookError, refetch, uploadFile } = useProjectFiles();
+    const { files: hookFiles, isLoading: hookLoading, error: hookError, refetch, uploadFile, toggleStar } = useProjectFiles();
 
     // Compute jobs hook
     const { submitJob } = useComputeJobs();
@@ -413,32 +423,75 @@ export function FilesPanelContent({
         });
     }, []);
 
-    const handleStar = useCallback((id) => log.debug('Toggle star:', id), []);
+    const handleStar = useCallback(async (id) => {
+        try {
+            await toggleStar('file', id);
+            log.debug('Toggled star for file:', id);
+        } catch (err) {
+            log.error('Failed to toggle star:', err);
+        }
+    }, [toggleStar]);
+
     const handleDragStart = useCallback((e, file) => {
         e.dataTransfer.setData('application/json', JSON.stringify(file));
         e.dataTransfer.effectAllowed = 'copy';
     }, []);
+
     const handleContextMenu = useCallback((e, file) => {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, file });
     }, []);
+
+    // Menu button click handler (shows menu at button position)
+    const handleMenuClick = useCallback((e, file) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setContextMenu({ x: rect.right, y: rect.top, file });
+    }, []);
+
     const handleContextAction = useCallback(async (action, file, operation) => {
         log.debug('Context action:', action, file, operation);
 
-        if (action === 'process' && operation) {
-            try {
-                log.info(`Submitting ${operation.id} job for file ${file.id}`);
-                await submitJob(
-                    file.id,
-                    operation.id,
-                    operation.defaultParams || {},
-                    { fileName: file.name }
-                );
-            } catch (err) {
-                log.error('Failed to submit compute job:', err);
-            }
+        switch (action) {
+            case 'open':
+                // TODO: Load file in an instance - requires instanceManager integration
+                log.info(`Load file in instance: ${file.name}`);
+                break;
+
+            case 'info':
+                // TODO: Show file details dialog
+                log.info(`Show details for: ${file.name}`);
+                break;
+
+            case 'rename':
+                // TODO: Show rename dialog
+                log.info(`Rename file: ${file.name}`);
+                break;
+
+            case 'star':
+                await handleStar(file.id);
+                break;
+
+            case 'process':
+                if (operation) {
+                    try {
+                        log.info(`Submitting ${operation.id} job for file ${file.id}`);
+                        await submitJob(
+                            file.id,
+                            operation.id,
+                            operation.defaultParams || {},
+                            { fileName: file.name }
+                        );
+                    } catch (err) {
+                        log.error('Failed to submit compute job:', err);
+                    }
+                }
+                break;
+
+            default:
+                log.warn(`Unknown context action: ${action}`);
         }
-    }, [submitJob]);
+    }, [submitJob, handleStar]);
     const toggleTypeFilter = useCallback((type) => {
         setActiveFilters(prev => ({
             ...prev,
@@ -452,15 +505,15 @@ export function FilesPanelContent({
             return (
                 <div className="files-grid">
                     {items.map(file => (
-                        <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} />
+                        <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} />
                     ))}
                 </div>
             );
         }
         return items.map(file => (
-            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
         ));
-    }, [viewMode, selectedFileId, expandedFolders, handleStar, handleDragStart, handleContextMenu, toggleFolder]);
+    }, [viewMode, selectedFileId, expandedFolders, handleStar, handleDragStart, handleContextMenu, handleMenuClick, toggleFolder]);
 
     return (
         <div className="files-tab">
@@ -563,12 +616,12 @@ export function FilesPanelContent({
                         viewMode === 'grid' ? (
                             <div className="files-grid">
                                 {files.filter(f => f.type !== 'folder').map(file => (
-                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} />
+                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} />
                                 ))}
                             </div>
                         ) : (
                             files.map(file => (
-                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
                             ))
                         )
                     ) : (

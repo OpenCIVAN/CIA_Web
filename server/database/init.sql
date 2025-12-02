@@ -623,6 +623,7 @@ CREATE TABLE computation_jobs (
     progress INTEGER DEFAULT 0,
     error_message TEXT,
     cache_id UUID REFERENCES computation_cache(id),
+    cache_key VARCHAR(255),
     result_metadata JSONB,
     queued_at TIMESTAMPTZ DEFAULT NOW(),
     started_at TIMESTAMPTZ,
@@ -721,6 +722,7 @@ CREATE INDEX idx_cache_key ON computation_cache(cache_key);
 CREATE INDEX idx_cache_file ON computation_cache(file_id);
 CREATE INDEX idx_jobs_status ON computation_jobs(status);
 CREATE INDEX idx_jobs_file ON computation_jobs(file_id);
+CREATE INDEX idx_jobs_cache_key ON computation_jobs(cache_key);
 
 -- Audit
 CREATE INDEX idx_audit_timestamp ON audit_log(timestamp DESC);

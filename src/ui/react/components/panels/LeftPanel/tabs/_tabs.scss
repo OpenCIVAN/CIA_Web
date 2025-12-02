@@ -281,6 +281,23 @@
   }
 }
 
+// Menu button for file items (shows context menu)
+.menu-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: $color-text-muted;
+  border-radius: $radius-xs;
+  transition: all $transition-fast;
+  margin-left: auto;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+}
+
 // =============================================================================
 // FILES GRID (Thumbnail View)
 // =============================================================================
