@@ -20,16 +20,13 @@ const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
 
-// Legacy file type validator (still works, uses hardcoded magic bytes)
 const {
-  validateFileType,
-  isTypeAllowed,
+  validateUpload,
+  validateUploadWithMagicBytes,
   getSupportedExtensions,
-} = require("../services/fileTypeValidator");
-
-// New manifest-driven handler capabilities (available once registry.json is generated)
-// Uncomment and use these once you've run `npm run build:manifests`:
-// const handlerCapabilities = require("../services/handlerCapabilities");
+  isExtensionSupported,
+  createValidationMiddleware,
+} = require("../services/handlerCapabilities");
 
 const { createLogger } = require("../utils/logger");
 
@@ -198,7 +195,7 @@ router.post("/", upload.single("file"), async (req, res, next) => {
     }
 
     // Validate file type using magic bytes
-    const validation = await validateFileType(file.buffer, file.originalname);
+    const validation = validateUploadWithMagicBytes(file.originalname, file.buffer);
 
     if (!validation.valid) {
       return res.status(400).json({
@@ -385,7 +382,7 @@ router.post("/:id/versions", upload.single("file"), async (req, res, next) => {
     }
 
     // Validate file type
-    const validation = await validateFileType(file.buffer, file.originalname);
+    const validation = validateUploadWithMagicBytes(file.originalname, file.buffer);
 
     if (!validation.valid) {
       return res.status(400).json({
