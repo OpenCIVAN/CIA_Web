@@ -1,6 +1,5 @@
 import { render as log } from "@Utils/logger.js";
 import VtkJsLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
-import VtkJsSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 
 /**
  * VTKLineWidget
@@ -60,10 +59,6 @@ export class VTKLineWidget {
       // Make visible and enabled
       handle.setEnabled(true);
       handle.setVisibility(true);
-
-      // Set appearance
-      handle.setHandleSize(15); // Larger handles for visibility
-      handle.setGlyphResolution(32); // Smoother spheres
 
       // Update on interaction
       handle.onInteractionEvent(() => {

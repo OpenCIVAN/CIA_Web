@@ -61,8 +61,6 @@ export class VTKAngleWidget {
       const handle = widgetManager.addWidget(widget);
       handle.setEnabled(true);
       handle.setVisibility(true);
-      handle.setHandleSize(15);
-      handle.setGlyphResolution(32);
 
       // Update on interaction
       handle.onInteractionEvent(() => {

@@ -63,6 +63,7 @@ function TopToolbar({
     onHideToolbar,
     renderTool,
     onOpenInstanceTools,
+    instanceToolsTabActive,
 }) {
     const tierConfig = getTierConfig(uiMode);
 
@@ -101,7 +102,7 @@ function TopToolbar({
                 <div className="instance-toolbar__global-tools">
                     <div className="instance-toolbar__separator" />
                     <button
-                        className="instance-toolbar__tool-button instance-toolbar__tool-button--primary"
+                        className={`instance-toolbar__tool-button ${instanceToolsTabActive ? 'instance-toolbar__tool-button--primary' : ''}`}
                         onClick={onOpenInstanceTools}
                         title="Instance Tools (I)"
                     >
@@ -555,6 +556,9 @@ export function InstanceViewport({
     // Fullscreen state
     const [isFullscreen, setIsFullscreen] = useState(false);
 
+    // Track if Instance Tools tab is active in left panel
+    const [instanceToolsTabActive, setInstanceToolsTabActive] = useState(false);
+
     // =========================================================================
     // SIZE TRACKING
     // =========================================================================
@@ -943,6 +947,22 @@ export function InstanceViewport({
     }, [actualInstanceId]);
 
     // =========================================================================
+    // TRACK INSTANCE TOOLS TAB STATE
+    // =========================================================================
+
+    useEffect(() => {
+        const handleTabChange = (event) => {
+            const { isInstanceToolsActive } = event.detail || {};
+            setInstanceToolsTabActive(isInstanceToolsActive || false);
+        };
+
+        window.addEventListener('cia:left-panel-tab-change', handleTabChange);
+        return () => {
+            window.removeEventListener('cia:left-panel-tab-change', handleTabChange);
+        };
+    }, []);
+
+    // =========================================================================
     // SPAN PICKER CLICK OUTSIDE
     // =========================================================================
 
@@ -1257,6 +1277,7 @@ export function InstanceViewport({
                     onHideToolbar={hideToolbar}
                     renderTool={renderTool}
                     onOpenInstanceTools={handleOpenInstanceTools}
+                    instanceToolsTabActive={instanceToolsTabActive}
                 />
             )}
 

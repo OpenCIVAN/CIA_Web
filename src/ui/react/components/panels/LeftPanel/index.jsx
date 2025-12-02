@@ -192,6 +192,10 @@ export function LeftPanel({
     // Handle tab change
     const handleTabChange = useCallback((tabId) => {
         setActiveTab(tabId);
+        // Dispatch event so InstanceViewport can track when Instance Tools is active
+        window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
+            detail: { tabId, isInstanceToolsActive: tabId === 'instance-tools' }
+        }));
     }, []);
 
     // Handle navigation between panels (for cross-panel links)
@@ -202,10 +206,21 @@ export function LeftPanel({
         }
     }, []);
 
+    // Dispatch initial tab state on mount so InstanceViewport knows the initial state
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
+            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'instance-tools' }
+        }));
+    }, []); // Only on mount
+
     // Listen for instance tools open event (from wrench button in InstanceViewport)
     useEffect(() => {
         const handleOpenInstanceTools = () => {
             setActiveTab('instance-tools');
+            // Dispatch tab change event
+            window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
+                detail: { tabId: 'instance-tools', isInstanceToolsActive: true }
+            }));
             // Ensure panel is open
             if (isCollapsed && onToggle) {
                 onToggle();

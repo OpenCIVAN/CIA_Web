@@ -788,7 +788,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseMeasurement,
           onClick: () => {
             log.debug("Line measurement clicked");
-            // FIX: Use correct method name
             instanceTools.toggleRulerMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
@@ -802,7 +801,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseMeasurement,
           onClick: () => {
             log.debug("Angle measurement clicked");
-            // FIX: Use correct method name
             instanceTools.toggleAngleMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
@@ -829,14 +827,21 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseWidgets,
           onClick: () => {
             log.debug("Clear all widgets clicked");
-            // Only disable widgets that are currently active
-            if (lineActive) {
+            // Check CURRENT widget state at click time, not captured values
+            const currentLineActive =
+              instanceTools.isWidgetActive?.(instanceId, "line") || false;
+            const currentAngleActive =
+              instanceTools.isWidgetActive?.(instanceId, "angle") || false;
+            const currentPlaneActive =
+              instanceTools.isWidgetActive?.(instanceId, "plane") || false;
+
+            if (currentLineActive) {
               instanceTools.toggleRulerMeasurement?.(instanceId);
             }
-            if (angleActive) {
+            if (currentAngleActive) {
               instanceTools.toggleAngleMeasurement?.(instanceId);
             }
-            if (planeActive) {
+            if (currentPlaneActive) {
               instanceTools.toggleClippingPlane?.(instanceId);
             }
             this._emitToolsUpdate(instanceId);
