@@ -1,17 +1,36 @@
 // server/src/routes/files.js
 // File management routes for v2.0 server-authority architecture
 // All file operations are server-authoritative with versioning support
+//
+// MANIFEST-DRIVEN ARCHITECTURE (Phase 1):
+// File type validation can now use the handler capabilities service.
+// The handlerCapabilities module reads from registry.json, which is
+// generated from handler manifests by `npm run build:manifests`.
+//
+// MIGRATION PATH:
+// 1. Current: Uses fileTypeValidator.js (hardcoded magic bytes)
+// 2. Future: Use handlerCapabilities.js (manifest-driven)
+//
+// Once registry.json is generated, you can switch to:
+// const { validateUpload, getSupportedExtensions } = require("../services/handlerCapabilities");
 
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
+
+// Legacy file type validator (still works, uses hardcoded magic bytes)
 const {
   validateFileType,
   isTypeAllowed,
   getSupportedExtensions,
 } = require("../services/fileTypeValidator");
+
+// New manifest-driven handler capabilities (available once registry.json is generated)
+// Uncomment and use these once you've run `npm run build:manifests`:
+// const handlerCapabilities = require("../services/handlerCapabilities");
+
 const { createLogger } = require("../utils/logger");
 
 const log = createLogger("files");

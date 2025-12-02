@@ -1,0 +1,249 @@
+{
+  "generatedAt": "2025-12-02T02:59:11.317Z",
+  "contractVersion": "1.0.0",
+  "buildInfo": {
+    "nodeVersion": "v22.19.0",
+    "platform": "darwin"
+  },
+  "handlers": {
+    "vtk": {
+      "contractVersion": "1.0.0",
+      "type": "vtk",
+      "displayName": "VTK 3D Visualization",
+      "version": "1.0.0",
+      "description": "High-performance 3D visualization using VTK.js for scientific data, medical imaging, and engineering applications.",
+      "fileTypes": [
+        {
+          "extension": "vtp",
+          "mimeType": "application/vnd.vtk.polydata+xml",
+          "displayName": "VTK PolyData (XML)",
+          "icon": "hexagon",
+          "color": "#c084fc",
+          "priority": 10,
+          "magicBytes": "3c3f786d6c",
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": true,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "vti",
+          "mimeType": "application/vnd.vtk.imagedata+xml",
+          "displayName": "VTK Image Data (XML)",
+          "icon": "grid3x3",
+          "color": "#60a5fa",
+          "priority": 10,
+          "magicBytes": "3c3f786d6c",
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": true,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "vtu",
+          "mimeType": "application/vnd.vtk.unstructuredgrid+xml",
+          "displayName": "VTK Unstructured Grid (XML)",
+          "icon": "share2",
+          "color": "#34d399",
+          "priority": 10,
+          "magicBytes": "3c3f786d6c",
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": true,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "vtk",
+          "mimeType": "application/vnd.vtk",
+          "displayName": "VTK Legacy Format",
+          "icon": "box",
+          "color": "#a78bfa",
+          "priority": 8,
+          "magicBytes": "232076746b2044617461",
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": false,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "stl",
+          "mimeType": "model/stl",
+          "displayName": "STL Model",
+          "icon": "triangle",
+          "color": "#f472b6",
+          "priority": 5,
+          "magicBytes": "736f6c6964",
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": false,
+            "canExport": true,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "obj",
+          "mimeType": "model/obj",
+          "displayName": "Wavefront OBJ",
+          "icon": "cube",
+          "color": "#fbbf24",
+          "priority": 5,
+          "magicBytes": "23",
+          "altMagicBytes": [
+            "76202d"
+          ],
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": false,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "ply",
+          "mimeType": "application/x-ply",
+          "displayName": "PLY Point Cloud",
+          "icon": "scatter-chart",
+          "color": "#22d3ee",
+          "priority": 5,
+          "magicBytes": "706c79",
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": true,
+            "canExport": false,
+            "canStream": false
+          }
+        }
+      ],
+      "runtime": {
+        "requires": [
+          "webgl",
+          "webgl2"
+        ],
+        "optional": [
+          "webxr",
+          "offscreencanvas"
+        ]
+      },
+      "vr": {
+        "supportsInstanceVR": true,
+        "supportsApplicationVR": false,
+        "requirements": {
+          "controllers": true,
+          "handTracking": false,
+          "roomScale": true,
+          "minFPS": 90
+        }
+      },
+      "collaboration": {
+        "supportsCursors": true,
+        "supportsAnnotations": true,
+        "supportsSharedState": true,
+        "supportsCameraSync": true
+      },
+      "compute": {
+        "clientSide": {
+          "operations": [
+            "pca",
+            "tsne",
+            "umap",
+            "clipping",
+            "slicing",
+            "contouring",
+            "point-picking",
+            "measurement"
+          ],
+          "maxDatasetSize": "100MB"
+        },
+        "serverSide": {
+          "operations": [],
+          "workerType": "vtk-compute"
+        },
+        "caching": {
+          "preprocessResults": true,
+          "cacheKey": [
+            "datasetId",
+            "operation",
+            "parameters"
+          ],
+          "ttl": "24h",
+          "invalidateOn": [
+            "dataset-update",
+            "dataset-delete"
+          ]
+        }
+      },
+      "tools": [],
+      "entry": {
+        "client": "./VTKInstanceHandler.js"
+      }
+    }
+  },
+  "fileTypeIndex": {
+    "vtp": {
+      "handlerType": "vtk",
+      "priority": 10,
+      "displayName": "VTK PolyData (XML)",
+      "icon": "hexagon",
+      "color": "#c084fc"
+    },
+    "vti": {
+      "handlerType": "vtk",
+      "priority": 10,
+      "displayName": "VTK Image Data (XML)",
+      "icon": "grid3x3",
+      "color": "#60a5fa"
+    },
+    "vtu": {
+      "handlerType": "vtk",
+      "priority": 10,
+      "displayName": "VTK Unstructured Grid (XML)",
+      "icon": "share2",
+      "color": "#34d399"
+    },
+    "vtk": {
+      "handlerType": "vtk",
+      "priority": 8,
+      "displayName": "VTK Legacy Format",
+      "icon": "box",
+      "color": "#a78bfa"
+    },
+    "stl": {
+      "handlerType": "vtk",
+      "priority": 5,
+      "displayName": "STL Model",
+      "icon": "triangle",
+      "color": "#f472b6"
+    },
+    "obj": {
+      "handlerType": "vtk",
+      "priority": 5,
+      "displayName": "Wavefront OBJ",
+      "icon": "cube",
+      "color": "#fbbf24"
+    },
+    "ply": {
+      "handlerType": "vtk",
+      "priority": 5,
+      "displayName": "PLY Point Cloud",
+      "icon": "scatter-chart",
+      "color": "#22d3ee"
+    }
+  }
+}

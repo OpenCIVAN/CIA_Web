@@ -77,6 +77,16 @@ module.exports = {
           },
         },
       },
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: {
+          loader: "ts-loader",
+          options: {
+            transpileOnly: true, // Faster builds, type checking via npm run typecheck
+          },
+        },
+      },
     ],
   },
   plugins: [
@@ -98,7 +108,7 @@ module.exports = {
     "./controller.html": "controller.html",
   },
   resolve: {
-    extensions: [".js", ".jsx"],
+    extensions: [".ts", ".js", ".jsx"],
     // allow absolute imports from "src" too (e.g., "ui/..." if you want)
     modules: [path.resolve(__dirname, "src"), "node_modules"],
     alias: {

@@ -1,5 +1,10 @@
 // src/core/instances/types/vtk/VTKInstanceHandler.js
 // Complete VTK handler implementation with proper interface
+//
+// MANIFEST-DRIVEN ARCHITECTURE (Phase 1):
+// File type capabilities are now declared in ./manifest.ts
+// The build script generates registry.json from the manifest.
+// This handler imports from the manifest for consistency.
 
 import { instance as log } from "@Utils/logger.js";
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
@@ -11,6 +16,12 @@ import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { viewConfigurationManager } from "@Init/appInitializer.js";
 import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
+
+// Import manifest data - single source of truth for file type capabilities
+// Note: The manifest is TypeScript but gets transpiled. For now, we'll define
+// a reference here that will be replaced once the build system is fully set up.
+// In the future, this will import from the generated registry.
+import vtkManifestData from "./manifest.ts";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -62,80 +73,30 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   }
 
   /**
-   * SINGLE SOURCE OF TRUTH: Declare all file types this handler supports
+   * SINGLE SOURCE OF TRUTH: File types this handler supports
    *
-   * This replaces the scattered capability checks throughout the old code.
-   * Now there's one place to add support for new formats, and all the
-   * capability queries (canHandle, canExtractMetadata, etc.) automatically work.
+   * MANIFEST-DRIVEN: This method now returns data from the manifest.
+   * The manifest (./manifest.ts) is the canonical source of truth.
+   * Both client (this handler) and server (via registry.json) use the same data.
+   *
+   * To add support for new formats, edit manifest.ts - NOT this method.
    */
   getSupportedFileTypes() {
-    return [
-      {
-        extension: "vtp",
-        mimeType: "application/vnd.vtk.polydata+xml",
-        displayName: "VTK PolyData (XML)",
-        icon: "hexagon", // Polygon mesh icon
-        color: "#c084fc", // Purple for VTK formats
-        capabilities: {
-          canRender: true,
-          canExtractMetadata: true, // We can read XML headers quickly
-          canExport: false,
-        },
-        priority: 10,
+    // Return file types from manifest, ensuring the format matches interface expectations
+    // The manifest uses TypeScript types, but the structure is compatible
+    return vtkManifestData.fileTypes.map((ft) => ({
+      extension: ft.extension,
+      mimeType: ft.mimeType,
+      displayName: ft.displayName,
+      icon: ft.icon,
+      color: ft.color,
+      capabilities: {
+        canRender: ft.capabilities.canRender,
+        canExtractMetadata: ft.capabilities.canExtractMetadata,
+        canExport: ft.capabilities.canExport,
       },
-      {
-        extension: "vti",
-        mimeType: "application/vnd.vtk.imagedata+xml",
-        displayName: "VTK Image Data (XML)",
-        icon: "grid3x3", // Grid for image/volume data
-        color: "#60a5fa", // Blue for image data
-        capabilities: {
-          canRender: true,
-          canExtractMetadata: true,
-          canExport: false,
-        },
-        priority: 10,
-      },
-      {
-        extension: "vtu",
-        mimeType: "application/vnd.vtk.unstructuredgrid+xml",
-        displayName: "VTK Unstructured Grid (XML)",
-        icon: "share2", // Network/mesh for unstructured grid
-        color: "#34d399", // Green for unstructured
-        capabilities: {
-          canRender: true,
-          canExtractMetadata: true,
-          canExport: false,
-        },
-        priority: 10,
-      },
-      {
-        extension: "vtk",
-        mimeType: "application/vnd.vtk",
-        displayName: "VTK Legacy Format",
-        icon: "box", // Generic box for legacy
-        color: "#a78bfa", // Lighter purple for legacy
-        capabilities: {
-          canRender: true,
-          canExtractMetadata: false, // Legacy format is harder to parse quickly
-          canExport: false,
-        },
-        priority: 8, // Lower priority than XML formats
-      },
-      {
-        extension: "stl",
-        mimeType: "model/stl",
-        displayName: "STL Model",
-        icon: "triangle", // Triangle for STL (triangulated mesh)
-        color: "#f472b6", // Pink for STL
-        capabilities: {
-          canRender: true,
-          canExtractMetadata: false, // Could implement later
-          canExport: false,
-        },
-        priority: 5,
-      },
-    ];
+      priority: ft.priority,
+    }));
   }
 
   /**
