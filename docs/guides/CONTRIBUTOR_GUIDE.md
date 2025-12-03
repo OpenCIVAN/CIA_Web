@@ -297,10 +297,10 @@ const instance = {
 const dataset = datasetManager.getDataset("dataset-123");
 const view1 = viewManager.createView(dataset.id, { name: "Front" });
 const view2 = viewManager.createView(dataset.id, { name: "Side" });
-const instance1 = instanceManager.createInstance({
+const instance1 = workspaceManager.createInstance({
   viewConfigurationId: view1.id,
 });
-const instance2 = instanceManager.createInstance({
+const instance2 = workspaceManager.createInstance({
   viewConfigurationId: view2.id,
 });
 
@@ -615,11 +615,18 @@ viewManager.activateView(viewId);
 const newView = viewManager.duplicateView(viewId, userId);
 ```
 
-### InstanceManager
+### WorkspaceManager (was InstanceManager)
 
 **What it does:** Manages instance windows (Layer 3)
 
-**File location:** `src/core/instances/instanceManager.js`
+**File location:** `src/core/instances/workspaceManager.js`
+
+**Key distinction:**
+
+- Instance windows are **ephemeral** - they don't sync to other users
+- They're just "projectors" that render ViewConfigurations
+- When you close a browser tab, instance windows are destroyed
+- ViewConfigurations persist and can be rendered again
 
 **Responsibilities:**
 
@@ -633,17 +640,17 @@ const newView = viewManager.duplicateView(viewId, userId);
 
 ```javascript
 // Create instance
-const instance = await instanceManager.createInstance({
+const instance = await workspaceManager.createInstance({
   viewConfigurationId: viewId,
   type: "vtk",
   container: domElement,
 });
 
 // Destroy instance (frees GPU memory)
-await instanceManager.destroyInstance(instanceId);
+await workspaceManager.destroyInstance(instanceId);
 
 // Get instance
-const instance = instanceManager.getInstance(instanceId);
+const instance = workspaceManager.getInstance(instanceId);
 ```
 
 ### WorkspaceManager
@@ -940,7 +947,7 @@ yChatMessages.observe(() => {
 
 1. User uploads file → `DatasetManager.addDataset()`
 2. Dataset created → `ViewConfigurationManager.createView()`
-3. View created → `InstanceManager.createInstance()`
+3. View created → `workspaceManager.createInstance()`
 4. Instance renders → VTK handler's `initialize()` and `loadData()`
 
 ### Types of Contributions
@@ -1160,7 +1167,7 @@ async function handleFileSelect(event) {
   console.log("View created:", viewConfig.id);
 
   // 4. Create an instance to display it (Layer 3)
-  const instance = await instanceManager.createInstance({
+  const instance = await workspaceManager.createInstance({
     viewConfigurationId: viewConfig.id,
     type: "vtk",
     container: document.getElementById("viewport-1"),
@@ -1291,7 +1298,7 @@ async function loadDataset(datasetId, instanceId) {
     const polydata = await datasetManager.loadPolydata(datasetId);
 
     // 4. Get instance
-    const instance = instanceManager.getInstance(instanceId);
+    const instance = workspaceManager.getInstance(instanceId);
     if (!instance) {
       throw new Error("Instance not found");
     }

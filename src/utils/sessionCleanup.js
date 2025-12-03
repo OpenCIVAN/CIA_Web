@@ -7,8 +7,7 @@ import {
   yViews,
   yAnnotations,
   yWorkspaceLayouts,
-  // Deprecated but kept for cleanup of old data
-  yInstances,
+  getLegacyInstancesMap,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 
@@ -118,16 +117,21 @@ export function cleanupStaleViews() {
 
 /**
  * Clean up legacy yInstances data (migration helper)
- * This removes old instance data that should no longer be synced
+ * This removes old instance data that was incorrectly synced
+ *
+ * NOTE: In the old architecture, instances were synced via Y.js.
+ * In v2.0, instances are ephemeral (Layer 3) and don't sync.
+ * This function cleans up any leftover data from the old system.
  */
 export function cleanupLegacyInstances() {
   log.debug("Cleaning up legacy instances...");
 
-  const count = yInstances.size;
+  const yInstancesLegacy = getLegacyInstancesMap();
+  const count = yInstancesLegacy.size;
 
   if (count > 0) {
     log.debug(`Found ${count} legacy instances, removing...`);
-    yInstances.clear();
+    yInstancesLegacy.clear();
     log.info("Legacy instances cleared");
   } else {
     log.debug("No legacy instances to clean up");
@@ -198,7 +202,11 @@ export async function clearAllData() {
   yViews.clear();
   yAnnotations.clear();
   yWorkspaceLayouts.clear();
-  yInstances.clear(); // Legacy cleanup
+
+  // Clear legacy instances map (migration cleanup)
+  const yInstancesLegacy = getLegacyInstancesMap();
+  yInstancesLegacy.clear();
+
   log.debug("Y.js maps cleared");
 
   // Clear IndexedDB
@@ -212,12 +220,14 @@ export async function clearAllData() {
  * Get cleanup statistics
  */
 export function getCleanupStats() {
+  const yInstancesLegacy = getLegacyInstancesMap();
+
   const stats = {
     datasets: yDatasets.size,
     views: yViews.size,
     annotations: yAnnotations.size,
     workspaceLayouts: yWorkspaceLayouts.size,
-    legacyInstances: yInstances.size,
+    legacyInstances: yInstancesLegacy.size, // Renamed for clarity
   };
 
   // Count views by status

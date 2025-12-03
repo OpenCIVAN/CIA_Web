@@ -502,24 +502,25 @@ function setupDebugHelpers() {
 ║  CIA.info()                    - Show system info              ║
 ║  CIA.listDatasets()            - List all datasets             ║
 ║  CIA.listViews()               - List all view configurations  ║
+║  CIA.listInstances()           - List instance windows         ║
 ║  CIA.getDataset(id)            - Inspect a dataset             ║
 ║  CIA.getView(id)               - Inspect a view configuration  ║
 ║  CIA.getInstance(id)           - Inspect an instance window    ║
+║                                                                ║
+║  Managers:                                                     ║
+║  CIA.datasetManager            - Dataset manager (Layer 1)     ║
+║  CIA.viewConfigurationManager  - View config manager (Layer 2) ║
+║  CIA.workspaceManager          - Instance window manager (L3)  ║
 ║                                                                ║
 ║  Sync & Reconciliation:                                        ║
 ║  CIA.syncStatus()              - Check sync status with server ║
 ║  CIA.forceReconcile()          - Force reconcile local/server  ║
 ║  CIA.resetLocalState()         - Clear all local data          ║
 ║                                                                ║
-║  Managers:                                                     ║
-║  CIA.datasetManager            - Dataset manager instance      ║
-║  CIA.viewConfigurationManager  - View configuration manager    ║
-║  CIA.instanceManager           - Instance manager              ║
-║                                                                ║
 ║  Legacy Cleanup:                                               ║
 ║  CIA.clearYjsDatasets()        - Clear stale Y.js data         ║
 ╚════════════════════════════════════════════════════════════════╝
-  `);
+    `);
   };
 
   window.CIA.info = function () {

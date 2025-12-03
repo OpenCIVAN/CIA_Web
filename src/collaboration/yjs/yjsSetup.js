@@ -65,6 +65,10 @@ export const yText = ydoc.getArray("chatMessages");
 // Kept for: sessionCleanup.js, dataCleanup.js, DebugPanel.jsx
 // ============================================================================
 
+// ============================================================================
+// LEGACY STATE MAPS (Deprecated - DO NOT USE IN NEW CODE)
+// ============================================================================
+
 // @deprecated v2.0 - Use server API: GET/POST /api/files
 export const yDatasets = ydoc.getMap("datasets");
 
@@ -74,14 +78,23 @@ export const yViews = ydoc.getMap("viewConfigurations");
 // @deprecated v2.0 - Use server API: GET/POST /api/annotations
 export const yAnnotations = ydoc.getMap("annotations");
 
-// @deprecated v2.0 - Instances are ephemeral and don't sync
-export const yInstances = ydoc.getMap("instances");
-
 // @deprecated v2.0 - Use server API for workspace layouts
 export const yWorkspaceLayouts = ydoc.getMap("workspaceLayouts");
 
 // @deprecated v2.0 - File metadata comes from server
 export const yFile = ydoc.getMap("file");
+
+// ============================================================================
+// MIGRATION-ONLY (Not exported - use only in sessionCleanup.js)
+// ============================================================================
+
+// Internal reference for cleanup utilities only - NEVER import this
+const _yInstancesLegacy = ydoc.getMap("instances");
+
+// Export getter for cleanup utilities only
+export function getLegacyInstancesMap() {
+  return _yInstancesLegacy;
+}
 
 // ============================================================================
 // Provider Initialization

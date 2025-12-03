@@ -306,13 +306,13 @@ CIA.getInstance("id"); // Inspect instance
 import {
   datasetManager,
   viewConfigurationManager,
-  instanceManager,
+  workspaceManager, // Changed from instanceManager
 } from "@Init/appInitializer.js";
 
 // Access anywhere in code
 const dataset = datasetManager.getDataset(id);
 const view = viewConfigurationManager.getView(id);
-const instance = instanceManager.getInstance(id);
+const instance = workspaceManager.getInstance(id); // Layer 3
 ```
 
 ### Y.js Inspection
@@ -325,10 +325,13 @@ import {
   yAnnotations,
 } from "@Collaboration/yjs/yjsSetup.js";
 
-// See what's synced
+// See what's synced (legacy - server is now source of truth)
 console.log("Datasets:", Array.from(yDatasets.keys()));
 console.log("Views:", Array.from(yViews.keys()));
 console.log("Annotations:", Array.from(yAnnotations.keys()));
+
+// NOTE: yInstances is deprecated and no longer exported
+// Instances (Layer 3) are ephemeral and don't sync
 ```
 
 ---
