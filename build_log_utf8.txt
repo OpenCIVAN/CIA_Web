@@ -1,0 +1,84 @@
+﻿[0/1] "C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SD:\wasm\vtk-wasm-app -BD:\wasm\vtk-wasm-app\build
+-- Building for: Visual Studio 16 2019
+-- Selecting Windows SDK version 10.0.19041.0 to target Windows 10.0.26200.
+-- The C compiler identification is MSVC 19.29.30159.0
+-- The CXX compiler identification is MSVC 19.29.30159.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+ninja : CMake Error 
+at CMakeLists.txt:6 
+(find_package):
+At line:1 char:398
++ ... _DIR=d:/wasm/V
+TK-src/build-wasm 
+..; ninja -v > 
+build.log 2>&1; 
+Copy-I ...
++                   
+                    
+  ~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (CMak   
+ e Error at ...(    
+find_package)::    
+String) [], Rem    
+oteException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+  By not providing 
+"FindVTK.cmake" in 
+CMAKE_MODULE_PATH 
+this project has
+  asked CMake to 
+find a package 
+configuration file 
+provided by "VTK", 
+but
+  CMake did not 
+find one.
+
+  Could not find a 
+package 
+configuration file 
+provided by "VTK" 
+with any of
+  the following 
+names:
+
+    VTKConfig.cmake
+    vtk-config.cmake
+
+  Add the 
+installation prefix 
+of "VTK" to 
+CMAKE_PREFIX_PATH 
+or set "VTK_DIR"
+  to a directory 
+containing one of 
+the above files.  
+If "VTK" provides a
+  separate 
+development package 
+or SDK, be sure it 
+has been installed.
+
+
+-- Configuring incomplete, errors occurred!
+ninja: error: 
+rebuilding 
+'build.ninja': 
+subcommand failed
+FAILED: [code=1] build.ninja D:/wasm/vtk-wasm-app/build/cmake_install.cmake 
+"C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SD:\wasm\vtk-wasm-app -BD:\wasm\vtk-wasm-app\build

@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/wasm/vtk-wasm-app/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

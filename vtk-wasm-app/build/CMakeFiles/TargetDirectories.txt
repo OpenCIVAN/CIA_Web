@@ -1,0 +1,3 @@
+D:/wasm/vtk-wasm-app/build/CMakeFiles/vtkWasmApp.dir
+D:/wasm/vtk-wasm-app/build/CMakeFiles/edit_cache.dir
+D:/wasm/vtk-wasm-app/build/CMakeFiles/rebuild_cache.dir
