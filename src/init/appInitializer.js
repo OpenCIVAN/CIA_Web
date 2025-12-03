@@ -6,7 +6,7 @@
 // - Y.js is used only for presence (cursors, avatars, view presence)
 // - WebSocket broadcasts keep clients in sync without polling
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
-import { initializeStorageProvider } from "@Core/config/storage.js";
+import { initializeStorageProvider } from "@Services/storage/storageService.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
