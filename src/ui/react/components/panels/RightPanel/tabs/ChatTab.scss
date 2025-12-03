@@ -1,0 +1,385 @@
+@use "sass:color";
+@use "theme" as *;
+
+// =============================================================================
+// CHAT TAB CONTAINER
+// =============================================================================
+
+.chat-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  .panel-header__status {
+    margin-left: auto;
+  }
+}
+
+// =============================================================================
+// CHAT STATUS INDICATOR
+// =============================================================================
+
+.chat-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: $font-size-xs;
+  padding: 2px $spacing-xs;
+  border-radius: $radius-sm;
+
+  &--loading {
+    color: $color-text-muted;
+
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  &--connected {
+    color: $color-accent-green;
+    background: rgba($color-accent-green, 0.1);
+  }
+
+  &--offline {
+    color: $color-text-muted;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// =============================================================================
+// ROOM INDICATOR
+// =============================================================================
+
+.chat-tab__room-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid $color-border-subtle;
+
+  svg {
+    color: $color-accent-blue;
+  }
+}
+
+.chat-tab__message-count {
+  margin-left: auto;
+  color: $color-text-tertiary;
+}
+
+// =============================================================================
+// MESSAGES CONTAINER
+// =============================================================================
+
+.chat-tab__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.chat-tab__loading,
+.chat-tab__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  color: $color-text-tertiary;
+  text-align: center;
+
+  svg {
+    opacity: 0.4;
+  }
+
+  span {
+    font-size: $font-size-sm;
+  }
+}
+
+.chat-tab__empty-hint {
+  font-size: $font-size-xs !important;
+  color: $color-text-muted;
+}
+
+// =============================================================================
+// MESSAGE BUBBLE
+// =============================================================================
+
+.message {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-xs;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: $radius-md;
+  }
+
+  &--me {
+    flex-direction: row-reverse;
+
+    .message__content {
+      align-items: flex-end;
+    }
+
+    .message__bubble {
+      background: rgba($color-accent-blue, 0.2);
+      border-color: rgba($color-accent-blue, 0.3);
+    }
+  }
+
+  &--system {
+    justify-content: center;
+    padding: $spacing-xs $spacing-md;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: $radius-full;
+    margin: $spacing-xs 0;
+  }
+}
+
+.message__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-full;
+  background: var(--avatar-color, $color-accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  color: white;
+  flex-shrink: 0;
+}
+
+.message__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 80%;
+}
+
+.message__user {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.message__bubble {
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-lg;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+  word-wrap: break-word;
+
+  &--mention {
+    background: rgba($color-accent-amber, 0.15);
+    border-color: rgba($color-accent-amber, 0.3);
+  }
+}
+
+.message__time {
+  font-size: 10px;
+  color: $color-text-tertiary;
+  padding: 0 $spacing-xs;
+}
+
+.message__delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+  align-self: center;
+
+  &:hover {
+    color: $color-accent-red;
+    background: rgba($color-accent-red, 0.1);
+  }
+}
+
+.message:hover .message__delete {
+  opacity: 1;
+}
+
+// =============================================================================
+// CHAT INPUT
+// =============================================================================
+
+.chat-input {
+  padding: $spacing-sm;
+  border-top: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chat-input__wrapper {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  background: $color-glass-light;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  padding: $spacing-xs;
+  transition: border-color $transition-fast;
+
+  &:focus-within {
+    border-color: $color-accent-blue;
+  }
+}
+
+.chat-input__textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  padding: $spacing-xs;
+  resize: none;
+  outline: none;
+  min-height: 20px;
+  max-height: 100px;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.chat-input__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: $color-text-secondary;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.chat-input__send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: $color-glass-light;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-full;
+  transition: all $transition-fast;
+
+  &--active {
+    background: $color-accent-blue;
+    color: white;
+
+    &:hover {
+      background: color.adjust($color-accent-blue, $lightness: 5%);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+// =============================================================================
+// LEGACY CHAT TABS (for future breakout/DM support)
+// =============================================================================
+
+.chat-tabs {
+  display: flex;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.chat-tabs__btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px $spacing-sm;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.3);
+    color: $color-accent-blue;
+  }
+}
+
+.chat-tabs__badge {
+  padding: 0 4px;
+  min-width: 16px;
+  height: 14px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}

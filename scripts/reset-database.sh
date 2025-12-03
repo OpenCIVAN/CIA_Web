@@ -53,8 +53,9 @@ docker compose down -v > /dev/null 2>&1
 if [ "$REBUILD_MODE" = true ]; then
     echo "🗑️  Cleaning up Docker system..."
     docker system prune -f > /dev/null 2>&1
-    echo "🔨 Rebuilding containers..."
-    docker compose up --build -d > /dev/null 2>&1
+    echo "🔨 Rebuilding containers (--no-cache to avoid stale code)..."
+    docker compose build --no-cache > /dev/null 2>&1
+    docker compose up -d > /dev/null 2>&1
 else
     echo "🚀 Starting with fresh database..."
     docker compose up -d > /dev/null 2>&1
@@ -80,10 +81,12 @@ fi
 
 # Verify
 sample_count=$(docker compose exec -T postgres psql -U ciauser -d cia_analytics -t -c "SELECT COUNT(*) FROM datasets WHERE uploaded_by = 'system';" 2>/dev/null | xargs || echo "0")
+yjs_tables=$(docker compose exec -T postgres psql -U ciauser -d cia_analytics -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_name LIKE 'yjs_%' OR table_name = 'chat_messages';" 2>/dev/null | xargs || echo "0")
 
 echo ""
 echo -e "${GREEN}✅ Database reset complete!${NC}"
 echo "📊 $sample_count sample files loaded"
+echo "💬 $yjs_tables Y.js persistence tables created"
 
 if [ "$QUICK_MODE" = false ]; then
     echo ""

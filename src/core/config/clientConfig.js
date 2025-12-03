@@ -31,13 +31,13 @@ export const config = Object.freeze({
 
   /**
    * WebSocket URL for Y.js collaboration server
-   * @example 'ws://localhost:8080'
+   * @example 'ws://localhost:9001'
    * @example 'wss://collab.cialab.io'
    */
   yjsWebSocketUrl: resolveValue(
     "yjsWebSocketUrl",
     "__YJS_WS_URL__",
-    "ws://localhost:8080"
+    "ws://localhost:9001"
   ),
 
   /**

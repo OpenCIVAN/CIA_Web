@@ -220,7 +220,7 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
 // FILE ITEM - LIST VIEW
 // =============================================================================
 
-function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, expandedFolders, onToggleFolder }) {
+function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, onDoubleClick, expandedFolders, onToggleFolder }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
     const isFolder = file.type === 'folder';
@@ -236,6 +236,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={() => isFolder ? onToggleFolder(file.id) : onSelect(file.id)}
+                onDoubleClick={(e) => { if (!isFolder) { e.stopPropagation(); onDoubleClick?.(file); } }}
                 onContextMenu={(e) => !isFolder && onContextMenu?.(e, file)}
             >
                 {isFolder ? (
@@ -261,7 +262,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
                 <span className="item-meta">{isFolder ? `${file.children?.length || 0}` : file.size}</span>
             </div>
             {isFolder && isExpanded && file.children?.map(child => (
-                <FileItemList key={child.id} file={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} onStar={onStar} onDragStart={onDragStart} onContextMenu={onContextMenu} onMenuClick={onMenuClick} expandedFolders={expandedFolders} onToggleFolder={onToggleFolder} />
+                <FileItemList key={child.id} file={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} onStar={onStar} onDragStart={onDragStart} onContextMenu={onContextMenu} onMenuClick={onMenuClick} onDoubleClick={onDoubleClick} expandedFolders={expandedFolders} onToggleFolder={onToggleFolder} />
             ))}
         </>
     );
@@ -271,7 +272,7 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
 // FILE ITEM - GRID VIEW
 // =============================================================================
 
-function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick }) {
+function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, onDoubleClick }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
 
@@ -285,6 +286,7 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => onSelect(file.id)}
+            onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(file); }}
             onContextMenu={(e) => onContextMenu?.(e, file)}
         >
             <div className="thumbnail">
@@ -437,6 +439,18 @@ export function FilesPanelContent({
         e.dataTransfer.effectAllowed = 'copy';
     }, []);
 
+    // Double-click to open file in instance
+    const handleDoubleClick = useCallback((file) => {
+        log.info(`Double-click to open: ${file.name}`);
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: {
+                datasetId: file.id,
+                fileId: file.id,
+                fileName: file.name,
+            }
+        }));
+    }, []);
+
     const handleContextMenu = useCallback((e, file) => {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, file });
@@ -454,8 +468,16 @@ export function FilesPanelContent({
 
         switch (action) {
             case 'open':
-                // TODO: Load file in an instance - requires instanceManager integration
-                log.info(`Load file in instance: ${file.name}`);
+                // Dispatch request to create/open instance with this file
+                // Note: file.id is the server file ID, which equals dataset.id after sync
+                log.info(`Opening file in instance: ${file.name}`);
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId: file.id,  // file.id === dataset.id after syncDatasetsFromServer
+                        fileId: file.id,     // Also provide as fileId for clarity
+                        fileName: file.name,
+                    }
+                }));
                 break;
 
             case 'info':
@@ -505,15 +527,15 @@ export function FilesPanelContent({
             return (
                 <div className="files-grid">
                     {items.map(file => (
-                        <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} />
+                        <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} />
                     ))}
                 </div>
             );
         }
         return items.map(file => (
-            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
         ));
-    }, [viewMode, selectedFileId, expandedFolders, handleStar, handleDragStart, handleContextMenu, handleMenuClick, toggleFolder]);
+    }, [viewMode, selectedFileId, expandedFolders, handleStar, handleDragStart, handleContextMenu, handleMenuClick, handleDoubleClick, toggleFolder]);
 
     return (
         <div className="files-tab">
@@ -616,12 +638,12 @@ export function FilesPanelContent({
                         viewMode === 'grid' ? (
                             <div className="files-grid">
                                 {files.filter(f => f.type !== 'folder').map(file => (
-                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} />
+                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} />
                                 ))}
                             </div>
                         ) : (
                             files.map(file => (
-                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
                             ))
                         )
                     ) : (

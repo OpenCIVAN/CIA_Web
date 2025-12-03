@@ -107,13 +107,17 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 9001
-    # Future: Add persistence
-    # YPERSISTENCE: ./yjs-data
+      # Database connection for Y.js persistence (Phase 2E)
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-cia_analytics}
+      DB_USER: ${POSTGRES_USER:-ciauser}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-ciadevpassword}
     ports:
       - "9001:9001"
-    # Future: Add volume for persistence
-    # volumes:
-    #   - yjs_data:/app/yjs-data
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "9001"]
       interval: 10s

@@ -128,6 +128,9 @@ const contentRouter = require("./routes/content");
 const folderRoutes = require("./routes/folders");
 const starRoutes = require("./routes/stars");
 
+// Chat routes (Phase 2E - Y.js persistence)
+const chatRouter = require("./routes/chat");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -147,6 +150,10 @@ app.use("/api/placements", optionalAuth, canvasesRouter);
 // The routes use mergeParams: true to access projectId from the mount path
 app.use("/api/projects/:projectId/folders", optionalAuth, folderRoutes);
 app.use("/api/projects/:projectId/stars", optionalAuth, starRoutes);
+
+// Chat history routes (Phase 2E - Y.js persistence)
+// Provides REST access to persisted chat messages for audit and history
+app.use("/api", optionalAuth, chatRouter);
 
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS

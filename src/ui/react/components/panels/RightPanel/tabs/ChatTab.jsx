@@ -1,12 +1,11 @@
 // src/ui/react/components/panels/RightPanel/tabs/ChatTab.jsx
-// Chat tab for the unified right panel
+// Chat tab for the unified right panel - Connected to Y.js for real-time sync
 //
 // Features:
-// - Room, Breakout, and Direct message tabs
+// - Room chat synced via Y.js (persisted to PostgreSQL)
 // - Message bubbles with avatars
 // - System messages for annotations/events
-// - DM conversation selector
-// - Message input with attachments and mentions
+// - Message input with send on Enter
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
@@ -16,146 +15,26 @@ import {
     Paperclip,
     AtSign,
     Globe,
-    Briefcase,
-    User,
-    ChevronDown,
-    Plus,
-    X,
+    Loader,
+    Trash2,
 } from 'lucide-react';
 
-// =============================================================================
-// CHAT TABS CONFIG
-// =============================================================================
+import { sync as log } from "@Utils/logger.js";
+import { textChat } from "@Collaboration/communication/textChat.js";
+import { getUserId, getUserName, getUserColor } from "@Collaboration/presence/userManagement.js";
+import { provider } from "@Collaboration/yjs/yjsSetup.js";
 
-const CHAT_TABS = [
-    { id: 'room', label: 'Room', icon: Globe, color: 'blue', unread: 0 },
-    { id: 'breakout', label: 'Breakout', icon: Briefcase, color: 'purple', unread: 3 },
-    { id: 'dm', label: 'Direct', icon: User, color: 'pink', unread: 1 },
-];
-
-// =============================================================================
-// SAMPLE DATA
-// =============================================================================
-
-const SAMPLE_MESSAGES = {
-    room: [
-        { id: 'm1', user: 'Dr. Smith', color: 'pink', text: 'Can everyone see the tumor region highlighted?', time: '10:32 AM', isMe: false },
-        { id: 'm2', user: 'You', color: 'green', text: 'Yes, I can see it clearly. The margins look well-defined.', time: '10:33 AM', isMe: true },
-        { id: 'm3', user: 'Dr. Jones', color: 'amber', text: 'I agree. Let me add a measurement annotation.', time: '10:34 AM', isMe: false },
-        { id: 'm4', user: 'Dr. Smith', color: 'pink', text: '@You can you zoom in on the left hemisphere?', time: '10:35 AM', isMe: false, mention: true },
-        { id: 'm5', user: 'System', color: 'muted', text: 'Dr. Jones added annotation: "Tumor diameter - 24.5mm"', time: '10:36 AM', isSystem: true },
-    ],
-    breakout: [
-        { id: 'b1', user: 'Alex Chen', color: 'purple', text: 'Should we discuss the surgical approach here?', time: '10:40 AM', isMe: false },
-        { id: 'b2', user: 'Dr. Smith', color: 'pink', text: "Yes, let's review the options.", time: '10:41 AM', isMe: false },
-        { id: 'b3', user: 'You', color: 'green', text: "I'll share my screen with the 3D model.", time: '10:42 AM', isMe: true },
-    ],
-    dm: [
-        { id: 'd1', user: 'Dr. Smith', color: 'pink', text: 'Hey, do you have a minute to discuss the case privately?', time: '9:15 AM', isMe: false },
-        { id: 'd2', user: 'You', color: 'green', text: "Sure, what's on your mind?", time: '9:16 AM', isMe: true },
-        { id: 'd3', user: 'Dr. Smith', color: 'pink', text: 'I wanted to get your opinion on the prognosis before we present to the team.', time: '9:17 AM', isMe: false },
-    ],
-};
-
-const DM_CONVERSATIONS = [
-    { id: 'dm1', user: 'Dr. Smith', color: 'pink', lastMessage: 'I wanted to get your opinion...', time: '9:17 AM', unread: 1 },
-    { id: 'dm2', user: 'Dr. Jones', color: 'amber', lastMessage: 'Thanks for the file!', time: 'Yesterday', unread: 0 },
-    { id: 'dm3', user: 'Alex Chen', color: 'purple', lastMessage: 'See you in the meeting', time: 'Mon', unread: 0 },
-];
-
-// =============================================================================
-// CHAT TAB BUTTONS
-// =============================================================================
-
-function ChatTabButtons({ tabs, activeTab, onTabChange }) {
-    return (
-        <div className="chat-tabs">
-            {tabs.map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                    <button
-                        key={tab.id}
-                        className={`chat-tabs__btn ${isActive ? 'chat-tabs__btn--active' : ''}`}
-                        data-color={tab.color}
-                        onClick={() => onTabChange(tab.id)}
-                    >
-                        <Icon size={12} />
-                        {tab.label}
-                        {tab.unread > 0 && (
-                            <span className="chat-tabs__badge" style={{ background: `var(--color-accent-${tab.color})` }}>
-                                {tab.unread}
-                            </span>
-                        )}
-                    </button>
-                );
-            })}
-        </div>
-    );
-}
-
-// =============================================================================
-// DM SELECTOR
-// =============================================================================
-
-function DMSelector({ conversations, selectedDM, onSelect, isOpen, onToggle }) {
-    const selectedConvo = conversations.find(c => c.id === selectedDM);
-
-    return (
-        <div className="dm-selector">
-            <button className="dm-selector__trigger" onClick={onToggle}>
-                <div
-                    className="dm-selector__avatar"
-                    style={{ '--avatar-color': `var(--color-accent-${selectedConvo?.color || 'pink'})` }}
-                >
-                    {selectedConvo?.user.split(' ').map(n => n[0]).join('').slice(0, 2) || 'DS'}
-                </div>
-                <span className="dm-selector__name">{selectedConvo?.user || 'Select conversation'}</span>
-                <ChevronDown size={14} />
-            </button>
-
-            {isOpen && (
-                <div className="dm-selector__dropdown">
-                    {conversations.map(convo => (
-                        <div
-                            key={convo.id}
-                            className={`dm-selector__item ${selectedDM === convo.id ? 'dm-selector__item--selected' : ''}`}
-                            onClick={() => { onSelect(convo.id); onToggle(); }}
-                        >
-                            <div
-                                className="dm-selector__avatar"
-                                style={{ '--avatar-color': `var(--color-accent-${convo.color})` }}
-                            >
-                                {convo.user.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </div>
-                            <div className="dm-selector__info">
-                                <div className="dm-selector__user">{convo.user}</div>
-                                <div className="dm-selector__preview">{convo.lastMessage}</div>
-                            </div>
-                            <div className="dm-selector__meta">
-                                <div className="dm-selector__time">{convo.time}</div>
-                                {convo.unread > 0 && (
-                                    <div className="dm-selector__unread">{convo.unread}</div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                    <button className="dm-selector__new">
-                        <Plus size={12} />
-                        New Conversation
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}
+import './ChatTab.scss';
 
 // =============================================================================
 // MESSAGE BUBBLE
 // =============================================================================
 
-function MessageBubble({ message }) {
-    if (message.isSystem) {
+function MessageBubble({ message, currentUserId, onDelete }) {
+    const isMe = message.userId === currentUserId;
+    const isSystem = message.isSystem;
+
+    if (isSystem) {
         return (
             <div className="message message--system">
                 {message.text}
@@ -163,28 +42,43 @@ function MessageBubble({ message }) {
         );
     }
 
-    const initials = message.user.split(' ').map(n => n[0]).join('').slice(0, 2);
+    const initials = (message.userName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2);
+    const time = new Date(message.timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    const userColor = message.userColor || '#2196F3';
 
     return (
-        <div className={`message ${message.isMe ? 'message--me' : ''}`}>
+        <div className={`message ${isMe ? 'message--me' : ''}`}>
             <div
                 className="message__avatar"
-                style={{ '--avatar-color': `var(--color-accent-${message.color})` }}
+                style={{ '--avatar-color': userColor }}
             >
                 {initials}
             </div>
 
             <div className="message__content">
-                {!message.isMe && (
-                    <span className="message__user" style={{ color: `var(--color-accent-${message.color})` }}>
-                        {message.user}
+                {!isMe && (
+                    <span className="message__user" style={{ color: userColor }}>
+                        {message.userName}
                     </span>
                 )}
-                <div className={`message__bubble ${message.mention ? 'message__bubble--mention' : ''}`}>
+                <div className="message__bubble">
                     {message.text}
                 </div>
-                <span className="message__time">{message.time}</span>
+                <span className="message__time">{time}</span>
             </div>
+
+            {isMe && (
+                <button
+                    className="message__delete"
+                    onClick={() => onDelete(message.id)}
+                    title="Delete message"
+                >
+                    <Trash2 size={12} />
+                </button>
+            )}
         </div>
     );
 }
@@ -193,12 +87,12 @@ function MessageBubble({ message }) {
 // MESSAGE INPUT
 // =============================================================================
 
-function MessageInput({ onSend }) {
+function MessageInput({ onSend, disabled }) {
     const [message, setMessage] = useState('');
     const textareaRef = useRef(null);
 
     const handleSend = () => {
-        if (message.trim()) {
+        if (message.trim() && !disabled) {
             onSend(message);
             setMessage('');
         }
@@ -214,7 +108,7 @@ function MessageInput({ onSend }) {
     return (
         <div className="chat-input">
             <div className="chat-input__wrapper">
-                <button className="chat-input__btn">
+                <button className="chat-input__btn" disabled={disabled}>
                     <Paperclip size={16} />
                 </button>
 
@@ -224,22 +118,23 @@ function MessageInput({ onSend }) {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type a message..."
+                    placeholder={disabled ? "Connecting..." : "Type a message..."}
                     rows={1}
+                    disabled={disabled}
                 />
 
-                <button className="chat-input__btn">
+                <button className="chat-input__btn" disabled={disabled}>
                     <AtSign size={16} />
                 </button>
 
-                <button className="chat-input__btn">
+                <button className="chat-input__btn" disabled={disabled}>
                     <Smile size={16} />
                 </button>
 
                 <button
-                    className={`chat-input__send ${message.trim() ? 'chat-input__send--active' : ''}`}
+                    className={`chat-input__send ${message.trim() && !disabled ? 'chat-input__send--active' : ''}`}
                     onClick={handleSend}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || disabled}
                 >
                     <Send size={14} />
                 </button>
@@ -253,38 +148,111 @@ function MessageInput({ onSend }) {
 // =============================================================================
 
 export function ChatPanelContent({ workspaceId }) {
-    const [activeTab, setActiveTab] = useState('room');
-    const [selectedDM, setSelectedDM] = useState('dm1');
-    const [showDMList, setShowDMList] = useState(false);
-    const [messages, setMessages] = useState(SAMPLE_MESSAGES);
+    const [messages, setMessages] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSynced, setIsSynced] = useState(false);
     const messagesEndRef = useRef(null);
+    const currentUserId = getUserId();
 
-    // Get current messages
-    const currentMessages = activeTab === 'dm'
-        ? messages.dm
-        : messages[activeTab] || [];
-
-    // Scroll to bottom on new messages
-    useEffect(() => {
+    // Scroll to bottom when messages change
+    const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [currentMessages]);
+    }, []);
 
-    // Handle send message
-    const handleSend = useCallback((text) => {
-        const newMessage = {
-            id: `m${Date.now()}`,
-            user: 'You',
-            color: 'green',
-            text,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isMe: true,
+    // Refresh messages from textChat
+    const refreshMessages = useCallback(() => {
+        const allMessages = textChat.getMessages();
+        log.debug('Chat refreshing messages, count:', allMessages.length);
+        setMessages([...allMessages]);
+        setTimeout(scrollToBottom, 100);
+    }, [scrollToBottom]);
+
+    // Initialize chat and set up listeners
+    useEffect(() => {
+        // Initialize the textChat system
+        textChat.initialize();
+
+        // Handle new messages
+        const handleNewMessage = (message) => {
+            log.debug('Chat: New message received:', message.userName);
+            setMessages([...textChat.getMessages()]);
+            setTimeout(scrollToBottom, 50);
         };
 
-        setMessages(prev => ({
-            ...prev,
-            [activeTab]: [...(prev[activeTab] || []), newMessage],
-        }));
-    }, [activeTab]);
+        // Handle message deletion
+        const handleDelete = () => {
+            log.debug('Chat: Message deleted');
+            setMessages([...textChat.getMessages()]);
+        };
+
+        // Subscribe to textChat events
+        textChat.onMessage(handleNewMessage);
+        textChat.onDelete(handleDelete);
+
+        // Wait for Y.js to sync
+        let syncTimeout;
+
+        const handleSync = (synced) => {
+            if (synced) {
+                log.info('Chat: Y.js synced, loading messages...');
+                clearTimeout(syncTimeout);
+                setIsSynced(true);
+                setTimeout(() => {
+                    refreshMessages();
+                    setIsLoading(false);
+                }, 500);
+            }
+        };
+
+        // Check if already synced
+        try {
+            provider.on('sync', handleSync);
+
+            // If provider is already synced, trigger immediately
+            if (provider.synced) {
+                handleSync(true);
+            }
+        } catch (e) {
+            log.warn('Chat: Provider not ready yet, will wait for sync');
+        }
+
+        // Fallback timeout
+        syncTimeout = setTimeout(() => {
+            log.debug('Chat: Sync timeout, loading messages anyway');
+            refreshMessages();
+            setIsLoading(false);
+        }, 3000);
+
+        // Cleanup
+        return () => {
+            try {
+                provider.off('sync', handleSync);
+            } catch (e) {
+                // Provider may not be available
+            }
+            clearTimeout(syncTimeout);
+            textChat.offMessage(handleNewMessage);
+            textChat.offDelete(handleDelete);
+        };
+    }, [refreshMessages, scrollToBottom]);
+
+    // Handle sending a message
+    const handleSend = useCallback((text) => {
+        try {
+            textChat.sendMessage(text);
+            log.debug('Chat: Message sent:', text.substring(0, 50));
+            // Messages will update via the onMessage callback
+        } catch (error) {
+            log.error('Chat: Error sending message:', error);
+        }
+    }, []);
+
+    // Handle deleting a message
+    const handleDelete = useCallback((messageId) => {
+        if (confirm('Delete this message for everyone?')) {
+            textChat.deleteMessage(messageId);
+        }
+    }, []);
 
     return (
         <div className="chat-tab">
@@ -292,38 +260,60 @@ export function ChatPanelContent({ workspaceId }) {
             <div className="panel-header">
                 <MessageSquare size={14} className="panel-header__icon file-icon--blue" />
                 <span className="panel-header__title">Chat</span>
+                <div className="panel-header__status">
+                    {isLoading ? (
+                        <span className="chat-status chat-status--loading">
+                            <Loader size={12} className="spin" />
+                            Syncing...
+                        </span>
+                    ) : isSynced ? (
+                        <span className="chat-status chat-status--connected">
+                            <Globe size={12} />
+                            Connected
+                        </span>
+                    ) : (
+                        <span className="chat-status chat-status--offline">
+                            Offline
+                        </span>
+                    )}
+                </div>
             </div>
 
-            {/* Chat Tabs */}
-            <div className="chat-tab__tabs-container">
-                <ChatTabButtons
-                    tabs={CHAT_TABS}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                />
+            {/* Room indicator */}
+            <div className="chat-tab__room-indicator">
+                <Globe size={12} />
+                <span>Room Chat</span>
+                <span className="chat-tab__message-count">{messages.length} messages</span>
             </div>
-
-            {/* DM Selector (only for DM tab) */}
-            {activeTab === 'dm' && (
-                <DMSelector
-                    conversations={DM_CONVERSATIONS}
-                    selectedDM={selectedDM}
-                    onSelect={setSelectedDM}
-                    isOpen={showDMList}
-                    onToggle={() => setShowDMList(!showDMList)}
-                />
-            )}
 
             {/* Messages */}
             <div className="chat-tab__messages">
-                {currentMessages.map(msg => (
-                    <MessageBubble key={msg.id} message={msg} />
-                ))}
+                {isLoading ? (
+                    <div className="chat-tab__loading">
+                        <Loader size={24} className="spin" />
+                        <span>Loading messages...</span>
+                    </div>
+                ) : messages.length === 0 ? (
+                    <div className="chat-tab__empty">
+                        <MessageSquare size={32} strokeWidth={1} />
+                        <span>No messages yet</span>
+                        <span className="chat-tab__empty-hint">Start the conversation!</span>
+                    </div>
+                ) : (
+                    messages.map(msg => (
+                        <MessageBubble
+                            key={msg.id}
+                            message={msg}
+                            currentUserId={currentUserId}
+                            onDelete={handleDelete}
+                        />
+                    ))
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}
-            <MessageInput onSend={handleSend} />
+            <MessageInput onSend={handleSend} disabled={isLoading} />
         </div>
     );
 }

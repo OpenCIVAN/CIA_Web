@@ -24,7 +24,7 @@ import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import { WebsocketProvider } from "y-websocket";
 
-import { NETWORK_CONFIG } from "@Core/config/constants.js";
+import clientConfig from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager";
 import { sync as log } from "@Utils/logger.js";
 
@@ -100,15 +100,11 @@ export function initializeYjsProvider() {
   }
 
   const roomId = sessionManager.getRoomId();
+  const wsUrl = clientConfig.yjsWebSocketUrl;
 
-  _provider = new WebsocketProvider(
-    NETWORK_CONFIG.WEBSOCKET_URL,
-    roomId,
-    ydoc,
-    { awareness }
-  );
+  _provider = new WebsocketProvider(wsUrl, roomId, ydoc, { awareness });
 
-  log.info(`Y.js connecting to room: ${roomId}`);
+  log.info(`Y.js connecting to ${wsUrl} room: ${roomId}`);
 
   _provider.on("status", (event) => {
     log.info(`Y.js connection status: ${event.status}`);

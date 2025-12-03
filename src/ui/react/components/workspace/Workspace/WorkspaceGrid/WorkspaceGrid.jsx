@@ -108,15 +108,17 @@ export function WorkspaceGrid() {
 
     // Listen for dataset click events
     // Note: DatasetsTab dispatches 'cia:request-instance' with viewId property
+    // FilesTab dispatches with fileId (which equals datasetId after syncDatasetsFromServer)
     useEffect(() => {
         const handleInstanceRequest = async (event) => {
-            const datasetId = event.detail?.datasetId;
+            // Support both datasetId and fileId (they're the same after server sync)
+            const datasetId = event.detail?.datasetId || event.detail?.fileId;
             // Support both viewConfigId and viewId (for compatibility with DatasetsTab)
             const viewConfigId = event.detail?.viewConfigId || event.detail?.viewId;
             const spawnNew = event.detail?.spawnNew;
             const duplicateViewId = event.detail?.duplicateViewId;
 
-            log.debug('Instance request received:', { datasetId, viewConfigId, spawnNew });
+            log.debug('Instance request received:', { datasetId, viewConfigId, spawnNew, fileId: event.detail?.fileId });
 
             if (!datasetId || typeof datasetId !== 'string') {
                 log.error('Invalid dataset ID:', datasetId);
@@ -124,9 +126,19 @@ export function WorkspaceGrid() {
             }
 
             try {
-                const dataset = datasetManager.getDataset(datasetId);
+                // Get the dataset - should exist after syncDatasetsFromServer on init
+                let dataset = datasetManager.getDataset(datasetId);
+
+                // If dataset not found locally, it might have been uploaded in another session
+                // Try syncing from server first
                 if (!dataset) {
-                    log.error('Dataset not found:', datasetId);
+                    log.info(`Dataset ${datasetId} not found locally, syncing from server...`);
+                    await datasetManager.syncDatasetsFromServer();
+                    dataset = datasetManager.getDataset(datasetId);
+                }
+
+                if (!dataset) {
+                    log.error('Dataset not found after sync:', datasetId);
                     return;
                 }
 
