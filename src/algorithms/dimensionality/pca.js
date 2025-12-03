@@ -13,7 +13,7 @@ import {
   logSuccess,
   logError,
   logWarning,
-} from "@UI/react/hooks/useLogging.js";
+} from "@Utils/logger.js";;
 
 export async function performPCA(pointsMatrix, numComponents = 3) {
   const numPoints = pointsMatrix.length;

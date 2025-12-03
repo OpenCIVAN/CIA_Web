@@ -1,6 +1,6 @@
 import vtkInteractorStyleImage from "@kitware/vtk.js/Interaction/Style/InteractorStyleImage";
 
-import { logProgress } from "@UI/react/hooks/useLogging.js";
+import { logProgress } from "@Utils/logger.js";
 
 let renderer, renderWindow, camera, interactor;
 let original3DInteractorStyle = null;

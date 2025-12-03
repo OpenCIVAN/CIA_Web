@@ -2,7 +2,7 @@
 // Result Interpolation for Large Datasets
 // ----------------------------------------------------------------------------
 
-import { logProgress } from "@UI/react/hooks/useLogging.js";
+import { logProgress } from "@Utils/logger.js";
 
 export function interpolateResults(
   allPoints,

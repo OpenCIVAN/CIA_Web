@@ -1,7 +1,6 @@
 // src/core/instances/types/vtk/utils/VTKPointProcessing.js
 
-import { logProgress, logSuccess } from "@UI/react/hooks/useLogging.js";
-import { render as log } from "@Utils/logger.js";
+import { render as log, logProgress, logSuccess  } from "@Utils/logger.js";
 
 /**
  * VTK Point Processing Utilities

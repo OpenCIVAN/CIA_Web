@@ -19,7 +19,7 @@ import {
   logSuccess,
   logError,
   logWarning,
-} from "@UI/react/hooks/useLogging.js";
+} from "@Utils/logger.js";
 
 export async function performUMAP(
   pointsMatrix,

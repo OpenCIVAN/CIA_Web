@@ -1,7 +1,7 @@
 // src/ui/react/components/panels/BottomPanel/BottomPanel.scss
 // Styles for the collapsible bottom panel
 
-@import "@UI/react/styles/theme.scss";
+@use "theme" as *;
 
 .bottom-panel {
   display: flex;

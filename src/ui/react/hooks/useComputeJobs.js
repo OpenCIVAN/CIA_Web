@@ -1,226 +1,473 @@
 // src/ui/react/hooks/useComputeJobs.js
+// Hook to track and manage compute jobs from BullMQ
 //
-// React hook for compute job management
-// Provides methods to submit jobs and track their status
+// Features:
+// - Fetches jobs from the server API
+// - Real-time updates via WebSocket
+// - Actions: cancel, retry, clear completed
+//
+// Usage:
+//   const { jobs, isLoading, cancelJob, retryJob } = useComputeJobs();
 
-import { useState, useEffect, useCallback } from "react";
-import {
-  useComputeJobStore,
-  JobStatus,
-} from "@UI/react/store/computeJobStore.js";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { config } from "@Core/config/clientConfig.js";
-import { api as log } from "@Utils/logger.js";
-import { toast } from "@UI/react/store/toastStore.js";
+import { compute as log } from "@Utils/logger.js";
 
-// Re-export config for components that need API URL
-export { config };
+// Job status constants (match server-side)
+export const JobStatus = Object.freeze({
+  QUEUED: "queued",
+  PROCESSING: "processing",
+  COMPLETE: "complete",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+});
 
 /**
- * Hook for managing compute jobs
+ * useComputeJobs - Track and manage compute jobs
  *
  * @param {Object} options
- * @param {string} options.fileId - Filter jobs for specific file (optional)
- * @returns {Object} Job state and actions
- *
- * @example
- * const { submitJob, activeJobs, hasActiveJobs } = useComputeJobs();
- *
- * // Submit a decimation job
- * const jobId = await submitJob(fileId, 'mesh-decimation', { reduction: 0.5 });
+ * @param {string} options.projectId - Filter jobs by project (optional)
+ * @param {boolean} options.includeCompleted - Include completed jobs (default: true)
+ * @param {number} options.maxJobs - Max jobs to fetch (default: 50)
+ * @returns {Object} Jobs data and actions
  */
 export function useComputeJobs(options = {}) {
-  const { fileId } = options;
+  const { projectId = null, includeCompleted = true, maxJobs = 50 } = options;
 
-  // Get store state and actions
-  const jobs = useComputeJobStore((state) => state.jobs);
-  const addJob = useComputeJobStore((state) => state.addJob);
-  const removeJob = useComputeJobStore((state) => state.removeJob);
-  const cleanupOldJobs = useComputeJobStore((state) => state.cleanupOldJobs);
+  const [jobs, setJobs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
-  // Cleanup old jobs on mount
+  // =========================================================================
+  // FETCH JOBS FROM API
+  // =========================================================================
+
+  const fetchJobs = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (projectId) params.set("projectId", projectId);
+      if (includeCompleted) params.set("includeCompleted", "true");
+      params.set("limit", maxJobs.toString());
+
+      const response = await fetch(
+        `${config.apiBaseUrl}/compute/jobs?${params}`,
+        {
+          headers: {
+            Accept: "application/json",
+            // Add auth header if needed
+            // "Authorization": `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch jobs: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Transform server jobs to UI format
+      const transformedJobs = (data.jobs || []).map(transformJob);
+      setJobs(transformedJobs);
+      setError(null);
+
+      log.debug(`Fetched ${transformedJobs.length} compute jobs`);
+    } catch (err) {
+      log.error("Failed to fetch compute jobs:", err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, includeCompleted, maxJobs]);
+
+  // =========================================================================
+  // WEBSOCKET FOR REAL-TIME UPDATES
+  // =========================================================================
+
+  const connectWebSocket = useCallback(() => {
+    // Use the Y.js WebSocket URL base, or construct from API URL
+    const wsUrl = config.yjsWebSocketUrl.replace("/yjs", "") + "/compute";
+
+    try {
+      wsRef.current = new WebSocket(wsUrl);
+
+      wsRef.current.onopen = () => {
+        log.debug("Compute WebSocket connected");
+        // Subscribe to job updates
+        wsRef.current.send(
+          JSON.stringify({
+            type: "subscribe",
+            channel: "compute-jobs",
+            projectId,
+          })
+        );
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleWebSocketMessage(message);
+        } catch (err) {
+          log.warn("Invalid WebSocket message:", event.data);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        log.debug("Compute WebSocket disconnected");
+        // Attempt reconnect after delay
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, 5000);
+      };
+
+      wsRef.current.onerror = (err) => {
+        log.warn("Compute WebSocket error:", err);
+      };
+    } catch (err) {
+      log.warn("Failed to connect compute WebSocket:", err);
+    }
+  }, [projectId]);
+
+  const handleWebSocketMessage = useCallback((message) => {
+    switch (message.type) {
+      case "job:created":
+        setJobs((prev) => [transformJob(message.job), ...prev]);
+        break;
+
+      case "job:progress":
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === message.jobId
+              ? { ...job, progress: message.progress, status: "running" }
+              : job
+          )
+        );
+        break;
+
+      case "job:complete":
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === message.jobId
+              ? {
+                  ...job,
+                  status: "completed",
+                  progress: 100,
+                  completedAt: Date.now(),
+                  duration: message.duration,
+                  result: message.result,
+                }
+              : job
+          )
+        );
+        break;
+
+      case "job:failed":
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === message.jobId
+              ? { ...job, status: "failed", error: message.error }
+              : job
+          )
+        );
+        break;
+
+      case "job:cancelled":
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === message.jobId
+              ? { ...job, status: "failed", error: "Cancelled" }
+              : job
+          )
+        );
+        break;
+
+      default:
+        log.debug("Unknown compute message type:", message.type);
+    }
+  }, []);
+
+  // =========================================================================
+  // JOB ACTIONS
+  // =========================================================================
+
+  /**
+   * Cancel a running or queued job
+   */
+  const cancelJob = useCallback(async (jobId) => {
+    try {
+      log.info(`Cancelling job: ${jobId}`);
+
+      const response = await fetch(
+        `${config.apiBaseUrl}/compute/jobs/${jobId}`,
+        {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to cancel job: ${response.status}`);
+      }
+
+      // Optimistically update UI
+      setJobs((prev) =>
+        prev.map((job) =>
+          job.id === jobId
+            ? { ...job, status: "failed", error: "Cancelled by user" }
+            : job
+        )
+      );
+
+      return { success: true };
+    } catch (err) {
+      log.error("Failed to cancel job:", err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  /**
+   * Retry a failed job
+   */
+  const retryJob = useCallback(async (jobId) => {
+    try {
+      log.info(`Retrying job: ${jobId}`);
+
+      const response = await fetch(
+        `${config.apiBaseUrl}/compute/jobs/${jobId}/retry`,
+        {
+          method: "POST",
+          headers: { Accept: "application/json" },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to retry job: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Update with new job (retry creates a new job)
+      if (data.job) {
+        setJobs((prev) => [
+          transformJob(data.job),
+          ...prev.filter((j) => j.id !== jobId),
+        ]);
+      }
+
+      return { success: true, newJobId: data.job?.id };
+    } catch (err) {
+      log.error("Failed to retry job:", err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  /**
+   * Clear completed jobs from the list
+   */
+  const clearCompleted = useCallback(() => {
+    setJobs((prev) => prev.filter((job) => job.status !== "completed"));
+    log.debug("Cleared completed jobs from UI");
+  }, []);
+
+  /**
+   * Refresh jobs list
+   */
+  const refresh = useCallback(() => {
+    setIsLoading(true);
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // =========================================================================
+  // LIFECYCLE
+  // =========================================================================
+
+  // Initial fetch
   useEffect(() => {
-    cleanupOldJobs();
-  }, [cleanupOldJobs]);
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // WebSocket connection
+  useEffect(() => {
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+  }, [connectWebSocket]);
+
+  // Periodic refresh as fallback (every 30s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only refresh if WebSocket is not connected
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        fetchJobs();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchJobs]);
+
+  return {
+    jobs,
+    isLoading,
+    error,
+    cancelJob,
+    retryJob,
+    clearCompleted,
+    refresh,
+  };
+}
+
+// =============================================================================
+// HELPER: Transform server job to UI format
+// =============================================================================
+
+function transformJob(serverJob) {
+  // Map server status to UI status
+  const statusMap = {
+    queued: "pending",
+    processing: "running",
+    complete: "completed",
+    failed: "failed",
+    cancelled: "failed",
+  };
+
+  // Map operation to type for display
+  const typeMap = {
+    "pca-reduction": "pca",
+    "tsne-reduction": "tsne",
+    "umap-reduction": "umap",
+    "mesh-decimation": "vtk_process",
+    "mesh-smoothing": "vtk_process",
+    "point-subsampling": "vtk_process",
+    "compute-statistics": "data_transform",
+    "lod-generation": "vtk_process",
+  };
+
+  return {
+    id: serverJob.id,
+    type: typeMap[serverJob.operation] || "default",
+    name: formatOperationName(serverJob.operation),
+    datasetName: serverJob.filename || serverJob.file_name || null,
+    status: statusMap[serverJob.status] || "pending",
+    progress: serverJob.progress || 0,
+    createdAt: serverJob.queued_at
+      ? new Date(serverJob.queued_at).getTime()
+      : Date.now(),
+    startedAt: serverJob.started_at
+      ? new Date(serverJob.started_at).getTime()
+      : null,
+    completedAt: serverJob.completed_at
+      ? new Date(serverJob.completed_at).getTime()
+      : null,
+    duration: serverJob.compute_time_ms || null,
+    error: serverJob.error_message || null,
+    result: serverJob.result_metadata || null,
+  };
+}
+
+function formatOperationName(operation) {
+  if (!operation) return "Unknown Operation";
+
+  return operation
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+// =============================================================================
+// COMPUTE OPERATIONS HOOK
+// =============================================================================
+
+/**
+ * useComputeOperations - Submit new compute jobs
+ *
+ * Usage:
+ *   const { submitJob, availableOperations } = useComputeOperations();
+ *   await submitJob('mesh-decimation', fileId, { ratio: 0.5 });
+ */
+export function useComputeOperations() {
+  const [availableOperations, setAvailableOperations] = useState([]);
+
+  // Fetch available operations on mount
+  useEffect(() => {
+    async function fetchOperations() {
+      try {
+        const response = await fetch(`${config.apiBaseUrl}/compute/operations`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableOperations(data.operations || []);
+        }
+      } catch (err) {
+        log.warn("Failed to fetch compute operations:", err);
+      }
+    }
+    fetchOperations();
+  }, []);
 
   /**
    * Submit a new compute job
-   *
-   * @param {string} targetFileId - File to process
-   * @param {string} operation - Operation ID (e.g., 'mesh-decimation')
-   * @param {Object} params - Operation parameters
-   * @param {Object} submitOptions - Additional options
-   * @param {string} submitOptions.fileName - Display name for UI
-   * @param {number} submitOptions.priority - Job priority (1-10)
-   * @returns {Promise<string>} Job ID
    */
   const submitJob = useCallback(
-    async (targetFileId, operation, params = {}, submitOptions = {}) => {
-      log.info(`Submitting job: ${operation} for file ${targetFileId}`);
-
+    async (operation, fileId, params = {}, options = {}) => {
       try {
+        log.info(`Submitting compute job: ${operation} for file ${fileId}`);
+
         const response = await fetch(`${config.apiBaseUrl}/compute/jobs`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
           body: JSON.stringify({
-            fileId: targetFileId,
+            fileId,
             operation,
             params,
-            priority: submitOptions.priority || 5,
+            priority: options.priority || 5,
           }),
         });
 
         if (!response.ok) {
           const error = await response.json();
           throw new Error(
-            error.message || error.error || "Failed to submit job"
+            error.error || `Failed to submit job: ${response.status}`
           );
         }
 
         const data = await response.json();
+        log.info(`Job submitted: ${data.job?.id}`);
 
-        // Check if result was cached
-        if (data.cached) {
-          log.info(`Job result was cached: ${data.cacheId}`);
-          toast.success(
-            "Result already cached! Using existing processed file.",
-            3000
-          );
-
-          // If there's a derived file from the cache, return its info
-          if (data.derivedFileId) {
-            return { cached: true, derivedFileId: data.derivedFileId };
-          }
-          return { cached: true, cacheId: data.cacheId };
-        }
-
-        // Add to local store
-        addJob({
-          id: data.job.id,
-          fileId: targetFileId,
-          fileName: submitOptions.fileName || targetFileId,
-          operation,
-          params,
-        });
-
-        log.info(`Job submitted: ${data.job.id}`);
-
-        // Show submission toast
-        const operationName = operation.replace(/-/g, " ");
-        toast.info(
-          `Started: ${operationName} on ${submitOptions.fileName || "file"}`,
-          3000
-        );
-
-        return { cached: false, jobId: data.job.id };
-      } catch (error) {
-        log.error("Failed to submit job:", error);
-        throw error;
+        return { success: true, job: data.job };
+      } catch (err) {
+        log.error("Failed to submit compute job:", err);
+        return { success: false, error: err.message };
       }
     },
-    [addJob]
+    []
   );
 
   /**
-   * Cancel a job
+   * Get operations available for a specific file type
    */
-  const cancelJob = useCallback(
-    async (jobId) => {
-      log.info(`Cancelling job: ${jobId}`);
-      try {
-        await fetch(`${config.apiBaseUrl}/compute/jobs/${jobId}/cancel`, {
-          method: "POST",
-        });
-        removeJob(jobId);
-      } catch (error) {
-        log.error("Failed to cancel job:", error);
-        // Still remove from local state
-        removeJob(jobId);
-      }
+  const getOperationsForFile = useCallback(
+    (fileType) => {
+      return availableOperations.filter((op) =>
+        op.inputFormats?.includes(fileType.toLowerCase())
+      );
     },
-    [removeJob]
+    [availableOperations]
   );
-
-  /**
-   * Dismiss a completed/failed job from the list
-   */
-  const dismissJob = useCallback(
-    (jobId) => {
-      removeJob(jobId);
-    },
-    [removeJob]
-  );
-
-  // Compute derived values
-  const allJobs = Object.values(jobs);
-  const activeJobs = allJobs.filter(
-    (j) => j.status === JobStatus.QUEUED || j.status === JobStatus.PROCESSING
-  );
-  const completedJobs = allJobs.filter((j) => j.status === JobStatus.COMPLETE);
-  const failedJobs = allJobs.filter((j) => j.status === JobStatus.FAILED);
-
-  // Filter by file if specified
-  const filteredJobs = fileId
-    ? allJobs.filter((j) => j.fileId === fileId)
-    : allJobs;
 
   return {
-    // State
-    jobs: filteredJobs,
-    activeJobs,
-    completedJobs,
-    failedJobs,
-    hasActiveJobs: activeJobs.length > 0,
-    activeJobCount: activeJobs.length,
-
-    // Actions
     submitJob,
-    cancelJob,
-    dismissJob,
-
-    // Re-export status enum for convenience
-    JobStatus,
+    availableOperations,
+    getOperationsForFile,
   };
-}
-
-/**
- * Hook to get available operations for a file type
- *
- * @param {string} handlerType - Handler type (e.g., 'vtk')
- * @param {string} fileType - File extension (e.g., 'vtp')
- * @returns {Object} Operations state
- */
-export function useComputeOperations(handlerType, fileType) {
-  const [operations, setOperations] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!handlerType) return;
-
-    const fetchOperations = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const url = new URL(`${config.apiBaseUrl}/compute/operations`);
-        url.searchParams.set("handlerType", handlerType);
-        if (fileType) url.searchParams.set("fileType", fileType);
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch operations");
-
-        const data = await response.json();
-        setOperations(data.operations || []);
-      } catch (err) {
-        setError(err.message);
-        setOperations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOperations();
-  }, [handlerType, fileType]);
-
-  return { operations, loading, error };
 }

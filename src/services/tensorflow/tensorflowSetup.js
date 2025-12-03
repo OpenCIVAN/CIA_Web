@@ -8,7 +8,7 @@ import {
   logError,
   logInfo,
   logWarning,
-} from "@UI/react/hooks/useLogging.js";
+} from "@Utils/logger.js";
 
 // ----------------------------------------------------------------------------
 // TensorFlow.js Configuration and Memory Management

@@ -3,7 +3,7 @@
 
 import React, { useRef, useEffect } from "react";
 
-import { useLogging, LogType } from "@UI/react/hooks/useLogging.js";
+import { useLogging, LogType } from "@Utils/logger.js";
 
 export function LoggingPanel() {
   const { logs, clearLogs } = useLogging();

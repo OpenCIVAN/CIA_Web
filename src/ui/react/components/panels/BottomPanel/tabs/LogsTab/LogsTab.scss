@@ -1,7 +1,7 @@
 // src/ui/react/components/panels/BottomPanel/tabs/LogsTab/LogsTab.scss
 // Styles for the log viewer tab
 
-@import "@UI/react/styles/theme.scss";
+@use "theme" as *;
 
 .logs-tab {
   display: flex;

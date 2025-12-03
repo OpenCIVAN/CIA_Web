@@ -10,7 +10,7 @@ import {
   logSuccess,
   logError,
   logWarning,
-} from "@UI/react/hooks/useLogging.js";
+} from "@Utils/logger.js";
 
 // Helper functions for debugging t-SNE
 function getDataRange(data) {

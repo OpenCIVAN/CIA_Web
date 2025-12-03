@@ -19,7 +19,7 @@ import {
     Clock,
     ChevronDown,
 } from "lucide-react";
-import { useLogging, LogType } from "@UI/react/hooks/useLogging.js";
+import { useLogging, LogType } from "@Utils/logger.js";
 import "./LogsTab.scss";
 
 // Icon mapping for log types
