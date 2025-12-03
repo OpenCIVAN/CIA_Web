@@ -45,6 +45,8 @@ export class ViewConfigurationManager {
       linkChanged: [],
       broadcastChanged: [],
       presenceChanged: [],
+      reconciled: [], // fired after reconciliation
+      reset: [], // fired after force reset
     };
 
     // Cleanup settings
@@ -1352,6 +1354,198 @@ export class ViewConfigurationManager {
       this._viewConfigs.delete(viewId);
       this._emit("viewRemoved", viewId);
     }
+  }
+
+  // ===========================================================================
+  // RECONCILIATION
+  // ===========================================================================
+
+  /**
+   * Reconcile local views with server
+   * Should be called AFTER DatasetManager.reconcileWithServer()
+   *
+   * @returns {Promise<ReconciliationResult>}
+   */
+  async reconcileWithServer() {
+    log.info("ViewConfigurationManager: Starting reconciliation...");
+
+    const startTime = Date.now();
+
+    try {
+      // 1. Fetch views from server
+      const response = await fetch(
+        `${this._apiBaseUrl}/views?projectId=${this._projectId}`
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No views on server - clear all local
+          log.debug("No views on server");
+          const orphanCount = this._viewConfigs.size;
+          this._viewConfigs.clear();
+          return { orphansRemoved: orphanCount, added: 0, total: 0 };
+        }
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      const serverViews = data.views || [];
+
+      log.debug(`Server has ${serverViews.length} view(s)`);
+
+      // Build server lookup
+      const serverViewIds = new Set(serverViews.map((v) => v.id));
+
+      // 2. Find orphan views
+      const orphans = [];
+      const invalidDatasetRefs = [];
+
+      // Get datasetManager reference (from global or import)
+      const datasetManager =
+        window.CIA?.datasetManager || window.__CIA_MANAGERS?.datasetManager;
+
+      for (const [viewId, view] of this._viewConfigs) {
+        if (!serverViewIds.has(viewId)) {
+          orphans.push(view);
+          continue;
+        }
+
+        // Check if dataset still exists
+        if (datasetManager && view.datasetId) {
+          const dataset = datasetManager.getDataset(view.datasetId);
+          if (!dataset) {
+            log.warn(
+              `View ${viewId} references deleted dataset ${view.datasetId}`
+            );
+            invalidDatasetRefs.push(view);
+          }
+        }
+      }
+
+      // 3. Remove orphan views
+      for (const orphan of orphans) {
+        log.debug(`Removing orphan view: ${orphan.name} (${orphan.id})`);
+        this._viewConfigs.delete(orphan.id);
+        this._cleanupLinkObserversForView(orphan);
+      }
+
+      // 4. Remove views with invalid dataset refs
+      for (const invalid of invalidDatasetRefs) {
+        log.warn(`Removing view with invalid dataset: ${invalid.name}`);
+        this._viewConfigs.delete(invalid.id);
+        this._cleanupLinkObserversForView(invalid);
+      }
+
+      // 5. Add views from server
+      let added = 0;
+
+      for (const serverView of serverViews) {
+        if (this._viewConfigs.has(serverView.id)) continue;
+
+        // Validate dataset exists
+        const datasetId =
+          serverView.file_id || serverView.fileId || serverView.dataset_id;
+        if (datasetManager && datasetId) {
+          const dataset = datasetManager.getDataset(datasetId);
+          if (!dataset) {
+            log.warn(`Skipping view ${serverView.id} - dataset not found`);
+            continue;
+          }
+        }
+
+        try {
+          const viewData = this._serverToClientFormat(serverView);
+          const view = new ViewConfiguration(viewData);
+          this._viewConfigs.set(view.id, view);
+          this._setupLinkObserversForView(view);
+          added++;
+        } catch (err) {
+          log.error(`Failed to add server view ${serverView.id}:`, err);
+        }
+      }
+
+      // 6. Result
+      const result = {
+        orphansRemoved: orphans.length,
+        invalidDatasetRefs: invalidDatasetRefs.length,
+        added,
+        total: this._viewConfigs.size,
+        wasClean:
+          orphans.length === 0 &&
+          invalidDatasetRefs.length === 0 &&
+          added === 0,
+        durationMs: Date.now() - startTime,
+      };
+
+      if (!result.wasClean) {
+        log.info(`View reconciliation complete in ${result.durationMs}ms`);
+        this._emit("reconciled", result);
+      }
+
+      return result;
+    } catch (error) {
+      log.error("View reconciliation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up link observers when a view is removed
+   * @private
+   */
+  _cleanupLinkObserversForView(view) {
+    if (!view) return;
+
+    // Remove as observer of other views
+    for (const property of LINKABLE_PROPERTIES) {
+      const link = view.links?.[property];
+      if (link?.targetViewId) {
+        this._unregisterLinkObserver(link.targetViewId, view.id);
+      }
+    }
+
+    // Remove as target
+    const subscribers = this._linkObservers.get(view.id);
+    if (subscribers) {
+      for (const subscriberId of subscribers) {
+        const subscriber = this._viewConfigs.get(subscriberId);
+        if (!subscriber) continue;
+
+        for (const property of LINKABLE_PROPERTIES) {
+          const link = subscriber.links?.[property];
+          if (link?.targetViewId === view.id) {
+            link.status = LINK_STATUS.BROKEN;
+            link.brokenAt = Date.now();
+            link.brokenReason = "target_deleted";
+          }
+        }
+      }
+      this._linkObservers.delete(view.id);
+    }
+  }
+
+  /**
+   * Force clear all local view data
+   */
+  async forceReset() {
+    log.warn("Force resetting all view state...");
+
+    for (const [viewId, view] of this._viewConfigs) {
+      this._cleanupLinkObserversForView(view);
+    }
+
+    this._viewConfigs.clear();
+    this._linkObservers.clear();
+    this._emit("reset");
+
+    log.info("View state reset complete");
+  }
+
+  /**
+   * Get IDs of all local views
+   */
+  getLocalViewIds() {
+    return Array.from(this._viewConfigs.keys());
   }
 
   // ===========================================================================

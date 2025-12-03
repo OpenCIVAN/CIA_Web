@@ -25,6 +25,12 @@ import {
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { config } from "@Core/config/clientConfig.js";
 import { app as log } from "@Utils/logger.js";
+import {
+  checkSyncStatus,
+  performReconciliation,
+  clearSyncState,
+  DivergenceLevel,
+} from "@Services/syncService.js";
 
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
@@ -36,13 +42,58 @@ export let dataCacheAdapter = null;
 export let viewConfigurationManager = null;
 
 /**
+ * Phase 0: Server Sync Check
+ *
+ * Runs BEFORE Phase 1 to detect server resets and prepare for reconciliation.
+ *
+ * @returns {Promise<{canContinue: boolean, serverStatus: object}>}
+ */
+export async function initializePhase0() {
+  log.info("Phase 0: Server Sync Check\n=====================================");
+
+  try {
+    const syncStatus = await checkSyncStatus();
+
+    if (syncStatus.divergence === DivergenceLevel.OFFLINE) {
+      log.warn("Server unreachable - continuing with local state");
+      return { canContinue: true, serverStatus: null, offline: true };
+    }
+
+    if (
+      syncStatus.divergence === DivergenceLevel.MAJOR &&
+      syncStatus.requiresClear
+    ) {
+      log.warn("Server database reset detected!");
+      clearSyncState();
+      return {
+        canContinue: true,
+        serverStatus: syncStatus.serverStatus,
+        serverReset: true,
+      };
+    }
+
+    log.debug("Sync check passed");
+    return {
+      canContinue: true,
+      serverStatus: syncStatus.serverStatus,
+      firstSync: syncStatus.firstSync,
+    };
+  } catch (error) {
+    log.error("Phase 0 sync check failed:", error);
+    return { canContinue: true, serverStatus: null, error };
+  }
+}
+
+/**
  * Phase 1: Core Services Initialization
  *
  * These are the foundational systems that everything else builds on.
  * No user authentication required yet.
  */
 export async function initializePhase1() {
-  log.info("Phase 1: Core Services Initialization\n=====================================");
+  log.info(
+    "Phase 1: Core Services Initialization\n====================================="
+  );
 
   try {
     // STEP 1: Register instance types
@@ -98,6 +149,37 @@ export async function initializePhase1() {
 
     log.debug("Data storage layer complete");
     log.debug(`Storage mode: ${storageMode}`);
+
+    // STEP 3.5: Reconcile local state with server
+    log.debug("Reconciling local state with server...");
+    try {
+      const phase0Result = window.__CIA_PHASE0_RESULT || {};
+
+      const reconcileResult = await performReconciliation(
+        datasetManager,
+        viewConfigurationManager,
+        phase0Result.serverStatus
+      );
+
+      const { divergence, totalOrphansRemoved } = reconcileResult;
+
+      switch (divergence) {
+        case DivergenceLevel.NONE:
+          log.debug("Local state in sync with server");
+          break;
+        case DivergenceLevel.MINOR:
+          log.debug(`Silent cleanup: ${totalOrphansRemoved} stale item(s)`);
+          break;
+        case DivergenceLevel.MODERATE:
+          log.info(`Synced: cleared ${totalOrphansRemoved} stale item(s)`);
+          break;
+        case DivergenceLevel.MAJOR:
+          log.warn(`Major sync: cleared ${totalOrphansRemoved} item(s)`);
+          break;
+      }
+    } catch (error) {
+      log.error("Reconciliation failed:", error);
+    }
 
     // STEP 4: View Configuration layer (Layer 2)
     log.debug("Setting up view configuration layer...");
@@ -210,7 +292,9 @@ export async function initializePhase1() {
  * User must be authenticated before this phase runs.
  */
 export async function initializePhase2() {
-  log.info("Phase 2: User Services Initialization\n=====================================");
+  log.info(
+    "Phase 2: User Services Initialization\n====================================="
+  );
 
   try {
     // STEP 1: Wait for Y.js to sync
@@ -422,6 +506,11 @@ function setupDebugHelpers() {
 ║  CIA.getView(id)               - Inspect a view configuration  ║
 ║  CIA.getInstance(id)           - Inspect an instance window    ║
 ║                                                                ║
+║  Sync & Reconciliation:                                        ║
+║  CIA.syncStatus()              - Check sync status with server ║
+║  CIA.forceReconcile()          - Force reconcile local/server  ║
+║  CIA.resetLocalState()         - Clear all local data          ║
+║                                                                ║
 ║  Managers:                                                     ║
 ║  CIA.datasetManager            - Dataset manager instance      ║
 ║  CIA.viewConfigurationManager  - View configuration manager    ║
@@ -492,6 +581,72 @@ function setupDebugHelpers() {
     return workspaceManager?.getInstance(id);
   };
 
+  // Sync debugging helpers
+  window.CIA.syncStatus = async function () {
+    try {
+      const status = await checkSyncStatus();
+      log.info("=== Sync Status ===");
+      log.info(`Divergence: ${status.divergence}`);
+      log.info(`First sync: ${status.firstSync}`);
+      log.info(`Requires clear: ${status.requiresClear}`);
+      if (status.serverStatus) {
+        log.info(`Server instance: ${status.serverStatus.serverInstanceId}`);
+        log.info(`Server datasets: ${status.serverStatus.datasetCount}`);
+        log.info(`Server views: ${status.serverStatus.viewCount}`);
+      }
+      return status;
+    } catch (error) {
+      log.error("Failed to get sync status:", error);
+      return { error: error.message };
+    }
+  };
+
+  window.CIA.forceReconcile = async function () {
+    log.info("=== Force Reconciliation ===");
+    try {
+      const result = await performReconciliation(
+        datasetManager,
+        viewConfigurationManager,
+        null // No cached server status, will fetch fresh
+      );
+      log.info(`Divergence: ${result.divergence}`);
+      log.info(`Datasets removed: ${result.datasets?.orphansRemoved || 0}`);
+      log.info(`Views removed: ${result.views?.orphansRemoved || 0}`);
+      log.info(`ID migrations: ${result.datasets?.idMigrations || 0}`);
+      return result;
+    } catch (error) {
+      log.error("Reconciliation failed:", error);
+      return { error: error.message };
+    }
+  };
+
+  window.CIA.resetLocalState = async function () {
+    log.warn("=== Resetting Local State ===");
+    log.warn("This will clear all local data and re-fetch from server");
+
+    try {
+      // Clear sync state
+      clearSyncState();
+
+      // Force reset both managers
+      if (datasetManager?.forceReset) {
+        await datasetManager.forceReset();
+        log.info("Dataset manager reset complete");
+      }
+
+      if (viewConfigurationManager?.forceReset) {
+        await viewConfigurationManager.forceReset();
+        log.info("View configuration manager reset complete");
+      }
+
+      log.info("Local state cleared. Reload page to re-fetch from server.");
+      return { success: true };
+    } catch (error) {
+      log.error("Reset failed:", error);
+      return { error: error.message };
+    }
+  };
+
   log.debug("Debug helpers available");
   log.debug("Type CIA.help() for available commands");
 }
@@ -551,9 +706,10 @@ async function fetchDatasetsFromServer() {
         // Remove from map with old ID
         datasetManager._datasets.delete(oldId);
 
-        // Update the dataset object's ID
+        // Update the dataset object's ID and download path
         existingByHash.id = serverFile.id;
         existingByHash.serverId = serverFile.id;
+        existingByHash.publicPath = `${config.apiBaseUrl}/files/${serverFile.id}/download`;
 
         // Re-add with new ID
         datasetManager._datasets.set(serverFile.id, existingByHash);

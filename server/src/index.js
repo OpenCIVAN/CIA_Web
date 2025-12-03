@@ -131,6 +131,9 @@ const starRoutes = require("./routes/stars");
 // Chat routes (Phase 2E - Y.js persistence)
 const chatRouter = require("./routes/chat");
 
+// Sync routes (Phase 2E - reconciliation)
+const syncRouter = require("./routes/sync");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -154,6 +157,9 @@ app.use("/api/projects/:projectId/stars", optionalAuth, starRoutes);
 // Chat history routes (Phase 2E - Y.js persistence)
 // Provides REST access to persisted chat messages for audit and history
 app.use("/api", optionalAuth, chatRouter);
+
+// Sync status routes (client reconciliation)
+app.use("/api/sync", optionalAuth, syncRouter);
 
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS

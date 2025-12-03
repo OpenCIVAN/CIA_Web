@@ -4,7 +4,7 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { initializePhase1 } from "@Init/appInitializer.js";
+import { initializePhase0, initializePhase1 } from "@Init/appInitializer.js";
 import { app as log } from "@Utils/logger.js";
 import { Bootstrap } from "@UI/react/components/auth/Bootstrap.jsx";
 
@@ -91,6 +91,17 @@ async function initializeApp() {
   }
 
   try {
+    // Run Phase 0: Server Sync Check (detects database resets)
+    log.info("Foundation: Checking server sync status...");
+    const phase0Result = await initializePhase0();
+    window.__CIA_PHASE0_RESULT = phase0Result;
+
+    if (phase0Result.serverReset) {
+      log.warn("Server database was reset - will clear stale local data");
+    } else if (phase0Result.offline) {
+      log.warn("Server offline - using local data only");
+    }
+
     // Run Phase 1: Core Services (before React)
     // This initializes services that don't depend on user context
     log.info("Foundation: Initializing core services...");

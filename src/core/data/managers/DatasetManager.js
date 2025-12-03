@@ -38,6 +38,8 @@ export class DatasetManager extends EventEmitter {
       annotationAdded: [],
       annotationRemoved: [],
       annotationUpdated: [],
+      reconciled: [], // fired after reconciliation
+      reset: [], // fired after force reset
     };
   }
 
@@ -1204,6 +1206,163 @@ export class DatasetManager extends EventEmitter {
     } catch (error) {
       log.error("Error clearing IndexedDB:", error);
     }
+  }
+
+  // ==================== RECONCILIATION ====================
+
+  /**
+   * Reconcile local state with server
+   *
+   * This method:
+   * 1. Fetches current server state
+   * 2. Identifies orphan datasets (local but not on server)
+   * 3. Removes orphans from IndexedDB
+   * 4. Adds any new datasets from server
+   * 5. Handles ID migrations (same file, different ID)
+   *
+   * @param {Object} options
+   * @returns {Promise<ReconciliationResult>}
+   */
+  async reconcileWithServer(options = {}) {
+    log.info("DatasetManager: Starting server reconciliation...");
+
+    const startTime = Date.now();
+
+    try {
+      // 1. Check if we have server storage
+      if (!this.storageProvider || !this.storageProvider.listDatasets) {
+        log.debug("No server storage provider - skipping reconciliation");
+        return { skipped: true, reason: "no-server-storage" };
+      }
+
+      const serverFiles = await this.storageProvider.listDatasets();
+      log.debug(`Server has ${serverFiles.length} dataset(s)`);
+
+      // Build lookup maps
+      const serverById = new Map(serverFiles.map((f) => [f.id, f]));
+      const serverByHash = new Map(
+        serverFiles.filter((f) => f.hash).map((f) => [f.hash, f])
+      );
+
+      // 2. Analyze local datasets
+      const localDatasets = this.getAllDatasets();
+      const orphans = [];
+      const needsIdMigration = [];
+      const valid = [];
+
+      for (const local of localDatasets) {
+        const serverById_match = serverById.get(local.id);
+        const serverByHash_match = local.hash
+          ? serverByHash.get(local.hash)
+          : null;
+
+        if (serverById_match) {
+          valid.push(local);
+        } else if (serverByHash_match) {
+          needsIdMigration.push({
+            local,
+            serverFile: serverByHash_match,
+            oldId: local.id,
+            newId: serverByHash_match.id,
+          });
+        } else {
+          orphans.push(local);
+        }
+      }
+
+      log.debug(
+        `Analysis: ${valid.length} valid, ${orphans.length} orphans, ${needsIdMigration.length} need migration`
+      );
+
+      // 3. Remove orphans
+      for (const orphan of orphans) {
+        log.warn(`Removing orphan dataset: ${orphan.filename} (${orphan.id})`);
+        this._datasets.delete(orphan.id);
+        try {
+          await this._deleteDataset(orphan.id);
+        } catch (err) {
+          log.warn(`Failed to delete orphan from IndexedDB:`, err);
+        }
+      }
+
+      // 4. Migrate IDs
+      for (const migration of needsIdMigration) {
+        const { local, serverFile, oldId, newId } = migration;
+        log.info(`Migrating dataset ID: ${local.filename}`);
+
+        this._datasets.delete(oldId);
+        local.id = newId;
+        local.serverId = newId;
+        local.publicPath = `${config.apiBaseUrl}/files/${newId}/download`;
+        this._datasets.set(newId, local);
+
+        try {
+          await this._deleteDataset(oldId);
+          await this._persistDataset(local);
+        } catch (err) {
+          log.warn(`Failed to persist ID migration:`, err);
+        }
+      }
+
+      // 5. Add new datasets from server
+      let added = 0;
+      const existingIds = new Set(this._datasets.keys());
+
+      for (const serverFile of serverFiles) {
+        if (!existingIds.has(serverFile.id)) {
+          try {
+            await this._addDatasetFromServer(serverFile);
+            added++;
+          } catch (err) {
+            log.error(`Failed to add server dataset ${serverFile.id}:`, err);
+          }
+        }
+      }
+
+      // 6. Build result
+      const result = {
+        orphansRemoved: orphans.length,
+        idsMigrated: needsIdMigration.length,
+        added,
+        total: this._datasets.size,
+        wasClean:
+          orphans.length === 0 && needsIdMigration.length === 0 && added === 0,
+        durationMs: Date.now() - startTime,
+      };
+
+      if (!result.wasClean) {
+        log.info(`Reconciliation complete in ${result.durationMs}ms:`);
+        log.info(`  Orphans removed: ${result.orphansRemoved}`);
+        log.info(`  IDs migrated: ${result.idsMigrated}`);
+        log.info(`  Added: ${result.added}`);
+        this._emit("reconciled", result);
+      } else {
+        log.debug(`Already in sync (${result.durationMs}ms)`);
+      }
+
+      return result;
+    } catch (error) {
+      log.error("Reconciliation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Force clear all local dataset data
+   */
+  async forceReset() {
+    log.warn("Force resetting all dataset state...");
+    this._datasets.clear();
+    await this.clearCorruptedData();
+    this._emit("reset");
+    log.info("Dataset state reset complete");
+  }
+
+  /**
+   * Get IDs of all local datasets
+   */
+  getLocalDatasetIds() {
+    return Array.from(this._datasets.keys());
   }
 }
 

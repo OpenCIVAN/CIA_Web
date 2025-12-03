@@ -11,6 +11,27 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
+-- SERVER INSTANCE TRACKING
+-- ============================================================================
+-- This table has exactly ONE row that identifies this database instance.
+-- The instance_id changes whenever the database is recreated (docker-compose down -v).
+-- Clients use this to detect when they need to clear stale local state.
+
+CREATE TABLE IF NOT EXISTS server_instance (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),  -- Enforce single row
+    instance_id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    schema_version VARCHAR(20) NOT NULL DEFAULT '2.0.0',
+    last_migration VARCHAR(100),
+    notes TEXT
+);
+
+-- Insert the single row (only if it doesn't exist)
+INSERT INTO server_instance (id, instance_id, schema_version, notes)
+VALUES (1, uuid_generate_v4(), '2.0.0', 'Initial database creation')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
 -- CORE TABLES
 -- ============================================================================
 
