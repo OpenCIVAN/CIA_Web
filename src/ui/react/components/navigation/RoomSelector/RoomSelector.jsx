@@ -19,6 +19,7 @@ import './RoomSelector.scss';
 
 /**
  * RoomItem - A single room in the dropdown list
+ * Uses div instead of button to avoid nesting issues with delete button
  */
 const RoomItem = memo(function RoomItem({
     room,
@@ -31,9 +32,17 @@ const RoomItem = memo(function RoomItem({
     const isMain = room.room_type === 'main';
 
     return (
-        <button
+        <div
             className={`room-item ${isSelected ? 'room-item--selected' : ''}`}
             onClick={() => onSelect(room.id, room.name)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(room.id, room.name);
+                }
+            }}
         >
             <div className="room-item__indicator">
                 {isSelected && <span className="room-item__dot" />}
@@ -53,7 +62,7 @@ const RoomItem = memo(function RoomItem({
                     <Trash2 size={12} />
                 </button>
             )}
-        </button>
+        </div>
     );
 });
 
@@ -104,7 +113,7 @@ export const RoomSelector = memo(function RoomSelector({
                         <span className="room-selector__name">
                             {currentRoom?.name || 'Select Room'}
                         </span>
-                        <span className="room-selector__count">{onlineCount}</span>
+                        <span className="room-selector__count">({onlineCount})</span>
                     </>
                 )}
                 <ChevronDown
@@ -155,7 +164,7 @@ export const RoomSelector = memo(function RoomSelector({
                             <span>Create Breakout Room</span>
                         </button>
 
-                        {/* TODO: Room Settings - show only for room admins */}
+                        {/* Room Settings - show only for room admins */}
                         {currentRoom?.my_role === 'admin' && (
                             <button className="room-selector__action">
                                 <Settings size={12} />

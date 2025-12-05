@@ -27,7 +27,7 @@ export function useRooms(projectId) {
     try {
       setLoading(true);
       const response = await fetch(
-        `${config.apiUrl}/projects/${projectId}/rooms`,
+        `${config.apiBaseUrl}/projects/${projectId}/rooms`,
         {
           headers: {
             "x-user-id": "00000000-0000-0000-0000-000000000001", // TODO: Get from auth
@@ -61,7 +61,7 @@ export function useRooms(projectId) {
 
       try {
         const response = await fetch(
-          `${config.apiUrl}/projects/${projectId}/rooms`,
+          `${config.apiBaseUrl}/projects/${projectId}/rooms`,
           {
             method: "POST",
             headers: {
@@ -94,7 +94,7 @@ export function useRooms(projectId) {
 
       try {
         const response = await fetch(
-          `${config.apiUrl}/projects/${projectId}/rooms/${roomId}/join`,
+          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/join`,
           {
             method: "POST",
             headers: {
@@ -107,7 +107,6 @@ export function useRooms(projectId) {
           throw new Error("Failed to join room");
         }
 
-        // Update room membership in local state
         setRooms((prev) =>
           prev.map((r) => (r.id === roomId ? { ...r, is_member: true } : r))
         );
@@ -126,7 +125,7 @@ export function useRooms(projectId) {
 
       try {
         const response = await fetch(
-          `${config.apiUrl}/projects/${projectId}/rooms/${roomId}/leave`,
+          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/leave`,
           {
             method: "POST",
             headers: {
@@ -139,7 +138,6 @@ export function useRooms(projectId) {
           throw new Error("Failed to leave room");
         }
 
-        // Update room membership in local state
         setRooms((prev) =>
           prev.map((r) => (r.id === roomId ? { ...r, is_member: false } : r))
         );
@@ -158,7 +156,7 @@ export function useRooms(projectId) {
 
       try {
         const response = await fetch(
-          `${config.apiUrl}/projects/${projectId}/rooms/${roomId}`,
+          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}`,
           {
             method: "DELETE",
             headers: {
@@ -171,8 +169,10 @@ export function useRooms(projectId) {
           throw new Error("Failed to delete room");
         }
 
-        // Remove from local state
         setRooms((prev) => prev.filter((r) => r.id !== roomId));
+
+        // Return the deleted roomId so caller can handle redirect
+        return { deletedRoomId: roomId };
       } catch (err) {
         log.error("Error deleting room:", err);
         throw err;
@@ -208,15 +208,14 @@ export function useRoomSelector({ projectId, onRoomChange }) {
   // Get current room from presence or default to main room
   useEffect(() => {
     const savedRoomId = presenceSystem.getRoom();
-    if (savedRoomId) {
+    if (savedRoomId && rooms.find((r) => r.id === savedRoomId)) {
       setCurrentRoomId(savedRoomId);
-      // Also notify parent of the saved room
       const savedRoom = rooms.find((r) => r.id === savedRoomId);
       if (savedRoom && onRoomChange) {
         onRoomChange(savedRoomId, savedRoom.name);
       }
-    } else if (rooms.length > 0) {
-      // Default to main room
+    } else if (rooms.length > 0 && !currentRoomId) {
+      // Default to main room only if we don't have a current room
       const mainRoom = rooms.find((r) => r.room_type === "main");
       if (mainRoom) {
         handleSelectRoom(mainRoom.id, mainRoom.name);
@@ -253,7 +252,6 @@ export function useRoomSelector({ projectId, onRoomChange }) {
       setRoom(roomId); // Update presence
       setIsOpen(false);
 
-      // Callback for parent components - pass both id and name
       if (onRoomChange) {
         onRoomChange(roomId, roomName);
       }
@@ -267,7 +265,6 @@ export function useRoomSelector({ projectId, onRoomChange }) {
       try {
         const newRoom = await createRoom(name, description, isPublic);
         setShowCreateModal(false);
-        // Auto-join and select the new room
         if (newRoom) {
           handleSelectRoom(newRoom.id, newRoom.name);
         }
@@ -289,6 +286,20 @@ export function useRoomSelector({ projectId, onRoomChange }) {
     setShowCreateModal(false);
   }, []);
 
+  // Delete room and redirect to main if needed
+  const handleDeleteRoom = useCallback(
+    async (roomId) => {
+      const wasCurrentRoom = currentRoomId === roomId;
+      await deleteRoom(roomId);
+
+      // If user was in the deleted room, switch to main room
+      if (wasCurrentRoom && mainRoom) {
+        handleSelectRoom(mainRoom.id, mainRoom.name);
+      }
+    },
+    [currentRoomId, deleteRoom, mainRoom, handleSelectRoom]
+  );
+
   return {
     // State
     isOpen,
@@ -303,7 +314,7 @@ export function useRoomSelector({ projectId, onRoomChange }) {
     closeDropdown,
     selectRoom: handleSelectRoom,
     createRoom: handleCreateRoom,
-    deleteRoom,
+    deleteRoom: handleDeleteRoom,
     openCreateModal,
     closeCreateModal,
     refetch,

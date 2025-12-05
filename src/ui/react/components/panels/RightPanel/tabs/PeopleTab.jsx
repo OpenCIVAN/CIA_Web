@@ -1,6 +1,5 @@
 // src/ui/react/components/panels/RightPanel/tabs/PeopleTab.jsx
-// People tab with Room/Workspace subtabs for Space Navigation system
-// Shows users filtered by room or workspace context
+// People tab with Room/Workspace/Project subtabs for Space Navigation system
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -9,24 +8,15 @@ import {
     X,
     UserPlus,
     Settings,
-    Coffee,
     Circle,
     Mic,
     MicOff,
-    Headphones,
-    MoreHorizontal,
     Hand,
-    MessageSquare,
     Eye,
     EyeOff,
-    Crown,
-    Globe,
-    User as UserIcon,
-    Briefcase,
-    ChevronDown,
-    ChevronRight,
     Home,
     Layout,
+    Globe,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
@@ -34,7 +24,7 @@ import {
     useSectionStates
 } from "@UI/react/components/common/ResizableSections";
 import { usePresence } from '@UI/react/hooks/usePresence.js';
-import { useRoomPresence, useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
+import { useRoomPresence, useWorkspacePresence, useProjectPresence } from '@UI/react/hooks/useRoomPresence.js';
 import { createLogger } from '@Utils/logger.js';
 
 const log = createLogger('presence');
@@ -56,111 +46,83 @@ const STATUS_CONFIG = {
 // SUB-COMPONENTS
 // =============================================================================
 
-/**
- * UserAvatar - User avatar with status indicator
- */
 function UserAvatar({ userName, color, status = 'active', size = 'md' }) {
     const initial = (userName || 'U')[0].toUpperCase();
     const sizeMap = { sm: 28, md: 32, lg: 40 };
-    const dimension = sizeMap[size] || sizeMap.md;
-    const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+    const px = sizeMap[size] || sizeMap.md;
 
     return (
-        <div
-            className="user-avatar"
-            style={{
-                width: dimension,
-                height: dimension,
-                borderRadius: '50%',
-                background: color || '#60a5fa',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: dimension * 0.4,
-                fontWeight: 600,
-                position: 'relative',
-                flexShrink: 0,
-            }}
-        >
+        <div style={{
+            position: 'relative',
+            width: px,
+            height: px,
+            borderRadius: '50%',
+            background: color || '#666',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: px * 0.4,
+            fontWeight: 600,
+            color: 'white',
+            flexShrink: 0,
+        }}>
             {initial}
-            {/* Status indicator */}
-            <div
-                style={{
-                    position: 'absolute',
-                    bottom: -1,
-                    right: -1,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: statusConfig.fill ? statusConfig.color : 'transparent',
-                    border: `2px solid ${statusConfig.color}`,
-                    boxShadow: '0 0 0 2px var(--color-bg-secondary, #1a1a1a)',
-                }}
-            />
+            <div style={{
+                position: 'absolute',
+                bottom: -1,
+                right: -1,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: STATUS_CONFIG[status]?.color || '#666',
+                border: '2px solid var(--color-bg-secondary, #252526)',
+            }} />
         </div>
     );
 }
 
-/**
- * MemberRow - Individual user row
- */
-function MemberRow({ user, isSelected, onSelect }) {
-    const statusConfig = STATUS_CONFIG[user.status] || STATUS_CONFIG.active;
+function MemberRow({ user, isSelected, onSelect, showVoice, showWorkspace, showCursor, showRoom }) {
+    const status = user.status || 'active';
+    const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.active;
 
     return (
         <div
-            className={`member-row ${isSelected ? 'member-row--selected' : ''} ${user.isYou ? 'member-row--you' : ''}`}
-            onClick={() => onSelect?.(user.clientId)}
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                borderRadius: '4px',
+                gap: '10px',
+                padding: '8px 12px',
                 cursor: 'pointer',
                 background: isSelected ? 'rgba(255,255,255,0.05)' : 'transparent',
-                transition: 'background 0.15s ease',
+                borderLeft: isSelected ? '2px solid #60a5fa' : '2px solid transparent',
+                transition: 'all 0.15s ease',
             }}
+            onClick={() => onSelect?.(user.clientId || user.userId)}
         >
             <UserAvatar
                 userName={user.userName}
                 color={user.userColor}
-                status={user.status}
+                status={status}
                 size="sm"
             />
-
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        color: 'var(--color-text-primary, #e0e0e0)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                    }}>
-                        {user.userName}
-                    </span>
-                    {user.isYou && (
-                        <span style={{
-                            fontSize: '9px',
-                            padding: '2px 4px',
-                            background: 'rgba(96,165,250,0.2)',
-                            color: '#60a5fa',
-                            borderRadius: '3px',
-                            fontWeight: 600,
-                        }}>
-                            YOU
-                        </span>
-                    )}
+                <div style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: 'var(--color-text-primary, #fff)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                }}>
+                    {user.userName || 'Anonymous'}
+                    {user.isYou && <span style={{ color: '#60a5fa', marginLeft: '4px' }}>(you)</span>}
                 </div>
                 <div style={{
-                    fontSize: '10px',
-                    color: 'var(--color-text-muted, #666)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
+                    fontSize: '10px',
+                    color: 'var(--color-text-muted, #666)',
                 }}>
                     <Circle
                         size={6}
@@ -168,10 +130,14 @@ function MemberRow({ user, isSelected, onSelect }) {
                         color={statusConfig.color}
                     />
                     {statusConfig.label}
+                    {showRoom && user.roomId && (
+                        <span style={{ marginLeft: '4px', opacity: 0.7 }}>
+                            • {user.roomName || 'Room'}
+                        </span>
+                    )}
                 </div>
             </div>
 
-            {/* Voice indicators */}
             {user.inVoice && (
                 <div style={{ display: 'flex', gap: '4px' }}>
                     {user.isMuted ? (
@@ -185,9 +151,6 @@ function MemberRow({ user, isSelected, onSelect }) {
     );
 }
 
-/**
- * EmptyState - Shown when no users
- */
 function EmptyState({ message }) {
     return (
         <div style={{
@@ -202,15 +165,18 @@ function EmptyState({ message }) {
 }
 
 // =============================================================================
-// SUBTAB COMPONENTS
+// SUBTAB TOGGLE (3 tabs)
 // =============================================================================
 
-/**
- * SubtabToggle - Toggle between Room and Workspace subtabs
- */
 function SubtabToggle({ activeTab, onChange }) {
+    const tabs = [
+        { id: 'room', icon: Home, label: 'Room', color: '#60a5fa' },
+        { id: 'workspace', icon: Layout, label: 'Workspace', color: '#2dd4bf' },
+        { id: 'project', icon: Globe, label: 'Project', color: '#f472b6' },
+    ];
+
     return (
-        <div className="subtab-toggle" style={{
+        <div style={{
             display: 'flex',
             gap: '2px',
             padding: '4px',
@@ -218,72 +184,52 @@ function SubtabToggle({ activeTab, onChange }) {
             borderRadius: '6px',
             margin: '8px 12px',
         }}>
-            <button
-                className={`subtab-btn ${activeTab === 'room' ? 'subtab-btn--active' : ''}`}
-                onClick={() => onChange('room')}
-                style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    padding: '6px 10px',
-                    background: activeTab === 'room' ? 'rgba(96,165,250,0.15)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: activeTab === 'room' ? '#60a5fa' : 'var(--color-text-muted, #666)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                }}
-            >
-                <Home size={12} />
-                Room
-            </button>
-            <button
-                className={`subtab-btn ${activeTab === 'workspace' ? 'subtab-btn--active' : ''}`}
-                onClick={() => onChange('workspace')}
-                style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    padding: '6px 10px',
-                    background: activeTab === 'workspace' ? 'rgba(45,212,191,0.15)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: activeTab === 'workspace' ? '#2dd4bf' : 'var(--color-text-muted, #666)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                }}
-            >
-                <Layout size={12} />
-                Workspace
-            </button>
+            {tabs.map(({ id, icon: Icon, label, color }) => (
+                <button
+                    key={id}
+                    onClick={() => onChange(id)}
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        padding: '6px 8px',
+                        background: activeTab === id ? `${color}22` : 'transparent',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: activeTab === id ? color : 'var(--color-text-muted, #666)',
+                        fontSize: '10px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                    }}
+                >
+                    <Icon size={11} />
+                    {label}
+                </button>
+            ))}
         </div>
     );
 }
 
-/**
- * RoomSubtab - Shows users in current room
- */
+// =============================================================================
+// ROOM SUBTAB
+// =============================================================================
+
 function RoomSubtab({ roomId, searchQuery, selectedMember, onSelectMember }) {
-    const { users, inVoice, notInVoice, onlineCount } = useRoomPresence(roomId);
+    const { users, inVoice, notInVoice } = useRoomPresence(roomId);
 
     const filteredInVoice = useMemo(() => {
         if (!searchQuery.trim()) return inVoice;
-        const query = searchQuery.toLowerCase();
-        return inVoice.filter(u => u.userName?.toLowerCase().includes(query));
+        const q = searchQuery.toLowerCase();
+        return inVoice.filter(u => u.userName?.toLowerCase().includes(q));
     }, [inVoice, searchQuery]);
 
     const filteredNotInVoice = useMemo(() => {
         if (!searchQuery.trim()) return notInVoice;
-        const query = searchQuery.toLowerCase();
-        return notInVoice.filter(u => u.userName?.toLowerCase().includes(query));
+        const q = searchQuery.toLowerCase();
+        return notInVoice.filter(u => u.userName?.toLowerCase().includes(q));
     }, [notInVoice, searchQuery]);
 
     const { states: sectionStates, toggleSection } = useSectionStates({
@@ -297,48 +243,22 @@ function RoomSubtab({ roomId, searchQuery, selectedMember, onSelectMember }) {
             sectionStates={sectionStates}
             onSectionToggle={toggleSection}
         >
-            {/* In Voice */}
-            <ResizableSection
-                id="voice"
-                icon={Mic}
-                iconColorClass="icon-green"
-                label="In Voice"
-                count={filteredInVoice.length}
-            >
+            <ResizableSection id="voice" icon={Mic} iconColorClass="icon-green" label="In Voice" count={filteredInVoice.length}>
                 {filteredInVoice.length === 0 ? (
                     <EmptyState message="No one in voice" />
                 ) : (
                     filteredInVoice.map(user => (
-                        <MemberRow
-                            key={user.clientId || user.userId}
-                            user={user}
-                            isSelected={selectedMember === (user.clientId || user.userId)}
-                            onSelect={onSelectMember}
-                            showVoice
-                        />
+                        <MemberRow key={user.clientId || user.userId} user={user} isSelected={selectedMember === (user.clientId || user.userId)} onSelect={onSelectMember} showVoice />
                     ))
                 )}
             </ResizableSection>
 
-            {/* In Room (not voice) */}
-            <ResizableSection
-                id="room"
-                icon={Users}
-                iconColorClass="icon-blue"
-                label="In Room"
-                count={filteredNotInVoice.length}
-            >
+            <ResizableSection id="room" icon={Users} iconColorClass="icon-blue" label="In Room" count={filteredNotInVoice.length}>
                 {filteredNotInVoice.length === 0 ? (
                     <EmptyState message="No other users in room" />
                 ) : (
                     filteredNotInVoice.map(user => (
-                        <MemberRow
-                            key={user.clientId || user.userId}
-                            user={user}
-                            isSelected={selectedMember === (user.clientId || user.userId)}
-                            onSelect={onSelectMember}
-                            showWorkspace
-                        />
+                        <MemberRow key={user.clientId || user.userId} user={user} isSelected={selectedMember === (user.clientId || user.userId)} onSelect={onSelectMember} showWorkspace />
                     ))
                 )}
             </ResizableSection>
@@ -346,96 +266,117 @@ function RoomSubtab({ roomId, searchQuery, selectedMember, onSelectMember }) {
     );
 }
 
-/**
- * WorkspaceSubtab - Shows users viewing current workspace
- */
+// =============================================================================
+// WORKSPACE SUBTAB
+// =============================================================================
+
 function WorkspaceSubtab({ workspaceId, searchQuery, selectedMember, onSelectMember }) {
-    const { users, otherUsers, onlineCount } = useWorkspacePresence(workspaceId);
+    const { users } = useWorkspacePresence(workspaceId);
     const [showMyCursor, setShowMyCursor] = useState(true);
     const [showAllCursors, setShowAllCursors] = useState(true);
 
     const filteredUsers = useMemo(() => {
         if (!searchQuery.trim()) return users;
-        const query = searchQuery.toLowerCase();
-        return users.filter(u => u.userName?.toLowerCase().includes(query));
+        const q = searchQuery.toLowerCase();
+        return users.filter(u => u.userName?.toLowerCase().includes(q));
     }, [users, searchQuery]);
 
     return (
-        <div className="workspace-subtab">
-            {/* User List */}
-            <div className="workspace-subtab__users">
-                <div style={{
-                    padding: '8px 12px',
-                    fontSize: '10px',
-                    color: 'var(--color-text-muted, #666)',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+                <div style={{ padding: '8px 12px', fontSize: '10px', color: 'var(--color-text-muted)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     Viewing This Workspace ({filteredUsers.length})
                 </div>
-
                 {filteredUsers.length === 0 ? (
                     <EmptyState message="No one else viewing this workspace" />
                 ) : (
-                    <div style={{ flex: 1, overflow: 'auto' }}>
-                        {filteredUsers.map(user => (
+                    filteredUsers.map(user => (
+                        <MemberRow key={user.clientId || user.userId} user={user} isSelected={selectedMember === (user.clientId || user.userId)} onSelect={onSelectMember} showCursor />
+                    ))
+                )}
+            </div>
+
+            <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '8px' }}>Cursor Settings</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--color-text-secondary)', cursor: 'pointer', marginBottom: '6px' }}>
+                    <input type="checkbox" checked={showMyCursor} onChange={(e) => setShowMyCursor(e.target.checked)} />
+                    Show my cursor to others
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={showAllCursors} onChange={(e) => setShowAllCursors(e.target.checked)} />
+                    Show all cursors
+                </label>
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// PROJECT SUBTAB (NEW)
+// =============================================================================
+
+function ProjectSubtab({ searchQuery, selectedMember, onSelectMember }) {
+    const { allUsers, byRoom, totalOnline } = useProjectPresence();
+
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return allUsers;
+        const q = searchQuery.toLowerCase();
+        return allUsers.filter(u => u.userName?.toLowerCase().includes(q));
+    }, [allUsers, searchQuery]);
+
+    // Group filtered users by room
+    const groupedByRoom = useMemo(() => {
+        const groups = {};
+        filteredUsers.forEach(user => {
+            const roomId = user.roomId || 'unknown';
+            if (!groups[roomId]) {
+                groups[roomId] = { roomName: user.roomName || 'Unknown Room', users: [] };
+            }
+            groups[roomId].users.push(user);
+        });
+        return groups;
+    }, [filteredUsers]);
+
+    const roomIds = Object.keys(groupedByRoom);
+
+    return (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+            <div style={{ padding: '8px 12px', fontSize: '10px', color: 'var(--color-text-muted)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                All Project Members ({totalOnline} online)
+            </div>
+
+            {filteredUsers.length === 0 ? (
+                <EmptyState message="No users online in project" />
+            ) : (
+                roomIds.map(roomId => (
+                    <div key={roomId}>
+                        <div style={{
+                            padding: '6px 12px',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            color: 'var(--color-text-muted)',
+                            background: 'rgba(255,255,255,0.02)',
+                            borderBottom: '1px solid rgba(255,255,255,0.03)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}>
+                            <Home size={10} />
+                            {groupedByRoom[roomId].roomName}
+                            <span style={{ opacity: 0.6 }}>({groupedByRoom[roomId].users.length})</span>
+                        </div>
+                        {groupedByRoom[roomId].users.map(user => (
                             <MemberRow
                                 key={user.clientId || user.userId}
                                 user={user}
                                 isSelected={selectedMember === (user.clientId || user.userId)}
                                 onSelect={onSelectMember}
-                                showCursor
+                                showRoom={false}
                             />
                         ))}
                     </div>
-                )}
-            </div>
-
-            {/* Cursor Settings */}
-            <div className="cursor-settings" style={{
-                padding: '12px',
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                background: 'rgba(0,0,0,0.1)',
-            }}>
-                <div style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    color: 'var(--color-text-muted, #666)',
-                    marginBottom: '8px',
-                }}>
-                    Cursor Settings
-                </div>
-                <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '11px',
-                    color: 'var(--color-text-secondary, #999)',
-                    cursor: 'pointer',
-                    marginBottom: '6px',
-                }}>
-                    <input
-                        type="checkbox"
-                        checked={showMyCursor}
-                        onChange={(e) => setShowMyCursor(e.target.checked)}
-                    />
-                    Show my cursor to others
-                </label>
-                <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '11px',
-                    color: 'var(--color-text-secondary, #999)',
-                    cursor: 'pointer',
-                }}>
-                    <input
-                        type="checkbox"
-                        checked={showAllCursors}
-                        onChange={(e) => setShowAllCursors(e.target.checked)}
-                    />
-                    Show all cursors
-                </label>
-            </div>
+                ))
+            )}
         </div>
     );
 }
@@ -445,15 +386,17 @@ function WorkspaceSubtab({ workspaceId, searchQuery, selectedMember, onSelectMem
 // =============================================================================
 
 export function PeoplePanelContent({ workspaceId, roomId }) {
-    // Get real presence data from Y.js
-    const { users, currentUser, onlineCount, usersByStatus, isInitialized } = usePresence();
+    const { onlineCount, isInitialized } = usePresence();
 
-    // Local UI state
     const [activeSubtab, setActiveSubtab] = useState('room');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMember, setSelectedMember] = useState(null);
 
-    log.trace('PeopleTab render:', { total: users.length, subtab: activeSubtab });
+    const placeholderText = {
+        room: 'Search in room...',
+        workspace: 'Search in workspace...',
+        project: 'Search all members...',
+    };
 
     return (
         <div className="people-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -475,7 +418,7 @@ export function PeoplePanelContent({ workspaceId, roomId }) {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={activeSubtab === 'room' ? 'Search in room...' : 'Search in workspace...'}
+                        placeholder={placeholderText[activeSubtab]}
                     />
                     {searchQuery && (
                         <button className="clear-button" onClick={() => setSearchQuery('')}>
@@ -487,34 +430,21 @@ export function PeoplePanelContent({ workspaceId, roomId }) {
 
             {/* Connection Status */}
             {!isInitialized && (
-                <div style={{
-                    padding: '12px',
-                    background: 'rgba(251,191,36,0.1)',
-                    borderBottom: '1px solid rgba(251,191,36,0.2)',
-                    fontSize: '11px',
-                    color: '#fbbf24',
-                    textAlign: 'center',
-                }}>
+                <div style={{ padding: '12px', background: 'rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.2)', fontSize: '11px', color: '#fbbf24', textAlign: 'center' }}>
                     Connecting to presence server...
                 </div>
             )}
 
             {/* Subtab Content */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                {activeSubtab === 'room' ? (
-                    <RoomSubtab
-                        roomId={roomId}
-                        searchQuery={searchQuery}
-                        selectedMember={selectedMember}
-                        onSelectMember={setSelectedMember}
-                    />
-                ) : (
-                    <WorkspaceSubtab
-                        workspaceId={workspaceId}
-                        searchQuery={searchQuery}
-                        selectedMember={selectedMember}
-                        onSelectMember={setSelectedMember}
-                    />
+                {activeSubtab === 'room' && (
+                    <RoomSubtab roomId={roomId} searchQuery={searchQuery} selectedMember={selectedMember} onSelectMember={setSelectedMember} />
+                )}
+                {activeSubtab === 'workspace' && (
+                    <WorkspaceSubtab workspaceId={workspaceId} searchQuery={searchQuery} selectedMember={selectedMember} onSelectMember={setSelectedMember} />
+                )}
+                {activeSubtab === 'project' && (
+                    <ProjectSubtab searchQuery={searchQuery} selectedMember={selectedMember} onSelectMember={setSelectedMember} />
                 )}
             </div>
 
