@@ -14,7 +14,7 @@ import {
   getUserName,
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
-import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
+import { ydoc, awareness } from "@Collaboration/yjs/yjsSetup.js";
 import { NETWORK_CONFIG } from "@Core/config/constants.js";
 import { cursor as log } from "@Utils/logger.js";
 
@@ -73,6 +73,12 @@ export function initializeCursorTracking() {
   // Handle window focus/blur
   window.addEventListener("blur", () => {
     broadcastCursorPosition(false);
+    // Clear cursor from awareness when window loses focus
+    const currentState = awareness.getLocalState() || {};
+    awareness.setLocalState({
+      ...currentState,
+      cursor: null,
+    });
   });
 
   window.addEventListener("focus", () => {
@@ -109,6 +115,18 @@ function broadcastCursorPosition(windowActive = true) {
     name: getUserName(),
     windowActive: windowActive,
     visible: prefs.visible, // Include visibility in position data for convenience
+  });
+
+  // Also update awareness for server-side recording
+  const currentState = awareness.getLocalState() || {};
+  awareness.setLocalState({
+    ...currentState,
+    cursor: {
+      instanceId: activeInstanceId,
+      x: lastMousePosition.x,
+      y: lastMousePosition.y,
+      timestamp: lastMousePosition.timestamp,
+    },
   });
 }
 

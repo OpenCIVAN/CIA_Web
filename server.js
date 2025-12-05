@@ -63,7 +63,6 @@ const lastCursorPositions = new Map();
 
 // Cursor recording settings
 const CURSOR_THROTTLE_MS = 66; // ~15 fps
-const MIN_CURSOR_MOVEMENT = 0.005; // 0.5% viewport threshold
 
 /**
  * Refresh active recordings cache from database
@@ -101,27 +100,24 @@ async function refreshActiveRecordings() {
  * Check if cursor update should be recorded (throttle + delta filter)
  */
 function shouldRecordCursor(clientId, cursor) {
-  if (!cursor) return false;
+  if (!cursor || cursor.x === undefined || cursor.y === undefined) return false;
 
   const now = Date.now();
   const last = lastCursorPositions.get(clientId);
 
-  // Time throttle
+  // Time throttle (~15 fps)
   if (last && now - last.timestamp < CURSOR_THROTTLE_MS) {
     return false;
   }
 
-  // Delta filter - skip if barely moved
+  // Delta filter - skip if barely moved (use 2D since we get screen coords)
   if (last) {
     const dx = Math.abs((cursor.x || 0) - (last.x || 0));
     const dy = Math.abs((cursor.y || 0) - (last.y || 0));
-    const dz = Math.abs((cursor.z || 0) - (last.z || 0));
 
-    if (
-      dx < MIN_CURSOR_MOVEMENT &&
-      dy < MIN_CURSOR_MOVEMENT &&
-      dz < MIN_CURSOR_MOVEMENT
-    ) {
+    // Screen coordinates - use pixel threshold instead of percentage
+    const MIN_PIXEL_MOVEMENT = 5; // 5 pixels
+    if (dx < MIN_PIXEL_MOVEMENT && dy < MIN_PIXEL_MOVEMENT) {
       return false;
     }
   }
@@ -130,7 +126,6 @@ function shouldRecordCursor(clientId, cursor) {
   lastCursorPositions.set(clientId, {
     x: cursor.x || 0,
     y: cursor.y || 0,
-    z: cursor.z || 0,
     timestamp: now,
   });
 
@@ -583,11 +578,13 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
           "cursor",
           "cursor:move",
           {
-            cursor: localState.cursor,
+            instanceId: localState.cursor.instanceId,
+            x: localState.cursor.x,
+            y: localState.cursor.y,
             user: localState.user
               ? {
-                  name: localState.user.name,
-                  color: localState.user.color,
+                  name: localState.user.userName || localState.user.name,
+                  color: localState.user.userColor || localState.user.color,
                 }
               : null,
           },

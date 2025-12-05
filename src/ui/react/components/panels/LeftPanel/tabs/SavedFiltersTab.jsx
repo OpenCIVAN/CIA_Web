@@ -35,7 +35,7 @@ import {
     AlertCircle,
 } from 'lucide-react';
 import { ui as log } from '@Utils/logger.js';
-import { useFilters } from '@Hooks/useFilters.js';
+import { useFilters } from '@UI/react/hooks/useFilters.js';
 
 // =============================================================================
 // FILTER TYPE ICONS

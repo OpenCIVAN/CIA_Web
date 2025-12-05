@@ -23,3 +23,6 @@ export { useLogging } from "./useLogging.js";
 
 // Dataset Manager (low-level)
 export { useDatasetManager } from "./useDatasetManager.js";
+
+export { useFilters } from "./useFilters.js";
+export { useBookmarks } from "./useBookmarks.js";

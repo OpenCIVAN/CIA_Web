@@ -31,7 +31,7 @@ import {
     AlertCircle,
 } from 'lucide-react';
 import { ui as log } from '@Utils/logger.js';
-import { useBookmarks } from '@Hooks/useBookmarks.js';
+import { useBookmarks } from '@UI/react/hooks/useBookmarks.js';
 
 // =============================================================================
 // SCOPE CONFIG
