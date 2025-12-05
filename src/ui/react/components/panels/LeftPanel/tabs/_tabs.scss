@@ -3605,6 +3605,135 @@
   }
 }
 
+// Spin animation for loaders
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+// Additional recordings tab styles
+.recordings-tab {
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    margin: $spacing-sm $spacing-md;
+    background: rgba($color-accent-red, 0.1);
+    border: 1px solid rgba($color-accent-red, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-red;
+    font-size: $font-size-xs;
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    gap: $spacing-sm;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    text-align: center;
+    gap: $spacing-sm;
+
+    svg {
+      opacity: 0.4;
+    }
+  }
+}
+
+// Additional recording controls styles
+.recording-controls {
+  &__name-input {
+    margin-bottom: $spacing-md;
+  }
+
+  &__input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    outline: none;
+
+    &:focus {
+      border-color: rgba($color-accent-purple, 0.5);
+    }
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+}
+
+// Additional recording card styles
+.recording-card {
+  &__live-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__live-dot {
+    color: $color-accent-red;
+    fill: $color-accent-red;
+    animation: pulse 1.5s infinite;
+  }
+
+  &__events {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  &__exported {
+    display: flex;
+    align-items: center;
+    color: $color-accent-green;
+  }
+
+  &__details {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__playback-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &__action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 // =============================================================================
 // LAYOUT TAB - CANVAS NAVIGATOR
 // =============================================================================

@@ -241,45 +241,51 @@ export function useRecordings() {
   );
 
   // ---------------------------------------------------------------------------
-  // EXPORT RECORDING
+  // EXPORT RECORDING (to MinIO)
   // ---------------------------------------------------------------------------
 
   const exportRecording = useCallback(
     async (recordingId) => {
-      if (!projectId) return;
+      if (!projectId) return null;
 
       try {
-        // Fetch all events
-        const data = await apiCall("GET", `/${recordingId}/events?limit=10000`);
+        const data = await apiCall("POST", `/${recordingId}/export`);
 
-        // Get recording metadata
-        const recordingData = await apiCall("GET", `/${recordingId}`);
+        // Refresh recordings to update storage_key
+        await fetchRecordings();
 
-        // Create export object
-        const exportData = {
-          recording: recordingData.recording,
-          events: data.events,
-          exportedAt: new Date().toISOString(),
-        };
-
-        // Download as JSON
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `recording-${recordingId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        log.info(`Recording exported: ${recordingId}`);
+        log.info(`Recording exported: ${recordingId}`, data);
+        return data;
       } catch (err) {
         log.error("Failed to export recording:", err);
         setError(err.message);
+        return null;
       }
     },
-    [apiCall, projectId]
+    [apiCall, projectId, fetchRecordings]
+  );
+
+  // ---------------------------------------------------------------------------
+  // DOWNLOAD RECORDING
+  // ---------------------------------------------------------------------------
+
+  const downloadRecording = useCallback(
+    (recordingId, format = "jsonl") => {
+      if (!projectId) return;
+
+      const url = `${apiBase}/projects/${projectId}/recordings/${recordingId}/download?format=${format}`;
+
+      // Open in new tab or trigger download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recording-${recordingId}.${
+        format === "json" ? "json" : "jsonl.gz"
+      }`;
+      a.click();
+
+      log.info(`Recording download initiated: ${recordingId}`);
+    },
+    [apiBase, projectId]
   );
 
   // ---------------------------------------------------------------------------
@@ -382,6 +388,7 @@ export function useRecordings() {
     resumeRecording,
     deleteRecording,
     exportRecording,
+    downloadRecording,
     playRecording,
 
     // Utilities
