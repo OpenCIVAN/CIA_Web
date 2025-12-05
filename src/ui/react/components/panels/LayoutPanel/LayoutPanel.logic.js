@@ -460,39 +460,24 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     return result;
   }, [cells, searchQuery, activeFilters]);
 
-  // Group cells by dataset (always returns array - never null)
-  // This makes iteration consistent whether grouping is on or off
-  const groupedCells = useMemo(() => {
-    if (!groupByDataset) {
-      // Single "all" group - no header will be rendered (groupName is null)
-      return [
-        {
-          groupId: "all",
-          groupName: null,
-          cells: filteredCells,
-        },
-      ];
+// Group cells by dataset
+const groupedCells = useMemo(() => {
+  if (!groupByDataset) {
+    // Return all cells under 'ungrouped' key when grouping is disabled
+    return { ungrouped: filteredCells };
+  }
+
+  const groups = {};
+  filteredCells.forEach((cell) => {
+    const groupKey = cell.datasetName || "Unknown Dataset";
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
     }
+    groups[groupKey].push(cell);
+  });
 
-    // Group by dataset
-    const groups = {};
-    filteredCells.forEach((cell) => {
-      const datasetId = cell.datasetId || "unknown";
-      if (!groups[datasetId]) {
-        groups[datasetId] = {
-          groupId: datasetId,
-          groupName: cell.datasetName || "Unknown Dataset",
-          cells: [],
-        };
-      }
-      groups[datasetId].cells.push(cell);
-    });
-
-    // Sort groups alphabetically by name
-    return Object.values(groups).sort((a, b) =>
-      (a.groupName || "").localeCompare(b.groupName || "")
-    );
-  }, [filteredCells, groupByDataset]);
+  return groups;
+}, [filteredCells, groupByDataset]);
 
   // ===========================================================================
   // VIEW EXPANSION

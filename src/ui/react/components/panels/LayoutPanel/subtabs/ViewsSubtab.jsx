@@ -195,46 +195,60 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
 
             {/* View List */}
             <div className="views-subtab__list">
-                {groupedCells && groupedCells.map((group) => (
-                    <div key={group.groupId} className="views-subtab__group">
-                        {/* Group Header - only render if groupName exists */}
-                        {group.groupName && (
-                            <div className="views-subtab__group-header">
-                                <Database size={10} className="views-subtab__group-icon" />
-                                <span className="views-subtab__group-name">{group.groupName}</span>
-                                <span className="views-subtab__group-count">
-                                    ({group.cells.length})
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Draggable View Items */}
-                        {group.cells.map((cell) => (
-                            <div
-                                key={cell.id}
-                                className={`views-subtab__item-wrapper ${draggedId === cell.id ? 'views-subtab__item-wrapper--dragging' : ''
-                                    }`}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, cell)}
-                                onDragEnd={handleDragEnd}
-                            >
-                                {/* Drag Handle */}
-                                <div className="views-subtab__drag-handle">
-                                    <GripVertical size={10} />
+                {groupByDataset && groupedCells ? (
+                    // Grouped view
+                    groupedCells.map((group) => (
+                        <div key={group.groupId} className="views-subtab__group">
+                            {/* Group Header - only render if groupName exists */}
+                            {group.groupName && (
+                                <div className="views-subtab__group-header">
+                                    <Database size={10} className="views-subtab__group-icon" />
+                                    <span className="views-subtab__group-name">{group.groupName}</span>
+                                    <span className="views-subtab__group-count">
+                                        ({group.cells.length})
+                                    </span>
                                 </div>
+                            )}
 
-                                {/* View Item */}
-                                <ViewItem
-                                    view={cell}
-                                    isExpanded={expandedViewId === cell.id}
-                                    onToggleExpand={toggleViewExpanded}
-                                    onAction={handleViewAction}
-                                    onSizeChange={handleSizeChange}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                ))}
+                            {/* Draggable View Items */}
+                            {group.cells.map((cell) => (
+                                <div
+                                    key={cell.id}
+                                    className={`views-subtab__item-wrapper ${draggedId === cell.id ? 'views-subtab__item-wrapper--dragging' : ''
+                                        }`}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, cell)}
+                                    onDragEnd={handleDragEnd}
+                                >
+                                    {/* Drag Handle */}
+                                    <div className="views-subtab__drag-handle">
+                                        <GripVertical size={10} />
+                                    </div>
+
+                                    {/* View Item */}
+                                    <ViewItem
+                                        view={cell}
+                                        isExpanded={expandedViewId === cell.id}
+                                        onToggleExpand={toggleViewExpanded}
+                                        onAction={handleViewAction}
+                                        onSizeChange={handleSizeChange}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ))) : (
+                    // Flat list (no grouping)
+                    filteredCells.map((cell) => (
+                        <ViewItem
+                            key={cell.id}
+                            view={cell}
+                            isExpanded={expandedViewId === cell.id}
+                            onToggleExpand={toggleViewExpanded}
+                            onAction={handleViewAction}
+                            onSizeChange={handleSizeChange}
+                        />
+                    ))
+                )}
 
                 {/* Empty State */}
                 {filteredCount === 0 && (
