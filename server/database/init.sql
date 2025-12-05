@@ -749,6 +749,96 @@ CREATE TABLE session_recordings (
 );
 
 -- ============================================================================
+-- SAVED FILTERS (Reusable filter configurations)
+-- ============================================================================
+
+CREATE TABLE saved_filters (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Identification
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+
+    -- Scope determines visibility
+    scope VARCHAR(20) NOT NULL DEFAULT 'personal'
+        CHECK (scope IN ('personal', 'workspace', 'project')),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+
+    -- Filter configuration (the actual filter parameters)
+    filter_config JSONB NOT NULL,
+
+    -- UI state
+    is_pinned BOOLEAN DEFAULT FALSE,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_saved_filters_project ON saved_filters(project_id);
+CREATE INDEX idx_saved_filters_owner ON saved_filters(owner_id);
+CREATE INDEX idx_saved_filters_workspace ON saved_filters(workspace_id) WHERE workspace_id IS NOT NULL;
+CREATE INDEX idx_saved_filters_scope ON saved_filters(scope);
+
+-- ============================================================================
+-- BOOKMARKS (Saved view states with camera position and filters)
+-- ============================================================================
+
+CREATE TABLE bookmarks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Identification
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+
+    -- Scope determines visibility
+    scope VARCHAR(20) NOT NULL DEFAULT 'personal'
+        CHECK (scope IN ('personal', 'workspace', 'project')),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+
+    -- Associated resources
+    dataset_id UUID REFERENCES datasets(id) ON DELETE SET NULL,
+    view_config_id UUID REFERENCES view_configurations(id) ON DELETE SET NULL,
+
+    -- Camera state (position, target, up vector)
+    camera_state JSONB,
+
+    -- References to saved filters
+    filter_ids UUID[] DEFAULT '{}',
+
+    -- Thumbnail preview image (MinIO path)
+    thumbnail_key VARCHAR(500),
+
+    -- Tags for organization
+    tags TEXT[] DEFAULT '{}',
+
+    -- UI state
+    is_pinned BOOLEAN DEFAULT FALSE,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_bookmarks_project ON bookmarks(project_id);
+CREATE INDEX idx_bookmarks_owner ON bookmarks(owner_id);
+CREATE INDEX idx_bookmarks_workspace ON bookmarks(workspace_id) WHERE workspace_id IS NOT NULL;
+CREATE INDEX idx_bookmarks_scope ON bookmarks(scope);
+CREATE INDEX idx_bookmarks_dataset ON bookmarks(dataset_id) WHERE dataset_id IS NOT NULL;
+CREATE INDEX idx_bookmarks_tags ON bookmarks USING GIN(tags);
+
+-- Triggers for saved_filters and bookmarks
+CREATE TRIGGER update_saved_filters_updated_at BEFORE UPDATE ON saved_filters
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_bookmarks_updated_at BEFORE UPDATE ON bookmarks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
 -- RECORDING EVENTS (For session playback)
 -- Captures Y.js events during active recordings
 -- ============================================================================

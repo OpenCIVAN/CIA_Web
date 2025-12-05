@@ -25,84 +25,68 @@ import {
     Tag,
     List,
     Grid3X3,
+    Pin,
+    PinOff,
+    Loader2,
+    AlertCircle,
 } from 'lucide-react';
 import { ui as log } from '@Utils/logger.js';
+import { useBookmarks } from '@Hooks/useBookmarks.js';
 
 // =============================================================================
-// SAMPLE DATA
+// SCOPE CONFIG
 // =============================================================================
 
-const SAMPLE_BOOKMARKS = [
-    {
-        id: 'b1',
-        name: 'Tumor Overview',
-        dataset: 'Brain_Scan_001.nii',
-        workspace: 'My Workspace',
-        timestamp: '2 hours ago',
-        createdBy: 'You',
-        shared: false,
-        tags: ['tumor', 'review'],
-        color: 'blue',
-    },
-    {
-        id: 'b2',
-        name: 'Left Hemisphere Detail',
-        dataset: 'Brain_Scan_001.nii',
-        workspace: 'My Workspace',
-        timestamp: '1 day ago',
-        createdBy: 'You',
-        shared: true,
-        tags: ['hemisphere', 'detail'],
-        color: 'blue',
-    },
-    {
-        id: 'b3',
-        name: 'Comparison View',
-        dataset: 'CT_Overlay.dcm',
-        workspace: 'Project Room',
-        timestamp: '3 days ago',
-        createdBy: 'Dr. Smith',
-        shared: true,
-        tags: ['comparison'],
-        color: 'teal',
-    },
-    {
-        id: 'b4',
-        name: 'Bone Structure A',
-        dataset: 'Reference_Atlas.nii',
-        workspace: 'Team A Breakout',
-        timestamp: '1 week ago',
-        createdBy: 'You',
-        shared: false,
-        tags: ['bone', 'structure'],
-        color: 'amber',
-    },
-    {
-        id: 'b5',
-        name: 'Pre-op Planning',
-        dataset: 'Tumor_Region.vtk',
-        workspace: 'Project Room',
-        timestamp: '1 week ago',
-        createdBy: 'Dr. Jones',
-        shared: true,
-        tags: ['planning', 'surgery'],
-        color: 'pink',
-    },
-];
+const SCOPE_COLORS = {
+    personal: 'blue',
+    workspace: 'teal',
+    project: 'amber',
+};
+
+function formatTimestamp(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+}
 
 // =============================================================================
 // THUMBNAIL
 // =============================================================================
 
-function Thumbnail({ bookmark, size = 'small' }) {
+function Thumbnail({ bookmark, thumbnailUrl, size = 'small' }) {
     const dimensions = size === 'small' ? { width: 48, height: 48 } : { width: '100%', height: 70 };
+    const color = SCOPE_COLORS[bookmark.scope] || 'blue';
+    const [hasError, setHasError] = useState(false);
+
+    if (thumbnailUrl && !hasError) {
+        return (
+            <div className={`bookmark-thumbnail bookmark-thumbnail--${size}`} style={dimensions}>
+                <img
+                    src={thumbnailUrl}
+                    alt={bookmark.name}
+                    onError={() => setHasError(true)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div
             className={`bookmark-thumbnail bookmark-thumbnail--${size}`}
             style={{
                 ...dimensions,
-                '--thumbnail-color': `var(--color-accent-${bookmark.color})`,
+                '--thumbnail-color': `var(--color-accent-${color})`,
             }}
         >
             <Camera size={size === 'small' ? 16 : 24} />
@@ -114,23 +98,31 @@ function Thumbnail({ bookmark, size = 'small' }) {
 // LIST ITEM
 // =============================================================================
 
-function BookmarkListItem({ bookmark, isSelected, onSelect, onNavigate }) {
+function BookmarkListItem({ bookmark, isSelected, onSelect, onNavigate, onTogglePin, thumbnailUrl }) {
     return (
         <div
             className={`bookmark-list-item ${isSelected ? 'bookmark-list-item--selected' : ''}`}
             onClick={() => onSelect(isSelected ? null : bookmark.id)}
         >
-            <Thumbnail bookmark={bookmark} size="small" />
+            <button
+                className={`bookmark-list-item__pin ${bookmark.isPinned ? 'bookmark-list-item__pin--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onTogglePin(bookmark.id); }}
+                title={bookmark.isPinned ? 'Unpin' : 'Pin'}
+            >
+                {bookmark.isPinned ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+            </button>
+
+            <Thumbnail bookmark={bookmark} thumbnailUrl={thumbnailUrl} size="small" />
 
             <div className="bookmark-list-item__content">
                 <div className="bookmark-list-item__name">
                     {bookmark.name}
-                    {bookmark.shared && <Share2 size={9} className="bookmark-list-item__shared-icon" />}
+                    {bookmark.scope !== 'personal' && <Share2 size={9} className="bookmark-list-item__shared-icon" />}
                 </div>
-                <div className="bookmark-list-item__dataset">{bookmark.dataset}</div>
+                <div className="bookmark-list-item__dataset">{bookmark.datasetName || 'No dataset'}</div>
                 <div className="bookmark-list-item__meta">
-                    <span><Clock size={8} /> {bookmark.timestamp}</span>
-                    <span><User size={8} /> {bookmark.createdBy}</span>
+                    <span><Clock size={8} /> {formatTimestamp(bookmark.createdAt)}</span>
+                    <span><User size={8} /> {bookmark.owner?.name || 'Unknown'}</span>
                 </div>
             </div>
 
@@ -148,15 +140,15 @@ function BookmarkListItem({ bookmark, isSelected, onSelect, onNavigate }) {
 // GRID ITEM
 // =============================================================================
 
-function BookmarkGridItem({ bookmark, onNavigate }) {
+function BookmarkGridItem({ bookmark, onNavigate, thumbnailUrl }) {
     return (
         <div
             className="bookmark-grid-item"
             onClick={() => onNavigate(bookmark.id)}
         >
-            <Thumbnail bookmark={bookmark} size="large" />
+            <Thumbnail bookmark={bookmark} thumbnailUrl={thumbnailUrl} size="large" />
             <div className="bookmark-grid-item__name">{bookmark.name}</div>
-            <div className="bookmark-grid-item__timestamp">{bookmark.timestamp}</div>
+            <div className="bookmark-grid-item__timestamp">{formatTimestamp(bookmark.createdAt)}</div>
         </div>
     );
 }
@@ -165,7 +157,7 @@ function BookmarkGridItem({ bookmark, onNavigate }) {
 // GROUP
 // =============================================================================
 
-function BookmarkGroup({ title, bookmarks, isExpanded, onToggle, viewMode, selectedBookmark, onSelect, onNavigate }) {
+function BookmarkGroup({ title, bookmarks, isExpanded, onToggle, viewMode, selectedBookmark, onSelect, onNavigate, onTogglePin, getThumbnailUrl }) {
     if (bookmarks.length === 0) return null;
 
     return (
@@ -186,6 +178,8 @@ function BookmarkGroup({ title, bookmarks, isExpanded, onToggle, viewMode, selec
                                 isSelected={selectedBookmark === bookmark.id}
                                 onSelect={onSelect}
                                 onNavigate={onNavigate}
+                                onTogglePin={onTogglePin}
+                                thumbnailUrl={bookmark.thumbnailKey ? getThumbnailUrl(bookmark.id) : null}
                             />
                         ))}
                     </div>
@@ -196,6 +190,7 @@ function BookmarkGroup({ title, bookmarks, isExpanded, onToggle, viewMode, selec
                                 key={bookmark.id}
                                 bookmark={bookmark}
                                 onNavigate={onNavigate}
+                                thumbnailUrl={bookmark.thumbnailKey ? getThumbnailUrl(bookmark.id) : null}
                             />
                         ))}
                     </div>
@@ -209,7 +204,7 @@ function BookmarkGroup({ title, bookmarks, isExpanded, onToggle, viewMode, selec
 // SELECTED BOOKMARK DETAILS
 // =============================================================================
 
-function SelectedBookmarkDetails({ bookmark, onClose, onNavigate }) {
+function SelectedBookmarkDetails({ bookmark, onClose, onNavigate, onDelete }) {
     if (!bookmark) return null;
 
     return (
@@ -222,13 +217,22 @@ function SelectedBookmarkDetails({ bookmark, onClose, onNavigate }) {
             </div>
 
             {/* Tags */}
-            <div className="bookmark-details__tags">
-                {bookmark.tags.map(tag => (
-                    <span key={tag} className="bookmark-details__tag">
-                        <Tag size={8} /> {tag}
-                    </span>
-                ))}
-            </div>
+            {bookmark.tags && bookmark.tags.length > 0 && (
+                <div className="bookmark-details__tags">
+                    {bookmark.tags.map(tag => (
+                        <span key={tag} className="bookmark-details__tag">
+                            <Tag size={8} /> {tag}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Description */}
+            {bookmark.description && (
+                <div className="bookmark-details__description">
+                    {bookmark.description}
+                </div>
+            )}
 
             {/* Actions */}
             <div className="bookmark-details__actions">
@@ -241,14 +245,95 @@ function SelectedBookmarkDetails({ bookmark, onClose, onNavigate }) {
                 <button className="bookmark-details__action-btn" data-color="blue">
                     <Edit3 size={12} />
                 </button>
-                <button className="bookmark-details__action-btn" data-color="pink">
-                    <Share2 size={12} />
-                </button>
-                <button className="bookmark-details__action-btn">
-                    <Trash2 size={12} />
-                </button>
+                {bookmark.isOwn && (
+                    <button
+                        className="bookmark-details__action-btn"
+                        onClick={() => onDelete(bookmark.id)}
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                )}
             </div>
         </div>
+    );
+}
+
+// =============================================================================
+// CREATE BOOKMARK FORM
+// =============================================================================
+
+function CreateBookmarkForm({ onSave, onCancel }) {
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [scope, setScope] = useState('personal');
+    const [tags, setTags] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+
+        setIsSaving(true);
+        try {
+            const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+            await onSave(name.trim(), {
+                description,
+                scope,
+                tags: tagList,
+                // camera_state should come from the current view
+            });
+        } catch (err) {
+            log.error('Failed to save bookmark:', err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <form className="create-bookmark-form" onSubmit={handleSubmit}>
+            <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Bookmark name..."
+                className="create-bookmark-form__input"
+                autoFocus
+            />
+            <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="create-bookmark-form__input"
+            />
+            <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="Tags (comma separated)"
+                className="create-bookmark-form__input"
+            />
+            <select
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+                className="create-bookmark-form__select"
+            >
+                <option value="personal">Personal</option>
+                <option value="project">Project</option>
+            </select>
+            <div className="create-bookmark-form__actions">
+                <button type="button" onClick={onCancel} className="create-bookmark-form__btn">
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={!name.trim() || isSaving}
+                    className="create-bookmark-form__btn create-bookmark-form__btn--primary"
+                >
+                    {isSaving ? <Loader2 size={12} className="spin" /> : 'Save'}
+                </button>
+            </div>
+        </form>
     );
 }
 
@@ -257,13 +342,30 @@ function SelectedBookmarkDetails({ bookmark, onClose, onNavigate }) {
 // =============================================================================
 
 export function BookmarksPanelContent({ workspaceId }) {
-    // State
+    // Use the real bookmarks hook
+    const {
+        bookmarks,
+        groupedBookmarks,
+        isLoading,
+        error,
+        createBookmark,
+        deleteBookmark,
+        togglePin,
+        navigateToBookmark,
+        getThumbnailUrl,
+        refetch,
+    } = useBookmarks({ workspaceId });
+
+    // Local state
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('list');
     const [selectedBookmark, setSelectedBookmark] = useState(null);
+    const [showCreateForm, setShowCreateForm] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState({
-        recent: true,
+        pinned: true,
         mine: true,
+        workspace: true,
+        project: true,
         shared: true,
     });
 
@@ -272,26 +374,88 @@ export function BookmarksPanelContent({ workspaceId }) {
         setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
     }, []);
 
-    // Navigate to bookmark
-    const navigateToBookmark = useCallback((bookmarkId) => {
-        log.debug('Navigate to bookmark:', bookmarkId);
-        // TODO: Navigate to the bookmarked view
-    }, []);
+    // Handle navigate
+    const handleNavigate = useCallback((bookmarkId) => {
+        const bookmark = navigateToBookmark(bookmarkId);
+        if (bookmark) {
+            log.debug('Navigating to bookmark:', bookmarkId, bookmark);
+        }
+    }, [navigateToBookmark]);
+
+    // Handle delete
+    const handleDelete = useCallback(async (bookmarkId) => {
+        if (window.confirm('Delete this bookmark?')) {
+            try {
+                await deleteBookmark(bookmarkId);
+                setSelectedBookmark(null);
+            } catch (err) {
+                log.error('Failed to delete bookmark:', err);
+            }
+        }
+    }, [deleteBookmark]);
+
+    // Handle create
+    const handleCreate = useCallback(async (name, options) => {
+        try {
+            await createBookmark(name, options);
+            setShowCreateForm(false);
+        } catch (err) {
+            log.error('Failed to create bookmark:', err);
+            throw err;
+        }
+    }, [createBookmark]);
 
     // Filter bookmarks
     const filteredBookmarks = useMemo(() => {
-        return SAMPLE_BOOKMARKS.filter(b =>
+        return bookmarks.filter(b =>
+            !searchQuery ||
             b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.dataset.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+            (b.datasetName && b.datasetName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (b.tags && b.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())))
         );
-    }, [searchQuery]);
+    }, [bookmarks, searchQuery]);
 
-    const recentBookmarks = filteredBookmarks.slice(0, 3);
-    const myBookmarks = filteredBookmarks.filter(b => b.createdBy === 'You');
-    const sharedBookmarks = filteredBookmarks.filter(b => b.createdBy !== 'You');
+    // Group bookmarks
+    const pinnedBookmarks = filteredBookmarks.filter(b => b.isPinned);
+    const myBookmarks = filteredBookmarks.filter(b => b.isOwn && b.scope === 'personal' && !b.isPinned);
+    const workspaceBookmarks = filteredBookmarks.filter(b => b.scope === 'workspace' && !b.isPinned);
+    const projectBookmarks = filteredBookmarks.filter(b => b.scope === 'project' && !b.isPinned);
+    const sharedBookmarks = filteredBookmarks.filter(b => !b.isOwn && !b.isPinned);
 
-    const selectedBookmarkData = SAMPLE_BOOKMARKS.find(b => b.id === selectedBookmark);
+    const selectedBookmarkData = bookmarks.find(b => b.id === selectedBookmark);
+
+    // Loading state
+    if (isLoading && bookmarks.length === 0) {
+        return (
+            <div className="bookmarks-tab">
+                <div className="panel-header">
+                    <Bookmark size={14} className="panel-header__icon file-icon--indigo" />
+                    <span className="panel-header__title">Bookmarks</span>
+                </div>
+                <div className="bookmarks-tab__loading">
+                    <Loader2 size={24} className="spin" />
+                    <span>Loading bookmarks...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error && bookmarks.length === 0) {
+        return (
+            <div className="bookmarks-tab">
+                <div className="panel-header">
+                    <Bookmark size={14} className="panel-header__icon file-icon--indigo" />
+                    <span className="panel-header__title">Bookmarks</span>
+                </div>
+                <div className="bookmarks-tab__error">
+                    <AlertCircle size={24} />
+                    <span>Failed to load bookmarks</span>
+                    <button onClick={refetch}>Retry</button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bookmarks-tab">
@@ -299,7 +463,7 @@ export function BookmarksPanelContent({ workspaceId }) {
             <div className="panel-header">
                 <Bookmark size={14} className="panel-header__icon file-icon--indigo" />
                 <span className="panel-header__title">Bookmarks</span>
-                <span className="panel-header__count">{SAMPLE_BOOKMARKS.length} saved</span>
+                <span className="panel-header__count">{bookmarks.length} saved</span>
             </div>
 
             {/* Search + View mode */}
@@ -344,17 +508,21 @@ export function BookmarksPanelContent({ workspaceId }) {
 
             {/* Content */}
             <div className="bookmarks-tab__content">
+                {/* Pinned */}
                 <BookmarkGroup
-                    title="Recent"
-                    bookmarks={recentBookmarks}
-                    isExpanded={expandedGroups.recent}
-                    onToggle={() => toggleGroup('recent')}
+                    title="Pinned"
+                    bookmarks={pinnedBookmarks}
+                    isExpanded={expandedGroups.pinned}
+                    onToggle={() => toggleGroup('pinned')}
                     viewMode={viewMode}
                     selectedBookmark={selectedBookmark}
                     onSelect={setSelectedBookmark}
-                    onNavigate={navigateToBookmark}
+                    onNavigate={handleNavigate}
+                    onTogglePin={togglePin}
+                    getThumbnailUrl={getThumbnailUrl}
                 />
 
+                {/* My Bookmarks */}
                 <BookmarkGroup
                     title="My Bookmarks"
                     bookmarks={myBookmarks}
@@ -363,9 +531,40 @@ export function BookmarksPanelContent({ workspaceId }) {
                     viewMode={viewMode}
                     selectedBookmark={selectedBookmark}
                     onSelect={setSelectedBookmark}
-                    onNavigate={navigateToBookmark}
+                    onNavigate={handleNavigate}
+                    onTogglePin={togglePin}
+                    getThumbnailUrl={getThumbnailUrl}
                 />
 
+                {/* Workspace Bookmarks */}
+                <BookmarkGroup
+                    title="Workspace Bookmarks"
+                    bookmarks={workspaceBookmarks}
+                    isExpanded={expandedGroups.workspace}
+                    onToggle={() => toggleGroup('workspace')}
+                    viewMode={viewMode}
+                    selectedBookmark={selectedBookmark}
+                    onSelect={setSelectedBookmark}
+                    onNavigate={handleNavigate}
+                    onTogglePin={togglePin}
+                    getThumbnailUrl={getThumbnailUrl}
+                />
+
+                {/* Project Bookmarks */}
+                <BookmarkGroup
+                    title="Project Bookmarks"
+                    bookmarks={projectBookmarks}
+                    isExpanded={expandedGroups.project}
+                    onToggle={() => toggleGroup('project')}
+                    viewMode={viewMode}
+                    selectedBookmark={selectedBookmark}
+                    onSelect={setSelectedBookmark}
+                    onNavigate={handleNavigate}
+                    onTogglePin={togglePin}
+                    getThumbnailUrl={getThumbnailUrl}
+                />
+
+                {/* Shared with Me */}
                 <BookmarkGroup
                     title="Shared with Me"
                     bookmarks={sharedBookmarks}
@@ -374,13 +573,15 @@ export function BookmarksPanelContent({ workspaceId }) {
                     viewMode={viewMode}
                     selectedBookmark={selectedBookmark}
                     onSelect={setSelectedBookmark}
-                    onNavigate={navigateToBookmark}
+                    onNavigate={handleNavigate}
+                    onTogglePin={togglePin}
+                    getThumbnailUrl={getThumbnailUrl}
                 />
 
                 {/* Empty state */}
                 {filteredBookmarks.length === 0 && (
                     <div className="bookmarks-tab__empty">
-                        No bookmarks found
+                        {searchQuery ? 'No bookmarks match your search' : 'No bookmarks yet'}
                     </div>
                 )}
             </div>
@@ -390,14 +591,26 @@ export function BookmarksPanelContent({ workspaceId }) {
                 <SelectedBookmarkDetails
                     bookmark={selectedBookmarkData}
                     onClose={() => setSelectedBookmark(null)}
-                    onNavigate={navigateToBookmark}
+                    onNavigate={handleNavigate}
+                    onDelete={handleDelete}
+                />
+            )}
+
+            {/* Create Form */}
+            {showCreateForm && (
+                <CreateBookmarkForm
+                    onSave={handleCreate}
+                    onCancel={() => setShowCreateForm(false)}
                 />
             )}
 
             {/* Footer */}
-            {!selectedBookmark && (
+            {!selectedBookmark && !showCreateForm && (
                 <div className="panel-footer">
-                    <button className="panel-footer__btn panel-footer__btn--primary">
+                    <button
+                        className="panel-footer__btn panel-footer__btn--primary"
+                        onClick={() => setShowCreateForm(true)}
+                    >
                         <Plus size={11} />
                         <span>Bookmark Current View</span>
                     </button>

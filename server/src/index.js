@@ -146,6 +146,10 @@ const syncRouter = require("./routes/sync");
 
 const recordingsRouter = require("./routes/recordings");
 
+// Saved filters and bookmarks routes
+const filtersRouter = require("./routes/filters");
+const bookmarksRouter = require("./routes/bookmarks");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -171,6 +175,10 @@ app.use("/api/projects/:projectId/rooms", optionalAuth, roomsRouter);
 
 // Recording routes (nested under projects)
 app.use("/api/projects/:projectId/recordings", optionalAuth, recordingsRouter);
+
+// Saved filters and bookmarks routes (nested under projects)
+app.use("/api/projects/:projectId/filters", optionalAuth, filtersRouter);
+app.use("/api/projects/:projectId/bookmarks", optionalAuth, bookmarksRouter);
 
 // Chat history routes (Phase 2E - Y.js persistence)
 // Provides REST access to persisted chat messages for audit and history
