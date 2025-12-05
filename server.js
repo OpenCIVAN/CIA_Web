@@ -62,7 +62,7 @@ const activeRecordings = new Map();
 const lastCursorPositions = new Map();
 
 // Cursor recording settings
-const CURSOR_THROTTLE_MS = 66;   // ~15 fps
+const CURSOR_THROTTLE_MS = 66; // ~15 fps
 const MIN_CURSOR_MOVEMENT = 0.005; // 0.5% viewport threshold
 
 /**
@@ -107,7 +107,7 @@ function shouldRecordCursor(clientId, cursor) {
   const last = lastCursorPositions.get(clientId);
 
   // Time throttle
-  if (last && (now - last.timestamp) < CURSOR_THROTTLE_MS) {
+  if (last && now - last.timestamp < CURSOR_THROTTLE_MS) {
     return false;
   }
 
@@ -117,7 +117,11 @@ function shouldRecordCursor(clientId, cursor) {
     const dy = Math.abs((cursor.y || 0) - (last.y || 0));
     const dz = Math.abs((cursor.z || 0) - (last.z || 0));
 
-    if (dx < MIN_CURSOR_MOVEMENT && dy < MIN_CURSOR_MOVEMENT && dz < MIN_CURSOR_MOVEMENT) {
+    if (
+      dx < MIN_CURSOR_MOVEMENT &&
+      dy < MIN_CURSOR_MOVEMENT &&
+      dz < MIN_CURSOR_MOVEMENT
+    ) {
       return false;
     }
   }
@@ -149,7 +153,14 @@ function cleanupClientCursor(clientId) {
  * @param {string} userId - Optional user UUID
  * @param {number} clientId - Y.js awareness client ID
  */
-async function recordEvent(projectId, eventType, eventSource, eventData, userId = null, clientId = null) {
+async function recordEvent(
+  projectId,
+  eventType,
+  eventSource,
+  eventData,
+  userId = null,
+  clientId = null
+) {
   const recording = activeRecordings.get(projectId);
   if (!recording || !persistence?.pool) return;
 
@@ -242,7 +253,14 @@ class Room {
     if (!persistence) return;
 
     try {
-      const { userName, text, timestamp, messageType, metadata, id: messageId } = message;
+      const {
+        userName,
+        text,
+        timestamp,
+        messageType,
+        metadata,
+        id: messageId,
+      } = message;
 
       await persistence.storeChatMessage(
         this.roomId,
@@ -340,7 +358,11 @@ class Room {
       // NEW: Record to recording_events if active
       if (this.projectId && activeRecordings.has(this.projectId)) {
         // Skip noisy cursor/awareness updates unless you want them
-        if (origin !== "cursor" && origin !== "presence" && origin !== "avatar") {
+        if (
+          origin !== "cursor" &&
+          origin !== "presence" &&
+          origin !== "avatar"
+        ) {
           await recordEvent(
             this.projectId,
             "yjs_update",
@@ -532,13 +554,29 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
   // Relay to other clients
   broadcastToRoom(room, rawMessage, socket);
 
+  // DEBUG: Log recording state
+  recordingLog.debug(
+    `Awareness update - room.projectId: ${room.projectId}, ` +
+      `activeRecordings.has: ${activeRecordings.has(room.projectId)}, ` +
+      `activeRecordings.size: ${activeRecordings.size}`
+  );
+
   // Record cursor if recording is active
   if (room.projectId && activeRecordings.has(room.projectId)) {
     try {
       const states = room.awareness.getStates();
       const localState = states.get(socket.clientId);
 
-      if (localState?.cursor && shouldRecordCursor(socket.clientId, localState.cursor)) {
+      if (localState) {
+        recordingLog.debug(
+          `Awareness state keys: ${Object.keys(localState).join(", ")}`
+        );
+      }
+
+      if (
+        localState?.cursor &&
+        shouldRecordCursor(socket.clientId, localState.cursor)
+      ) {
         // Don't await - fire and forget for performance
         recordEvent(
           room.projectId,
@@ -546,10 +584,12 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
           "cursor:move",
           {
             cursor: localState.cursor,
-            user: localState.user ? {
-              name: localState.user.name,
-              color: localState.user.color,
-            } : null,
+            user: localState.user
+              ? {
+                  name: localState.user.name,
+                  color: localState.user.color,
+                }
+              : null,
           },
           socket.userId,
           socket.clientId
@@ -591,7 +631,8 @@ function detectUpdateOrigin(doc, update) {
 wss.on("connection", async (socket, req) => {
   // Parse URL and query params
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const roomName = url.searchParams.get("room") || url.pathname.slice(1) || "default";
+  const roomName =
+    url.searchParams.get("room") || url.pathname.slice(1) || "default";
 
   // Extract projectId if present in room name or URL
   // Convention: room name format is "project:{projectId}" or just projectId

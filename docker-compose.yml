@@ -180,4 +180,4 @@ volumes:
   postgres_data:
   minio_data:
   redis_data:
-  # yjs_data:  # Uncomment when adding persistence
+  yjs_data:  # Uncomment when adding persistence
