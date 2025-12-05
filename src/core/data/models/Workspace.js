@@ -44,6 +44,7 @@ export class Workspace {
     // Hierarchy
     this.parentId = data.parentId || null; // For nested workspaces
     this.projectId = data.projectId || null; // Parent project if breakout
+    this.roomId = data.roomId || data.room_id || null; // Room association for breakout workspaces
 
     // Ownership
     this.ownerId = data.ownerId || null;
@@ -237,6 +238,7 @@ export class Workspace {
       type: this.type,
       parentId: this.parentId,
       projectId: this.projectId,
+      roomId: this.roomId,
       ownerId: this.ownerId,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
@@ -272,8 +274,19 @@ export class Workspace {
 
   /**
    * Create a breakout from a project
+   * @param {string} projectId
+   * @param {string} name
+   * @param {string} creatorId
+   * @param {number} expiresInHours
+   * @param {string} roomId - Optional room to associate with
    */
-  static createBreakout(projectId, name, creatorId, expiresInHours = 2) {
+  static createBreakout(
+    projectId,
+    name,
+    creatorId,
+    expiresInHours = 2,
+    roomId = null
+  ) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
@@ -281,6 +294,7 @@ export class Workspace {
       name,
       type: WorkspaceType.BREAKOUT,
       projectId,
+      roomId, // <-- Add this
       ownerId: creatorId,
       createdBy: creatorId,
       expiresAt: expiresAt.toISOString(),

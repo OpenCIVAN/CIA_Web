@@ -15,11 +15,10 @@ import { WorkspaceType } from "@Core/data/models/Workspace.js";
 function transformWorkspace(workspace) {
   if (!workspace) return null;
 
-  // Map workspace type to color
   const typeColors = {
-    [WorkspaceType.PROJECT]: "#60a5fa", // Blue
-    [WorkspaceType.BREAKOUT]: "#c084fc", // Purple
-    [WorkspaceType.PERSONAL]: "#34d399", // Green
+    [WorkspaceType.PROJECT]: "#60a5fa",
+    [WorkspaceType.BREAKOUT]: "#c084fc",
+    [WorkspaceType.PERSONAL]: "#34d399",
   };
 
   return {
@@ -30,6 +29,7 @@ function transformWorkspace(workspace) {
     type: workspace.type,
     color: typeColors[workspace.type] || "#60a5fa",
     ownerId: workspace.ownerId,
+    roomId: workspace.roomId, // <-- ADD THIS
     createdBy: workspace.createdBy,
     members: workspace.members,
     memberCount: workspace.members?.length || 0,
@@ -37,7 +37,6 @@ function transformWorkspace(workspace) {
     activeCanvasId: workspace.activeCanvasId,
     isArchived: workspace.isArchived,
     isPending: workspace.isPending,
-    // Breakout-specific
     expiresAt: workspace.expiresAt,
     isExpired: workspace.isExpired?.() || false,
     projectId: workspace.projectId,
@@ -186,7 +185,7 @@ export function useWorkspaces({ userId, projectId } = {}) {
   }, []);
 
   const createBreakout = useCallback(
-    async (name, expiresInHours = 2) => {
+    async (name, expiresInHours = 2, roomId = null) => {
       if (!projectId || !userId) {
         throw new Error("Cannot create breakout: missing projectId or userId");
       }
@@ -195,7 +194,8 @@ export function useWorkspaces({ userId, projectId } = {}) {
         projectId,
         name,
         userId,
-        expiresInHours
+        expiresInHours,
+        roomId // <-- Pass through
       );
 
       return transformWorkspace(breakout);

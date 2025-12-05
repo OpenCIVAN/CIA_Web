@@ -434,6 +434,81 @@ CREATE TRIGGER trigger_room_updated
     FOR EACH ROW
     EXECUTE FUNCTION update_room_timestamp();
 
+-- Auto-create default project workspace when project is created
+CREATE OR REPLACE FUNCTION create_default_workspace_for_project()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO workspaces (name, description, type, project_id, owner_id, created_by)
+    VALUES (
+        'Project Workspace',
+        'Default shared workspace for ' || NEW.name,
+        'project',
+        NEW.id,
+        NULL,
+        NEW.created_by
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_create_project_workspace ON projects;
+CREATE TRIGGER trigger_create_project_workspace
+    AFTER INSERT ON projects
+    FOR EACH ROW
+    EXECUTE FUNCTION create_default_workspace_for_project();
+
+-- Auto-create default workspace for breakout rooms (not main room)
+CREATE OR REPLACE FUNCTION create_default_workspace_for_room()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.room_type != 'main' THEN
+        INSERT INTO workspaces (name, description, type, project_id, room_id, owner_id, created_by)
+        VALUES (
+            NEW.name || ' Workspace',
+            'Default workspace for room: ' || NEW.name,
+            'breakout',
+            NEW.project_id,
+            NEW.id,
+            NEW.created_by,
+            NEW.created_by
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_create_room_workspace ON rooms;
+CREATE TRIGGER trigger_create_room_workspace
+    AFTER INSERT ON rooms
+    FOR EACH ROW
+    EXECUTE FUNCTION create_default_workspace_for_room();
+
+-- Helper function: ensure user has personal workspace in project
+CREATE OR REPLACE FUNCTION ensure_user_personal_workspace(
+    p_user_id UUID,
+    p_project_id UUID,
+    p_user_name VARCHAR(255) DEFAULT 'User'
+)
+RETURNS UUID AS $$
+DECLARE
+    v_workspace_id UUID;
+BEGIN
+    SELECT id INTO v_workspace_id
+    FROM workspaces
+    WHERE project_id = p_project_id
+      AND owner_id = p_user_id
+      AND type = 'personal';
+
+    IF v_workspace_id IS NULL THEN
+        INSERT INTO workspaces (name, description, type, project_id, owner_id, created_by)
+        VALUES ('My Workspace', 'Personal workspace for ' || p_user_name, 'personal', p_project_id, p_user_id, p_user_id)
+        RETURNING id INTO v_workspace_id;
+    END IF;
+
+    RETURN v_workspace_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ============================================================================
 -- VIEW CONFIGURATIONS
 -- Server-authoritative view state for v2.0 architecture
@@ -943,6 +1018,7 @@ CREATE TABLE workspaces (
     -- Hierarchy
     parent_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,  -- <-- ADD THIS LINE
 
     -- Ownership
     owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -964,6 +1040,7 @@ CREATE TABLE workspaces (
 CREATE INDEX idx_workspaces_owner ON workspaces(owner_id);
 CREATE INDEX idx_workspaces_project ON workspaces(project_id);
 CREATE INDEX idx_workspaces_type ON workspaces(type);
+CREATE INDEX idx_workspaces_room ON workspaces(room_id);
 
 -- Workspace members for shared workspaces
 CREATE TABLE workspace_members (
@@ -1209,6 +1286,30 @@ VALUES (
 INSERT INTO room_members (room_id, user_id, role)
 VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'admin')
 ON CONFLICT (room_id, user_id) DO NOTHING;
+
+-- Default project workspace for demo project
+INSERT INTO workspaces (id, name, description, type, project_id, owner_id, created_by)
+VALUES (
+    '00000000-0000-0000-0000-000000000003',
+    'Project Workspace',
+    'Default shared workspace for Sample Files',
+    'project',
+    '00000000-0000-0000-0000-000000000001',
+    NULL,
+    '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT DO NOTHING;
+
+-- Personal workspace for demo user in demo project
+INSERT INTO workspaces (id, name, description, type, project_id, owner_id, created_by)
+VALUES (
+    '00000000-0000-0000-0000-000000000004',
+    'My Workspace',
+    'Personal workspace for Demo User',
+    'personal',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT DO NOTHING;
 
 -- Demo files: Run ./scripts/load-demo-files.sh to upload VTP samples to MinIO
 

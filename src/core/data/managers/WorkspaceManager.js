@@ -100,7 +100,8 @@ class WorkspaceManagerClass {
       projectId,
       name,
       creatorId,
-      expiresInHours
+      expiresInHours,
+      roomId
     );
     return this.createWorkspace(workspace.toJSON());
   }
