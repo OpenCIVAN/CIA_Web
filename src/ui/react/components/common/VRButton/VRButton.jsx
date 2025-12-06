@@ -2,10 +2,11 @@
 // VR mode toggle button with state feedback
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Glasses, GlassesOff, Loader2 } from "lucide-react";
+import { Glasses, Loader2 } from "lucide-react";
+import { SlashedIcon } from "@UI/react/components/common/IconOverlay/IconOverlay.jsx";
 import { vrManager } from "@Core/vr/VRManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { toast } from "react-hot-toast";
+import { toast } from "@UI/react/store/toastStore.js";
 import "./VRButton.scss";
 
 /**
@@ -193,7 +194,7 @@ export function VRButton({
                 {isEntering ? (
                     <Loader2 size={iconSize} className="vr-button__spinner" />
                 ) : isInVR ? (
-                    <GlassesOff size={iconSize} />
+                    <SlashedIcon icon={Glasses} size={iconSize} />
                 ) : (
                     <Glasses size={iconSize} />
                 )}

@@ -83,7 +83,33 @@ auditLogger.initialize(pool);
 // MIDDLEWARE
 // ============================================================================
 
-app.use(cors());
+// CORS configuration - must specify origin when credentials are used
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost on any port for development
+    if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+      return callback(null, true);
+    }
+
+    // Allow specific production origins if needed
+    const allowedOrigins = (process.env.CORS_ORIGINS || "")
+      .split(",")
+      .filter(Boolean);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true, // Allow cookies and auth headers
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
