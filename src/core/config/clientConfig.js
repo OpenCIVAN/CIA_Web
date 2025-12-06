@@ -206,18 +206,4 @@ if (config.debugEnabled && isBrowser()) {
   setTimeout(() => logConfig(), 100);
 }
 
-// =============================================================================
-// BACKWARD COMPATIBILITY EXPORTS
-// These mirror the old storage.js exports for easier migration
-// =============================================================================
-
-/** @deprecated Use config.useServerStorage instead */
-export const USE_SERVER_STORAGE = config.useServerStorage;
-
-/** @deprecated Use config.apiBaseUrl instead */
-export const API_BASE_URL = config.apiBaseUrl;
-
-/** @deprecated Use config.defaultSessionId instead */
-export const DEFAULT_SESSION_ID = config.defaultSessionId;
-
 export default config;
