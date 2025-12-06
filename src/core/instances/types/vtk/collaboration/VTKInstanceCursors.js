@@ -16,6 +16,8 @@ import {
   onCursorUpdate,
   onCursorRemove,
   hasWorldPosition,
+  getCursorNamesVisible,
+  onCursorNamesVisibilityChange,
 } from "@Collaboration/presence/cursors.js";
 import { worldToScreen } from "@VTK/utils/vtkRaycaster.js";
 import { cursor as log } from "@Utils/logger.js";
@@ -56,6 +58,40 @@ class VTKInstanceCursors {
 
     // Cleanup functions for global listeners
     this.cleanupFunctions = [];
+
+    // Listen for cursor name visibility changes
+    const cleanupNameVisibility = onCursorNamesVisibilityChange((visible) => {
+      this._updateAllLabelVisibility(visible);
+    });
+    this.cleanupFunctions.push(cleanupNameVisibility);
+  }
+
+  /**
+   * Update visibility of all labels across all instances
+   * @private
+   */
+  _updateAllLabelVisibility(visible) {
+    this.instanceStates.forEach((state) => {
+      // Update 3D cursor labels
+      state.labels.forEach((labelEl) => {
+        labelEl.style.display = visible ? "block" : "none";
+      });
+
+      // Update DOM cursor labels (they're children of the cursor element)
+      state.domCursors.forEach((cursorEl) => {
+        const label = cursorEl.querySelector("div");
+        if (label) {
+          label.style.display = visible ? "block" : "none";
+        }
+      });
+
+      // Re-render to reflect changes
+      if (state.sceneObjects?.renderWindow) {
+        state.sceneObjects.renderWindow.render();
+      }
+    });
+
+    log.debug(`Updated all cursor labels visibility: ${visible}`);
   }
 
   /**
@@ -381,6 +417,12 @@ class VTKInstanceCursors {
       cursorEl.style.left = `${x}px`;
       cursorEl.style.top = `${y}px`;
       cursorEl.style.display = "block";
+
+      // Update label visibility based on global setting
+      const label = cursorEl.querySelector("div");
+      if (label) {
+        label.style.display = getCursorNamesVisible() ? "block" : "none";
+      }
     } else {
       cursorEl.style.display = "none";
     }
@@ -398,6 +440,9 @@ class VTKInstanceCursors {
       state.container.appendChild(labelEl);
     }
 
+    // Check if cursor names should be visible
+    const namesVisible = getCursorNamesVisible();
+
     // Project world position to screen
     const screenPos = worldToScreen(
       state.sceneObjects,
@@ -405,7 +450,7 @@ class VTKInstanceCursors {
       state.container
     );
 
-    if (screenPos && screenPos.visible) {
+    if (namesVisible && screenPos && screenPos.visible) {
       const rect = state.container.getBoundingClientRect();
       const x = screenPos.screenX - rect.left;
       const y = screenPos.screenY - rect.top + LABEL_OFFSET_Y;

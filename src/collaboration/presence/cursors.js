@@ -26,6 +26,10 @@ const yCursorPrefs = ydoc.getMap("cursorPreferences"); // Visibility, style
 let lastMousePosition = { x: 0, y: 0, timestamp: 0 };
 let mouseMoveTimeout = null;
 
+// Local display preferences (not synced - each user controls their own view)
+let showCursorNames = true;
+const cursorNameListeners = new Set();
+
 // 3D world position (set by instance handlers like VTK)
 let lastWorldPosition = null; // { x, y, z } or null
 let lastWorldNormal = null; // { x, y, z } or null (surface normal for orientation)
@@ -191,6 +195,49 @@ export function setMyCursorVisible(visible) {
 export function getMyCursorVisible() {
   const prefs = yCursorPrefs.get(getUserId());
   return prefs?.visible !== false; // Default to visible
+}
+
+// ----------------------------------------------------------------------------
+// Cursor Name Display (Local Preference)
+// ----------------------------------------------------------------------------
+
+/**
+ * Set whether to show names on other users' cursors.
+ * This is a local preference - each user controls their own view.
+ * @param {boolean} visible - Whether to show cursor names
+ */
+export function setCursorNamesVisible(visible) {
+  showCursorNames = visible;
+  log.debug(`Cursor names visibility: ${visible}`);
+
+  // Notify all listeners
+  cursorNameListeners.forEach((callback) => {
+    try {
+      callback(visible);
+    } catch (error) {
+      log.error("Error in cursor name visibility listener:", error);
+    }
+  });
+}
+
+/**
+ * Get whether cursor names are currently shown
+ * @returns {boolean}
+ */
+export function getCursorNamesVisible() {
+  return showCursorNames;
+}
+
+/**
+ * Subscribe to cursor name visibility changes
+ * @param {Function} callback - Called with (visible: boolean)
+ * @returns {Function} Cleanup function
+ */
+export function onCursorNamesVisibilityChange(callback) {
+  cursorNameListeners.add(callback);
+  return () => {
+    cursorNameListeners.delete(callback);
+  };
 }
 
 // ----------------------------------------------------------------------------

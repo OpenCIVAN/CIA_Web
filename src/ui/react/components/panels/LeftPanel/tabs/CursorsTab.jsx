@@ -7,7 +7,7 @@
 // - Links to fine-grained controls in other panels
 // - Cursor color presets
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     Users,
     MousePointer2,
@@ -22,7 +22,13 @@ import {
     Check,
     Eye,
     EyeOff,
+    Tag,
 } from 'lucide-react';
+import {
+    getCursorNamesVisible,
+    setCursorNamesVisible,
+    onCursorNamesVisibilityChange,
+} from '@Collaboration/presence/cursors.js';
 
 // =============================================================================
 // CURSOR COLOR PRESETS
@@ -143,6 +149,23 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
 
     const [showColorPicker, setShowColorPicker] = useState(false);
 
+    // Cursor names visibility (local preference)
+    const [showCursorNames, setShowCursorNames] = useState(getCursorNamesVisible);
+
+    // Listen for external changes to cursor names visibility
+    useEffect(() => {
+        const cleanup = onCursorNamesVisibilityChange((visible) => {
+            setShowCursorNames(visible);
+        });
+        return cleanup;
+    }, []);
+
+    // Handle cursor names toggle
+    const handleCursorNamesToggle = useCallback((visible) => {
+        setCursorNamesVisible(visible);
+        setShowCursorNames(visible);
+    }, []);
+
     // Update setting
     const updateSetting = useCallback((key, value) => {
         setMySettings(prev => ({ ...prev, [key]: value }));
@@ -225,6 +248,21 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                             <ToggleSwitch
                                 value={mySettings.showOthersDefault}
                                 onChange={(v) => updateSetting('showOthersDefault', v)}
+                            />
+                        </SettingRow>
+                    </div>
+
+                    {/* Show cursor names */}
+                    <div className="cursor-setting-card">
+                        <SettingRow
+                            icon={Tag}
+                            iconColor="var(--color-accent-amber)"
+                            title="Show cursor names"
+                            description="Display name labels on other users' cursors"
+                        >
+                            <ToggleSwitch
+                                value={showCursorNames}
+                                onChange={handleCursorNamesToggle}
                             />
                         </SettingRow>
                     </div>
