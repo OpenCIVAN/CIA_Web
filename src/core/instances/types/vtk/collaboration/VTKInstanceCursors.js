@@ -6,10 +6,11 @@
 // DOM overlay fallback (for screen-only coordinates).
 //
 // ARCHITECTURE:
-// - For cursors with world coordinates: Render as VTK sphere/cone actors
-// - For cursors with screen-only coordinates: Render as DOM overlays
+// - For cursors with world coordinates: Render as circle outline (ring) on surface
+// - For cursors with screen-only coordinates: Render as DOM overlays (OS-style cursor)
 // - Actor pooling to reduce allocation overhead
 // - Name labels positioned via world-to-screen projection
+// - Self-cursor rendering (user sees their own cursor in their color)
 // ----------------------------------------------------------------------------
 
 import {
@@ -19,19 +20,18 @@ import {
   getCursorNamesVisible,
   onCursorNamesVisibilityChange,
 } from "@Collaboration/presence/cursors.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { worldToScreen } from "@VTK/utils/vtkRaycaster.js";
 import { cursor as log } from "@Utils/logger.js";
 
 // VTK imports for 3D cursor actors
-import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
-import vtkConeSource from "@kitware/vtk.js/Filters/Sources/ConeSource";
+import vtkCircleSource from "@kitware/vtk.js/Filters/Sources/CircleSource";
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 
 // Constants
-const CURSOR_SPHERE_RADIUS = 0.02; // Relative to scene scale
-const CURSOR_CONE_HEIGHT = 0.04;
-const CURSOR_CONE_RADIUS = 0.015;
+const CURSOR_RING_RADIUS = 0.025; // Relative to scene scale
+const CURSOR_RING_RESOLUTION = 32; // Smoothness of the circle
 const ACTOR_POOL_SIZE = 10; // Pre-allocate this many cursor actors
 const LABEL_OFFSET_Y = 25; // Pixels below cursor for label
 
@@ -71,17 +71,23 @@ class VTKInstanceCursors {
    * @private
    */
   _updateAllLabelVisibility(visible) {
+    const currentUserId = getUserId();
+
     this.instanceStates.forEach((state) => {
-      // Update 3D cursor labels
-      state.labels.forEach((labelEl) => {
-        labelEl.style.display = visible ? "block" : "none";
+      // Update 3D cursor labels (skip self cursor - it never has a label)
+      state.labels.forEach((labelEl, userId) => {
+        if (userId !== currentUserId) {
+          labelEl.style.display = visible ? "block" : "none";
+        }
       });
 
-      // Update DOM cursor labels (they're children of the cursor element)
-      state.domCursors.forEach((cursorEl) => {
-        const label = cursorEl.querySelector("div");
-        if (label) {
-          label.style.display = visible ? "block" : "none";
+      // Update DOM cursor labels (skip self cursor - it never has a label)
+      state.domCursors.forEach((cursorEl, userId) => {
+        if (userId !== currentUserId) {
+          const label = cursorEl.querySelector(".cursor-label");
+          if (label) {
+            label.style.display = visible ? "block" : "none";
+          }
         }
       });
 
@@ -181,52 +187,32 @@ class VTKInstanceCursors {
   }
 
   /**
-   * Create a cursor actor (sphere with optional cone for direction)
+   * Create a cursor actor (circle outline ring that lies flat on surface)
    */
   _createCursorActor() {
-    // Create sphere source for cursor point
-    const sphereSource = vtkSphereSource.newInstance();
-    sphereSource.setRadius(CURSOR_SPHERE_RADIUS);
-    sphereSource.setThetaResolution(16);
-    sphereSource.setPhiResolution(16);
+    // Create circle source for cursor ring outline
+    const circleSource = vtkCircleSource.newInstance();
+    circleSource.setRadius(CURSOR_RING_RADIUS);
+    circleSource.setResolution(CURSOR_RING_RESOLUTION);
+    circleSource.setLines(true); // Render as lines (outline), not filled
+    circleSource.setFace(false); // Don't create a filled face
 
-    // Create cone source for direction indicator (optional)
-    const coneSource = vtkConeSource.newInstance();
-    coneSource.setHeight(CURSOR_CONE_HEIGHT);
-    coneSource.setRadius(CURSOR_CONE_RADIUS);
-    coneSource.setResolution(12);
-    coneSource.setDirection(0, 0, 1); // Default pointing up
+    // Create mapper for circle
+    const circleMapper = vtkMapper.newInstance();
+    circleMapper.setInputConnection(circleSource.getOutputPort());
 
-    // Create mapper for sphere
-    const sphereMapper = vtkMapper.newInstance();
-    sphereMapper.setInputConnection(sphereSource.getOutputPort());
-
-    // Create actor for sphere
-    const sphereActor = vtkActor.newInstance();
-    sphereActor.setMapper(sphereMapper);
-    sphereActor.getProperty().setAmbient(0.5);
-    sphereActor.getProperty().setDiffuse(0.5);
-    sphereActor.setPickable(false); // Don't interfere with scene picking
-
-    // Create mapper for cone
-    const coneMapper = vtkMapper.newInstance();
-    coneMapper.setInputConnection(coneSource.getOutputPort());
-
-    // Create actor for cone
-    const coneActor = vtkActor.newInstance();
-    coneActor.setMapper(coneMapper);
-    coneActor.getProperty().setAmbient(0.5);
-    coneActor.getProperty().setDiffuse(0.5);
-    coneActor.setPickable(false);
-    coneActor.setVisibility(false); // Hidden by default, shown when we have normal
+    // Create actor for circle
+    const circleActor = vtkActor.newInstance();
+    circleActor.setMapper(circleMapper);
+    circleActor.getProperty().setLineWidth(2.5); // Thicker line for visibility
+    circleActor.getProperty().setAmbient(1.0); // Full ambient for consistent color
+    circleActor.getProperty().setDiffuse(0.0); // No diffuse lighting
+    circleActor.setPickable(false); // Don't interfere with scene picking
 
     return {
-      sphereSource,
-      sphereMapper,
-      actor: sphereActor,
-      coneSource,
-      coneMapper,
-      coneActor,
+      circleSource,
+      circleMapper,
+      actor: circleActor,
       inUse: false,
       userId: null,
     };
@@ -257,7 +243,6 @@ class VTKInstanceCursors {
     // Add to renderer if we have scene objects
     if (state.sceneObjects?.renderer) {
       state.sceneObjects.renderer.addActor(cursorActor.actor);
-      state.sceneObjects.renderer.addActor(cursorActor.coneActor);
     }
 
     // Store reference
@@ -275,12 +260,10 @@ class VTKInstanceCursors {
 
     // Hide the actor
     cursorActor.actor.setVisibility(false);
-    cursorActor.coneActor.setVisibility(false);
 
     // Remove from renderer
     if (state.sceneObjects?.renderer) {
       state.sceneObjects.renderer.removeActor(cursorActor.actor);
-      state.sceneObjects.renderer.removeActor(cursorActor.coneActor);
     }
 
     // Mark as available
@@ -303,6 +286,9 @@ class VTKInstanceCursors {
     const state = this.instanceStates.get(instanceId);
     if (!state) return;
 
+    // Check if this is the user's own cursor
+    const isSelf = userId === getUserId();
+
     // Match on viewConfigId (shared across collaborators) if available
     // Fall back to instanceId matching for backward compatibility
     const shouldShow = state.viewConfigId
@@ -319,14 +305,14 @@ class VTKInstanceCursors {
     const hasSceneObjects = !!state.sceneObjects?.renderer;
 
     if (hasWorld && hasSceneObjects) {
-      // Render as 3D actor
-      this._renderActorCursor(state, userId, cursorData);
+      // Render as 3D actor (ring on surface)
+      this._renderActorCursor(state, userId, cursorData, isSelf);
       // Remove any existing DOM cursor
       this._removeDomCursor(state, userId);
       state.renderModes.set(userId, "actor");
     } else {
-      // Fallback to DOM overlay
-      this._renderDomCursor(state, userId, cursorData);
+      // Fallback to DOM overlay (OS-style cursor)
+      this._renderDomCursor(state, userId, cursorData, isSelf);
       // Remove any existing actor cursor
       this._releaseActor(state, userId);
       state.renderModes.set(userId, "dom");
@@ -334,9 +320,9 @@ class VTKInstanceCursors {
   }
 
   /**
-   * Render cursor as 3D VTK actor
+   * Render cursor as 3D VTK actor (circle ring outline on surface)
    */
-  _renderActorCursor(state, userId, cursorData) {
+  _renderActorCursor(state, userId, cursorData, isSelf = false) {
     const cursorActor = this._acquireActor(state, userId);
     const { world, normal, color } = cursorData;
 
@@ -347,43 +333,32 @@ class VTKInstanceCursors {
       bounds[3] - bounds[2],
       bounds[5] - bounds[4]
     );
-    const cursorSize = sceneSize * CURSOR_SPHERE_RADIUS;
+    const ringRadius = sceneSize * CURSOR_RING_RADIUS;
 
-    // Update sphere position and size
-    cursorActor.sphereSource.setRadius(cursorSize);
-    cursorActor.sphereSource.setCenter(world.x, world.y, world.z);
+    // Update circle source
+    cursorActor.circleSource.setRadius(ringRadius);
+    cursorActor.circleSource.setCenter([world.x, world.y, world.z]);
+
+    // Orient the ring to lie flat on the surface if we have a normal
+    if (normal && (normal.x !== 0 || normal.y !== 0 || normal.z !== 0)) {
+      cursorActor.circleSource.setNormal([normal.x, normal.y, normal.z]);
+    } else {
+      // Default to facing camera (Z-up)
+      cursorActor.circleSource.setNormal([0, 0, 1]);
+    }
 
     // Set color from user
     const rgb = hexToRgb(color || "#60a5fa");
     cursorActor.actor.getProperty().setColor(...rgb);
     cursorActor.actor.setVisibility(true);
 
-    // Update cone if we have normal data
-    if (normal && (normal.x !== 0 || normal.y !== 0 || normal.z !== 0)) {
-      const coneSize = sceneSize * CURSOR_CONE_HEIGHT;
-      cursorActor.coneSource.setHeight(coneSize);
-      cursorActor.coneSource.setRadius(coneSize * 0.4);
-
-      // Position cone slightly above surface along normal
-      const offset = cursorSize * 1.5;
-      cursorActor.coneSource.setCenter(
-        world.x + normal.x * offset,
-        world.y + normal.y * offset,
-        world.z + normal.z * offset
-      );
-
-      // Orient cone along normal (pointing into surface)
-      cursorActor.coneSource.setDirection(-normal.x, -normal.y, -normal.z);
-
-      cursorActor.coneActor.getProperty().setColor(...rgb);
-      cursorActor.coneActor.getProperty().setOpacity(0.7);
-      cursorActor.coneActor.setVisibility(true);
+    // Update or create label (only for other users, not self)
+    if (!isSelf) {
+      this._updateLabel(state, userId, cursorData, world);
     } else {
-      cursorActor.coneActor.setVisibility(false);
+      // Remove label for self cursor
+      this._removeLabel(state, userId);
     }
-
-    // Update or create label
-    this._updateLabel(state, userId, cursorData, world);
 
     // Trigger render
     if (state.sceneObjects?.renderWindow) {
@@ -392,15 +367,20 @@ class VTKInstanceCursors {
   }
 
   /**
-   * Render cursor as DOM overlay (fallback for screen-only coordinates)
+   * Render cursor as DOM overlay (OS-style cursor)
    */
-  _renderDomCursor(state, userId, cursorData) {
+  _renderDomCursor(state, userId, cursorData, isSelf = false) {
     let cursorEl = state.domCursors.get(userId);
 
     if (!cursorEl) {
-      cursorEl = this._createDomCursorElement(cursorData);
+      cursorEl = this._createDomCursorElement(cursorData, isSelf);
       state.domCursors.set(userId, cursorEl);
       state.container.appendChild(cursorEl);
+
+      // Hide native OS cursor in workspace when we have self-cursor
+      if (isSelf) {
+        state.container.style.cursor = "none";
+      }
     }
 
     // Get screen coordinates (use legacy x/y or screen object)
@@ -418,10 +398,11 @@ class VTKInstanceCursors {
       cursorEl.style.top = `${y}px`;
       cursorEl.style.display = "block";
 
-      // Update label visibility based on global setting
-      const label = cursorEl.querySelector("div");
+      // Update label visibility based on global setting (never show for self)
+      const label = cursorEl.querySelector(".cursor-label");
       if (label) {
-        label.style.display = getCursorNamesVisible() ? "block" : "none";
+        const shouldShowLabel = !isSelf && getCursorNamesVisible();
+        label.style.display = shouldShowLabel ? "block" : "none";
       }
     } else {
       cursorEl.style.display = "none";
@@ -492,58 +473,66 @@ class VTKInstanceCursors {
   }
 
   /**
-   * Create DOM cursor element (for fallback rendering)
+   * Create DOM cursor element (OS-style pointer cursor)
+   * Mimics the standard operating system cursor appearance
    */
-  _createDomCursorElement(cursorData) {
+  _createDomCursorElement(cursorData, isSelf = false) {
     const cursor = document.createElement("div");
-    cursor.className = "remote-cursor";
+    cursor.className = "collaborative-cursor";
     cursor.style.cssText = `
       position: absolute;
       width: 0;
       height: 0;
       pointer-events: none;
       z-index: 10000;
-      transform: translate(-4px, -4px);
-      transition: left 0.05s ease, top 0.05s ease;
+      transform: translate(0, 0);
+      transition: left 0.016s linear, top 0.016s linear;
     `;
 
-    // Create arrow SVG
+    // Create OS-style arrow cursor SVG
+    // This mimics the classic Windows/Mac pointer cursor shape
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", "24");
+    svg.setAttribute("width", "20");
     svg.setAttribute("height", "24");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.style.cssText = "filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));";
+    svg.setAttribute("viewBox", "0 0 20 24");
+    svg.style.cssText = "filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.4));";
 
+    // Main cursor shape - classic OS pointer arrow
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", "M3 3 L3 17 L9 13 L12 20 L14 19 L11 12 L18 12 Z");
+    // Classic pointer shape: pointed top, body widening down, tail going right
+    path.setAttribute("d", "M1,1 L1,18 L5,14 L8,21 L11,20 L8,13 L14,13 L1,1 Z");
     path.setAttribute("fill", cursorData.color || "#60a5fa");
     path.setAttribute("stroke", "white");
-    path.setAttribute("stroke-width", "1");
+    path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("stroke-linejoin", "round");
 
     svg.appendChild(path);
     cursor.appendChild(svg);
 
-    // Add name label
-    const label = document.createElement("div");
-    label.style.cssText = `
-      position: absolute;
-      top: 24px;
-      left: 0px;
-      background: ${cursorData.color || "#60a5fa"};
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-family: Arial, sans-serif;
-      white-space: nowrap;
-      font-weight: bold;
-      max-width: 120px;
-      text-overflow: ellipsis;
-      overflow: hidden;
-    `;
-    label.textContent = cursorData.name || "Unknown";
-
-    cursor.appendChild(label);
+    // Add name label (only for other users, not self)
+    if (!isSelf) {
+      const label = document.createElement("div");
+      label.className = "cursor-label";
+      label.style.cssText = `
+        position: absolute;
+        top: 20px;
+        left: 12px;
+        background: ${cursorData.color || "#60a5fa"};
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        white-space: nowrap;
+        font-weight: 500;
+        max-width: 120px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      `;
+      label.textContent = cursorData.name || "Unknown";
+      cursor.appendChild(label);
+    }
 
     return cursor;
   }
@@ -556,6 +545,11 @@ class VTKInstanceCursors {
     if (cursorEl) {
       cursorEl.remove();
       state.domCursors.delete(userId);
+
+      // Restore native cursor if this was the self cursor
+      if (userId === getUserId()) {
+        state.container.style.cursor = "";
+      }
     }
   }
 
@@ -603,10 +597,9 @@ class VTKInstanceCursors {
     if (!state) return;
 
     // Remove all actor cursors from renderer
-    state.actorCursors.forEach((cursorActor, userId) => {
+    state.actorCursors.forEach((cursorActor) => {
       if (state.sceneObjects?.renderer) {
         state.sceneObjects.renderer.removeActor(cursorActor.actor);
-        state.sceneObjects.renderer.removeActor(cursorActor.coneActor);
       }
     });
     state.actorCursors.clear();
@@ -614,17 +607,17 @@ class VTKInstanceCursors {
     // Cleanup actor pool
     state.actorPool.forEach((cursorActor) => {
       cursorActor.actor.delete();
-      cursorActor.coneActor.delete();
-      cursorActor.sphereMapper.delete();
-      cursorActor.coneMapper.delete();
-      cursorActor.sphereSource.delete();
-      cursorActor.coneSource.delete();
+      cursorActor.circleMapper.delete();
+      cursorActor.circleSource.delete();
     });
     state.actorPool = [];
 
     // Remove all DOM cursors
     state.domCursors.forEach((cursorEl) => cursorEl.remove());
     state.domCursors.clear();
+
+    // Restore native cursor
+    state.container.style.cursor = "";
 
     // Remove all labels
     state.labels.forEach((labelEl) => labelEl.remove());

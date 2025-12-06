@@ -434,10 +434,11 @@ export function onCursorRemove(callback) {
 // ----------------------------------------------------------------------------
 
 // Observe cursor changes and notify all subscribers
+// NOTE: We include own cursor updates so users can see their own cursor rendered
+// in their color, matching what others see. VTKInstanceCursors handles self-cursor
+// specially (no name label, hides native OS cursor).
 yCursors.observe((event) => {
   event.changes.keys.forEach((change, userId) => {
-    if (userId === getUserId()) return; // Ignore own cursor
-
     if (change.action === "add" || change.action === "update") {
       const cursorData = yCursors.get(userId);
 
