@@ -52,11 +52,11 @@ export const LayoutPanel = memo(function LayoutPanel({
     const context = useContext(LayoutPanelContext);
 
     // Create standalone logic only if no context is available
-    // This allows LayoutPanel to work both with and without the provider
-    const standaloneLogic = useLayoutPanel(context ? null : { canvasId });
+    // IMPORTANT: We always call the hook but useLayoutPanel handles missing canvasId gracefully
+    const standaloneLogic = useLayoutPanel({ canvasId });
 
     // Use context logic if available, otherwise use standalone
-    const logic = context?.logic || standaloneLogic;
+    const logic = context ? context.logic : standaloneLogic;
 
     // Destructure what we need from logic
     const {
