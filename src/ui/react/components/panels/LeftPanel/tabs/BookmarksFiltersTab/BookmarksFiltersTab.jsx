@@ -18,6 +18,9 @@ import {
     Loader2,
     AlertCircle,
     Sliders,
+    Globe,
+    Users,
+    UserCircle,
 } from 'lucide-react';
 import { ui as log } from '@Utils/logger.js';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -25,6 +28,8 @@ import { getScopeChips, getScopeConfig } from '@UI/react/components/panels/LeftP
 import { ScopedSection } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/ScopedSection';
 import { BookmarkItem } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/BookmarkItem';
 import { FilterItem } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/FilterItem';
+import { useBookmarks } from '@UI/react/hooks/useBookmarks.js';
+import { useFilters } from '@UI/react/hooks/useFilters.js';
 import './BookmarksFiltersTab.scss';
 
 // =============================================================================

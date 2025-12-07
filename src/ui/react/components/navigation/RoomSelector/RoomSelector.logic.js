@@ -4,7 +4,7 @@
 // REFACTORED: Uses useAsyncData and useAsyncMutation
 // Before: ~200 lines | After: ~150 lines
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { config } from "@Core/config/clientConfig.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import {
@@ -204,6 +204,10 @@ export function useRoomSelector(options = {}) {
   // Validate projectId is a string, not an object
   const validProjectId = typeof projectId === "string" ? projectId : null;
 
+  // Also add state for dropdown open/close and create modal
+  const [isOpen, setIsOpen] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   const {
     rooms,
     isLoading,
@@ -280,27 +284,59 @@ export function useRoomSelector(options = {}) {
     [createRoom, handleSwitchRoom]
   );
 
-  // ---------------------------------------------------------------------------
-  // RETURN
-  // ---------------------------------------------------------------------------
+  const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
+  const closeDropdown = useCallback(() => setIsOpen(false), []);
+  const openCreateModal = useCallback(() => setShowCreateModal(true), []);
+  const closeCreateModal = useCallback(() => setShowCreateModal(false), []);
 
+  const selectRoom = useCallback(
+    async (roomId, roomName) => {
+      closeDropdown();
+      await handleSwitchRoom(roomId);
+      onRoomChange?.(roomId, roomName);
+    },
+    [closeDropdown, handleSwitchRoom, onRoomChange]
+  );
+
+  // Computed values for main/breakout separation
+  const mainRoom = useMemo(
+    () => rooms.find((r) => r.room_type === "main"),
+    [rooms]
+  );
+  const breakoutRooms = useMemo(
+    () => rooms.filter((r) => r.room_type !== "main"),
+    [rooms]
+  );
+
+  // Return the full state object that RoomSelector.jsx expects:
   return {
+    // UI State
+    isOpen,
+    showCreateModal,
+    loading: isLoading,
+
     // Data
     rooms: roomsWithPresence,
     currentRoom,
+    mainRoom,
+    breakoutRooms,
     otherRooms,
-    isLoading,
     error,
 
-    // States
+    // Mutation states
     isCreating,
     isJoining,
 
     // Actions
-    switchRoom: handleSwitchRoom,
+    toggleOpen,
+    closeDropdown,
+    selectRoom,
     createRoom: handleCreateRoom,
-    leaveRoom,
     deleteRoom,
+    openCreateModal,
+    closeCreateModal,
+    switchRoom: handleSwitchRoom,
+    leaveRoom,
     refetch,
   };
 }

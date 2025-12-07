@@ -1,7 +1,9 @@
 // LayersSubtab.jsx
 // Layers visibility subtab for InstanceToolsTab
+//
+// FIXED: Now accepts activeInstance and manages layers state internally
 
-import React from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     Users,
     MapPin,
@@ -55,10 +57,51 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
 }
 
 // =============================================================================
+// DEFAULT LAYERS STATE
+// =============================================================================
+
+const DEFAULT_LAYERS = {
+    cursors: { enabled: true, count: 0, total: 0 },
+    annotations: { enabled: true, count: 0, total: 0 },
+    widgets: { enabled: true, count: 0, total: 0 },
+};
+
+// =============================================================================
 // LAYERS SUBTAB CONTENT
 // =============================================================================
 
-export function LayersSubtab({ layers, onToggleLayer }) {
+export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleLayer: externalToggle }) {
+    // Internal state if not provided externally
+    const [internalLayers, setInternalLayers] = useState(DEFAULT_LAYERS);
+
+    // Use external layers if provided, otherwise internal
+    const layers = externalLayers || internalLayers;
+
+    // Toggle handler
+    const handleToggleLayer = useCallback((layerName) => {
+        if (externalToggle) {
+            externalToggle(layerName);
+        } else {
+            setInternalLayers(prev => ({
+                ...prev,
+                [layerName]: {
+                    ...prev[layerName],
+                    enabled: !prev[layerName].enabled,
+                },
+            }));
+
+            // TODO: Actually toggle layer visibility on the instance
+            // if (activeInstance?.instanceId) {
+            //     workspaceManager.toggleLayer?.(activeInstance.instanceId, layerName);
+            // }
+        }
+    }, [externalToggle, activeInstance]);
+
+    // Safe access with defaults
+    const cursors = layers?.cursors || DEFAULT_LAYERS.cursors;
+    const annotations = layers?.annotations || DEFAULT_LAYERS.annotations;
+    const widgets = layers?.widgets || DEFAULT_LAYERS.widgets;
+
     return (
         <div className="layers-subtab">
             <div className="layers-subtab__info">
@@ -68,26 +111,26 @@ export function LayersSubtab({ layers, onToggleLayer }) {
                 <LayerToggle
                     icon={Users}
                     label="Remote Cursors"
-                    enabled={layers.cursors.enabled}
-                    count={layers.cursors.count}
-                    total={layers.cursors.total}
-                    onToggle={() => onToggleLayer('cursors')}
+                    enabled={cursors.enabled}
+                    count={cursors.count}
+                    total={cursors.total}
+                    onToggle={() => handleToggleLayer('cursors')}
                 />
                 <LayerToggle
                     icon={MapPin}
                     label="Annotations"
-                    enabled={layers.annotations.enabled}
-                    count={layers.annotations.count}
-                    total={layers.annotations.total}
-                    onToggle={() => onToggleLayer('annotations')}
+                    enabled={annotations.enabled}
+                    count={annotations.count}
+                    total={annotations.total}
+                    onToggle={() => handleToggleLayer('annotations')}
                 />
                 <LayerToggle
                     icon={Box}
                     label="Widgets"
-                    enabled={layers.widgets.enabled}
-                    count={layers.widgets.count}
-                    total={layers.widgets.total}
-                    onToggle={() => onToggleLayer('widgets')}
+                    enabled={widgets.enabled}
+                    count={widgets.count}
+                    total={widgets.total}
+                    onToggle={() => handleToggleLayer('widgets')}
                 />
             </div>
         </div>
