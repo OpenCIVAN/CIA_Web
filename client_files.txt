@@ -137,6 +137,7 @@ useVTKReduction.js
 ./src/core/instances/types/vtk/utils:
 VTKPointProcessing.js
 VTKViewHelpers.js
+cameraUtils.js
 vtkRaycaster.js
 
 ./src/core/instances/types/vtk/vr:
@@ -321,6 +322,7 @@ index.js
 
 ./src/ui/react/components/common:
 Button
+ChipGroup
 DockedBottomSection
 IconOverlay
 PillBar
@@ -336,6 +338,12 @@ WorkspaceOverlay
 Button.jsx
 Button.scss
 Button.stories.jsx
+index.js
+
+./src/ui/react/components/common/ChipGroup:
+ChipGroup.jsx
+ChipGroup.scss
+ChipGroup.stories.jsx
 index.js
 
 ./src/ui/react/components/common/DockedBottomSection:
@@ -645,12 +653,12 @@ index.jsx
 BookmarksFiltersTab.jsx
 BookmarksFiltersTab.scss
 components
+constants.js
 index.jsx
 
 ./src/ui/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components:
 BookmarkItem.jsx
 FilterItem.jsx
-ScopeChips.jsx
 ScopedSection.jsx
 
 ./src/ui/react/components/panels/LeftPanel/tabs/CursorsTab:
@@ -932,6 +940,8 @@ index.js
 ./src/ui/react/hooks:
 index.js
 useAnnotations.js
+useAsyncData.js
+useAsyncData.stories.jsx
 useAuth.js
 useBookmarks.js
 useCanvas.js
@@ -952,6 +962,7 @@ useStatusBar.js
 useViewportSize.js
 useVoice.js
 useVoiceCommands.js
+useWebSocketEvents.js
 useWorkspaces.js
 
 ./src/ui/react/store:
