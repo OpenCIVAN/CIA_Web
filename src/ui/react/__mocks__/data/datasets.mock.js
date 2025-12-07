@@ -1,259 +1,207 @@
-// src/ui/react/__mocks__/data/datasets.mock.js
-// Dataset and ViewConfiguration mock data for DatasetsTab Storybook stories
+// src/ui/react/__mocks__/data/annotations.mock.js
+// Annotation mock data for AnnotationsTab Storybook stories
 //
 // Provides:
-// - Datasets loaded in client memory (from DatasetManager)
-// - ViewConfigurations for each dataset
-// - Various states (active, inactive, shared)
+// - Spatial annotations with 3D positions
+// - Various annotation types (point, region, measurement)
+// - Visibility and sharing states
+// - Tag-based filtering support
 
 import { MOCK_USERS } from "./users.mock.js";
 
 /**
- * Datasets loaded in client memory
- * Matches the shape returned by useDatasets() hook
+ * Mock annotations matching the Annotation model shape
  */
-export const MOCK_DATASETS = [
+export const MOCK_ANNOTATIONS = [
   {
-    id: "ds-brain-scan",
-    name: "Brain_Scan_001.nii",
-    fileType: "nii",
-    serverId: "file-brain-scan", // Links to server file
-    pointCount: 1250000,
-    cellCount: 0,
-    bounds: [-100, 100, -100, 100, -100, 100],
-    dataArrays: ["intensity", "segmentation"],
-    annotations: 5,
-    hasPolydata: true,
-    isAnalyzed: true,
-    isLoading: false,
-    loadProgress: 100,
-    uploadedByName: "You",
-    status: "active",
-    sharedWith: null,
-  },
-  {
-    id: "ds-ct-overlay",
-    name: "CT_Overlay.dcm",
-    fileType: "dcm",
-    serverId: "file-ct-overlay",
-    pointCount: 890000,
-    cellCount: 0,
-    bounds: [-150, 150, -150, 150, -200, 200],
-    dataArrays: ["hounsfield"],
-    annotations: 2,
-    hasPolydata: true,
-    isAnalyzed: true,
-    isLoading: false,
-    loadProgress: 100,
-    uploadedByName: "Dr. Smith",
-    status: "active",
-    sharedWith: ["Dr. Jones"],
-  },
-  {
-    id: "ds-analysis-results",
-    name: "Analysis_Results.vtk",
-    fileType: "vtk",
-    serverId: "file-analysis-results",
-    pointCount: 45000,
-    cellCount: 12000,
-    bounds: [-50, 50, -50, 50, -50, 50],
-    dataArrays: ["scalars", "vectors"],
-    annotations: 0,
-    hasPolydata: true,
-    isAnalyzed: false,
-    isLoading: false,
-    loadProgress: 100,
-    uploadedByName: "Alex Chen",
-    status: "inactive", // Not currently visualized
-    sharedWith: null,
-  },
-  {
-    id: "ds-surface-model",
-    name: "Surface_Model.vtp",
-    fileType: "vtp",
-    serverId: "file-surface-model",
-    pointCount: 25000,
-    cellCount: 48000,
-    bounds: [-30, 30, -30, 30, -30, 30],
-    dataArrays: ["normals", "curvature"],
-    annotations: 1,
-    hasPolydata: true,
-    isAnalyzed: true,
-    isLoading: false,
-    loadProgress: 100,
-    uploadedByName: "You",
-    status: "active",
-    sharedWith: ["Team"],
-  },
-  {
-    id: "ds-loading-example",
-    name: "Large_Dataset.nii",
-    fileType: "nii",
-    serverId: null, // Still loading
-    pointCount: 0,
-    cellCount: 0,
-    bounds: null,
-    dataArrays: [],
-    annotations: 0,
-    hasPolydata: false,
-    isAnalyzed: false,
-    isLoading: true,
-    loadProgress: 45,
-    uploadedByName: "You",
-    status: "loading",
-    sharedWith: null,
-  },
-];
-
-/**
- * ViewConfigurations for datasets
- * Matches the shape from ViewConfigurationManager
- */
-export const MOCK_VIEWS = [
-  // Brain scan views
-  {
-    id: "view-brain-axial",
+    id: "ann-tumor-marker",
     datasetId: "ds-brain-scan",
-    name: "Axial View",
-    workspaceId: "ws-personal",
-    workspaceScope: "personal",
-    status: "active",
-    instanceColor: "#60a5fa",
-    camera: { position: [0, 0, 200], focalPoint: [0, 0, 0], viewUp: [0, 1, 0] },
-    filters: [{ type: "threshold", min: 50, max: 200 }],
-    widgetStates: {},
-    isShared: false,
-    sharedWith: [],
-    createdBy: MOCK_USERS.current,
-    createdAt: "2025-11-20T10:00:00Z",
-    updatedAt: "2025-11-28T15:30:00Z",
+    datasetName: "Brain_Scan_001.nii",
+    type: "point",
+    position: [12.5, -34.2, 56.8],
+    normal: [0, 0, 1],
+    text: "Suspicious mass - requires follow-up imaging",
+    tags: ["tumor", "priority", "follow-up"],
+    color: "#fb7185", // Pink for important
+    visibility: "shared",
+    sharedWith: ["user-smith", "user-jones"],
+    isVisible: true,
+    createdBy: MOCK_USERS.current.id,
+    createdByName: MOCK_USERS.current.name,
+    createdAt: "2025-11-20T10:30:00Z",
+    modifiedAt: "2025-11-25T14:00:00Z",
+    modifiedBy: MOCK_USERS.current.id,
   },
   {
-    id: "view-brain-sagittal",
+    id: "ann-ventricle-label",
     datasetId: "ds-brain-scan",
-    name: "Sagittal View",
-    workspaceId: "ws-personal",
-    workspaceScope: "personal",
-    status: "active",
-    instanceColor: "#fb7185",
-    camera: { position: [200, 0, 0], focalPoint: [0, 0, 0], viewUp: [0, 0, 1] },
-    filters: [],
-    widgetStates: {},
-    isShared: true,
-    sharedWith: [MOCK_USERS.drSmith],
-    createdBy: MOCK_USERS.current,
-    createdAt: "2025-11-20T10:15:00Z",
-    updatedAt: "2025-11-27T09:00:00Z",
+    datasetName: "Brain_Scan_001.nii",
+    type: "point",
+    position: [0, 15.3, 22.1],
+    normal: [0, 1, 0],
+    text: "Lateral ventricle - normal appearance",
+    tags: ["anatomy", "ventricle"],
+    color: "#60a5fa", // Blue for anatomy
+    visibility: "public",
+    sharedWith: [],
+    isVisible: true,
+    createdBy: MOCK_USERS.drSmith.id,
+    createdByName: MOCK_USERS.drSmith.name,
+    createdAt: "2025-11-18T09:00:00Z",
+    modifiedAt: "2025-11-18T09:00:00Z",
+    modifiedBy: MOCK_USERS.drSmith.id,
   },
   {
-    id: "view-brain-coronal",
+    id: "ann-measurement-1",
     datasetId: "ds-brain-scan",
-    name: "Coronal View",
-    workspaceId: "ws-project",
-    workspaceScope: "project",
-    status: "inactive",
-    instanceColor: "#fbbf24",
-    camera: { position: [0, 200, 0], focalPoint: [0, 0, 0], viewUp: [0, 0, 1] },
-    filters: [],
-    widgetStates: {},
-    isShared: true,
-    sharedWith: [],
-    createdBy: MOCK_USERS.current,
-    createdAt: "2025-11-21T14:00:00Z",
-    updatedAt: "2025-11-21T14:00:00Z",
-  },
-  // CT overlay view
-  {
-    id: "view-ct-overview",
-    datasetId: "ds-ct-overlay",
-    name: "CT Overview",
-    workspaceId: "ws-project",
-    workspaceScope: "project",
-    status: "active",
-    instanceColor: "#34d399",
-    camera: { position: [0, 0, 300], focalPoint: [0, 0, 0], viewUp: [0, 1, 0] },
-    filters: [{ type: "windowLevel", window: 400, level: 40 }],
-    widgetStates: {},
-    isShared: true,
-    sharedWith: [],
-    createdBy: MOCK_USERS.drSmith,
+    datasetName: "Brain_Scan_001.nii",
+    type: "measurement",
+    position: [10, 20, 30],
+    endPosition: [45, 20, 30], // For line measurements
+    normal: null,
+    text: "Lesion diameter: 35mm",
+    tags: ["measurement", "tumor"],
+    color: "#fbbf24", // Amber for measurements
+    visibility: "shared",
+    sharedWith: ["user-smith"],
+    isVisible: true,
+    createdBy: MOCK_USERS.current.id,
+    createdByName: MOCK_USERS.current.name,
     createdAt: "2025-11-22T11:00:00Z",
-    updatedAt: "2025-11-28T16:00:00Z",
+    modifiedAt: "2025-11-22T11:00:00Z",
+    modifiedBy: MOCK_USERS.current.id,
   },
-  // Surface model view
   {
-    id: "view-surface-default",
-    datasetId: "ds-surface-model",
-    name: "Default View",
-    workspaceId: "ws-personal",
-    workspaceScope: "personal",
-    status: "active",
-    instanceColor: "#c084fc",
-    camera: {
-      position: [50, 50, 50],
-      focalPoint: [0, 0, 0],
-      viewUp: [0, 1, 0],
-    },
-    filters: [],
-    widgetStates: {
-      clipPlane: { enabled: true, origin: [0, 0, 0], normal: [1, 0, 0] },
-    },
-    isShared: false,
+    id: "ann-ct-bone",
+    datasetId: "ds-ct-overlay",
+    datasetName: "CT_Overlay.dcm",
+    type: "region",
+    position: [25, -10, 45],
+    bounds: [-5, 5, -5, 5, -5, 5], // Region bounds
+    normal: null,
+    text: "Bone density anomaly in vertebra T7",
+    tags: ["bone", "spine", "anomaly"],
+    color: "#34d399", // Green
+    visibility: "public",
     sharedWith: [],
-    createdBy: MOCK_USERS.current,
-    createdAt: "2025-11-25T09:00:00Z",
-    updatedAt: "2025-11-28T14:00:00Z",
+    isVisible: true,
+    createdBy: MOCK_USERS.drSmith.id,
+    createdByName: MOCK_USERS.drSmith.name,
+    createdAt: "2025-11-24T16:00:00Z",
+    modifiedAt: "2025-11-24T16:00:00Z",
+    modifiedBy: MOCK_USERS.drSmith.id,
+  },
+  {
+    id: "ann-surface-feature",
+    datasetId: "ds-surface-model",
+    datasetName: "Surface_Model.vtp",
+    type: "point",
+    position: [8.2, 12.4, -5.6],
+    normal: [0.5, 0.7, 0.5],
+    text: "High curvature region - artifact or feature?",
+    tags: ["surface", "question", "review"],
+    color: "#c084fc", // Purple
+    visibility: "private",
+    sharedWith: [],
+    isVisible: true,
+    createdBy: MOCK_USERS.alexChen.id,
+    createdByName: MOCK_USERS.alexChen.name,
+    createdAt: "2025-11-26T10:00:00Z",
+    modifiedAt: "2025-11-26T10:00:00Z",
+    modifiedBy: MOCK_USERS.alexChen.id,
+  },
+  {
+    id: "ann-hidden-example",
+    datasetId: "ds-brain-scan",
+    datasetName: "Brain_Scan_001.nii",
+    type: "point",
+    position: [-20, 5, 15],
+    normal: [1, 0, 0],
+    text: "Reference point (hidden)",
+    tags: ["reference"],
+    color: "#94a3b8", // Gray
+    visibility: "private",
+    sharedWith: [],
+    isVisible: false, // Hidden annotation
+    createdBy: MOCK_USERS.current.id,
+    createdByName: MOCK_USERS.current.name,
+    createdAt: "2025-11-15T08:00:00Z",
+    modifiedAt: "2025-11-15T08:00:00Z",
+    modifiedBy: MOCK_USERS.current.id,
   },
 ];
 
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
 /**
- * Get views for a specific dataset
+ * Get annotations for a specific dataset
  */
-export function getViewsForDataset(datasetId) {
-  return MOCK_VIEWS.filter((v) => v.datasetId === datasetId);
+export function getAnnotationsForDataset(datasetId) {
+  return MOCK_ANNOTATIONS.filter((a) => a.datasetId === datasetId);
 }
 
 /**
- * Get active datasets (currently visualized)
+ * Get visible annotations only
  */
-export function getActiveDatasets() {
-  return MOCK_DATASETS.filter((d) => d.status === "active");
+export function getVisibleAnnotations() {
+  return MOCK_ANNOTATIONS.filter((a) => a.isVisible);
 }
 
 /**
- * Get inactive datasets
+ * Get annotations by type
  */
-export function getInactiveDatasets() {
-  return MOCK_DATASETS.filter((d) => d.status === "inactive");
+export function getAnnotationsByType(type) {
+  return MOCK_ANNOTATIONS.filter((a) => a.type === type);
 }
 
 /**
- * Get shared datasets
+ * Get all unique tags across annotations
  */
-export function getSharedDatasets() {
-  return MOCK_DATASETS.filter((d) => d.sharedWith && d.sharedWith.length > 0);
+export function getAllAnnotationTags() {
+  const tags = new Set();
+  MOCK_ANNOTATIONS.forEach((a) => a.tags?.forEach((t) => tags.add(t)));
+  return Array.from(tags).sort();
 }
 
 /**
- * Get loading datasets
+ * Filter annotations by tags (returns annotations matching ANY tag)
  */
-export function getLoadingDatasets() {
-  return MOCK_DATASETS.filter((d) => d.isLoading);
+export function filterAnnotationsByTags(tags) {
+  if (!tags || tags.length === 0) return MOCK_ANNOTATIONS;
+  return MOCK_ANNOTATIONS.filter((a) =>
+    tags.some((tag) => a.tags?.includes(tag))
+  );
 }
 
-/**
- * Datasets grouped by status for UI sections
- */
-export const MOCK_DATASETS_GROUPED = {
-  my: MOCK_DATASETS.filter((d) => d.uploadedByName === "You" && !d.sharedWith),
-  shared: getSharedDatasets(),
-  inactive: getInactiveDatasets(),
+// =============================================================================
+// ANNOTATION TYPE CONFIG (for UI rendering)
+// =============================================================================
+
+export const ANNOTATION_TYPE_CONFIG = {
+  point: {
+    name: "Point",
+    icon: "MapPin",
+    color: "#60a5fa",
+    description: "Single point marker",
+  },
+  region: {
+    name: "Region",
+    icon: "Box",
+    color: "#34d399",
+    description: "3D bounding region",
+  },
+  measurement: {
+    name: "Measurement",
+    icon: "Ruler",
+    color: "#fbbf24",
+    description: "Distance measurement",
+  },
+  angle: {
+    name: "Angle",
+    icon: "CornerUpRight",
+    color: "#c084fc",
+    description: "Angle measurement",
+  },
 };
-
-/**
- * Datasets with their views attached (for tree display)
- */
-export const MOCK_DATASETS_WITH_VIEWS = MOCK_DATASETS.map((dataset) => ({
-  ...dataset,
-  views: getViewsForDataset(dataset.id),
-}));

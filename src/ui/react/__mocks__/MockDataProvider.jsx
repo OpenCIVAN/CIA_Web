@@ -20,6 +20,12 @@ import {
     useMockDatasetActions,
     useMockViewConfigurations
 } from './hooks/useDatasets.mock.js';
+import { useMockComputeJobs } from './hooks/useComputeJobs.mock.js';
+import { useMockRooms } from './hooks/useRooms.mock.js';
+import { useMockAnnotations } from './hooks/useAnnotations.mock.js';
+import { useMockBookmarks } from './hooks/useBookmarks.mock.js';
+import { useMockFilters } from './hooks/useFilters.mock.js';
+import { useMockWorkspaces } from './hooks/useWorkspaces.mock.js';
 
 // =============================================================================
 // CONTEXT
@@ -52,22 +58,49 @@ export function useMockDataMode() {
  * 
  * @param {Object} props
  * @param {React.ReactNode} props.children - Child components
- * @param {Object} props.overrides - Optional hook overrides
+ * @param {string} props.workspaceId - Optional workspace ID for context
+ * @param {string} props.datasetId - Optional dataset ID for filtering
  */
-export function MockDataProvider({ children, overrides = {} }) {
-    // Create mock hook instances
+export function MockDataProvider({
+    children,
+    workspaceId = 'ws-personal',
+    datasetId = null
+}) {
+    // Build mock hooks object
     const mockHooks = useMemo(() => ({
+        // File hooks
         useProjectFiles: useMockProjectFiles,
+
+        // Dataset hooks
         useDatasets: useMockDatasets,
         useDatasetActions: useMockDatasetActions,
-        useViewConfigurations: useMockViewConfigurations,
-        ...overrides,
-    }), [overrides]);
+        useViewConfigurations: (dsId) => useMockViewConfigurations(dsId || datasetId),
+
+        // Compute hooks
+        useComputeJobs: useMockComputeJobs,
+
+        // Collaboration hooks
+        useRooms: useMockRooms,
+
+        // Annotation hooks
+        useAnnotations: (dsId) => useMockAnnotations(dsId || datasetId),
+
+        // Bookmark hooks
+        useBookmarks: (options) => useMockBookmarks({ ...options, datasetId }),
+
+        // Filter hooks
+        useFilters: useMockFilters,
+
+        // Workspace hooks
+        useWorkspaces: useMockWorkspaces,
+    }), [datasetId]);
 
     const contextValue = useMemo(() => ({
         isMockMode: true,
         mockHooks,
-    }), [mockHooks]);
+        workspaceId,
+        datasetId,
+    }), [mockHooks, workspaceId, datasetId]);
 
     return (
         <MockDataContext.Provider value={contextValue}>
@@ -77,59 +110,46 @@ export function MockDataProvider({ children, overrides = {} }) {
 }
 
 // =============================================================================
-// STORYBOOK DECORATOR
-// =============================================================================
-
-/**
- * Storybook decorator that enables mock data mode
- * 
- * Add to story default export:
- *   decorators: [MockDataDecorator]
- * 
- * Or in .storybook/preview.js for all stories:
- *   decorators: [MockDataDecorator]
- */
-export const MockDataDecorator = (Story, context) => {
-    return (
-        <MockDataProvider>
-            <Story />
-        </MockDataProvider>
-    );
-};
-
-// =============================================================================
 // HOOK WRAPPER UTILITIES
 // =============================================================================
 
 /**
- * Creates a hook that returns mock data when in MockDataProvider
+ * Create a hook that uses mock data when in MockDataProvider
  * 
  * Usage:
- *   const useProjectFiles = createMockableHook(
- *     realUseProjectFiles,
- *     'useProjectFiles'
+ *   const useDatasets = createMockableHook(
+ *     realUseDatasets,
+ *     'useDatasets'
  *   );
  * 
  * @param {Function} realHook - The real hook implementation
- * @param {string} hookName - Name for looking up mock version
- * @returns {Function} Wrapped hook
+ * @param {string} hookName - Name of the hook in mockHooks
+ * @returns {Function} - A hook that switches between real and mock
  */
 export function createMockableHook(realHook, hookName) {
     return function useMockableHook(...args) {
         const { isMockMode, mockHooks } = useMockDataMode();
 
-        // In mock mode, use mock hook if available
         if (isMockMode && mockHooks[hookName]) {
             return mockHooks[hookName](...args);
         }
 
-        // Otherwise use real hook
         return realHook(...args);
     };
 }
 
-// =============================================================================
-// EXPORTS
-// =============================================================================
-
-export { MockDataContext };
+/**
+ * HOC to wrap a component with MockDataProvider for stories
+ * 
+ * Usage in stories:
+ *   export const MyStory = {
+ *     decorators: [withMockData({ datasetId: 'ds-brain-scan' })],
+ *   };
+ */
+export function withMockData(options = {}) {
+    return (Story) => (
+        <MockDataProvider {...options}>
+            <Story />
+        </MockDataProvider>
+    );
+}

@@ -1,383 +1,289 @@
-// tabs/CursorsTab/CursorsTab.scss
-// Cursors tab styling - darker theme matching LayoutPanel
+// src/ui/react/components/panels/LeftPanel/tabs/CursorsTab/CursorsTab.scss
+// Cursors tab styling
 
 @use "theme" as *;
 
-// =============================================================================
-// CURSORS TAB CONTAINER
-// =============================================================================
-
 .cursors-tab {
   display: flex;
-  flex: 1;
   flex-direction: column;
   height: 100%;
-  width: 100%;
   overflow: hidden;
 
-  // Header
-  &__header {
+  // Quick toggle section
+  &__quick-toggle {
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+    display: flex;
+    justify-content: center;
+  }
+
+  // Users section
+  &__users {
+    flex-shrink: 0;
+    border-bottom: 1px solid $color-border-default;
+  }
+
+  &__users-header {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    border-bottom: 1px solid $color-border-default;
-    flex-shrink: 0;
-  }
-
-  &__title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  // Intro text
-  &__intro {
-    padding: $spacing-sm $spacing-md;
-    font-size: 11px;
-    color: $color-text-muted;
-    border-bottom: 1px solid $color-border-subtle;
-    background: rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-  }
-
-  // Content area
-  &__content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    gap: $spacing-xs;
     padding: $spacing-sm;
-    min-height: 0;
-  }
-
-  // Sections
-  &__section {
-    margin-bottom: $spacing-md;
-
-    &--links {
-      .cursor-link-card {
-        margin-bottom: $spacing-xs;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-    }
-  }
-
-  &__section-header {
     font-size: 10px;
-    color: $color-text-muted;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: $font-weight-semibold;
-    margin-bottom: $spacing-sm;
-    padding: 0 $spacing-xs;
+    background: rgba(0, 0, 0, 0.15);
   }
 
-  // Footer
-  &__footer {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    border-top: 1px solid $color-border-default;
-    background: rgba(0, 0, 0, 0.15);
-    flex-shrink: 0;
-    font-size: 10px;
+  &__users-count {
+    margin-left: auto;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-full;
+    font-size: 9px;
     color: $color-text-muted;
+  }
+
+  &__users-list {
+    padding: $spacing-xs;
+  }
+
+  // Settings section
+  &__settings {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-xs;
   }
 }
 
-// =============================================================================
-// CURSOR SETTING CARD (dark card style)
-// =============================================================================
+// Quick toggle button
+.quick-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
 
-.cursor-setting-card {
-  margin-bottom: $spacing-xs;
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-teal, 0.15);
+    border-color: rgba($color-accent-teal, 0.3);
+    color: $color-accent-teal;
+  }
+}
+
+// Cursor row (user item)
+.cursor-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
   padding: $spacing-sm;
-  background: rgba(0, 0, 0, 0.2);
+  margin-bottom: $spacing-xs;
+  background: rgba(0, 0, 0, 0.15);
   border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
+  border-radius: $radius-sm;
+  position: relative;
 
   &:last-child {
     margin-bottom: 0;
   }
-}
 
-// =============================================================================
-// CURSOR SETTING ROW
-// =============================================================================
-
-.cursor-setting-row {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-
-  &__icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: $radius-sm;
-    color: var(--icon-color, $color-text-muted);
-    flex-shrink: 0;
+  &--self {
+    background: rgba($color-accent-teal, 0.08);
+    border-color: rgba($color-accent-teal, 0.2);
   }
 
-  &__info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__title {
-    display: block;
-    font-size: 11px;
-    color: $color-text-primary;
-    font-weight: $font-weight-medium;
-  }
-
-  &__description {
-    display: block;
-    font-size: 9px;
-    color: $color-text-muted;
-    margin-top: 2px;
-  }
-
-  &__control {
-    flex-shrink: 0;
-  }
-
-  &--color {
-    margin-bottom: $spacing-xs;
-  }
-}
-
-// =============================================================================
-// TOGGLE SWITCH (dark styled)
-// =============================================================================
-
-.cursors-toggle {
-  width: 36px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid $color-border-default;
-  border-radius: 10px;
-  padding: 2px;
-  cursor: pointer;
-  transition: all $transition-fast;
-  position: relative;
-
-  &__thumb {
-    display: block;
-    width: 14px;
-    height: 14px;
-    background: $color-text-muted;
+  &__color {
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    transition: all $transition-fast;
-  }
-
-  &:hover {
-    border-color: $color-border-medium;
-  }
-
-  &--active {
-    background: rgba($color-accent-green, 0.3);
-    border-color: rgba($color-accent-green, 0.5);
-
-    .cursors-toggle__thumb {
-      transform: translateX(16px);
-      background: $color-accent-green;
-    }
-  }
-}
-
-// =============================================================================
-// COLOR BUTTON
-// =============================================================================
-
-.cursor-color-button {
-  width: 28px;
-  height: 28px;
-  background: var(--current-color);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: scale(1.05);
-  }
-}
-
-// =============================================================================
-// COLOR PICKER
-// =============================================================================
-
-.cursor-color-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-top: $spacing-sm;
-  margin-top: $spacing-sm;
-  border-top: 1px solid $color-border-subtle;
-
-  &__swatch {
-    width: 28px;
-    height: 28px;
-    background: var(--swatch-color);
-    border: 2px solid transparent;
-    border-radius: $radius-sm;
+    flex-shrink: 0;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all $transition-fast;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: transform $transition-fast;
 
     &:hover {
       transform: scale(1.1);
+    }
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 12px;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__you {
+    margin-left: 4px;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__visibility {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+
+  // Color picker dropdown
+  &__color-picker {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+  }
+
+  &__color-option {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      transform: scale(1.15);
       border-color: rgba(255, 255, 255, 0.3);
     }
-
-    &--selected {
-      border-color: rgba(255, 255, 255, 0.6);
-      box-shadow: 0 0 8px rgba(var(--swatch-color), 0.5);
-    }
   }
 }
 
-// =============================================================================
-// FOLLOW MODE BUTTONS (etched style)
-// =============================================================================
-
-.follow-mode-buttons {
-  display: flex;
-  gap: 4px;
-  margin-top: $spacing-sm;
-  padding-left: 44px; // Align with content
-}
-
-.follow-mode-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  font-size: 10px;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  // Default (inactive) state - dark etched
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.35) 0%,
-    rgba(0, 0, 0, 0.2) 100%
-  );
-  border: 1px solid rgba(0, 0, 0, 0.4);
-  color: $color-text-muted;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-
-  &:hover:not(&--active) {
-    color: $color-text-secondary;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.15) 100%
-    );
-  }
-
-  &--active {
-    background: rgba($color-accent-blue, 0.2);
-    border-color: rgba($color-accent-blue, 0.4);
-    color: $color-accent-blue;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.3);
-  }
-}
-
-// =============================================================================
-// LINK CARD
-// =============================================================================
-
-.cursor-link-card {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
-  background: rgba(0, 0, 0, 0.2);
+// Settings section
+.settings-section {
+  margin-bottom: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
   border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: all $transition-fast;
-  width: 100%;
-  text-align: left;
+  border-radius: $radius-sm;
+  overflow: hidden;
 
-  &:hover {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(var(--link-color), 0.4);
-  }
-
-  &__icon {
-    width: 36px;
-    height: 36px;
+  &__header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: $radius-sm;
-    color: var(--link-color);
-    flex-shrink: 0;
+    gap: $spacing-xs;
+    width: 100%;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    color: $color-text-secondary;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
+
+  &--expanded .settings-section__header {
+    border-bottom: 1px solid $color-border-subtle;
   }
 
   &__content {
-    flex: 1;
-    min-width: 0;
+    padding: $spacing-sm;
+  }
+}
+
+// Setting row
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid $color-border-subtle;
   }
 
-  &__title {
-    display: block;
+  span {
     font-size: 11px;
-    color: $color-text-primary;
-    font-weight: $font-weight-medium;
-  }
-
-  &__description {
-    display: block;
-    font-size: 9px;
-    color: $color-text-muted;
-    margin-top: 2px;
-  }
-
-  &__arrow {
-    color: $color-text-muted;
-    flex-shrink: 0;
-    transition: all $transition-fast;
-  }
-
-  &:hover &__arrow {
-    color: var(--link-color);
-    transform: translateX(2px);
+    color: $color-text-secondary;
   }
 }
 
-// =============================================================================
-// ICON HELPERS
-// =============================================================================
+.setting-select {
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-xs;
+  color: $color-text-primary;
+  font-size: 11px;
+  cursor: pointer;
 
-.icon-pink {
-  color: $color-accent-pink;
+  &:focus {
+    outline: none;
+    border-color: $color-accent-teal;
+  }
 }
-.icon-green {
-  color: $color-accent-green;
+
+.setting-toggle {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &--on {
+    background: rgba($color-accent-teal, 0.15);
+    border-color: rgba($color-accent-teal, 0.3);
+    color: $color-accent-teal;
+  }
 }
-.icon-amber {
-  color: $color-accent-amber;
+
+// Color swatches
+.color-swatches {
+  display: flex;
+  gap: 4px;
 }
-.icon-blue {
-  color: $color-accent-blue;
-}
-.icon-teal {
-  color: $color-accent-teal;
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &--active {
+    border-color: $color-text-primary;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  }
 }

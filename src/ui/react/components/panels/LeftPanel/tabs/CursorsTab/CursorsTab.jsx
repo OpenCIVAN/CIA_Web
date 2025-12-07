@@ -1,146 +1,108 @@
-// tabs/CursorsTab/CursorsTab.jsx
-// Cursors tab content for the unified left panel
+// src/ui/react/components/panels/LeftPanel/tabs/CursorsTab/CursorsTab.jsx
+// Cursors tab - cursor visibility and settings
 //
-// Features:
-// - My cursor settings (visibility, color)
-// - Default behavior settings for new workspaces
-// - Links to fine-grained controls in other panels
-// - Cursor color presets
+// FIXES:
+// - Header uses ALL CAPS styling like Files/Datasets
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-    Users,
     MousePointer2,
+    Eye,
+    EyeOff,
     Palette,
-    Radio,
-    X,
-    Link,
-    LayoutGrid,
-    Wand2,
+    Users,
+    User,
     Settings,
+    ChevronDown,
     ChevronRight,
-    Check,
-    Tag,
-    Crosshair,
 } from 'lucide-react';
-import {
-    getCursorNamesVisible,
-    setCursorNamesVisible,
-    onCursorNamesVisibilityChange,
-    getMyCursorVisible,
-    setMyCursorVisible,
-    getMyCursorColor,
-    setMyCursorColor,
-    getSelfCursorVisible,
-    setSelfCursorVisible,
-    onSelfCursorVisibilityChange,
-    getShowOthersCursors,
-    setShowOthersCursors,
-    onShowOthersCursorsChange,
-} from '@Collaboration/presence/cursors.js';
 import './CursorsTab.scss';
 
 // =============================================================================
-// CURSOR COLOR PRESETS
+// CONSTANTS
 // =============================================================================
 
-const CURSOR_COLORS = [
-    { name: 'Green', value: '#34d399' },
-    { name: 'Blue', value: '#60a5fa' },
-    { name: 'Purple', value: '#c084fc' },
-    { name: 'Pink', value: '#fb7185' },
-    { name: 'Amber', value: '#fbbf24' },
-    { name: 'Teal', value: '#7dd3fc' },
-    { name: 'Red', value: '#f87171' },
-    { name: 'White', value: '#ffffff' },
+const DEFAULT_CURSOR_COLORS = [
+    '#60a5fa', // blue
+    '#34d399', // green
+    '#fb7185', // pink
+    '#fbbf24', // amber
+    '#c084fc', // purple
+    '#2dd4bf', // teal
 ];
 
-const FOLLOW_MODES = [
-    { id: 'none', label: 'None', icon: X },
-    { id: 'follow', label: 'Follow', icon: Radio },
-    { id: 'broadcast', label: 'Broadcast', icon: Link },
+// Sample online users - replace with real presence data
+const SAMPLE_USERS = [
+    { id: 'user-1', name: 'You', color: '#2dd4bf', isVisible: true, isSelf: true },
+    { id: 'user-2', name: 'Dr. Sarah Smith', color: '#fb7185', isVisible: true, isSelf: false },
+    { id: 'user-3', name: 'Alex Chen', color: '#60a5fa', isVisible: false, isSelf: false },
 ];
 
 // =============================================================================
-// TOGGLE SWITCH (dark styled)
+// SUB-COMPONENTS
 // =============================================================================
 
-function ToggleSwitch({ value, onChange }) {
+function UserCursorRow({ user, onToggleVisibility, onChangeColor }) {
+    const [showColorPicker, setShowColorPicker] = useState(false);
+
     return (
-        <button
-            className={`cursors-toggle ${value ? 'cursors-toggle--active' : ''}`}
-            onClick={() => onChange(!value)}
-        >
-            <span className="cursors-toggle__thumb" />
-        </button>
-    );
-}
+        <div className={`cursor-row ${user.isSelf ? 'cursor-row--self' : ''}`}>
+            <div
+                className="cursor-row__color"
+                style={{ backgroundColor: user.color }}
+                onClick={() => !user.isSelf && setShowColorPicker(!showColorPicker)}
+                title={user.isSelf ? 'Your cursor color' : 'Click to change'}
+            />
+            <span className="cursor-row__name">
+                {user.name}
+                {user.isSelf && <span className="cursor-row__you">(you)</span>}
+            </span>
+            <button
+                className="cursor-row__visibility"
+                onClick={() => onToggleVisibility(user.id)}
+                title={user.isVisible ? 'Hide cursor' : 'Show cursor'}
+            >
+                {user.isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+            </button>
 
-// =============================================================================
-// SETTING ROW
-// =============================================================================
-
-function SettingRow({ icon: Icon, iconColor, title, description, children }) {
-    return (
-        <div className="cursor-setting-row">
-            <div className="cursor-setting-row__icon" style={{ '--icon-color': iconColor }}>
-                <Icon size={16} />
-            </div>
-            <div className="cursor-setting-row__info">
-                <span className="cursor-setting-row__title">{title}</span>
-                <span className="cursor-setting-row__description">{description}</span>
-            </div>
-            <div className="cursor-setting-row__control">
-                {children}
-            </div>
+            {/* Color picker dropdown */}
+            {showColorPicker && !user.isSelf && (
+                <div className="cursor-row__color-picker">
+                    {DEFAULT_CURSOR_COLORS.map(color => (
+                        <button
+                            key={color}
+                            className="cursor-row__color-option"
+                            style={{ backgroundColor: color }}
+                            onClick={() => {
+                                onChangeColor(user.id, color);
+                                setShowColorPicker(false);
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-// =============================================================================
-// COLOR PICKER
-// =============================================================================
+function SettingsSection({ title, children, defaultExpanded = true }) {
+    const [expanded, setExpanded] = useState(defaultExpanded);
 
-function ColorPicker({ selectedColor, onSelectColor }) {
     return (
-        <div className="cursor-color-picker">
-            {CURSOR_COLORS.map(color => (
-                <button
-                    key={color.value}
-                    className={`cursor-color-picker__swatch ${selectedColor === color.value ? 'cursor-color-picker__swatch--selected' : ''}`}
-                    style={{ '--swatch-color': color.value }}
-                    onClick={() => onSelectColor(color.value)}
-                    title={color.name}
-                >
-                    {selectedColor === color.value && (
-                        <Check size={12} style={{ color: color.value === '#ffffff' ? '#000' : '#fff' }} />
-                    )}
-                </button>
-            ))}
+        <div className={`settings-section ${expanded ? 'settings-section--expanded' : ''}`}>
+            <button
+                className="settings-section__header"
+                onClick={() => setExpanded(!expanded)}
+            >
+                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <span>{title}</span>
+            </button>
+            {expanded && (
+                <div className="settings-section__content">
+                    {children}
+                </div>
+            )}
         </div>
-    );
-}
-
-// =============================================================================
-// LINK CARD
-// =============================================================================
-
-function LinkCard({ icon: Icon, title, description, color, onClick }) {
-    return (
-        <button
-            className="cursor-link-card"
-            style={{ '--link-color': color }}
-            onClick={onClick}
-        >
-            <div className="cursor-link-card__icon">
-                <Icon size={18} />
-            </div>
-            <div className="cursor-link-card__content">
-                <span className="cursor-link-card__title">{title}</span>
-                <span className="cursor-link-card__description">{description}</span>
-            </div>
-            <ChevronRight size={16} className="cursor-link-card__arrow" />
-        </button>
     );
 }
 
@@ -148,217 +110,127 @@ function LinkCard({ icon: Icon, title, description, color, onClick }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
-    const [showColorPicker, setShowColorPicker] = useState(false);
-    const [cursorVisible, setCursorVisible] = useState(getMyCursorVisible);
-    const [cursorColor, setCursorColor] = useState(() => getMyCursorColor() || '#34d399');
-    const [showCursorNames, setShowCursorNames] = useState(getCursorNamesVisible);
-    const [showSelfCursor, setShowSelfCursor] = useState(getSelfCursorVisible);
-    const [showOthersCursors, setShowOthersCursorsState] = useState(getShowOthersCursors);
-    const [defaultFollowMode, setDefaultFollowMode] = useState('none');
+export function CursorsPanelContent({ workspaceId }) {
+    // State
+    const [users, setUsers] = useState(SAMPLE_USERS);
+    const [showAllCursors, setShowAllCursors] = useState(true);
+    const [cursorSize, setCursorSize] = useState('medium');
+    const [showLabels, setShowLabels] = useState(true);
+    const [showTrails, setShowTrails] = useState(false);
 
-    useEffect(() => {
-        const cleanupNames = onCursorNamesVisibilityChange((visible) => {
-            setShowCursorNames(visible);
-        });
-        const cleanupSelf = onSelfCursorVisibilityChange((visible) => {
-            setShowSelfCursor(visible);
-        });
-        const cleanupOthers = onShowOthersCursorsChange((visible) => {
-            setShowOthersCursorsState(visible);
-        });
-        return () => {
-            cleanupNames();
-            cleanupSelf();
-            cleanupOthers();
-        };
+    // Handlers
+    const toggleUserVisibility = useCallback((userId) => {
+        setUsers(prev => prev.map(u =>
+            u.id === userId ? { ...u, isVisible: !u.isVisible } : u
+        ));
     }, []);
 
-    const handleCursorVisibleToggle = useCallback((visible) => {
-        setMyCursorVisible(visible);
-        setCursorVisible(visible);
+    const changeUserColor = useCallback((userId, color) => {
+        setUsers(prev => prev.map(u =>
+            u.id === userId ? { ...u, color } : u
+        ));
     }, []);
 
-    const handleColorChange = useCallback((color) => {
-        setMyCursorColor(color);
-        setCursorColor(color);
-    }, []);
+    const toggleAllCursors = useCallback(() => {
+        const newValue = !showAllCursors;
+        setShowAllCursors(newValue);
+        setUsers(prev => prev.map(u => ({ ...u, isVisible: newValue })));
+    }, [showAllCursors]);
 
-    const handleCursorNamesToggle = useCallback((visible) => {
-        setCursorNamesVisible(visible);
-        setShowCursorNames(visible);
-    }, []);
-
-    const handleSelfCursorToggle = useCallback((visible) => {
-        setSelfCursorVisible(visible);
-        setShowSelfCursor(visible);
-    }, []);
-
-    const handleShowOthersToggle = useCallback((visible) => {
-        setShowOthersCursors(visible);
-        setShowOthersCursorsState(visible);
-    }, []);
+    // Count visible
+    const visibleCount = users.filter(u => u.isVisible).length;
 
     return (
         <div className="cursors-tab">
-            {/* Header */}
-            <div className="cursors-tab__header">
-                <Users size={14} className="icon-pink" />
-                <span className="cursors-tab__title">Cursors</span>
+            {/* Header - ALL CAPS like other tabs */}
+            <div className="panel-header panel-header--teal">
+                <MousePointer2 size={16} className="panel-header__icon" />
+                <span className="panel-header__title">Cursors</span>
+                <span className="panel-header__count">{visibleCount}/{users.length}</span>
             </div>
 
-            {/* Intro */}
-            <div className="cursors-tab__intro">
-                Room-wide defaults for cursor visibility and behavior
+            {/* Quick toggle */}
+            <div className="cursors-tab__quick-toggle">
+                <button
+                    className={`quick-toggle-btn ${showAllCursors ? 'quick-toggle-btn--active' : ''}`}
+                    onClick={toggleAllCursors}
+                >
+                    {showAllCursors ? <Eye size={14} /> : <EyeOff size={14} />}
+                    {showAllCursors ? 'Hide All' : 'Show All'}
+                </button>
             </div>
 
-            {/* Content */}
-            <div className="cursors-tab__content">
-                {/* My Cursor Section */}
-                <div className="cursors-tab__section">
-                    <div className="cursors-tab__section-header">My Cursor</div>
-
-                    <div className="cursor-setting-card">
-                        <SettingRow
-                            icon={MousePointer2}
-                            iconColor="var(--color-accent-green)"
-                            title="Visible to others"
-                            description="Others can see your cursor in shared views"
-                        >
-                            <ToggleSwitch
-                                value={cursorVisible}
-                                onChange={handleCursorVisibleToggle}
-                            />
-                        </SettingRow>
-                    </div>
-
-                    <div className="cursor-setting-card">
-                        <div className="cursor-setting-row cursor-setting-row--color">
-                            <div className="cursor-setting-row__icon" style={{ '--icon-color': cursorColor }}>
-                                <Palette size={16} />
-                            </div>
-                            <div className="cursor-setting-row__info">
-                                <span className="cursor-setting-row__title">Cursor Color</span>
-                                <span className="cursor-setting-row__description">Your cursor color in shared views</span>
-                            </div>
-                            <button
-                                className="cursor-color-button"
-                                style={{ '--current-color': cursorColor }}
-                                onClick={() => setShowColorPicker(!showColorPicker)}
-                            />
-                        </div>
-                        {showColorPicker && (
-                            <ColorPicker
-                                selectedColor={cursorColor}
-                                onSelectColor={(color) => {
-                                    handleColorChange(color);
-                                    setShowColorPicker(false);
-                                }}
-                            />
-                        )}
-                    </div>
+            {/* User list */}
+            <div className="cursors-tab__users">
+                <div className="cursors-tab__users-header">
+                    <Users size={12} />
+                    <span>Online Users</span>
+                    <span className="cursors-tab__users-count">{users.length}</span>
                 </div>
+                <div className="cursors-tab__users-list">
+                    {users.map(user => (
+                        <UserCursorRow
+                            key={user.id}
+                            user={user}
+                            onToggleVisibility={toggleUserVisibility}
+                            onChangeColor={changeUserColor}
+                        />
+                    ))}
+                </div>
+            </div>
 
-                {/* Display Options Section */}
-                <div className="cursors-tab__section">
-                    <div className="cursors-tab__section-header">Display Options</div>
-
-                    <div className="cursor-setting-card">
-                        <SettingRow
-                            icon={Users}
-                            iconColor="var(--color-accent-pink)"
-                            title="Show others' cursors"
-                            description="See other users' cursors in your views"
+            {/* Settings */}
+            <div className="cursors-tab__settings">
+                <SettingsSection title="Display Settings">
+                    <div className="setting-row">
+                        <span>Cursor Size</span>
+                        <select
+                            value={cursorSize}
+                            onChange={(e) => setCursorSize(e.target.value)}
+                            className="setting-select"
                         >
-                            <ToggleSwitch
-                                value={showOthersCursors}
-                                onChange={handleShowOthersToggle}
-                            />
-                        </SettingRow>
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
                     </div>
-
-                    <div className="cursor-setting-card">
-                        <SettingRow
-                            icon={Tag}
-                            iconColor="var(--color-accent-amber)"
-                            title="Show cursor names"
-                            description="Display name labels on other users' cursors"
+                    <div className="setting-row">
+                        <span>Show Labels</span>
+                        <button
+                            className={`setting-toggle ${showLabels ? 'setting-toggle--on' : ''}`}
+                            onClick={() => setShowLabels(!showLabels)}
                         >
-                            <ToggleSwitch
-                                value={showCursorNames}
-                                onChange={handleCursorNamesToggle}
-                            />
-                        </SettingRow>
+                            {showLabels ? 'On' : 'Off'}
+                        </button>
                     </div>
-
-                    <div className="cursor-setting-card">
-                        <SettingRow
-                            icon={Crosshair}
-                            iconColor="var(--color-accent-teal)"
-                            title="Show my projected cursor"
-                            description="See your own cursor rendered in your color"
+                    <div className="setting-row">
+                        <span>Cursor Trails</span>
+                        <button
+                            className={`setting-toggle ${showTrails ? 'setting-toggle--on' : ''}`}
+                            onClick={() => setShowTrails(!showTrails)}
                         >
-                            <ToggleSwitch
-                                value={showSelfCursor}
-                                onChange={handleSelfCursorToggle}
-                            />
-                        </SettingRow>
+                            {showTrails ? 'On' : 'Off'}
+                        </button>
                     </div>
+                </SettingsSection>
 
-                    <div className="cursor-setting-card">
-                        <div className="cursor-setting-row">
-                            <div className="cursor-setting-row__icon" style={{ '--icon-color': 'var(--color-accent-blue)' }}>
-                                <Radio size={16} />
-                            </div>
-                            <div className="cursor-setting-row__info">
-                                <span className="cursor-setting-row__title">Default Follow Mode</span>
-                                <span className="cursor-setting-row__description">When joining shared views</span>
-                            </div>
-                        </div>
-                        <div className="follow-mode-buttons">
-                            {FOLLOW_MODES.map(mode => {
-                                const ModeIcon = mode.icon;
-                                return (
+                <SettingsSection title="My Cursor" defaultExpanded={false}>
+                    <div className="my-cursor-settings">
+                        <div className="setting-row">
+                            <span>Color</span>
+                            <div className="color-swatches">
+                                {DEFAULT_CURSOR_COLORS.map(color => (
                                     <button
-                                        key={mode.id}
-                                        className={`follow-mode-btn ${defaultFollowMode === mode.id ? 'follow-mode-btn--active' : ''}`}
-                                        onClick={() => setDefaultFollowMode(mode.id)}
-                                    >
-                                        <ModeIcon size={10} />
-                                        {mode.label}
-                                    </button>
-                                );
-                            })}
+                                        key={color}
+                                        className={`color-swatch ${users[0]?.color === color ? 'color-swatch--active' : ''}`}
+                                        style={{ backgroundColor: color }}
+                                        onClick={() => changeUserColor('user-1', color)}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Fine-Grained Controls Section */}
-                <div className="cursors-tab__section cursors-tab__section--links">
-                    <div className="cursors-tab__section-header">Fine-Grained Controls</div>
-
-                    <LinkCard
-                        icon={LayoutGrid}
-                        title="Workspace Members"
-                        description="Per-user cursor visibility in current workspace"
-                        color="var(--color-accent-amber)"
-                        onClick={() => onNavigateToPanel?.('layout')}
-                    />
-
-                    <LinkCard
-                        icon={Wand2}
-                        title="Instance Layers"
-                        description="Per-instance cursor controls and follow mode"
-                        color="var(--color-accent-purple)"
-                        onClick={() => onNavigateToPanel?.('tools')}
-                    />
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div className="cursors-tab__footer">
-                <Settings size={12} />
-                <span>Changes apply to all new views automatically</span>
+                </SettingsSection>
             </div>
         </div>
     );

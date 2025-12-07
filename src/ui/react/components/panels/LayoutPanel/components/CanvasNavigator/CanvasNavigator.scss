@@ -1,6 +1,8 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
 // Canvas Navigator component - Moonlight theme
 // Uses design tokens - no hard-coded values
+//
+// FIX: Changed __main to flex-direction: column so minimap stacks above controls
 
 @use "sass:color";
 @use "theme" as *;
@@ -38,6 +40,8 @@
     font-size: 10px;
     font-weight: 600;
     color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   &__header-actions {
@@ -183,11 +187,12 @@
   }
 
   // ==========================================================================
-  // MAIN CONTENT AREA
+  // MAIN CONTENT AREA - FIX: Stack vertically (column)
   // ==========================================================================
 
   &__main {
     display: flex;
+    flex-direction: column; // FIX: Was missing, causing horizontal layout
   }
 
   // ==========================================================================
@@ -196,7 +201,8 @@
 
   &__minimap {
     flex: 1;
-    height: 120px;
+    min-height: 100px;
+    max-height: 160px;
     position: relative;
     overflow: auto;
     padding: 8px;
@@ -214,193 +220,86 @@
     justify-content: center;
     border-radius: 2px;
     cursor: pointer;
-    transition: all 0.1s ease;
-    overflow: hidden;
+    transition: all 0.15s ease;
 
-    &--filled {
-      background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.6);
-      border: 1px solid var(--cell-color, $color-accent-blue);
+    &:hover:not(&--drop-target) {
+      transform: scale(1.05);
+      z-index: 1;
     }
 
     &--empty {
-      background: $color-bg-secondary;
-      border: 1px solid $color-border-subtle;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid $color-border-default;
+    }
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.08);
+    &--occupied {
+      background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.3);
+      border: 1px solid rgba(var(--cell-color-rgb, 96, 165, 250), 0.6);
+    }
+
+    &--in-viewport {
+      box-shadow: 0 0 0 1px $color-accent-green;
+    }
+
+    // Drop target states
+    &--drop-target {
+      &.canvas-navigator__cell--valid {
+        background: rgba($color-accent-green, 0.3);
+        border: 2px dashed $color-accent-green;
+        transform: scale(1.1);
+      }
+
+      &.canvas-navigator__cell--invalid {
+        background: rgba($color-accent-pink, 0.2);
+        border: 2px dashed $color-accent-pink;
       }
     }
-
-    // Drop target - valid drop zone
-    &--drop-target {
-      outline: 2px dashed $color-accent-green;
-      outline-offset: -2px;
-      background: rgba($color-accent-green, 0.15) !important;
-      animation: drop-pulse 0.8s ease-in-out infinite;
-    }
-
-    // Drop target - invalid (occupied cell in Add mode)
-    &--drop-invalid {
-      outline-color: $color-accent-red;
-      background: rgba($color-accent-red, 0.15) !important;
-      animation: none;
-    }
   }
 
-  &__cell-label {
-    font-size: 7px;
-    color: inherit;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 2px;
-  }
-
-  // Viewport indicator
-  &__viewport-indicator {
+  &__viewport-overlay {
     position: absolute;
-    border: 2px solid $color-accent-amber;
-    border-radius: 3px;
+    border: 2px solid $color-accent-green;
+    border-radius: 2px;
     pointer-events: none;
-    box-shadow: 0 0 6px rgba($color-accent-amber, 0.5);
+    box-shadow: 0 0 8px rgba($color-accent-green, 0.4);
   }
 
   // ==========================================================================
-  // CONTROLS PANEL
+  // CONTROLS (D-pad, zoom, position)
   // ==========================================================================
 
   &__controls {
-    width: 90px;
-    padding: 8px;
-    border-left: 1px solid $color-border-subtle;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    background: rgba(0, 0, 0, 0.2);
+    justify-content: space-between;
+    padding: 8px;
+    gap: 12px;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.15);
   }
 
-  // D-pad navigation
   &__dpad {
     display: grid;
-    grid-template-columns: repeat(3, 20px);
-    gap: 1px;
-  }
-
-  &__nav-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3px;
-    background: transparent;
-    border: 1px solid $color-border-default;
-    border-radius: 3px;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-      color: $color-text-secondary;
-    }
-
-    &--center {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    &--home {
-      background: rgba($color-accent-amber, 0.15);
-      border-color: $color-accent-amber;
-      color: $color-accent-amber;
-    }
-  }
-
-  // Size controls
-  &__size-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 100%;
-  }
-
-  &__size-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__size-label {
-    font-size: 10px;
-    color: $color-text-muted;
-    width: 28px;
-  }
-
-  &__size-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    background: transparent;
-    border: 1px solid $color-border-default;
-    border-radius: 3px;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-      color: $color-text-secondary;
-    }
-  }
-
-  &__size-input {
-    flex: 1;
-    min-width: 0;
-    padding: 4px 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid $color-border-default;
-    border-radius: 3px;
-    color: $color-text-primary;
-    font-size: 11px;
-    text-align: center;
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent-blue;
-    }
-
-    // Hide spinners
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    -moz-appearance: textfield;
-  }
-
-  // Zoom controls
-  &__zoom {
-    display: flex;
-    align-items: center;
+    grid-template-columns: repeat(3, 24px);
+    grid-template-rows: repeat(3, 24px);
     gap: 2px;
   }
 
-  &__zoom-btn {
+  &__nav-btn {
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid $color-border-default;
-    border-radius: 3px;
+    border-radius: 4px;
     color: $color-text-muted;
     cursor: pointer;
     transition: all 0.15s ease;
 
     &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.08);
       color: $color-text-secondary;
     }
 
@@ -408,43 +307,49 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
+
+    &--center {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: rgba($color-accent-amber, 0.3);
+      color: $color-accent-amber;
+
+      &:hover {
+        background: rgba($color-accent-amber, 0.25);
+      }
+    }
   }
 
-  &__zoom-label {
-    font-size: 8px;
+  &__position {
+    font-size: 9px;
     color: $color-text-muted;
-    min-width: 24px;
     text-align: center;
   }
 
-  // Position display
-  &__position {
-    font-size: 9px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 2px 6px;
-    border-radius: 3px;
+  &__zoom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__zoom-value {
+    font-size: 10px;
+    color: $color-text-secondary;
+    min-width: 32px;
+    text-align: center;
   }
 
   // ==========================================================================
-  // FOOTER (Size controls)
+  // BOTTOM BAR (Canvas size controls)
   // ==========================================================================
 
-  &__footer {
+  &__bottom {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.3);
+    gap: 16px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.2);
     border-top: 1px solid $color-border-subtle;
-  }
-
-  &__footer-label {
-    font-size: 9px;
-    color: $color-text-muted;
-    text-transform: uppercase;
   }
 
   &__size-group {
@@ -453,83 +358,50 @@
     gap: 4px;
   }
 
-  &__size-x {
-    font-size: 12px;
+  &__size-label {
+    font-size: 9px;
     color: $color-text-muted;
+    min-width: 24px;
   }
-}
 
-// =============================================================================
-// DROP ANIMATION
-// =============================================================================
+  &__size-input {
+    width: 36px;
+    height: 22px;
+    padding: 0 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-secondary;
+    font-size: 11px;
+    text-align: center;
 
-@keyframes drop-pulse {
-  0%,
-  100% {
-    outline-offset: -2px;
-    box-shadow: inset 0 0 0 0 rgba($color-accent-green, 0);
-  }
-  50% {
-    outline-offset: -1px;
-    box-shadow: inset 0 0 8px 0 rgba($color-accent-green, 0.3);
-  }
-}
-
-// =============================================================================
-// GLOBAL DRAG STATE
-// =============================================================================
-
-// Apply to body during drag operations from ViewsSubtab
-body.dragging-view-item {
-  cursor: grabbing !important;
-  user-select: none;
-
-  // Highlight all droppable cells in minimap
-  .canvas-navigator__cell--empty {
-    outline: 1px dashed rgba($color-accent-green, 0.5);
-    outline-offset: -1px;
-
-    &:hover {
-      background: rgba($color-accent-green, 0.2);
+    &:focus {
+      outline: none;
+      border-color: $color-accent-amber;
     }
   }
 
-  // Dim filled cells that can't accept drops (in Add mode)
-  .canvas-navigator__cell--filled {
-    opacity: 0.4;
+  &__size-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
 
-    &:hover {
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
       cursor: not-allowed;
-    }
-  }
-}
-
-// In Replace mode, filled cells are also droppable
-body.dragging-view-item.drop-mode-replace {
-  .canvas-navigator__cell--filled {
-    opacity: 0.7;
-
-    &:hover {
-      cursor: pointer;
-      outline: 1px dashed rgba($color-accent-amber, 0.5);
-    }
-  }
-}
-
-// =============================================================================
-// VR/TOUCH OPTIMIZATIONS FOR DROP TARGETS
-// =============================================================================
-
-@media (pointer: coarse) {
-  .canvas-navigator__cell {
-    // Larger hit area for touch/VR
-    min-width: 32px;
-    min-height: 24px;
-
-    &--drop-target {
-      // More prominent visual feedback for touch
-      outline-width: 3px;
-      outline-offset: -3px;
     }
   }
 }

@@ -1,221 +1,150 @@
-// tabs/AnnotationsTab/AnnotationsTab.jsx
-// Global Annotations tab content for the unified left panel
+// src/ui/react/components/panels/LeftPanel/tabs/AnnotationsTab/AnnotationsTab.jsx
+// Annotations tab - spatial annotations for datasets and workspaces
 //
-// Features:
-// - Search and filter all annotations across the project
-// - Scope filtering (Project | Workspace | Instance)
-// - Filtering by type (Point, Ruler, Region, Note)
-// - Visibility toggle and navigation to annotations
+// FIXES:
+// - Header now uses ALL CAPS styling like Files/Datasets
+// - Scope chips are centered
+// - Type filters are centered
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-    MessageSquare,
+    MapPin,
     Search,
     X,
     Filter,
-    Eye,
-    EyeOff,
-    MapPin,
-    Ruler,
-    Square,
-    ChevronDown,
-    ChevronRight,
-    User,
-    Clock,
-    Share2,
-    Target,
-    Edit3,
-    Trash2,
     Database,
     LayoutGrid,
-    Globe,
-    Monitor,
+    Circle,
+    Box,
+    Ruler,
+    CornerUpRight,
+    Eye,
+    EyeOff,
+    MoreHorizontal,
+    ChevronRight,
+    ChevronDown,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './AnnotationsTab.scss';
 
 // =============================================================================
-// SCOPE CHIPS
+// CONSTANTS
 // =============================================================================
 
-// Define chips config (can be outside component or memoized)
-const SCOPE_CHIPS = [
-    { id: 'project', label: 'Project', icon: Globe, color: 'amber' },
-    { id: 'workspace', label: 'Workspace', icon: LayoutGrid, color: 'teal' },
-    { id: 'instance', label: 'Instance', icon: Monitor, color: 'blue' },
+const ANNOTATION_SCOPES = [
+    { id: 'all', label: 'All', color: 'blue' },
+    { id: 'dataset', label: 'Dataset', color: 'teal' },
+    { id: 'workspace', label: 'Workspace', color: 'amber' },
 ];
-
-// =============================================================================
-// ANNOTATION TYPES
-// =============================================================================
 
 const ANNOTATION_TYPES = {
     point: { icon: MapPin, label: 'Point', color: 'blue' },
-    ruler: { icon: Ruler, label: 'Ruler', color: 'green' },
-    region: { icon: Square, label: 'Region', color: 'purple' },
-    note: { icon: MessageSquare, label: 'Note', color: 'amber' },
+    region: { icon: Box, label: 'Region', color: 'green' },
+    measurement: { icon: Ruler, label: 'Measure', color: 'amber' },
+    angle: { icon: CornerUpRight, label: 'Angle', color: 'purple' },
 };
 
-// =============================================================================
-// SAMPLE DATA (will be replaced with real data)
-// =============================================================================
-
+// Sample data - will be replaced with real data from useAnnotations
 const SAMPLE_ANNOTATIONS = {
     datasets: [
         {
-            id: 'ds1',
+            id: 'ds-1',
             name: 'Brain_Scan_001.nii',
-            color: 'blue',
             annotations: [
-                { id: 'a1', type: 'ruler', text: 'Tumor diameter', value: '24.5mm', createdBy: 'You', timestamp: '2h ago', visible: true },
-                { id: 'a2', type: 'point', text: 'Region of interest', createdBy: 'Dr. Smith', timestamp: '1d ago', visible: true, shared: true },
-                { id: 'a3', type: 'region', text: 'Affected area outline', createdBy: 'You', timestamp: '1d ago', visible: false },
-            ]
+                { id: 'ann-1', type: 'point', text: 'Tumor marker', visible: true },
+                { id: 'ann-2', type: 'measurement', text: 'Lesion diameter: 35mm', visible: true },
+                { id: 'ann-3', type: 'region', text: 'Region of interest', visible: false },
+            ],
         },
         {
-            id: 'ds2',
+            id: 'ds-2',
             name: 'CT_Overlay.dcm',
-            color: 'teal',
             annotations: [
-                { id: 'a4', type: 'point', text: 'Reference point A', createdBy: 'You', timestamp: '1w ago', visible: true },
-                { id: 'a5', type: 'ruler', text: 'Distance to landmark', value: '12.3mm', createdBy: 'You', timestamp: '1w ago', visible: true },
-            ]
+                { id: 'ann-4', type: 'point', text: 'Vertebra T7', visible: true },
+            ],
         },
     ],
     workspace: [
-        { id: 'wa1', type: 'note', text: 'Compare these two views', linkedInstances: ['Main Analysis', 'CT Overlay'], createdBy: 'You', timestamp: '1h ago' },
-        { id: 'wa2', type: 'region', text: 'Focus area for presentation', linkedInstances: ['Main Analysis'], createdBy: 'Dr. Smith', timestamp: '2d ago', shared: true },
-    ]
+        { id: 'ws-ann-1', type: 'point', text: 'Reference point A', visible: true },
+        { id: 'ws-ann-2', type: 'angle', text: 'Rotation angle', visible: true },
+    ],
+};
+
+const DEFAULT_SECTION_STATES = {
+    dataset: { expanded: true, flexGrow: 2 },
+    workspace: { expanded: true, flexGrow: 1 },
 };
 
 // =============================================================================
-// TYPE FILTER TOGGLE
+// SUB-COMPONENTS
 // =============================================================================
+
+function ScopeChip({ scope, active, onClick }) {
+    return (
+        <button
+            className={`scope-chip ${active ? 'scope-chip--active' : ''}`}
+            data-color={scope.color}
+            onClick={onClick}
+        >
+            {scope.label}
+        </button>
+    );
+}
 
 function TypeFilterToggle({ type, config, active, onClick }) {
     const Icon = config.icon;
     return (
         <button
-            className={`type-filter-btn ${active ? 'type-filter-btn--active' : ''}`}
+            className={`type-filter-toggle ${active ? 'type-filter-toggle--active' : ''}`}
             data-color={config.color}
             onClick={onClick}
+            title={config.label}
         >
-            <Icon size={10} />
-            <span>{config.label}</span>
+            <Icon size={14} />
         </button>
     );
 }
 
-// =============================================================================
-// ANNOTATION ITEM
-// =============================================================================
-
-function AnnotationItem({ annotation, datasetColor, onToggleVisibility, onNavigate }) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const typeConfig = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
-    const TypeIcon = typeConfig.icon;
+function AnnotationItem({ annotation }) {
+    const config = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
+    const Icon = config.icon;
 
     return (
-        <div
-            className={`annotation-item ${isExpanded ? 'annotation-item--expanded' : ''}`}
-            data-color={typeConfig.color}
-            style={{ opacity: annotation.visible === false ? 0.5 : 1 }}
-        >
-            <div className="annotation-item__main" onClick={() => setIsExpanded(!isExpanded)}>
-                {/* Visibility toggle */}
-                <button
-                    className="annotation-item__visibility"
-                    onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(annotation.id); }}
-                >
-                    {annotation.visible !== false ? (
-                        <Eye size={12} className="icon-green" />
-                    ) : (
-                        <EyeOff size={12} />
-                    )}
-                </button>
-
-                {/* Type badge */}
-                <span className={`annotation-item__type-badge type-badge--${typeConfig.color}`}>
-                    <TypeIcon size={12} />
-                </span>
-
-                {/* Content */}
-                <div className="annotation-item__content">
-                    <span className="annotation-item__text">
-                        {annotation.text}
-                        {annotation.shared && <Share2 size={9} className="icon-pink" />}
-                    </span>
-                    {annotation.value && (
-                        <span className="annotation-item__value">{annotation.value}</span>
-                    )}
-                    <span className="annotation-item__meta">
-                        <User size={8} /> {annotation.createdBy} <Clock size={8} /> {annotation.timestamp}
-                    </span>
-                </div>
-
-                {/* Navigate button */}
-                <button
-                    className="annotation-item__go-btn"
-                    onClick={(e) => { e.stopPropagation(); onNavigate?.(annotation.id); }}
-                >
-                    <Target size={10} /> Go
-                </button>
-            </div>
-
-            {/* Expanded actions */}
-            {isExpanded && (
-                <div className="annotation-item__actions">
-                    <button className="annotation-item__action-btn" data-color="blue">
-                        <Edit3 size={10} /> Edit
-                    </button>
-                    <button className="annotation-item__action-btn" data-color="pink">
-                        <Share2 size={10} /> Share
-                    </button>
-                    <button className="annotation-item__action-btn" data-color="red">
-                        <Trash2 size={10} />
-                    </button>
-                </div>
-            )}
+        <div className="annotation-item">
+            <Icon size={12} className="annotation-item__icon" data-color={config.color} />
+            <span className="annotation-item__text">{annotation.text}</span>
+            <button className="annotation-item__visibility">
+                {annotation.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+            </button>
+            <button className="annotation-item__more">
+                <MoreHorizontal size={12} />
+            </button>
         </div>
     );
 }
 
-// =============================================================================
-// DATASET GROUP
-// =============================================================================
-
-function DatasetGroup({ dataset, onToggleVisibility, onNavigate }) {
-    const [isExpanded, setIsExpanded] = useState(true);
+function DatasetGroup({ dataset }) {
+    const [expanded, setExpanded] = useState(true);
 
     return (
         <div className="dataset-group">
-            <div
-                className={`dataset-group__header ${isExpanded ? 'dataset-group__header--expanded' : ''}`}
-                onClick={() => setIsExpanded(!isExpanded)}
+            <button
+                className="dataset-group__header"
+                onClick={() => setExpanded(!expanded)}
             >
-                <span className="dataset-group__chevron">
-                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                </span>
-                <span className={`dataset-group__dot dot--${dataset.color}`} />
+                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <Database size={12} className="dataset-group__icon" />
                 <span className="dataset-group__name">{dataset.name}</span>
                 <span className="dataset-group__count">{dataset.annotations.length}</span>
-            </div>
-
-            {isExpanded && (
-                <div className="dataset-group__items">
+            </button>
+            {expanded && (
+                <div className="dataset-group__list">
                     {dataset.annotations.map(ann => (
-                        <AnnotationItem
-                            key={ann.id}
-                            annotation={ann}
-                            datasetColor={dataset.color}
-                            onToggleVisibility={onToggleVisibility}
-                            onNavigate={onNavigate}
-                        />
+                        <AnnotationItem key={ann.id} annotation={ann} />
                     ))}
                 </div>
             )}
@@ -223,31 +152,17 @@ function DatasetGroup({ dataset, onToggleVisibility, onNavigate }) {
     );
 }
 
-// =============================================================================
-// WORKSPACE ANNOTATION ITEM
-// =============================================================================
-
 function WorkspaceAnnotationItem({ annotation }) {
-    const typeConfig = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.note;
-    const TypeIcon = typeConfig.icon;
+    const config = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
+    const Icon = config.icon;
 
     return (
-        <div className="workspace-annotation">
-            <span className={`workspace-annotation__badge type-badge--${typeConfig.color}`}>
-                <TypeIcon size={12} />
-            </span>
-            <div className="workspace-annotation__content">
-                <span className="workspace-annotation__text">{annotation.text}</span>
-                <div className="workspace-annotation__links">
-                    {annotation.linkedInstances?.map(inst => (
-                        <span key={inst} className="workspace-annotation__link-badge">{inst}</span>
-                    ))}
-                </div>
-                <span className="workspace-annotation__meta">
-                    {annotation.createdBy} &middot; {annotation.timestamp}
-                    {annotation.shared && <Share2 size={8} className="icon-pink" />}
-                </span>
-            </div>
+        <div className="annotation-item annotation-item--workspace">
+            <Icon size={12} className="annotation-item__icon" data-color={config.color} />
+            <span className="annotation-item__text">{annotation.text}</span>
+            <button className="annotation-item__visibility">
+                {annotation.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+            </button>
         </div>
     );
 }
@@ -258,15 +173,12 @@ function WorkspaceAnnotationItem({ annotation }) {
 
 export function AnnotationsPanelContent({ workspaceId }) {
     // State
+    const [scope, setScope] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [typeFilters, setTypeFilters] = useState([]);
-    const [activeScopes, setActiveScopes] = useState(['project', 'workspace', 'instance']);
+    const [typeFilters, setTypeFilters] = useState(Object.keys(ANNOTATION_TYPES));
 
-    // Section states
-    const { states: sectionStates, toggleSection } = useSectionStates({
-        dataset: { expanded: true, flexGrow: 2 },
-        workspace: { expanded: true, flexGrow: 1 },
-    });
+    // Section states for resizable sections
+    const { states: sectionStates, toggleSection } = useSectionStates(DEFAULT_SECTION_STATES);
 
     // Toggle type filter
     const toggleTypeFilter = useCallback((type) => {
@@ -277,38 +189,35 @@ export function AnnotationsPanelContent({ workspaceId }) {
         );
     }, []);
 
-    // Toggle scope filter
-    const toggleScope = useCallback((scope) => {
-        setActiveScopes(prev =>
-            prev.includes(scope)
-                ? prev.filter(s => s !== scope)
-                : [...prev, scope]
-        );
-    }, []);
-
     // Calculate total count
     const totalCount = useMemo(() => {
-        const datasetCount = SAMPLE_ANNOTATIONS.datasets.reduce((sum, ds) => sum + ds.annotations.length, 0);
+        const datasetCount = SAMPLE_ANNOTATIONS.datasets.reduce(
+            (sum, ds) => sum + ds.annotations.length, 0
+        );
         return datasetCount + SAMPLE_ANNOTATIONS.workspace.length;
     }, []);
 
     return (
         <div className="annotations-tab">
-            {/* Header */}
-            <div className="annotations-tab__header">
-                <MapPin size={14} className="icon-pink" />
-                <span className="annotations-tab__title">Annotations</span>
-                <span className="annotations-tab__count">{totalCount} total</span>
+            {/* Header - ALL CAPS like other tabs */}
+            <div className="panel-header panel-header--pink">
+                <MapPin size={16} className="panel-header__icon" />
+                <span className="panel-header__title">Annotations</span>
+                <span className="panel-header__count">{totalCount}</span>
             </div>
 
-            {/* Scope filters */}
-            <div className="annotations-tab__scope-bar">
-                <ChipGroup
-                    chips={SCOPE_CHIPS}
-                    activeChips={activeScopes}
-                    onToggle={toggleScope}
-                    size="sm"
-                />
+            {/* Scope chips - CENTERED */}
+            <div className="scope-chips-wrapper">
+                <div className="scope-chips">
+                    {ANNOTATION_SCOPES.map(s => (
+                        <ScopeChip
+                            key={s.id}
+                            scope={s}
+                            active={scope === s.id}
+                            onClick={() => setScope(s.id)}
+                        />
+                    ))}
+                </div>
             </div>
 
             {/* Search */}
@@ -319,7 +228,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search all annotations..."
+                        placeholder="Search annotations..."
                     />
                     {searchQuery && (
                         <button
@@ -332,8 +241,8 @@ export function AnnotationsPanelContent({ workspaceId }) {
                 </div>
             </div>
 
-            {/* Type filters */}
-            <div className="annotations-tab__type-filters">
+            {/* Type filters - CENTERED */}
+            <div className="type-filter-wrapper">
                 <div className="type-filter-group">
                     {Object.entries(ANNOTATION_TYPES).map(([type, config]) => (
                         <TypeFilterToggle
@@ -345,9 +254,6 @@ export function AnnotationsPanelContent({ workspaceId }) {
                         />
                     ))}
                 </div>
-                <button className="annotations-tab__filter-btn" title="Filter options">
-                    <Filter size={12} />
-                </button>
             </div>
 
             {/* Resizable Sections */}
@@ -389,7 +295,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Footer */}
             <div className="annotations-tab__footer">
                 <span className="annotations-tab__footer-count">
-                    {totalCount} annotation{totalCount !== 1 ? 's' : ''} found
+                    {totalCount} annotation{totalCount !== 1 ? 's' : ''}
                 </span>
             </div>
         </div>

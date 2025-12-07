@@ -1,3 +1,4 @@
+// src/ui/react/components/panels/LayoutPanel/LayoutPanel.jsx
 /**
  * LayoutPanel Component
  *
@@ -14,6 +15,9 @@
  * - Dockable Canvas Navigator at bottom
  * - Conditional UI based on navigator docking state
  * - Loading/error states from server connection
+ *
+ * FIXES:
+ * - Header now uses ALL CAPS styling consistent with Files/Datasets tabs
  */
 
 import React, { memo, useContext } from 'react';
@@ -49,51 +53,68 @@ export const LayoutPanel = memo(function LayoutPanel({
 
     // Create standalone logic only if no context is available
     // This allows LayoutPanel to work both with and without the provider
-    const standaloneLogic = useLayoutPanel(context ? undefined : { canvasId });
+    const standaloneLogic = useLayoutPanel(context ? null : { canvasId });
 
     // Use context logic if available, otherwise use standalone
     const logic = context?.logic || standaloneLogic;
 
+    // Destructure what we need from logic
     const {
+        // Canvas data
+        canvas,
+        cells,
+        isLoading,
+        error,
+        isConnected,
+        // UI state
         panelSubtab,
         setPanelSubtab,
         navigatorDocked,
-        cells,
-        loading,
-        error,
-        isConnected,
     } = logic;
 
-    // Render loading state
-    if (loading) {
+    // Loading state
+    if (isLoading) {
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
-                <div className="layout-panel__header">
-                    <LayoutGrid size={14} className="layout-panel__header-icon" />
-                    <span className="layout-panel__header-title">Layout</span>
+                <div className="panel-header panel-header--amber">
+                    <LayoutGrid size={16} className="panel-header__icon" />
+                    <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__loading">
-                    <Loader2 size={20} className="layout-panel__loading-spinner" />
+                    <Loader2 size={24} className="layout-panel__spinner" />
                     <span>Loading canvas...</span>
                 </div>
             </div>
         );
     }
 
-    // Render error state
+    // Error state
     if (error) {
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
-                <div className="layout-panel__header">
-                    <LayoutGrid size={14} className="layout-panel__header-icon" />
-                    <span className="layout-panel__header-title">Layout</span>
+                <div className="panel-header panel-header--amber">
+                    <LayoutGrid size={16} className="panel-header__icon" />
+                    <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__error">
-                    <AlertCircle size={20} />
-                    <span>Failed to load canvas</span>
-                    <span className="layout-panel__error-detail">
-                        {error.message || 'Unknown error'}
-                    </span>
+                    <AlertCircle size={24} />
+                    <span>{error}</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Disconnected state
+    if (!isConnected) {
+        return (
+            <div className={`layout-panel layout-panel--disconnected ${className}`}>
+                <div className="panel-header panel-header--amber">
+                    <LayoutGrid size={16} className="panel-header__icon" />
+                    <span className="panel-header__title">Layout</span>
+                </div>
+                <div className="layout-panel__disconnected">
+                    <WifiOff size={24} />
+                    <span>Connecting to server...</span>
                 </div>
             </div>
         );
@@ -101,25 +122,21 @@ export const LayoutPanel = memo(function LayoutPanel({
 
     return (
         <div className={`layout-panel ${className}`}>
-            {/* Panel Header */}
-            <div className="layout-panel__header">
-                <LayoutGrid size={14} className="layout-panel__header-icon" />
-                <span className="layout-panel__header-title">Layout</span>
-                {/* Connection indicator */}
-                {!isConnected && (
-                    <WifiOff
-                        size={12}
-                        className="layout-panel__header-offline"
-                        title="Offline - changes will sync when reconnected"
-                    />
+            {/* Header - ALL CAPS like other tabs */}
+            <div className="panel-header panel-header--amber">
+                <LayoutGrid size={16} className="panel-header__icon" />
+                <span className="panel-header__title">Layout</span>
+                {cells.length > 0 && (
+                    <span className="panel-header__count">{cells.length}</span>
                 )}
             </div>
 
-            {/* Subtab Navigation */}
+            {/* Subtabs */}
             <div className="layout-panel__tabs">
-                {SUBTABS.map((tab) => {
+                {SUBTABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = panelSubtab === tab.id;
+                    // Show badge for views count on Views tab
                     const badge = tab.id === 'views' ? cells.length : null;
 
                     return (

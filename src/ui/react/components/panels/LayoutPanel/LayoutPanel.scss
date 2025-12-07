@@ -1,8 +1,67 @@
 // src/ui/react/components/panels/LayoutPanel/LayoutPanel.scss
-// Layout Panel styling - main container with subtabs
-// Uses design tokens - no hard-coded values
+// Layout Panel styling
 
 @use "theme" as *;
+
+// =============================================================================
+// PANEL HEADER (shared style - can also be in _tabs.scss)
+// =============================================================================
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-default;
+  flex-shrink: 0;
+
+  &__icon {
+    color: var(--header-color, $color-text-muted);
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: 11px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__count {
+    margin-left: auto;
+    font-size: 10px;
+    color: $color-text-muted;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-full;
+  }
+
+  // Color variants
+  &--amber {
+    --header-color: #{$color-accent-amber};
+  }
+
+  &--pink {
+    --header-color: #{$color-accent-pink};
+  }
+
+  &--teal {
+    --header-color: #{$color-accent-teal};
+  }
+
+  &--purple {
+    --header-color: #{$color-accent-purple};
+  }
+
+  &--blue {
+    --header-color: #{$color-accent-blue};
+  }
+
+  &--green {
+    --header-color: #{$color-accent-green};
+  }
+}
 
 // =============================================================================
 // LAYOUT PANEL CONTAINER
@@ -12,30 +71,31 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: $color-bg-primary;
   overflow: hidden;
 
-  // Header
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    border-bottom: 1px solid $color-border-default;
-    flex-shrink: 0;
+  // State modifiers
+  &--loading,
+  &--error,
+  &--disconnected {
+    .layout-panel__loading,
+    .layout-panel__error,
+    .layout-panel__disconnected {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: $spacing-sm;
+      color: $color-text-muted;
+      font-size: 12px;
+    }
   }
 
-  &__header-icon {
-    color: $color-accent-green;
+  &__spinner {
+    animation: spin 1s linear infinite;
   }
 
-  &__header-title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  // Subtab Navigation
+  // Subtabs
   &__tabs {
     display: flex;
     border-bottom: 1px solid $color-border-subtle;
@@ -53,7 +113,7 @@
     border: none;
     border-bottom: 2px solid transparent;
     color: $color-text-muted;
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     transition: all $transition-fast;
 
@@ -63,40 +123,37 @@
     }
 
     &--active {
-      color: var(--tab-color);
-      border-bottom-color: var(--tab-color);
       background: rgba(var(--tab-color-rgb), 0.04);
-    }
+      border-bottom-color: var(--tab-color);
+      color: var(--tab-color);
 
-    // Color variants
-    &[data-color="amber"] {
-      --tab-color: #{$color-accent-amber};
-      --tab-color-rgb: 251, 191, 36;
-    }
+      &[data-color="amber"] {
+        --tab-color: #{$color-accent-amber};
+        --tab-color-rgb: 251, 191, 36;
+      }
 
-    &[data-color="purple"] {
-      --tab-color: #{$color-accent-purple};
-      --tab-color-rgb: 192, 132, 252;
+      &[data-color="purple"] {
+        --tab-color: #{$color-accent-purple};
+        --tab-color-rgb: 192, 132, 252;
+      }
     }
   }
 
   &__tab-badge {
-    padding: 1px 5px;
-    background: rgba(var(--tab-color-rgb), 0.2);
-    border-radius: $radius-full;
     font-size: 9px;
-    color: var(--tab-color);
+    padding: 1px 5px;
+    background: rgba(var(--tab-color-rgb, 255, 255, 255), 0.15);
+    border-radius: $radius-full;
   }
 
-  // Content Area
+  // Content area
   &__content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: $spacing-sm;
   }
 
-  // Docked Navigator
+  // Navigator (docked)
   &__navigator {
     flex-shrink: 0;
     border-top: 1px solid $color-border-default;
@@ -104,7 +161,7 @@
 }
 
 // =============================================================================
-// FLOATING CANVAS NAVIGATOR
+// FLOATING NAVIGATOR
 // =============================================================================
 
 .floating-canvas-navigator {
@@ -112,262 +169,16 @@
   bottom: $spacing-md;
   left: $spacing-md;
   width: 400px;
+  max-width: calc(100% - #{$spacing-md * 2});
+  z-index: 50;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   border-radius: $radius-md;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  z-index: $z-popover;
   overflow: hidden;
 }
 
 // =============================================================================
-// SUBTAB COMMON STYLES
+// ANIMATIONS
 // =============================================================================
-
-// Card/Section styling
-.layout-panel-card {
-  margin-bottom: $spacing-md;
-  padding: $spacing-sm;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-sm;
-    font-size: 10px;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__header-icon {
-    color: var(--card-color, $color-text-muted);
-  }
-
-  &__description {
-    font-size: 9px;
-    color: $color-text-tertiary;
-    margin-top: $spacing-sm;
-    line-height: 1.4;
-  }
-}
-
-// =============================================================================
-// ETCHED TOGGLE (used in Layout Mode and View Mode)
-// =============================================================================
-
-.etched-toggle {
-  display: inline-flex;
-  border-radius: $radius-sm;
-  overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.2) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.etched-toggle__btn {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  background: transparent;
-  border: none;
-  color: $color-text-muted;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all $transition-fast;
-  white-space: nowrap;
-
-  &:hover:not(&--active) {
-    color: $color-text-secondary;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &--active {
-    background: rgba(var(--toggle-color-rgb), 0.2);
-    color: var(--toggle-color);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.3);
-  }
-
-  // Color variants
-  &--grid,
-  &--blue {
-    --toggle-color: #{$color-accent-blue};
-    --toggle-color-rgb: 96, 165, 250;
-  }
-
-  &--flow,
-  &--green {
-    --toggle-color: #{$color-accent-green};
-    --toggle-color-rgb: 52, 211, 153;
-  }
-
-  &--normal {
-    --toggle-color: #{$color-accent-blue};
-    --toggle-color-rgb: 96, 165, 250;
-  }
-
-  &--isolation,
-  &--amber {
-    --toggle-color: #{$color-accent-amber};
-    --toggle-color-rgb: 251, 191, 36;
-  }
-
-  &--subset,
-  &--purple {
-    --toggle-color: #{$color-accent-purple};
-    --toggle-color-rgb: 192, 132, 252;
-  }
-
-  // Compact variant
-  &--compact {
-    padding: $spacing-xs;
-  }
-}
-
-// =============================================================================
-// TOOL BUTTONS (28x28)
-// =============================================================================
-
-.layout-tool-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $color-border-default;
-  border-radius: $radius-sm;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover:not(:disabled):not(&--active) {
-    background: rgba(255, 255, 255, 0.08);
-    color: $color-text-secondary;
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  &--active {
-    background: rgba(var(--tool-color-rgb), 0.2);
-    border-color: var(--tool-color);
-    color: var(--tool-color);
-  }
-
-  // Color variants
-  &--blue {
-    --tool-color: #{$color-accent-blue};
-    --tool-color-rgb: 96, 165, 250;
-  }
-
-  &--teal {
-    --tool-color: #{$color-accent-teal};
-    --tool-color-rgb: 125, 211, 252;
-  }
-
-  &--purple {
-    --tool-color: #{$color-accent-purple};
-    --tool-color-rgb: 192, 132, 252;
-  }
-
-  &--amber {
-    --tool-color: #{$color-accent-amber};
-    --tool-color-rgb: 251, 191, 36;
-  }
-
-  &--green {
-    --tool-color: #{$color-accent-green};
-    --tool-color-rgb: 52, 211, 153;
-  }
-}
-
-// =============================================================================
-// NAV BUTTONS (D-pad, position)
-// =============================================================================
-
-.layout-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px;
-  background: transparent;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-xs;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: $color-text-secondary;
-  }
-
-  &--active {
-    background: rgba($color-accent-amber, 0.15);
-    border-color: $color-accent-amber;
-    color: $color-accent-amber;
-  }
-
-  &--amber {
-    color: $color-accent-amber;
-  }
-}
-
-// =============================================================================
-// DIVIDER
-// =============================================================================
-
-.layout-divider {
-  width: 1px;
-  height: 16px;
-  background: $color-border-default;
-  margin: 0 $spacing-xs;
-  flex-shrink: 0;
-}
-
-
-// ============================================================================
-// LayoutPanel.scss - ADDITIONS for loading/error/offline states
-// Add these to your existing LayoutPanel.scss file
-// ============================================================================
-
-// -----------------------------------------------------------------------------
-// Loading State
-// -----------------------------------------------------------------------------
-
-.layout-panel--loading {
-  .layout-panel__content {
-    display: none;
-  }
-}
-
-.layout-panel__loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
-  padding: $spacing-xl;
-  color: $color-text-muted;
-  font-size: 11px;
-  flex: 1;
-}
-
-.layout-panel__loading-spinner {
-  color: $color-accent-amber;
-  animation: spin 1s linear infinite;
-}
 
 @keyframes spin {
   from {
@@ -375,133 +186,5 @@
   }
   to {
     transform: rotate(360deg);
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Error State
-// -----------------------------------------------------------------------------
-
-.layout-panel--error {
-  .layout-panel__content {
-    display: none;
-  }
-}
-
-.layout-panel__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
-  padding: $spacing-xl;
-  color: $color-error;
-  font-size: 11px;
-  flex: 1;
-  text-align: center;
-
-  svg {
-    opacity: 0.7;
-  }
-}
-
-.layout-panel__error-detail {
-  color: $color-text-muted;
-  font-size: 10px;
-  max-width: 200px;
-  word-break: break-word;
-}
-
-// -----------------------------------------------------------------------------
-// Offline Indicator (in header)
-// -----------------------------------------------------------------------------
-
-.layout-panel__header-offline {
-  color: $color-accent-amber;
-  margin-left: auto;
-  opacity: 0.8;
-  
-  // Pulse animation to draw attention
-  animation: pulse-opacity 2s ease-in-out infinite;
-}
-
-@keyframes pulse-opacity {
-  0%, 100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Disabled state for controls when offline/loading
-// -----------------------------------------------------------------------------
-
-.layout-panel--disabled {
-  .layout-panel__content {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-  
-  .layout-panel__navigator {
-    opacity: 0.6;
-    pointer-events: none;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Navigator disabled state
-// -----------------------------------------------------------------------------
-
-.canvas-navigator--disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  
-  .canvas-navigator__size-input,
-  .canvas-navigator__tool-btn,
-  .canvas-navigator__nav-btn {
-    cursor: not-allowed;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Minimap viewport rectangle (for drag interaction)
-// -----------------------------------------------------------------------------
-
-.canvas-navigator__minimap-viewport {
-  position: absolute;
-  border: 2px solid $color-accent-amber;
-  background: rgba($color-accent-amber, 0.1);
-  border-radius: 2px;
-  cursor: move;
-  transition: background-color 0.15s ease;
-  
-  &:hover {
-    background: rgba($color-accent-amber, 0.2);
-  }
-  
-  &--dragging {
-    background: rgba($color-accent-amber, 0.25);
-    border-color: $color-accent-amber;
-    box-shadow: 0 0 8px rgba($color-accent-amber, 0.4);
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Minimap cell hover states
-// -----------------------------------------------------------------------------
-
-.canvas-navigator__minimap-cell {
-  cursor: pointer;
-  transition: all 0.1s ease;
-  
-  &:hover {
-    filter: brightness(1.2);
-    transform: scale(1.05);
-  }
-  
-  &--empty:hover {
-    background: rgba(255, 255, 255, 0.08);
   }
 }

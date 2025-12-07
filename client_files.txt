@@ -231,10 +231,14 @@ users.mock.js
 workspaces.mock.js
 
 ./src/ui/react/__mocks__/hooks:
+useAnnotations.mock.js
+useBookmarks.mock.js
 useComputeJobs.mock.js
 useDatasets.mock.js
+useFilters.mock.js
 useProjectFiles.mock.js
 useRooms.mock.js
+useWorkspaces.mock.js
 
 ./src/ui/react/components:
 auth
