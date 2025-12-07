@@ -9,9 +9,8 @@ import {
     Wrench,
     LayoutGrid,
     MapPin,
-    MousePointer2,
-    Filter,
     Bookmark,
+    Users,
 } from 'lucide-react';
 
 // =============================================================================
@@ -26,27 +25,26 @@ import {
  * - label: Display name (for tooltips)
  * - color: Accent color variable name from tokens
  * - implemented: Whether the tab content is ready
+ *
+ * 6-tab configuration per spec:
+ * - Files: Project files with grid/list views and thumbnails
+ * - Datasets: Loaded datasets with views tree
+ * --- divider ---
+ * - Instance Tools: Tools for the active instance
+ * - Layout: Workspace layout presets
+ * --- divider ---
+ * - Annotations: Global annotations search/filter
+ * - Bookmarks & Filters: Combined bookmarks and saved filter presets
  */
 export const LEFT_PANEL_TABS = [
     { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
+    { id: 'tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
-    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
-    { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
-    { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: true },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: true },
+    { id: 'cursors', icon: Users, label: 'Cursors', color: 'pink', implemented: true },
+    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'rose', implemented: true },
+    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks & Filters', color: 'purple', implemented: true },
 ];
-
-// Tabs:
-// - Files: Project files with grid/list views and thumbnails
-// - Datasets: Loaded datasets with views tree
-// - Instance Tools: Tools for the active instance
-// - Layout: Workspace layout presets
-// - Annotations: Spatial annotations
-// - Cursors: Cursor visibility settings
-// - Saved Filters: Reusable filter presets
-// - Bookmarks: Saved view bookmarks
 
 /**
  * Dividers appear after these tabs for visual grouping
@@ -91,14 +89,14 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
     // Dispatch tab change events for other components (e.g., InstanceViewport)
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
-            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'instance-tools' }
+            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'tools' }
         }));
     }, [activeTab]);
 
     // Listen for instance tools open event (from wrench button in InstanceViewport)
     useEffect(() => {
         const handleOpenInstanceTools = () => {
-            setActiveTab('instance-tools');
+            setActiveTab('tools');
         };
 
         window.addEventListener('cia:open-instance-tools', handleOpenInstanceTools);

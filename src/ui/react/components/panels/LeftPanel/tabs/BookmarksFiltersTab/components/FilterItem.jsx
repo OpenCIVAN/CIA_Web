@@ -1,0 +1,70 @@
+// components/FilterItem.jsx
+// Individual filter item component
+
+import React, { useState } from 'react';
+import { Filter, Pin, PinOff, Trash2, Play } from 'lucide-react';
+import { SCOPE_CONFIG } from './ScopeChips';
+
+export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
+    const [isHovered, setIsHovered] = useState(false);
+    const scopeConfig = SCOPE_CONFIG[filter.scope] || SCOPE_CONFIG.personal;
+
+    return (
+        <div
+            className="filter-item"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Type icon */}
+            <div className="filter-item__icon">
+                <Filter size={14} />
+            </div>
+
+            {/* Content */}
+            <div className="filter-item__content">
+                <div className="filter-item__name">
+                    {filter.name}
+                    <span
+                        className="filter-item__scope-badge"
+                        data-color={scopeConfig.color}
+                    >
+                        {scopeConfig.label}
+                    </span>
+                </div>
+                {filter.description && (
+                    <div className="filter-item__description">{filter.description}</div>
+                )}
+            </div>
+
+            {/* Actions */}
+            <div className="filter-item__actions" style={{ opacity: isHovered ? 1 : 0 }}>
+                <button
+                    className={`filter-item__action-btn ${filter.isPinned ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); onTogglePin(filter.id); }}
+                    title={filter.isPinned ? 'Unpin' : 'Pin'}
+                >
+                    {filter.isPinned ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+                </button>
+                {filter.isOwn && (
+                    <button
+                        className="filter-item__action-btn"
+                        onClick={(e) => { e.stopPropagation(); onDelete(filter.id); }}
+                        title="Delete"
+                    >
+                        <Trash2 size={10} />
+                    </button>
+                )}
+            </div>
+
+            {/* Apply button */}
+            <button
+                className="filter-item__apply-btn"
+                onClick={() => onApply(filter.id)}
+            >
+                <Play size={10} /> Apply
+            </button>
+        </div>
+    );
+}
+
+export default FilterItem;

@@ -4102,3 +4102,509 @@
     color: $color-accent-amber;
   }
 }
+
+// =============================================================================
+// SCOPE CHIPS - Shared scope toggle buttons
+// =============================================================================
+
+.scope-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scope-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: 999px;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-primary;
+
+    &[data-color="amber"] {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
+    }
+
+    &[data-color="teal"] {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+
+    &[data-color="blue"] {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__count {
+    font-size: 9px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+  }
+}
+
+// =============================================================================
+// SUB-TABS - Tab bar within a panel
+// =============================================================================
+
+.sub-tabs {
+  display: flex;
+  padding: $spacing-sm $spacing-md;
+  gap: $spacing-xs;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: $color-border-default;
+      color: $color-text-primary;
+    }
+  }
+}
+
+// =============================================================================
+// BOOKMARKS & FILTERS TAB
+// =============================================================================
+
+.bookmarks-filters-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-sm 0;
+  }
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+    font-size: 11px;
+    text-align: center;
+  }
+}
+
+// Scoped section (collapsible group)
+.scoped-section {
+  margin-bottom: $spacing-xs;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: $color-text-secondary;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  &__label {
+    flex: 1;
+    text-align: left;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+  }
+
+  &__count {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__content {
+    padding: 0 $spacing-sm;
+  }
+}
+
+// Bookmark item
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin: 2px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: $color-border-subtle;
+  }
+
+  &__thumbnail {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-xs;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    svg {
+      color: $color-text-muted;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    svg {
+      color: $color-accent-pink;
+      flex-shrink: 0;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    transition: opacity $transition-fast;
+  }
+
+  &__action-btn {
+    padding: 4px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-primary;
+    }
+
+    &.active {
+      color: $color-accent-amber;
+    }
+  }
+
+  &__go-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 10px;
+    background: rgba($color-accent-green, 0.15);
+    border: 1px solid rgba($color-accent-green, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-green;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.25);
+    }
+  }
+}
+
+// Filter item (in Bookmarks & Filters tab)
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin: 2px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: $color-border-subtle;
+  }
+
+  &__icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__scope-badge {
+    font-size: 8px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    color: var(--badge-color, $color-text-muted);
+    text-transform: uppercase;
+  }
+
+  &__description {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+    transition: opacity $transition-fast;
+  }
+
+  &__action-btn {
+    padding: 4px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-primary;
+    }
+
+    &.active {
+      color: $color-accent-amber;
+    }
+  }
+
+  &__apply-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 10px;
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.25);
+    }
+  }
+}
+
+// =============================================================================
+// INSTANCE ANNOTATIONS SUBTAB
+// =============================================================================
+
+.instance-annotations-subtab {
+  padding: $spacing-sm;
+
+  &__info {
+    font-size: 10px;
+    color: $color-text-muted;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    svg {
+      margin-bottom: $spacing-sm;
+      opacity: 0.4;
+    }
+
+    p {
+      font-size: 12px;
+      margin: 0 0 $spacing-xs 0;
+      color: $color-text-secondary;
+    }
+
+    span {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__open-full {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: $spacing-sm;
+    margin-top: $spacing-md;
+    font-size: 11px;
+    background: transparent;
+    border: 1px dashed $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: $color-border-medium;
+      color: $color-text-secondary;
+    }
+  }
+}
+
+.instance-annotation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &__icon {
+    color: $color-accent-pink;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__text {
+    display: block;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__meta {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+}
+
+// =============================================================================
+// PANEL FOOTER - Info variant
+// =============================================================================
+
+.panel-footer--info {
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid $color-border-subtle;
+
+  .panel-footer__count {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+}

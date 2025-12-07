@@ -1,11 +1,10 @@
-// src/ui/react/components/panels/LeftPanel/tabs/LayoutTab.jsx
-// Layout tab content - now simplified since useLayoutPanel manages its own data
-//
-// BEFORE: LayoutTab managed mock state and passed it as props
-// AFTER: LayoutTab just renders LayoutPanel, which handles everything internally
+// tabs/LayoutTab/LayoutTab.jsx
+// Layout tab content - wrapper for LayoutPanel component
+// Uses LayoutPanel internally which manages its own state via useLayoutPanel
 
 import React, { useCallback } from 'react';
 import { LayoutPanel } from '@UI/react/components/panels/LayoutPanel';
+import './LayoutTab.scss';
 // FloatingCanvasNavigator is rendered elsewhere (in the workspace area)
 
 /**

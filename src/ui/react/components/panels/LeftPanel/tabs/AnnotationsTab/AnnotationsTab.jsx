@@ -1,11 +1,11 @@
-// src/ui/react/components/panels/LeftPanel/tabs/AnnotationsTab.jsx
-// Annotations tab content for the unified left panel
+// tabs/AnnotationsTab/AnnotationsTab.jsx
+// Global Annotations tab content for the unified left panel
 //
 // Features:
-// - Shows annotations organized by dataset and workspace
+// - Search and filter all annotations across the project
+// - Scope filtering (Project | Workspace | Instance)
 // - Filtering by type (Point, Ruler, Region, Note)
 // - Visibility toggle and navigation to annotations
-// - VS Code-style resizable sections
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -28,15 +28,25 @@ import {
     Trash2,
     Database,
     LayoutGrid,
-    PenTool,
-    ArrowUpRight,
+    Globe,
+    Monitor,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
-import { useAnnotations } from '@UI/react/hooks';
+import './AnnotationsTab.scss';
+
+// =============================================================================
+// SCOPE CONFIG
+// =============================================================================
+
+const SCOPE_CONFIG = {
+    project: { label: 'Project', icon: Globe, color: 'amber' },
+    workspace: { label: 'Workspace', icon: LayoutGrid, color: 'teal' },
+    instance: { label: 'Instance', icon: Monitor, color: 'blue' },
+};
 
 // =============================================================================
 // ANNOTATION TYPES
@@ -82,6 +92,33 @@ const SAMPLE_ANNOTATIONS = {
 };
 
 // =============================================================================
+// SCOPE CHIPS (Shared component - could be extracted)
+// =============================================================================
+
+function ScopeChips({ activeScopes, onToggleScope }) {
+    return (
+        <div className="scope-chips">
+            {Object.entries(SCOPE_CONFIG).map(([scope, config]) => {
+                const isActive = activeScopes.includes(scope);
+                const Icon = config.icon;
+
+                return (
+                    <button
+                        key={scope}
+                        className={`scope-chip ${isActive ? 'scope-chip--active' : ''}`}
+                        data-color={config.color}
+                        onClick={() => onToggleScope(scope)}
+                    >
+                        <Icon size={10} />
+                        <span>{config.label}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+// =============================================================================
 // TYPE FILTER TOGGLE
 // =============================================================================
 
@@ -89,7 +126,7 @@ function TypeFilterToggle({ type, config, active, onClick }) {
     const Icon = config.icon;
     return (
         <button
-            className={`filter-toggle ${active ? 'active' : ''}`}
+            className={`type-filter-btn ${active ? 'type-filter-btn--active' : ''}`}
             data-color={config.color}
             onClick={onClick}
         >
@@ -110,47 +147,45 @@ function AnnotationItem({ annotation, datasetColor, onToggleVisibility, onNaviga
 
     return (
         <div
-            className={`tree-item tree-item--annotation ${isExpanded ? 'expanded' : ''}`}
-            style={{
-                '--item-color': `var(--color-accent-${typeConfig.color})`,
-                opacity: annotation.visible === false ? 0.5 : 1,
-            }}
+            className={`annotation-item ${isExpanded ? 'annotation-item--expanded' : ''}`}
+            data-color={typeConfig.color}
+            style={{ opacity: annotation.visible === false ? 0.5 : 1 }}
         >
-            <div className="tree-item__main" onClick={() => setIsExpanded(!isExpanded)}>
+            <div className="annotation-item__main" onClick={() => setIsExpanded(!isExpanded)}>
                 {/* Visibility toggle */}
                 <button
-                    className="tree-item__visibility-btn"
+                    className="annotation-item__visibility"
                     onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(annotation.id); }}
                 >
                     {annotation.visible !== false ? (
-                        <Eye size={12} style={{ color: 'var(--color-accent-green)' }} />
+                        <Eye size={12} className="icon-green" />
                     ) : (
                         <EyeOff size={12} />
                     )}
                 </button>
 
-                {/* Type icon */}
-                <span className={`tree-item__type-badge tree-item__type-badge--${typeConfig.color}`}>
+                {/* Type badge */}
+                <span className={`annotation-item__type-badge type-badge--${typeConfig.color}`}>
                     <TypeIcon size={12} />
                 </span>
 
                 {/* Content */}
-                <div className="tree-item__info">
-                    <span className="item-name">
+                <div className="annotation-item__content">
+                    <span className="annotation-item__text">
                         {annotation.text}
-                        {annotation.shared && <Share2 size={9} style={{ color: 'var(--color-accent-pink)', marginLeft: '4px' }} />}
+                        {annotation.shared && <Share2 size={9} className="icon-pink" />}
                     </span>
                     {annotation.value && (
-                        <span className="item-value">{annotation.value}</span>
+                        <span className="annotation-item__value">{annotation.value}</span>
                     )}
-                    <span className="item-meta">
+                    <span className="annotation-item__meta">
                         <User size={8} /> {annotation.createdBy} <Clock size={8} /> {annotation.timestamp}
                     </span>
                 </div>
 
-                {/* Go button */}
+                {/* Navigate button */}
                 <button
-                    className="tree-item__action-btn"
+                    className="annotation-item__go-btn"
                     onClick={(e) => { e.stopPropagation(); onNavigate?.(annotation.id); }}
                 >
                     <Target size={10} /> Go
@@ -159,14 +194,14 @@ function AnnotationItem({ annotation, datasetColor, onToggleVisibility, onNaviga
 
             {/* Expanded actions */}
             {isExpanded && (
-                <div className="tree-item__expanded-actions">
-                    <button className="tree-item__expanded-btn" data-color="blue">
+                <div className="annotation-item__actions">
+                    <button className="annotation-item__action-btn" data-color="blue">
                         <Edit3 size={10} /> Edit
                     </button>
-                    <button className="tree-item__expanded-btn" data-color="pink">
+                    <button className="annotation-item__action-btn" data-color="pink">
                         <Share2 size={10} /> Share
                     </button>
-                    <button className="tree-item__expanded-btn">
+                    <button className="annotation-item__action-btn" data-color="red">
                         <Trash2 size={10} />
                     </button>
                 </div>
@@ -183,24 +218,21 @@ function DatasetGroup({ dataset, onToggleVisibility, onNavigate }) {
     const [isExpanded, setIsExpanded] = useState(true);
 
     return (
-        <div className="tree-group">
+        <div className="dataset-group">
             <div
-                className="tree-item tree-item--folder"
+                className={`dataset-group__header ${isExpanded ? 'dataset-group__header--expanded' : ''}`}
                 onClick={() => setIsExpanded(!isExpanded)}
-                style={{
-                    background: isExpanded ? `rgba(var(--color-accent-${dataset.color}-rgb), 0.08)` : 'transparent',
-                }}
             >
-                <span className="chevron">
+                <span className="dataset-group__chevron">
                     {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 </span>
-                <span className={`tree-item__color-dot tree-item__color-dot--${dataset.color}`} />
-                <span className="item-name">{dataset.name}</span>
-                <span className="item-meta">{dataset.annotations.length}</span>
+                <span className={`dataset-group__dot dot--${dataset.color}`} />
+                <span className="dataset-group__name">{dataset.name}</span>
+                <span className="dataset-group__count">{dataset.annotations.length}</span>
             </div>
 
             {isExpanded && (
-                <div className="tree-group__children">
+                <div className="dataset-group__items">
                     {dataset.annotations.map(ann => (
                         <AnnotationItem
                             key={ann.id}
@@ -225,20 +257,20 @@ function WorkspaceAnnotationItem({ annotation }) {
     const TypeIcon = typeConfig.icon;
 
     return (
-        <div className="tree-item tree-item--workspace-annotation">
-            <span className={`tree-item__type-badge tree-item__type-badge--${typeConfig.color}`}>
+        <div className="workspace-annotation">
+            <span className={`workspace-annotation__badge type-badge--${typeConfig.color}`}>
                 <TypeIcon size={12} />
             </span>
-            <div className="tree-item__info">
-                <span className="item-name">{annotation.text}</span>
-                <div className="item-linked-instances">
+            <div className="workspace-annotation__content">
+                <span className="workspace-annotation__text">{annotation.text}</span>
+                <div className="workspace-annotation__links">
                     {annotation.linkedInstances?.map(inst => (
-                        <span key={inst} className="linked-instance-badge">{inst}</span>
+                        <span key={inst} className="workspace-annotation__link-badge">{inst}</span>
                     ))}
                 </div>
-                <span className="item-meta">
+                <span className="workspace-annotation__meta">
                     {annotation.createdBy} &middot; {annotation.timestamp}
-                    {annotation.shared && <Share2 size={8} style={{ color: 'var(--color-accent-pink)', marginLeft: '4px' }} />}
+                    {annotation.shared && <Share2 size={8} className="icon-pink" />}
                 </span>
             </div>
         </div>
@@ -251,10 +283,9 @@ function WorkspaceAnnotationItem({ annotation }) {
 
 export function AnnotationsPanelContent({ workspaceId }) {
     // State
-    const { annotations, isLoading, error } = useAnnotations({});
-    console.log('Annotations from hook:', { annotations, isLoading, error });
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilters, setTypeFilters] = useState([]);
+    const [activeScopes, setActiveScopes] = useState(['project', 'workspace', 'instance']);
 
     // Section states
     const { states: sectionStates, toggleSection } = useSectionStates({
@@ -271,6 +302,15 @@ export function AnnotationsPanelContent({ workspaceId }) {
         );
     }, []);
 
+    // Toggle scope filter
+    const toggleScope = useCallback((scope) => {
+        setActiveScopes(prev =>
+            prev.includes(scope)
+                ? prev.filter(s => s !== scope)
+                : [...prev, scope]
+        );
+    }, []);
+
     // Calculate total count
     const totalCount = useMemo(() => {
         const datasetCount = SAMPLE_ANNOTATIONS.datasets.reduce((sum, ds) => sum + ds.annotations.length, 0);
@@ -280,25 +320,30 @@ export function AnnotationsPanelContent({ workspaceId }) {
     return (
         <div className="annotations-tab">
             {/* Header */}
-            <div className="panel-header">
-                <MessageSquare size={14} className="panel-header__icon file-icon--pink" />
-                <span className="panel-header__title">Annotations</span>
-                <span className="panel-header__count">{totalCount} total</span>
+            <div className="annotations-tab__header">
+                <MapPin size={14} className="icon-pink" />
+                <span className="annotations-tab__title">Annotations</span>
+                <span className="annotations-tab__count">{totalCount} total</span>
+            </div>
+
+            {/* Scope filters */}
+            <div className="annotations-tab__scope-bar">
+                <ScopeChips activeScopes={activeScopes} onToggleScope={toggleScope} />
             </div>
 
             {/* Search */}
-            <div className="panel-search">
-                <div className="panel-search__wrapper">
-                    <Search size={12} className="search-icon" />
+            <div className="annotations-tab__search">
+                <div className="search-input">
+                    <Search size={12} className="search-input__icon" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search annotations..."
+                        placeholder="Search all annotations..."
                     />
                     {searchQuery && (
                         <button
-                            className="clear-button"
+                            className="search-input__clear"
                             onClick={() => setSearchQuery('')}
                         >
                             <X size={10} />
@@ -308,18 +353,19 @@ export function AnnotationsPanelContent({ workspaceId }) {
             </div>
 
             {/* Type filters */}
-            <div className="panel-toolbar">
-                {Object.entries(ANNOTATION_TYPES).map(([type, config]) => (
-                    <TypeFilterToggle
-                        key={type}
-                        type={type}
-                        config={config}
-                        active={typeFilters.includes(type)}
-                        onClick={() => toggleTypeFilter(type)}
-                    />
-                ))}
-                <div className="panel-toolbar__spacer" />
-                <button className="panel-header__action-btn" title="Filter options">
+            <div className="annotations-tab__type-filters">
+                <div className="type-filter-group">
+                    {Object.entries(ANNOTATION_TYPES).map(([type, config]) => (
+                        <TypeFilterToggle
+                            key={type}
+                            type={type}
+                            config={config}
+                            active={typeFilters.includes(type)}
+                            onClick={() => toggleTypeFilter(type)}
+                        />
+                    ))}
+                </div>
+                <button className="annotations-tab__filter-btn" title="Filter options">
                     <Filter size={12} />
                 </button>
             </div>
@@ -337,9 +383,11 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     label="Dataset Annotations"
                     count={SAMPLE_ANNOTATIONS.datasets.reduce((sum, ds) => sum + ds.annotations.length, 0)}
                 >
-                    {SAMPLE_ANNOTATIONS.datasets.map(ds => (
-                        <DatasetGroup key={ds.id} dataset={ds} />
-                    ))}
+                    <div className="annotations-tab__section-content">
+                        {SAMPLE_ANNOTATIONS.datasets.map(ds => (
+                            <DatasetGroup key={ds.id} dataset={ds} />
+                        ))}
+                    </div>
                 </ResizableSection>
 
                 {/* Workspace Annotations */}
@@ -350,24 +398,19 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     label="Workspace Annotations"
                     count={SAMPLE_ANNOTATIONS.workspace.length}
                 >
-                    {SAMPLE_ANNOTATIONS.workspace.map(ann => (
-                        <WorkspaceAnnotationItem key={ann.id} annotation={ann} />
-                    ))}
+                    <div className="annotations-tab__section-content">
+                        {SAMPLE_ANNOTATIONS.workspace.map(ann => (
+                            <WorkspaceAnnotationItem key={ann.id} annotation={ann} />
+                        ))}
+                    </div>
                 </ResizableSection>
             </ResizableSectionsContainer>
 
             {/* Footer */}
-            <div className="panel-footer">
-                <button className="panel-footer__btn panel-footer__btn--primary">
-                    <PenTool size={11} />
-                    <span>Instance Tools</span>
-                    <ArrowUpRight size={10} />
-                </button>
-                <button className="panel-footer__btn panel-footer__btn--primary">
-                    <LayoutGrid size={11} />
-                    <span>Layout</span>
-                    <ArrowUpRight size={10} />
-                </button>
+            <div className="annotations-tab__footer">
+                <span className="annotations-tab__footer-count">
+                    {totalCount} annotation{totalCount !== 1 ? 's' : ''} found
+                </span>
             </div>
         </div>
     );

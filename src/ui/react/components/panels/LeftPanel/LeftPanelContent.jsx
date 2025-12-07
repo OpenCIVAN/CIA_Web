@@ -15,10 +15,9 @@ import { FilesPanelContent } from './tabs/FilesTab';
 import { DatasetsPanelContent } from './tabs/DatasetsTab';
 import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
 import { LayoutPanelContent } from './tabs/LayoutTab';
-import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
-import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
-import { BookmarksPanelContent } from './tabs/BookmarksTab';
+import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
+import { BookmarksFiltersPanelContent } from './tabs/BookmarksFiltersTab';
 
 // Icons for pop-out button
 import { ExternalLink } from 'lucide-react';
@@ -54,6 +53,14 @@ function PlaceholderContent({ tab }) {
 
 /**
  * Render content for a specific tab
+ *
+ * 6-tab configuration:
+ * - files: Project files
+ * - datasets: Loaded datasets with views
+ * - tools: Instance tools for active instance
+ * - layout: Canvas layout configuration
+ * - annotations: Global annotations search
+ * - bookmarks: Combined bookmarks & filters
  */
 function renderTabContent(tabId, workspaceId, navigateToPanel) {
     switch (tabId) {
@@ -61,18 +68,16 @@ function renderTabContent(tabId, workspaceId, navigateToPanel) {
             return <FilesPanelContent workspaceId={workspaceId} />;
         case 'datasets':
             return <DatasetsPanelContent workspaceId={workspaceId} />;
-        case 'instance-tools':
+        case 'tools':
             return <InstanceToolsPanelContent workspaceId={workspaceId} />;
         case 'layout':
             return <LayoutPanelContent workspaceId={workspaceId} />;
-        case 'annotations':
-            return <AnnotationsPanelContent workspaceId={workspaceId} />;
         case 'cursors':
             return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={navigateToPanel} />;
-        case 'filters':
-            return <SavedFiltersPanelContent workspaceId={workspaceId} />;
+        case 'annotations':
+            return <AnnotationsPanelContent workspaceId={workspaceId} />;
         case 'bookmarks':
-            return <BookmarksPanelContent workspaceId={workspaceId} />;
+            return <BookmarksFiltersPanelContent workspaceId={workspaceId} />;
         default:
             return <PlaceholderContent tab={LEFT_PANEL_TABS[0]} />;
     }

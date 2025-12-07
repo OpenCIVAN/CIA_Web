@@ -1,0 +1,304 @@
+// tabs/DatasetsTab/DatasetsTab.scss
+// Datasets tab styling - darker theme matching LayoutPanel
+
+@use "theme" as *;
+
+// =============================================================================
+// DATASETS TAB CONTAINER
+// =============================================================================
+
+.datasets-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+// =============================================================================
+// VIEW MODE SELECTOR
+// =============================================================================
+
+.view-mode-selector {
+  display: inline-flex;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.2);
+      color: $color-accent-teal;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// =============================================================================
+// DATASET PARENT (Tree node)
+// =============================================================================
+
+.dataset-parent {
+  margin-bottom: $spacing-xs;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: $color-border-medium;
+    }
+
+    &--expanded {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      background: rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  &__chevron {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__count {
+    font-size: 9px;
+    color: $color-text-muted;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-full;
+  }
+
+  &__more-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  &__children {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid $color-border-subtle;
+    border-top: none;
+    border-bottom-left-radius: $radius-md;
+    border-bottom-right-radius: $radius-md;
+    padding: $spacing-xs;
+  }
+}
+
+// =============================================================================
+// VIEW ITEM (in tree)
+// =============================================================================
+
+.dataset-view-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: $spacing-xs;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: $color-border-subtle;
+  }
+
+  &--active {
+    border-color: rgba($color-accent-green, 0.4);
+    background: rgba($color-accent-green, 0.1);
+  }
+
+  &__status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--active {
+      background: $color-accent-green;
+      box-shadow: 0 0 4px rgba($color-accent-green, 0.5);
+    }
+
+    &--inactive {
+      background: $color-text-muted;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__badges {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__badge {
+    font-size: 8px;
+    padding: 2px 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+
+    &--shared {
+      background: rgba($color-accent-pink, 0.15);
+      color: $color-accent-pink;
+    }
+  }
+}
+
+// =============================================================================
+// FILTER BAR
+// =============================================================================
+
+.datasets-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.datasets-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-muted;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  &:hover:not(&--active) {
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    &[data-color="green"] {
+      background: rgba($color-accent-green, 0.2);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="gray"] {
+      background: rgba($color-text-muted, 0.2);
+      border-color: rgba($color-text-muted, 0.4);
+      color: $color-text-secondary;
+    }
+
+    &[data-color="pink"] {
+      background: rgba($color-accent-pink, 0.2);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+  }
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+.datasets-tab__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-muted;
+  flex: 1;
+
+  svg {
+    opacity: 0.5;
+    margin-bottom: $spacing-md;
+  }
+
+  h3 {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  p {
+    font-size: 11px;
+  }
+}

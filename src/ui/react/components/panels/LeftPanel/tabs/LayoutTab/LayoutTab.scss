@@ -1,0 +1,36 @@
+// tabs/LayoutTab/LayoutTab.scss
+// Layout tab styling - wraps LayoutPanel component
+// Most styling comes from LayoutPanel/LayoutPanel.scss
+
+@use "theme" as *;
+
+// =============================================================================
+// LAYOUT TAB CONTAINER
+// =============================================================================
+
+.layout-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  // LayoutPanel fills the container
+  .layout-panel {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB WRAPPER OVERRIDES
+// =============================================================================
+
+// When used inside the LeftPanel, adjust LayoutPanel to fit
+.left-panel-content .layout-panel {
+  // Remove duplicate header if needed
+  &__header {
+    display: none;
+  }
+}

@@ -1,0 +1,757 @@
+// tabs/InstanceToolsTab/InstanceToolsTab.scss
+// Instance Tools tab styling - darker theme matching LayoutPanel
+
+@use "theme" as *;
+
+// =============================================================================
+// INSTANCE TOOLS TAB CONTAINER
+// =============================================================================
+
+.instance-tools-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  // Instance header
+  &__instance-header {
+    padding: $spacing-sm $spacing-md;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    border-bottom: 1px solid $color-border-default;
+    background: rgba(0, 0, 0, 0.15);
+    border-left: 2px solid var(--instance-color);
+  }
+
+  &__instance-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__instance-name {
+    display: block;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__instance-dataset {
+    display: block;
+    font-size: 10px;
+    color: $color-text-muted;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__instance-type {
+    font-size: 8px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-semibold;
+    flex-shrink: 0;
+  }
+
+  // Subtabs
+  &__tabs {
+    display: flex;
+    gap: 4px;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: $spacing-sm;
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(0, 0, 0, 0.3);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      &[data-color="amber"] {
+        background: rgba($color-accent-amber, 0.15);
+        border-color: rgba($color-accent-amber, 0.4);
+        color: $color-accent-amber;
+      }
+
+      &[data-color="purple"] {
+        background: rgba($color-accent-purple, 0.15);
+        border-color: rgba($color-accent-purple, 0.4);
+        color: $color-accent-purple;
+      }
+
+      &[data-color="pink"] {
+        background: rgba($color-accent-pink, 0.15);
+        border-color: rgba($color-accent-pink, 0.4);
+        color: $color-accent-pink;
+      }
+    }
+  }
+
+  // Content area
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding: $spacing-sm;
+  }
+
+  // No instance placeholder
+  &__no-instance {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    flex: 1;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-md;
+    }
+
+    h3 {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-text-secondary;
+      margin-bottom: $spacing-sm;
+    }
+
+    p {
+      font-size: 11px;
+      margin-bottom: $spacing-xs;
+    }
+  }
+
+  &__no-instance-hint {
+    font-size: 10px;
+    color: $color-text-tertiary;
+    font-style: italic;
+  }
+
+  // Footer
+  &__footer {
+    display: flex;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-top: 1px solid $color-border-default;
+    background: rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+
+  &__footer-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-primary;
+    }
+  }
+}
+
+// =============================================================================
+// TOOLS LIST
+// =============================================================================
+
+.tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-sm;
+    }
+
+    p {
+      font-size: 11px;
+      margin-bottom: $spacing-xs;
+    }
+
+    span {
+      font-size: 10px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  &__separator {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-xs 0;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs;
+  }
+
+  &__item-label {
+    font-size: 11px;
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// TOOL BUTTON
+// =============================================================================
+
+.tool-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
+
+  &:hover:not(&--active):not(&--disabled) {
+    background: rgba(0, 0, 0, 0.3);
+    color: $color-text-primary;
+  }
+
+  &--active {
+    background: rgba($color-accent-amber, 0.2);
+    border-color: rgba($color-accent-amber, 0.4);
+    color: $color-accent-amber;
+  }
+
+  &--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &__dropdown-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    opacity: 0.5;
+  }
+}
+
+// =============================================================================
+// TOOL MENU (Expandable)
+// =============================================================================
+
+.tool-menu {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  &--expanded {
+    border-color: $color-border-medium;
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: all $transition-fast;
+    color: $color-text-secondary;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    &--has-active {
+      color: $color-accent-amber;
+    }
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+  }
+
+  &__hint {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+  }
+
+  &__options {
+    border-top: 1px solid $color-border-subtle;
+    padding: $spacing-xs;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &__separator {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-xs 0;
+  }
+
+  &__header-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: $spacing-xs $spacing-sm;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: all $transition-fast;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+
+    &:hover:not(&--disabled) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      color: $color-accent-amber;
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__item-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__item-label {
+    display: block;
+    font-size: 11px;
+  }
+
+  &__item-desc {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__item-active-dot {
+    width: 6px;
+    height: 6px;
+    background: $color-accent-amber;
+    border-radius: 50%;
+  }
+}
+
+// =============================================================================
+// SLIDER WITH PRESETS
+// =============================================================================
+
+.slider-with-presets {
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: $radius-sm;
+  margin: $spacing-xs 0;
+
+  &--disabled {
+    opacity: 0.5;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    font-size: 11px;
+    color: $color-text-secondary;
+  }
+
+  &__label {
+    flex: 1;
+  }
+
+  &__value {
+    color: $color-accent-teal;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__slider-row {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__slider {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: $color-accent-teal;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+  }
+
+  &__presets {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__preset {
+    padding: 3px 8px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.2);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+  }
+
+  &__disabled-reason {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+    margin-top: $spacing-sm;
+  }
+}
+
+// =============================================================================
+// CAMERA GRID MENU
+// =============================================================================
+
+.camera-grid-menu {
+  padding: $spacing-sm;
+
+  &__label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  &__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    font-size: 8px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--empty) {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &--empty {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+
+    &--special {
+      background: rgba($color-accent-amber, 0.1);
+      border-color: rgba($color-accent-amber, 0.3);
+      color: $color-accent-amber;
+    }
+  }
+}
+
+// =============================================================================
+// LAYERS SUBTAB
+// =============================================================================
+
+.layers-subtab {
+  &__info {
+    font-size: 10px;
+    color: $color-text-muted;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: $radius-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+
+  &__btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__count {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__opacity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 9px;
+    color: $color-text-muted;
+
+    input[type="range"] {
+      width: 60px;
+      height: 4px;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+  }
+
+  &__manage {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// ANNOTATIONS SUBTAB
+// =============================================================================
+
+.annotations-subtab {
+  &__info {
+    font-size: 10px;
+    color: $color-text-muted;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: $radius-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-sm;
+    }
+
+    p {
+      font-size: 11px;
+      margin-bottom: $spacing-xs;
+    }
+
+    span {
+      font-size: 10px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__open-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: $spacing-sm;
+    margin-top: $spacing-md;
+    background: rgba($color-accent-pink, 0.1);
+    border: 1px solid rgba($color-accent-pink, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-pink;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-pink, 0.2);
+      border-color: rgba($color-accent-pink, 0.5);
+    }
+  }
+}
+
+.annotation-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+
+  &__icon {
+    color: $color-accent-pink;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__text {
+    display: block;
+    font-size: 11px;
+    color: $color-text-primary;
+    margin-bottom: 2px;
+  }
+
+  &__meta {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+}

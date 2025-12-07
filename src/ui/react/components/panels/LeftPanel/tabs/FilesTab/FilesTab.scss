@@ -1,0 +1,424 @@
+// tabs/FilesTab/FilesTab.scss
+// Files tab styling - darker theme matching LayoutPanel
+
+@use "theme" as *;
+
+// =============================================================================
+// FILES TAB CONTAINER
+// =============================================================================
+
+.files-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  &__sections {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+// =============================================================================
+// FILE ITEM
+// =============================================================================
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: $color-border-subtle;
+  }
+
+  &--selected {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.4);
+  }
+
+  &--can-viz:hover {
+    border-color: rgba($color-accent-green, 0.4);
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__size {
+    font-size: 9px;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &:hover &__actions {
+    opacity: 1;
+  }
+
+  &__action-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+// =============================================================================
+// FILE DETAILS MODAL
+// =============================================================================
+
+.file-details-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal;
+}
+
+.file-details-modal {
+  width: 360px;
+  max-width: 90vw;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-md;
+    flex-shrink: 0;
+  }
+
+  &__title-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__type {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  &__content {
+    padding: $spacing-md;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm 0;
+    border-bottom: 1px solid $color-border-subtle;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    svg {
+      color: $color-text-muted;
+      flex-shrink: 0;
+    }
+  }
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-muted;
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  &__value {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+
+    &--path {
+      font-family: monospace;
+      font-size: 10px;
+      word-break: break-all;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--primary {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.25);
+      }
+    }
+
+    &--danger {
+      &:hover {
+        background: rgba($color-error, 0.15);
+        border-color: rgba($color-error, 0.4);
+        color: $color-error;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// PROCESSES TAB
+// =============================================================================
+
+.processes-tab {
+  padding: $spacing-sm;
+
+  &__loading,
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-sm;
+    }
+
+    p {
+      font-size: 11px;
+      margin-bottom: $spacing-xs;
+    }
+
+    span {
+      font-size: 10px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  &__section {
+    margin-bottom: $spacing-md;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 10px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.process-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: $spacing-xs;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: block;
+    font-size: 11px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__file {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__progress {
+    height: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  &__progress-bar {
+    height: 100%;
+    background: $color-accent-amber;
+    transition: width 0.3s ease;
+  }
+
+  &__error {
+    display: block;
+    font-size: 9px;
+    color: $color-error;
+    margin-top: 4px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__action-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+// =============================================================================
+// SPIN ANIMATION
+// =============================================================================
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// =============================================================================
+// ICON HELPERS
+// =============================================================================
+
+.icon-amber {
+  color: $color-accent-amber;
+}
+.icon-green {
+  color: $color-accent-green;
+}
+.icon-blue {
+  color: $color-accent-blue;
+}
+.icon-red {
+  color: $color-error;
+}
+.icon-gray {
+  color: $color-text-muted;
+}

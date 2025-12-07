@@ -1,4 +1,4 @@
-// src/ui/react/components/panels/LeftPanel/tabs/CursorsTab.jsx
+// tabs/CursorsTab/CursorsTab.jsx
 // Cursors tab content for the unified left panel
 //
 // Features:
@@ -20,31 +20,25 @@ import {
     Settings,
     ChevronRight,
     Check,
-    Eye,
-    EyeOff,
     Tag,
     Crosshair,
 } from 'lucide-react';
 import {
-    // Cursor name visibility
     getCursorNamesVisible,
     setCursorNamesVisible,
     onCursorNamesVisibilityChange,
-    // My cursor visibility to others
     getMyCursorVisible,
     setMyCursorVisible,
-    // My cursor color
     getMyCursorColor,
     setMyCursorColor,
-    // Self cursor projection
     getSelfCursorVisible,
     setSelfCursorVisible,
     onSelfCursorVisibilityChange,
-    // Show others' cursors
     getShowOthersCursors,
     setShowOthersCursors,
     onShowOthersCursorsChange,
 } from '@Collaboration/presence/cursors.js';
+import './CursorsTab.scss';
 
 // =============================================================================
 // CURSOR COLOR PRESETS
@@ -68,16 +62,16 @@ const FOLLOW_MODES = [
 ];
 
 // =============================================================================
-// TOGGLE SWITCH
+// TOGGLE SWITCH (dark styled)
 // =============================================================================
 
 function ToggleSwitch({ value, onChange }) {
     return (
         <button
-            className={`toggle-switch ${value ? 'toggle-switch--active' : ''}`}
+            className={`cursors-toggle ${value ? 'cursors-toggle--active' : ''}`}
             onClick={() => onChange(!value)}
         >
-            <span className="toggle-switch__thumb" />
+            <span className="cursors-toggle__thumb" />
         </button>
     );
 }
@@ -156,26 +150,13 @@ function LinkCard({ icon: Icon, title, description, color, onClick }) {
 
 export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
     const [showColorPicker, setShowColorPicker] = useState(false);
-
-    // My cursor visibility to others (synced via Y.js)
     const [cursorVisible, setCursorVisible] = useState(getMyCursorVisible);
-
-    // My cursor color (synced via Y.js)
     const [cursorColor, setCursorColor] = useState(() => getMyCursorColor() || '#34d399');
-
-    // Cursor names visibility (local preference)
     const [showCursorNames, setShowCursorNames] = useState(getCursorNamesVisible);
-
-    // Self cursor projection visibility (local preference)
     const [showSelfCursor, setShowSelfCursor] = useState(getSelfCursorVisible);
-
-    // Show others' cursors (local preference)
     const [showOthersCursors, setShowOthersCursorsState] = useState(getShowOthersCursors);
-
-    // Default follow mode (UI-only for now)
     const [defaultFollowMode, setDefaultFollowMode] = useState('none');
 
-    // Listen for external changes
     useEffect(() => {
         const cleanupNames = onCursorNamesVisibilityChange((visible) => {
             setShowCursorNames(visible);
@@ -193,31 +174,26 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
         };
     }, []);
 
-    // Handle my cursor visibility toggle
     const handleCursorVisibleToggle = useCallback((visible) => {
         setMyCursorVisible(visible);
         setCursorVisible(visible);
     }, []);
 
-    // Handle cursor color change
     const handleColorChange = useCallback((color) => {
         setMyCursorColor(color);
         setCursorColor(color);
     }, []);
 
-    // Handle cursor names toggle
     const handleCursorNamesToggle = useCallback((visible) => {
         setCursorNamesVisible(visible);
         setShowCursorNames(visible);
     }, []);
 
-    // Handle self cursor visibility toggle
     const handleSelfCursorToggle = useCallback((visible) => {
         setSelfCursorVisible(visible);
         setShowSelfCursor(visible);
     }, []);
 
-    // Handle show others toggle
     const handleShowOthersToggle = useCallback((visible) => {
         setShowOthersCursors(visible);
         setShowOthersCursorsState(visible);
@@ -226,9 +202,9 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
     return (
         <div className="cursors-tab">
             {/* Header */}
-            <div className="panel-header">
-                <Users size={14} className="panel-header__icon file-icon--pink" />
-                <span className="panel-header__title">Cursors</span>
+            <div className="cursors-tab__header">
+                <Users size={14} className="icon-pink" />
+                <span className="cursors-tab__title">Cursors</span>
             </div>
 
             {/* Intro */}
@@ -242,7 +218,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                 <div className="cursors-tab__section">
                     <div className="cursors-tab__section-header">My Cursor</div>
 
-                    {/* Visibility toggle */}
                     <div className="cursor-setting-card">
                         <SettingRow
                             icon={MousePointer2}
@@ -257,7 +232,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                         </SettingRow>
                     </div>
 
-                    {/* Cursor color */}
                     <div className="cursor-setting-card">
                         <div className="cursor-setting-row cursor-setting-row--color">
                             <div className="cursor-setting-row__icon" style={{ '--icon-color': cursorColor }}>
@@ -289,7 +263,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                 <div className="cursors-tab__section">
                     <div className="cursors-tab__section-header">Display Options</div>
 
-                    {/* Show others' cursors */}
                     <div className="cursor-setting-card">
                         <SettingRow
                             icon={Users}
@@ -304,7 +277,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                         </SettingRow>
                     </div>
 
-                    {/* Show cursor names */}
                     <div className="cursor-setting-card">
                         <SettingRow
                             icon={Tag}
@@ -319,7 +291,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                         </SettingRow>
                     </div>
 
-                    {/* Show my projected cursor */}
                     <div className="cursor-setting-card">
                         <SettingRow
                             icon={Crosshair}
@@ -334,7 +305,6 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                         </SettingRow>
                     </div>
 
-                    {/* Default follow mode */}
                     <div className="cursor-setting-card">
                         <div className="cursor-setting-row">
                             <div className="cursor-setting-row__icon" style={{ '--icon-color': 'var(--color-accent-blue)' }}>
@@ -380,13 +350,13 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                         title="Instance Layers"
                         description="Per-instance cursor controls and follow mode"
                         color="var(--color-accent-purple)"
-                        onClick={() => onNavigateToPanel?.('instance-tools')}
+                        onClick={() => onNavigateToPanel?.('tools')}
                     />
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="panel-footer panel-footer--info">
+            <div className="cursors-tab__footer">
                 <Settings size={12} />
                 <span>Changes apply to all new views automatically</span>
             </div>

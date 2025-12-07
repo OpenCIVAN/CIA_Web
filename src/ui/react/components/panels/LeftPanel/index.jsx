@@ -31,14 +31,13 @@ import {
 } from 'lucide-react';
 
 // Tab content components
-import { FilesPanelContent } from './tabs/FilesTab';
-import { DatasetsPanelContent } from './tabs/DatasetsTab';
-import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
-import { LayoutPanelContent } from './tabs/LayoutTab';
-import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
-import { CursorsPanelContent } from './tabs/CursorsTab';
-import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
-import { BookmarksPanelContent } from './tabs/BookmarksTab';
+import { FilesPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/FilesTab';
+import { DatasetsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab';
+import { InstanceToolsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/InstanceToolsTab';
+import { LayoutPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/LayoutTab';
+import { AnnotationsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/AnnotationsTab';
+import { CursorsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/CursorsTab';
+import { BookmarksFiltersPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab';
 
 import './LeftPanel.scss';
 
@@ -62,8 +61,7 @@ const TABS = [
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
     { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
     { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
-    { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: true },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: true },
+    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'indigo', implemented: true },
 ];
 
 // =============================================================================

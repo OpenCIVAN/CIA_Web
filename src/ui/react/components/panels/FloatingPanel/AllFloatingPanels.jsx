@@ -14,8 +14,7 @@ import { InstanceToolsPanelContent } from '@UI/react/components/panels/LeftPanel
 import { LayoutPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/LayoutTab';
 import { AnnotationsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/AnnotationsTab';
 import { CursorsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/CursorsTab';
-import { SavedFiltersPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/SavedFiltersTab';
-import { BookmarksPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksTab';
+import { BookmarksFiltersPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab';
 import { LEFT_PANEL_TABS } from '@UI/react/components/panels/LeftPanel/LeftPanelContext';
 
 // Right panel tab content components
@@ -45,10 +44,8 @@ function renderLeftTabContent(tabId, workspaceId) {
             return <AnnotationsPanelContent workspaceId={workspaceId} />;
         case 'cursors':
             return <CursorsPanelContent workspaceId={workspaceId} />;
-        case 'filters':
-            return <SavedFiltersPanelContent workspaceId={workspaceId} />;
         case 'bookmarks':
-            return <BookmarksPanelContent workspaceId={workspaceId} />;
+            return <BookmarksFiltersPanelContent workspaceId={workspaceId} />;
         default:
             return <div>Unknown tab: {tabId}</div>;
     }

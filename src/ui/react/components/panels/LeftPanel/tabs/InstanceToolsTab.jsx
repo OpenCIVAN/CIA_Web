@@ -50,6 +50,10 @@ import {
     Activity,
     Network,
     Minus,
+    Zap,
+    ArrowUpRight,
+    User,
+    Clock,
 } from 'lucide-react';
 
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
@@ -432,6 +436,56 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
 }
 
 // =============================================================================
+// INSTANCE ANNOTATIONS SUBTAB
+// =============================================================================
+
+// Sample annotations for this instance (will be replaced with real data)
+const SAMPLE_INSTANCE_ANNOTATIONS = [
+    { id: 'a1', type: 'point', text: 'Tumor marker', createdBy: 'Beth', timestamp: '2h ago' },
+    { id: 'a2', type: 'region', text: 'Region of interest', createdBy: 'Alex', timestamp: '1d ago' },
+];
+
+function InstanceAnnotationsSubtab({ instanceId, onOpenFullPanel }) {
+    return (
+        <div className="instance-annotations-subtab">
+            <div className="instance-annotations-subtab__info">
+                Annotations on this instance only. For all annotations, use the global Annotations panel.
+            </div>
+
+            {SAMPLE_INSTANCE_ANNOTATIONS.length === 0 ? (
+                <div className="instance-annotations-subtab__empty">
+                    <MapPin size={24} />
+                    <p>No annotations on this instance</p>
+                    <span>Use the annotation tool to add markers</span>
+                </div>
+            ) : (
+                <div className="instance-annotations-subtab__list">
+                    {SAMPLE_INSTANCE_ANNOTATIONS.map(ann => (
+                        <div key={ann.id} className="instance-annotation-item">
+                            <MapPin size={14} className="instance-annotation-item__icon" />
+                            <div className="instance-annotation-item__content">
+                                <span className="instance-annotation-item__text">{ann.text}</span>
+                                <span className="instance-annotation-item__meta">
+                                    {ann.type} &middot; by {ann.createdBy}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <button
+                className="instance-annotations-subtab__open-full"
+                onClick={onOpenFullPanel}
+            >
+                <ArrowUpRight size={12} />
+                Open Full Annotations Panel
+            </button>
+        </div>
+    );
+}
+
+// =============================================================================
 // NO INSTANCE PLACEHOLDER
 // =============================================================================
 
@@ -454,7 +508,7 @@ function NoInstancePlaceholder() {
 
 export function InstanceToolsPanelContent({ workspaceId }) {
     // State
-    const [activeTab, setActiveTab] = useState('tools'); // 'tools' | 'layers'
+    const [activeTab, setActiveTab] = useState('tools'); // 'tools' | 'layers' | 'annotations'
     const [activeInstance, setActiveInstance] = useState(null);
     const [tools, setTools] = useState([]);
     const [expandedMenus, setExpandedMenus] = useState({});
@@ -463,6 +517,13 @@ export function InstanceToolsPanelContent({ workspaceId }) {
         annotations: { enabled: true, opacity: 1.0, count: 0, total: 0 },
         widgets: { enabled: true, opacity: 1.0, count: 0, total: 0 },
     });
+
+    // Handler to open full annotations panel
+    const handleOpenFullAnnotations = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:navigate-to-panel', {
+            detail: { panelId: 'annotations' }
+        }));
+    }, []);
 
     // Subscribe to workspace changes
     useEffect(() => {
@@ -553,31 +614,42 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                 <span className="instance-tools-tab__instance-type">{instanceInfo.type.toUpperCase()}</span>
             </div>
 
-            {/* Tab Bar */}
+            {/* Tab Bar - 3 subtabs per spec */}
             <div className="instance-tools-tab__tabs">
                 <button
                     className={`instance-tools-tab__tab ${activeTab === 'tools' ? 'instance-tools-tab__tab--active' : ''}`}
                     onClick={() => setActiveTab('tools')}
+                    data-color="amber"
                 >
-                    <Wand2 size={14} /> Tools
+                    <Zap size={14} /> Tools
                 </button>
                 <button
                     className={`instance-tools-tab__tab ${activeTab === 'layers' ? 'instance-tools-tab__tab--active' : ''}`}
                     onClick={() => setActiveTab('layers')}
+                    data-color="purple"
                 >
                     <Layers size={14} /> Layers
+                </button>
+                <button
+                    className={`instance-tools-tab__tab ${activeTab === 'annotations' ? 'instance-tools-tab__tab--active' : ''}`}
+                    onClick={() => setActiveTab('annotations')}
+                    data-color="pink"
+                >
+                    <MapPin size={14} /> Annotations
                 </button>
             </div>
 
             {/* Content */}
             <div className="instance-tools-tab__content">
-                {activeTab === 'tools' ? (
+                {activeTab === 'tools' && (
                     <ToolsList
                         tools={tools}
                         expandedMenus={expandedMenus}
                         onToggleMenu={toggleMenu}
                     />
-                ) : (
+                )}
+
+                {activeTab === 'layers' && (
                     /* Layers Tab Content */
                     <>
                         <div className="layers-tab__info">
@@ -585,14 +657,14 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                         </div>
                         <LayerToggle
                             icon={Users}
-                            label="Collaborator Cursors"
+                            label="Remote Cursors"
                             enabled={layers.cursors.enabled}
                             count={layers.cursors.count}
                             total={layers.cursors.total}
                             onToggle={() => toggleLayer('cursors')}
                         />
                         <LayerToggle
-                            icon={PenTool}
+                            icon={MapPin}
                             label="Annotations"
                             enabled={layers.annotations.enabled}
                             count={layers.annotations.count}
@@ -600,7 +672,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                             onToggle={() => toggleLayer('annotations')}
                         />
                         <LayerToggle
-                            icon={Compass}
+                            icon={Box}
                             label="Widgets"
                             enabled={layers.widgets.enabled}
                             count={layers.widgets.count}
@@ -608,6 +680,13 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                             onToggle={() => toggleLayer('widgets')}
                         />
                     </>
+                )}
+
+                {activeTab === 'annotations' && (
+                    <InstanceAnnotationsSubtab
+                        instanceId={activeInstance?.instanceId}
+                        onOpenFullPanel={handleOpenFullAnnotations}
+                    />
                 )}
             </div>
 
