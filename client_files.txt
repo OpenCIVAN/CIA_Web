@@ -647,7 +647,7 @@ CursorsTab
 DatasetsTab
 FilesTab
 InstanceToolsTab
-InstanceToolsTab.jsx
+InstanceToolsTab.old
 LayoutTab
 _tabs.scss
 
@@ -719,13 +719,17 @@ ProcessesTab.jsx
 index.jsx
 
 ./src/ui/react/components/panels/LeftPanel/tabs/InstanceToolsTab:
-AnnotationsSubtab.jsx
 InstanceToolsTab.jsx
 InstanceToolsTab.scss
-LayersSubtab.jsx
-ToolsSubtab.jsx
 iconMap.js
 index.jsx
+subtabs
+
+./src/ui/react/components/panels/LeftPanel/tabs/InstanceToolsTab/subtabs:
+AnnotationsSubtab.jsx
+LayersSubtab.jsx
+ToolsSubtab.jsx
+index.js
 
 ./src/ui/react/components/panels/LeftPanel/tabs/LayoutTab:
 CanvasSubtab.jsx
