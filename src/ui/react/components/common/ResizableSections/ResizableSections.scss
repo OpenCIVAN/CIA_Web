@@ -153,11 +153,11 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 $spacing-xs; // horizontal padding for content
+  padding: $spacing-xs $spacing-sm; // ADD horizontal padding
 
-  // Add spacing between items
+  // Add spacing between child items
   > * + * {
-    margin-top: 1px;
+    margin-top: 2px;
   }
 
   // Custom scrollbar (unchanged)

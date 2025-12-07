@@ -370,28 +370,20 @@ export function useLayoutPanel(options) {
   // ===========================================================================
 
   const moveViewport = useCallback(
-    (direction) => {
-      switch (direction) {
-        case "up":
-          canvasMoveViewport(-1, 0);
-          break;
-        case "down":
-          canvasMoveViewport(1, 0);
-          break;
-        case "left":
-          canvasMoveViewport(0, -1);
-          break;
-        case "right":
-          canvasMoveViewport(0, 1);
-          break;
-        case "reset":
-          setViewportPosition(homepoint.row, homepoint.col);
-          break;
-        default:
-          break;
+    (deltaRow, deltaCol) => {
+      if (!canvas) return;
+
+      const maxRow = Math.max(0, canvas.dimensions.rows - viewport.rows);
+      const maxCol = Math.max(0, canvas.dimensions.cols - viewport.cols);
+
+      const newRow = Math.min(maxRow, Math.max(0, viewport.row + deltaRow));
+      const newCol = Math.min(maxCol, Math.max(0, viewport.col + deltaCol));
+
+      if (newRow !== viewport.row || newCol !== viewport.col) {
+        canvasMoveViewport?.(newRow - viewport.row, newCol - viewport.col);
       }
     },
-    [canvasMoveViewport, setViewportPosition, homepoint]
+    [canvas, viewport, canvasMoveViewport]
   );
 
   const navigateToCell = useCallback(
@@ -629,6 +621,66 @@ export function useLayoutPanel(options) {
     [canvasSetFlowDirection]
   );
 
+  const applyQuickLayout = useCallback(
+    async (layout) => {
+      if (!canvas) {
+        console.warn("Cannot apply layout: no canvas");
+        return;
+      }
+
+      // Clear existing placements first (optional - could be configurable)
+      // For now, just log what would happen
+      console.log("Applying quick layout:", layout.id, layout.grid);
+
+      // Calculate required grid size
+      const rows = layout.grid.length;
+      const cols = Math.max(
+        ...layout.grid.map((row) => row.reduce((sum, span) => sum + span, 0))
+      );
+
+      // Update canvas dimensions if needed
+      if (canvas.dimensions.rows < rows || canvas.dimensions.cols < cols) {
+        try {
+          await canvasManager.updateCanvas(canvas.id, {
+            dimensions: {
+              rows: Math.max(canvas.dimensions.rows, rows),
+              cols: Math.max(canvas.dimensions.cols, cols),
+            },
+          });
+        } catch (err) {
+          console.error("Failed to resize canvas for layout:", err);
+        }
+      }
+
+      // TODO: Create placements based on layout.grid
+      // This requires knowing which datasets/views to place
+    },
+    [canvas]
+  );
+
+  // Add closeView function
+  const closeView = useCallback(
+    async (viewId) => {
+      if (!viewId) return;
+
+      // Find the placement with this view
+      const placement = rawPlacements.find(
+        (p) =>
+          p.content?.viewConfigurationId === viewId ||
+          p.getViewId?.() === viewId
+      );
+
+      if (placement) {
+        try {
+          await canvasManager.removePlacement(placement.id);
+        } catch (err) {
+          console.error("Failed to remove placement:", err);
+        }
+      }
+    },
+    [rawPlacements]
+  );
+
   // ===========================================================================
   // TOOLS STATE
   // ===========================================================================
@@ -829,6 +881,8 @@ export function useLayoutPanel(options) {
     setGroupByDataset,
     filteredCells,
     groupedCells,
+    applyQuickLayout,
+    closeView,
   };
 }
 

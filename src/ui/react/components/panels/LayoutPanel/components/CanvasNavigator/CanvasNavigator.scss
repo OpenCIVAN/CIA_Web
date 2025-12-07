@@ -20,9 +20,20 @@
   }
 
   &--floating {
+    position: absolute;
+    bottom: $spacing-md;
+    right: $spacing-md;
+    max-height: calc(100vh - 200px); // Prevent overflow
+    overflow: hidden;
+    z-index: $z-floating;
     border-radius: $radius-md;
     border: 1px solid $color-border-default;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+    .canvas-navigator__body {
+      max-height: 400px;
+      overflow-y: auto;
+    }
   }
 
   &--disabled {

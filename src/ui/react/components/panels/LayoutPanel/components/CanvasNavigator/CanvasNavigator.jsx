@@ -109,18 +109,6 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     // Refs for press-and-hold
     const holdIntervalRef = useRef(null);
 
-    const startHold = useCallback((action) => {
-        action();
-        holdIntervalRef.current = setInterval(action, 150);
-    }, []);
-
-    const stopHold = useCallback(() => {
-        if (holdIntervalRef.current) {
-            clearInterval(holdIntervalRef.current);
-            holdIntervalRef.current = null;
-        }
-    }, []);
-
     // Generate minimap grid
     const minimapCells = useMemo(() => {
         const result = [];
@@ -378,9 +366,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <span className="canvas-navigator__size-label">Cols</span>
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={() => startHold(decrementColsHold)}
-                        onMouseUp={stopHold}
-                        onMouseLeave={stopHold}
+                        onMouseDown={decrementColsHold.start}
+                        onMouseUp={decrementColsHold.stop}
+                        onMouseLeave={decrementColsHold.stop}
                         disabled={canvasSize.cols <= 1}
                         title="Decrease columns"
                     >

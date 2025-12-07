@@ -11,13 +11,34 @@ const VIEW_COLORS = ['#60a5fa', '#4ade80', '#f472b6', '#fbbf24', '#2dd4bf', '#a7
 
 export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     const {
-        cells = [],
-        canvasSize,
+        cells,               // Array of enriched cell objects from logic
+        filteredCells,       // Filtered by search/activeFilters
+        groupedCells,        // Grouped by dataset if groupByDataset
         groupByDataset,
         setGroupByDataset,
-        closeView,
+        searchQuery,
+        setSearchQuery,
+        activeFilters,
+        toggleFilter,
         navigateToCell,
+        closeView,
+        toggleViewExpanded,
+        expandedViewId,
     } = logic;
+
+    // Use filteredCells or groupedCells for rendering
+    const displayCells = groupByDataset ? groupedCells : filteredCells;
+
+    // If cells is empty, show empty state
+    if (!cells || cells.length === 0) {
+        return (
+            <div className="views-subtab__empty">
+                <Layers size={24} />
+                <p>No views on canvas</p>
+                <span>Drag a dataset to create a view</span>
+            </div>
+        );
+    }
 
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilters, setActiveFilters] = useState([]);
