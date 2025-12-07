@@ -767,17 +767,18 @@ CanvasWorkspace
 ConnectionOverlay
 FloatingResizePopover
 GridEditOverlay
-MiniMap
 ViewportNavigator
 index.js
 
 ./src/ui/react/components/workspace/Canvas/CanvasCell:
 CanvasCell.jsx
 CanvasCell.scss
+index.js
 
 ./src/ui/react/components/workspace/Canvas/CanvasGrid:
 CanvasGrid.jsx
 CanvasGrid.scss
+index.js
 
 ./src/ui/react/components/workspace/Canvas/CanvasMinimap:
 CanvasMinimap.jsx
@@ -787,6 +788,7 @@ index.js
 ./src/ui/react/components/workspace/Canvas/CanvasWorkspace:
 CanvasWorkspace.jsx
 CanvasWorkspace.scss
+index.js
 
 ./src/ui/react/components/workspace/Canvas/ConnectionOverlay:
 ConnectionOverlay.jsx
@@ -803,13 +805,10 @@ GridEditOverlay.jsx
 GridEditOverlay.scss
 index.js
 
-./src/ui/react/components/workspace/Canvas/MiniMap:
-MiniMap.jsx
-MiniMap.scss
-
 ./src/ui/react/components/workspace/Canvas/ViewportNavigator:
 ViewportNavigator.jsx
 ViewportNavigator.scss
+index.js
 
 ./src/ui/react/components/workspace/GridLayoutPreview:
 GridLayoutPreview.jsx

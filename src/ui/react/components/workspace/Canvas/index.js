@@ -4,7 +4,7 @@
 // Canvas components
 export { CanvasGrid } from "./CanvasGrid/CanvasGrid.jsx";
 export { CanvasCell } from "./CanvasCell/CanvasCell.jsx";
-export { MiniMap } from "./MiniMap/MiniMap.jsx";
+export { CanvasMinimap, CanvasMinimap as MiniMap } from "./CanvasMinimap/CanvasMinimap.jsx";
 export { ViewportNavigator } from "./ViewportNavigator/ViewportNavigator.jsx";
 
 // Full canvas workspace integration
