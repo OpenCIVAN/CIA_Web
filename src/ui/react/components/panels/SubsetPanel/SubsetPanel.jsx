@@ -9,8 +9,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useSubsets } from '@UI/react/hooks/useCanvas.js';
-import { SubsetCard } from './SubsetCard.jsx';
-import { CreateSubsetDialog } from './CreateSubsetDialog.jsx';
+import { SubsetCard } from '../SubsetCard';
+import { CreateSubsetDialog } from '../CreateSubsetDialog';
 import './SubsetPanel.scss';
 
 /**

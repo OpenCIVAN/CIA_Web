@@ -5,8 +5,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { CanvasGrid } from '@UI/react/components/workspace';
-import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel.jsx';
-import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay.jsx';
+import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel';
+import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';

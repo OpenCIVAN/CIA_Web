@@ -537,21 +537,16 @@ index.js
 
 ./src/ui/react/components/panels:
 BottomPanel
-CreateSubsetDialog.jsx
-CreateSubsetDialog.scss
+CreateSubsetDialog
 FloatingPanel
-FocusModeOverlay.jsx
-FocusModeOverlay.scss
+FocusModeOverlay
 LayoutPanel
 LeftPanel
 LoggingPanel
 RightPanel
-SelectionToolbar.jsx
-SelectionToolbar.scss
-SubsetCard.jsx
-SubsetCard.scss
-SubsetPanel.jsx
-SubsetPanel.scss
+SelectionToolbar
+SubsetCard
+SubsetPanel
 index.js
 
 ./src/ui/react/components/panels/BottomPanel:
@@ -577,12 +572,22 @@ LogsTab.jsx
 LogsTab.scss
 index.js
 
+./src/ui/react/components/panels/CreateSubsetDialog:
+CreateSubsetDialog.jsx
+CreateSubsetDialog.scss
+index.js
+
 ./src/ui/react/components/panels/FloatingPanel:
 AllFloatingPanels.jsx
 FloatingPanel.jsx
 FloatingPanel.scss
 FloatingPanelContext.jsx
 PopOutButton.jsx
+index.js
+
+./src/ui/react/components/panels/FocusModeOverlay:
+FocusModeOverlay.jsx
+FocusModeOverlay.scss
 index.js
 
 ./src/ui/react/components/panels/LayoutPanel:
@@ -742,6 +747,21 @@ PeopleTab.jsx
 RecordingsTab.jsx
 RoomsTab.jsx
 VoiceTab.jsx
+
+./src/ui/react/components/panels/SelectionToolbar:
+SelectionToolbar.jsx
+SelectionToolbar.scss
+index.js
+
+./src/ui/react/components/panels/SubsetCard:
+SubsetCard.jsx
+SubsetCard.scss
+index.js
+
+./src/ui/react/components/panels/SubsetPanel:
+SubsetPanel.jsx
+SubsetPanel.scss
+index.js
 
 ./src/ui/react/components/toolbars:
 Toolbar.jsx
