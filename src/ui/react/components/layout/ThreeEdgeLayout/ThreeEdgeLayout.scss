@@ -172,6 +172,7 @@
     background: $color-bg-base;
     min-width: 0;
     min-height: 0;
+    position: relative; // Required for FloatingCanvasNavigator absolute positioning
     // The minmax(300px, 1fr) in grid-template-columns ensures this expands
   }
 

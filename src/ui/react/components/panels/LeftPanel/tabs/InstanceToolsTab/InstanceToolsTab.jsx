@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 // Import subtab components
-import { ToolsList as ToolsSubtab } from './subtabs/ToolsSubtab';
+import { ToolsList } from './subtabs/ToolsSubtab';
 import { LayersSubtab } from './subtabs/LayersSubtab';
 import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 
@@ -30,6 +30,63 @@ import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 import './InstanceToolsTab.scss';
+
+// =============================================================================
+// TOOLS SUBTAB WRAPPER - Gets tools from instance handler
+// =============================================================================
+
+function ToolsSubtab({ activeInstance }) {
+    const [expandedMenus, setExpandedMenus] = useState({});
+    const [tools, setTools] = useState([]);
+
+    // Get tools from the instance handler
+    useEffect(() => {
+        if (!activeInstance) {
+            setTools([]);
+            return;
+        }
+
+        const handler = activeInstance.handler;
+        if (handler && typeof handler.getToolbarConfig === 'function') {
+            try {
+                const toolbarConfig = handler.getToolbarConfig();
+                // Transform toolbar config to tools format
+                const instanceTools = toolbarConfig.map(tool => ({
+                    id: tool.id,
+                    icon: tool.icon,
+                    label: tool.label,
+                    description: tool.tooltip || tool.description,
+                    type: tool.items ? 'menu' : 'button',
+                    active: tool.active,
+                    disabled: tool.disabled,
+                    options: tool.items,
+                    onClick: tool.onClick,
+                }));
+                setTools(instanceTools);
+            } catch (e) {
+                console.warn('Failed to get toolbar config:', e);
+                setTools([]);
+            }
+        } else {
+            setTools([]);
+        }
+    }, [activeInstance]);
+
+    const handleToggleMenu = useCallback((menuId) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuId]: !prev[menuId]
+        }));
+    }, []);
+
+    return (
+        <ToolsList
+            tools={tools}
+            expandedMenus={expandedMenus}
+            onToggleMenu={handleToggleMenu}
+        />
+    );
+}
 
 // =============================================================================
 // NO INSTANCE PLACEHOLDER
@@ -119,8 +176,8 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             {/* ============================================================
                 PANEL HEADER - Matches Files and Datasets tabs
                 ============================================================ */}
-            <div className="panel-header">
-                <Wrench size={14} className="panel-header__icon file-icon--amber" />
+            <div className="panel-header panel-header--amber">
+                <Wrench size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Instance Tools</span>
                 {activeInstance && (
                     <span className="panel-header__count">1 active</span>

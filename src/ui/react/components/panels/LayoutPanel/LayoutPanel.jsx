@@ -84,10 +84,10 @@ export const LayoutPanel = memo(function LayoutPanel({
 
     return (
         <div className={`layout-panel ${!isConnected ? 'layout-panel--disabled' : ''} ${className}`}>
-            {/* Header */}
-            <div className="layout-panel__header">
-                <LayoutGrid size={14} className="layout-panel__header-icon" />
-                <span className="layout-panel__title">Layout</span>
+            {/* Header - using standard panel-header */}
+            <div className="panel-header panel-header--amber">
+                <LayoutGrid size={14} className="panel-header__icon" />
+                <span className="panel-header__title">Layout</span>
                 {!isConnected && (
                     <WifiOff size={12} className="layout-panel__header-offline" title="Disconnected" />
                 )}

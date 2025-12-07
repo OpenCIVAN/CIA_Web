@@ -2,7 +2,7 @@
  * ViewsSubtab - Shows all active views from the canvas
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
-import { Search, X, Database, Filter, Plus, ChevronDown, ChevronRight, GripVertical, Eye, Trash2 } from 'lucide-react';
+import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight, GripVertical, Eye, Trash2 } from 'lucide-react';
 import { FilterChips } from '../components/FilterChips';
 import './ViewsSubtab.scss';
 
@@ -12,13 +12,11 @@ const VIEW_COLORS = ['#60a5fa', '#4ade80', '#f472b6', '#fbbf24', '#2dd4bf', '#a7
 export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     const {
         cells,               // Array of enriched cell objects from logic
-        filteredCells,       // Filtered by search/activeFilters
-        groupedCells,        // Grouped by dataset if groupByDataset
         groupByDataset,
         setGroupByDataset,
-        searchQuery,
-        setSearchQuery,
-        activeFilters,
+        searchQuery: logicSearchQuery,
+        setSearchQuery: logicSetSearchQuery,
+        activeFilters: logicActiveFilters,
         toggleFilter,
         navigateToCell,
         closeView,
@@ -26,26 +24,19 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         expandedViewId,
     } = logic;
 
-    // Use filteredCells or groupedCells for rendering
-    const displayCells = groupByDataset ? groupedCells : filteredCells;
-
-    // If cells is empty, show empty state
-    if (!cells || cells.length === 0) {
-        return (
-            <div className="views-subtab__empty">
-                <Layers size={24} />
-                <p>No views on canvas</p>
-                <span>Drag a dataset to create a view</span>
-            </div>
-        );
-    }
-
-    const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilters, setActiveFilters] = useState([]);
+    // Local state for UI - use logic state if available, otherwise local
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
+    const [localActiveFilters, setLocalActiveFilters] = useState([]);
     const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+
+    // Use logic state if available, otherwise use local
+    const searchQuery = logicSearchQuery !== undefined ? logicSearchQuery : localSearchQuery;
+    const setSearchQuery = logicSetSearchQuery || setLocalSearchQuery;
+    const activeFilters = logicActiveFilters !== undefined ? logicActiveFilters : localActiveFilters;
 
     // Filter cells based on search
     const filteredCells = useMemo(() => {
+        if (!cells) return [];
         if (!searchQuery) return cells;
         const q = searchQuery.toLowerCase();
         return cells.filter(cell =>
@@ -87,6 +78,17 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         closeView?.(cellId);
     }, [closeView]);
 
+    // If cells is empty, show empty state
+    if (!cells || cells.length === 0) {
+        return (
+            <div className="views-subtab__empty">
+                <Layers size={24} />
+                <p>No views on canvas</p>
+                <span>Drag a dataset to create a view</span>
+            </div>
+        );
+    }
+
     return (
         <div className="views-subtab">
             {/* Search */}
@@ -111,9 +113,15 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                 <Filter size={10} className="views-subtab__filter-icon" />
                 <FilterChips
                     activeFilters={activeFilters}
-                    onToggle={(id) => setActiveFilters(prev =>
-                        prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-                    )}
+                    onToggle={(id) => {
+                        if (toggleFilter) {
+                            toggleFilter(id);
+                        } else {
+                            setLocalActiveFilters(prev =>
+                                prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
+                            );
+                        }
+                    }}
                 />
                 <button
                     className={`views-subtab__group-btn ${groupByDataset ? 'views-subtab__group-btn--active' : ''}`}
@@ -122,7 +130,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                     <Database size={10} /> Group
                 </button>
                 {activeFilters.length > 0 && (
-                    <button className="views-subtab__clear-btn" onClick={() => setActiveFilters([])}>
+                    <button className="views-subtab__clear-btn" onClick={() => setLocalActiveFilters([])}>
                         Clear
                     </button>
                 )}

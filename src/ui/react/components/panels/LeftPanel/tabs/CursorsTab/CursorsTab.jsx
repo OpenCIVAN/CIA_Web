@@ -3,6 +3,8 @@
 //
 // FIXES:
 // - Header uses ALL CAPS styling like Files/Datasets
+// - Online users section is collapsible at the bottom
+// - Uses ResizableSections for settings and users
 
 import React, { useState, useCallback } from 'react';
 import {
@@ -16,6 +18,11 @@ import {
     ChevronDown,
     ChevronRight,
 } from 'lucide-react';
+import {
+    ResizableSectionsContainer,
+    ResizableSection,
+    useSectionStates
+} from '@UI/react/components/common/ResizableSections';
 import './CursorsTab.scss';
 
 // =============================================================================
@@ -37,6 +44,11 @@ const SAMPLE_USERS = [
     { id: 'user-2', name: 'Dr. Sarah Smith', color: '#fb7185', isVisible: true, isSelf: false },
     { id: 'user-3', name: 'Alex Chen', color: '#60a5fa', isVisible: false, isSelf: false },
 ];
+
+const DEFAULT_SECTION_STATES = {
+    settings: { expanded: true, flexGrow: 2 },
+    online: { expanded: true, flexGrow: 1 },
+};
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -118,6 +130,9 @@ export function CursorsPanelContent({ workspaceId }) {
     const [showLabels, setShowLabels] = useState(true);
     const [showTrails, setShowTrails] = useState(false);
 
+    // Section states for resizable sections
+    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTION_STATES);
+
     // Handlers
     const toggleUserVisibility = useCallback((userId) => {
         setUsers(prev => prev.map(u =>
@@ -160,64 +175,54 @@ export function CursorsPanelContent({ workspaceId }) {
                 </button>
             </div>
 
-            {/* User list */}
-            <div className="cursors-tab__users">
-                <div className="cursors-tab__users-header">
-                    <Users size={12} />
-                    <span>Online Users</span>
-                    <span className="cursors-tab__users-count">{users.length}</span>
-                </div>
-                <div className="cursors-tab__users-list">
-                    {users.map(user => (
-                        <UserCursorRow
-                            key={user.id}
-                            user={user}
-                            onToggleVisibility={toggleUserVisibility}
-                            onChangeColor={changeUserColor}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* Settings */}
-            <div className="cursors-tab__settings">
-                <SettingsSection title="Display Settings">
-                    <div className="setting-row">
-                        <span>Cursor Size</span>
-                        <select
-                            value={cursorSize}
-                            onChange={(e) => setCursorSize(e.target.value)}
-                            className="setting-select"
-                        >
-                            <option value="small">Small</option>
-                            <option value="medium">Medium</option>
-                            <option value="large">Large</option>
-                        </select>
-                    </div>
-                    <div className="setting-row">
-                        <span>Show Labels</span>
-                        <button
-                            className={`setting-toggle ${showLabels ? 'setting-toggle--on' : ''}`}
-                            onClick={() => setShowLabels(!showLabels)}
-                        >
-                            {showLabels ? 'On' : 'Off'}
-                        </button>
-                    </div>
-                    <div className="setting-row">
-                        <span>Cursor Trails</span>
-                        <button
-                            className={`setting-toggle ${showTrails ? 'setting-toggle--on' : ''}`}
-                            onClick={() => setShowTrails(!showTrails)}
-                        >
-                            {showTrails ? 'On' : 'Off'}
-                        </button>
-                    </div>
-                </SettingsSection>
-
-                <SettingsSection title="My Cursor" defaultExpanded={false}>
-                    <div className="my-cursor-settings">
+            {/* Resizable Sections */}
+            <ResizableSectionsContainer
+                sectionStates={sectionStates}
+                onSectionToggle={toggleSection}
+                onSectionResize={resizeSection}
+            >
+                {/* Settings Section */}
+                <ResizableSection
+                    id="settings"
+                    icon={Settings}
+                    iconColorClass="icon-amber"
+                    label="Display Settings"
+                >
+                    <div className="cursors-tab__settings-content">
                         <div className="setting-row">
-                            <span>Color</span>
+                            <span>Cursor Size</span>
+                            <select
+                                value={cursorSize}
+                                onChange={(e) => setCursorSize(e.target.value)}
+                                className="setting-select"
+                            >
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                        <div className="setting-row">
+                            <span>Show Labels</span>
+                            <button
+                                className={`setting-toggle ${showLabels ? 'setting-toggle--on' : ''}`}
+                                onClick={() => setShowLabels(!showLabels)}
+                            >
+                                {showLabels ? 'On' : 'Off'}
+                            </button>
+                        </div>
+                        <div className="setting-row">
+                            <span>Cursor Trails</span>
+                            <button
+                                className={`setting-toggle ${showTrails ? 'setting-toggle--on' : ''}`}
+                                onClick={() => setShowTrails(!showTrails)}
+                            >
+                                {showTrails ? 'On' : 'Off'}
+                            </button>
+                        </div>
+
+                        {/* My Cursor Color */}
+                        <div className="setting-row setting-row--colors">
+                            <span>My Color</span>
                             <div className="color-swatches">
                                 {DEFAULT_CURSOR_COLORS.map(color => (
                                     <button
@@ -230,8 +235,28 @@ export function CursorsPanelContent({ workspaceId }) {
                             </div>
                         </div>
                     </div>
-                </SettingsSection>
-            </div>
+                </ResizableSection>
+
+                {/* Online Users Section - Collapsible at bottom */}
+                <ResizableSection
+                    id="online"
+                    icon={Users}
+                    iconColorClass="icon-teal"
+                    label="Online Users"
+                    count={users.length}
+                >
+                    <div className="cursors-tab__users-list">
+                        {users.map(user => (
+                            <UserCursorRow
+                                key={user.id}
+                                user={user}
+                                onToggleVisibility={toggleUserVisibility}
+                                onChangeColor={changeUserColor}
+                            />
+                        ))}
+                    </div>
+                </ResizableSection>
+            </ResizableSectionsContainer>
         </div>
     );
 }

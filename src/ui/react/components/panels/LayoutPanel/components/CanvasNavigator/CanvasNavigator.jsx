@@ -16,7 +16,7 @@
  * When FLOATING: Shows tools bar
  */
 
-import React, { memo, useMemo, useCallback, useRef } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import {
     ChevronUp,
     ChevronDown,
@@ -105,9 +105,6 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         handleCellDragLeave,
         handleCellDrop,
     } = nav;
-
-    // Refs for press-and-hold
-    const holdIntervalRef = useRef(null);
 
     // Generate minimap grid
     const minimapCells = useMemo(() => {
@@ -384,9 +381,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     />
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={() => startHold(incrementColsHold)}
-                        onMouseUp={stopHold}
-                        onMouseLeave={stopHold}
+                        onMouseDown={incrementColsHold.start}
+                        onMouseUp={incrementColsHold.stop}
+                        onMouseLeave={incrementColsHold.stop}
                         disabled={canvasSize.cols >= 20}
                         title="Increase columns"
                     >
@@ -400,9 +397,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <span className="canvas-navigator__size-label">Rows</span>
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={() => startHold(decrementRowsHold)}
-                        onMouseUp={stopHold}
-                        onMouseLeave={stopHold}
+                        onMouseDown={decrementRowsHold.start}
+                        onMouseUp={decrementRowsHold.stop}
+                        onMouseLeave={decrementRowsHold.stop}
                         disabled={canvasSize.rows <= 1}
                         title="Decrease rows"
                     >
@@ -418,9 +415,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     />
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={() => startHold(incrementRowsHold)}
-                        onMouseUp={stopHold}
-                        onMouseLeave={stopHold}
+                        onMouseDown={incrementRowsHold.start}
+                        onMouseUp={incrementRowsHold.stop}
+                        onMouseLeave={incrementRowsHold.stop}
                         disabled={canvasSize.rows >= 20}
                         title="Increase rows"
                     >

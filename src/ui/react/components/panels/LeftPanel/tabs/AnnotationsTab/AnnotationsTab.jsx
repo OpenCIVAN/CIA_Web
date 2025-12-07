@@ -1,10 +1,11 @@
 // src/ui/react/components/panels/LeftPanel/tabs/AnnotationsTab/AnnotationsTab.jsx
 // Annotations tab - spatial annotations for datasets and workspaces
 //
-// FIXES:
-// - Header now uses ALL CAPS styling like Files/Datasets
-// - Scope chips are centered
-// - Type filters are centered
+// Features:
+// - Uses real data from useAnnotations hook
+// - Header uses ALL CAPS styling like Files/Datasets
+// - Scope chips and type filters are centered
+// - Footer uses panel-footer class fixed to bottom
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -23,12 +24,17 @@ import {
     MoreHorizontal,
     ChevronRight,
     ChevronDown,
+    ExternalLink,
+    Plus,
+    Loader,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
+import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import './AnnotationsTab.scss';
 
 // =============================================================================
@@ -37,8 +43,8 @@ import './AnnotationsTab.scss';
 
 const ANNOTATION_SCOPES = [
     { id: 'all', label: 'All', color: 'blue' },
-    { id: 'dataset', label: 'Dataset', color: 'teal' },
-    { id: 'workspace', label: 'Workspace', color: 'amber' },
+    { id: 'mine', label: 'Mine', color: 'teal' },
+    { id: 'shared', label: 'Shared', color: 'amber' },
 ];
 
 const ANNOTATION_TYPES = {
@@ -46,32 +52,7 @@ const ANNOTATION_TYPES = {
     region: { icon: Box, label: 'Region', color: 'green' },
     measurement: { icon: Ruler, label: 'Measure', color: 'amber' },
     angle: { icon: CornerUpRight, label: 'Angle', color: 'purple' },
-};
-
-// Sample data - will be replaced with real data from useAnnotations
-const SAMPLE_ANNOTATIONS = {
-    datasets: [
-        {
-            id: 'ds-1',
-            name: 'Brain_Scan_001.nii',
-            annotations: [
-                { id: 'ann-1', type: 'point', text: 'Tumor marker', visible: true },
-                { id: 'ann-2', type: 'measurement', text: 'Lesion diameter: 35mm', visible: true },
-                { id: 'ann-3', type: 'region', text: 'Region of interest', visible: false },
-            ],
-        },
-        {
-            id: 'ds-2',
-            name: 'CT_Overlay.dcm',
-            annotations: [
-                { id: 'ann-4', type: 'point', text: 'Vertebra T7', visible: true },
-            ],
-        },
-    ],
-    workspace: [
-        { id: 'ws-ann-1', type: 'point', text: 'Reference point A', visible: true },
-        { id: 'ws-ann-2', type: 'angle', text: 'Rotation angle', visible: true },
-    ],
+    text: { icon: MapPin, label: 'Text', color: 'pink' },
 };
 
 const DEFAULT_SECTION_STATES = {
@@ -109,26 +90,35 @@ function TypeFilterToggle({ type, config, active, onClick }) {
     );
 }
 
-function AnnotationItem({ annotation }) {
-    const config = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
-    const Icon = config.icon;
+function AnnotationItem({ annotation, onToggleVisibility }) {
+    const typeConfig = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
+    const Icon = typeConfig.icon;
+    const isVisible = annotation.visible !== false;
 
     return (
         <div className="annotation-item">
-            <Icon size={12} className="annotation-item__icon" data-color={config.color} />
-            <span className="annotation-item__text">{annotation.text}</span>
-            <button className="annotation-item__visibility">
-                {annotation.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+            <Icon size={12} className={`annotation-item__icon icon-${typeConfig.color}`} />
+            <span className="annotation-item__text">
+                {annotation.label || annotation.text || `${typeConfig.label} annotation`}
+            </span>
+            <button
+                className="annotation-item__visibility"
+                onClick={() => onToggleVisibility?.(annotation)}
+                title={isVisible ? 'Hide' : 'Show'}
+            >
+                {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
-            <button className="annotation-item__more">
+            <button className="annotation-item__more" title="More options">
                 <MoreHorizontal size={12} />
             </button>
         </div>
     );
 }
 
-function DatasetGroup({ dataset }) {
+function DatasetGroup({ dataset, annotations, onToggleVisibility }) {
     const [expanded, setExpanded] = useState(true);
+
+    if (!annotations || annotations.length === 0) return null;
 
     return (
         <div className="dataset-group">
@@ -138,13 +128,17 @@ function DatasetGroup({ dataset }) {
             >
                 {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 <Database size={12} className="dataset-group__icon" />
-                <span className="dataset-group__name">{dataset.name}</span>
-                <span className="dataset-group__count">{dataset.annotations.length}</span>
+                <span className="dataset-group__name">{dataset?.name || 'Unknown Dataset'}</span>
+                <span className="dataset-group__count">{annotations.length}</span>
             </button>
             {expanded && (
                 <div className="dataset-group__list">
-                    {dataset.annotations.map(ann => (
-                        <AnnotationItem key={ann.id} annotation={ann} />
+                    {annotations.map(ann => (
+                        <AnnotationItem
+                            key={ann.id}
+                            annotation={ann}
+                            onToggleVisibility={onToggleVisibility}
+                        />
                     ))}
                 </div>
             )}
@@ -152,17 +146,11 @@ function DatasetGroup({ dataset }) {
     );
 }
 
-function WorkspaceAnnotationItem({ annotation }) {
-    const config = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
-    const Icon = config.icon;
-
+function EmptyState({ message }) {
     return (
-        <div className="annotation-item annotation-item--workspace">
-            <Icon size={12} className="annotation-item__icon" data-color={config.color} />
-            <span className="annotation-item__text">{annotation.text}</span>
-            <button className="annotation-item__visibility">
-                {annotation.visible ? <Eye size={12} /> : <EyeOff size={12} />}
-            </button>
+        <div className="annotations-tab__empty">
+            <MapPin size={24} />
+            <p>{message}</p>
         </div>
     );
 }
@@ -173,12 +161,31 @@ function WorkspaceAnnotationItem({ annotation }) {
 
 export function AnnotationsPanelContent({ workspaceId }) {
     // State
-    const [scope, setScope] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilters, setTypeFilters] = useState(Object.keys(ANNOTATION_TYPES));
 
-    // Section states for resizable sections
-    const { states: sectionStates, toggleSection } = useSectionStates(DEFAULT_SECTION_STATES);
+    // Section states for resizable sections - include resizeSection for drag resizing
+    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTION_STATES);
+
+    // Get real annotations from hook
+    const {
+        annotations,
+        annotationsByDataset,
+        stats,
+        isLoading,
+        error,
+        activeScope,
+        setActiveScope,
+        updateAnnotation,
+    } = useAnnotations({ workspaceId });
+
+    // Get datasets for name lookup
+    const datasets = useDatasets();
+    const datasetMap = useMemo(() => {
+        const map = {};
+        datasets.forEach(ds => { map[ds.id] = ds; });
+        return map;
+    }, [datasets]);
 
     // Toggle type filter
     const toggleTypeFilter = useCallback((type) => {
@@ -189,13 +196,46 @@ export function AnnotationsPanelContent({ workspaceId }) {
         );
     }, []);
 
-    // Calculate total count
-    const totalCount = useMemo(() => {
-        const datasetCount = SAMPLE_ANNOTATIONS.datasets.reduce(
-            (sum, ds) => sum + ds.annotations.length, 0
-        );
-        return datasetCount + SAMPLE_ANNOTATIONS.workspace.length;
-    }, []);
+    // Toggle annotation visibility
+    const handleToggleVisibility = useCallback((annotation) => {
+        updateAnnotation({
+            id: annotation.id,
+            targetDatasetId: annotation.datasetId,
+            updates: { visible: annotation.visible === false }
+        });
+    }, [updateAnnotation]);
+
+    // Filter annotations by type and search
+    const filteredAnnotations = useMemo(() => {
+        return annotations.filter(ann => {
+            // Type filter
+            if (!typeFilters.includes(ann.type)) return false;
+
+            // Search filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const text = (ann.label || ann.text || '').toLowerCase();
+                if (!text.includes(query)) return false;
+            }
+
+            return true;
+        });
+    }, [annotations, typeFilters, searchQuery]);
+
+    // Group filtered annotations by dataset
+    const filteredByDataset = useMemo(() => {
+        const grouped = {};
+        filteredAnnotations.forEach(ann => {
+            const dsId = ann.datasetId || 'unknown';
+            if (!grouped[dsId]) grouped[dsId] = [];
+            grouped[dsId].push(ann);
+        });
+        return grouped;
+    }, [filteredAnnotations]);
+
+    // Count dataset annotations
+    const datasetAnnotationCount = Object.values(filteredByDataset)
+        .reduce((sum, arr) => sum + arr.length, 0);
 
     return (
         <div className="annotations-tab">
@@ -203,7 +243,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             <div className="panel-header panel-header--pink">
                 <MapPin size={16} className="panel-header__icon" />
                 <span className="panel-header__title">Annotations</span>
-                <span className="panel-header__count">{totalCount}</span>
+                <span className="panel-header__count">{stats.total}</span>
             </div>
 
             {/* Scope chips - CENTERED */}
@@ -213,8 +253,8 @@ export function AnnotationsPanelContent({ workspaceId }) {
                         <ScopeChip
                             key={s.id}
                             scope={s}
-                            active={scope === s.id}
-                            onClick={() => setScope(s.id)}
+                            active={activeScope === s.id}
+                            onClick={() => setActiveScope(s.id)}
                         />
                     ))}
                 </div>
@@ -256,47 +296,77 @@ export function AnnotationsPanelContent({ workspaceId }) {
                 </div>
             </div>
 
-            {/* Resizable Sections */}
-            <ResizableSectionsContainer
-                sectionStates={sectionStates}
-                onSectionToggle={toggleSection}
-            >
-                {/* Dataset Annotations */}
-                <ResizableSection
-                    id="dataset"
-                    icon={Database}
-                    iconColorClass="icon-blue"
-                    label="Dataset Annotations"
-                    count={SAMPLE_ANNOTATIONS.datasets.reduce((sum, ds) => sum + ds.annotations.length, 0)}
-                >
-                    <div className="annotations-tab__section-content">
-                        {SAMPLE_ANNOTATIONS.datasets.map(ds => (
-                            <DatasetGroup key={ds.id} dataset={ds} />
-                        ))}
-                    </div>
-                </ResizableSection>
+            {/* Loading state */}
+            {isLoading && (
+                <div className="annotations-tab__loading">
+                    <Loader size={16} className="spin" />
+                    <span>Loading annotations...</span>
+                </div>
+            )}
 
-                {/* Workspace Annotations */}
-                <ResizableSection
-                    id="workspace"
-                    icon={LayoutGrid}
-                    iconColorClass="icon-amber"
-                    label="Workspace Annotations"
-                    count={SAMPLE_ANNOTATIONS.workspace.length}
-                >
-                    <div className="annotations-tab__section-content">
-                        {SAMPLE_ANNOTATIONS.workspace.map(ann => (
-                            <WorkspaceAnnotationItem key={ann.id} annotation={ann} />
-                        ))}
-                    </div>
-                </ResizableSection>
-            </ResizableSectionsContainer>
+            {/* Error state */}
+            {error && (
+                <div className="annotations-tab__error">
+                    <span>Failed to load annotations</span>
+                </div>
+            )}
 
-            {/* Footer */}
-            <div className="annotations-tab__footer">
-                <span className="annotations-tab__footer-count">
-                    {totalCount} annotation{totalCount !== 1 ? 's' : ''}
-                </span>
+            {/* Content - Resizable Sections */}
+            {!isLoading && !error && (
+                <ResizableSectionsContainer
+                    sectionStates={sectionStates}
+                    onSectionToggle={toggleSection}
+                    onSectionResize={resizeSection}
+                >
+                    {/* Dataset Annotations */}
+                    <ResizableSection
+                        id="dataset"
+                        icon={Database}
+                        iconColorClass="icon-blue"
+                        label="Dataset Annotations"
+                        count={datasetAnnotationCount}
+                    >
+                        <div className="annotations-tab__section-content">
+                            {Object.keys(filteredByDataset).length === 0 ? (
+                                <EmptyState message="No dataset annotations" />
+                            ) : (
+                                Object.entries(filteredByDataset).map(([dsId, anns]) => (
+                                    <DatasetGroup
+                                        key={dsId}
+                                        dataset={datasetMap[dsId]}
+                                        annotations={anns}
+                                        onToggleVisibility={handleToggleVisibility}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </ResizableSection>
+
+                    {/* Workspace Annotations - placeholder for workspace-level annotations */}
+                    <ResizableSection
+                        id="workspace"
+                        icon={LayoutGrid}
+                        iconColorClass="icon-amber"
+                        label="Workspace Annotations"
+                        count={0}
+                    >
+                        <div className="annotations-tab__section-content">
+                            <EmptyState message="No workspace annotations" />
+                        </div>
+                    </ResizableSection>
+                </ResizableSectionsContainer>
+            )}
+
+            {/* Footer - fixed at bottom */}
+            <div className="panel-footer">
+                <button className="panel-footer__btn panel-footer__btn--primary">
+                    <Plus size={11} />
+                    <span>New Annotation</span>
+                </button>
+                <button className="panel-footer__btn" title="Open full annotations panel">
+                    <ExternalLink size={11} />
+                    <span>Open Panel</span>
+                </button>
             </div>
         </div>
     );

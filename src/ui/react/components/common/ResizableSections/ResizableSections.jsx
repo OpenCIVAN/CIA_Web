@@ -128,6 +128,7 @@ export function ResizableSection({
 
 export function ResizableSectionsContainer({
     children,
+    className,
     sectionStates, // { [id]: { expanded: boolean, flexGrow: number } }
     onSectionToggle,
     onSectionResize,
@@ -223,11 +224,14 @@ export function ResizableSectionsContainer({
         });
     });
 
+    const containerClasses = [
+        'resizable-sections-container',
+        resizing && 'resizable-sections-container--resizing',
+        className,
+    ].filter(Boolean).join(' ');
+
     return (
-        <div
-            ref={containerRef}
-            className={`resizable-sections-container ${resizing ? 'resizable-sections-container--resizing' : ''}`}
-        >
+        <div ref={containerRef} className={containerClasses}>
             {enhancedChildren}
         </div>
     );

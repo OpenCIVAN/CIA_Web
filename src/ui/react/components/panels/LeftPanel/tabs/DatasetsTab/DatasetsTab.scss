@@ -1,5 +1,5 @@
 // tabs/DatasetsTab/DatasetsTab.scss
-// Datasets tab styling - darker theme matching LayoutPanel
+// Datasets tab styling - matches Layout tab patterns
 
 @use "theme" as *;
 
@@ -14,38 +14,200 @@
   width: 100%;
   overflow: hidden;
 
-  // This is critical - sections container should grow but not push footer
-  &__sections,
-  .resizable-sections-container {
+  // Subtabs - Layout tab style
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: $color-text-muted;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba(var(--tab-color-rgb), 0.04);
+      border-bottom-color: var(--tab-color);
+      color: var(--tab-color);
+
+      &[data-color="teal"] {
+        --tab-color: #{$color-accent-teal};
+        --tab-color-rgb: 45, 212, 191;
+      }
+
+      &[data-color="blue"] {
+        --tab-color: #{$color-accent-blue};
+        --tab-color-rgb: 96, 165, 250;
+      }
+    }
+  }
+
+  &__tab-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    background: rgba(var(--tab-color-rgb, 255, 255, 255), 0.15);
+    border-radius: $radius-full;
+  }
+
+  // Filter bar - centered chips
+  &__filter-bar {
+    display: flex;
+    justify-content: center;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+  }
+
+  // Search - matches ViewsSubtab style
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__search-icon {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    color: $color-text-primary;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-secondary;
+    }
+  }
+
+  // Content area - takes remaining space
+  &__content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // List for "By Dataset" view
+  &__list {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: $spacing-sm;
+  }
+
+  // Canvas sections for "By Canvas" view
+  &__canvas-sections {
     flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
   }
+
+  // Canvas list within sections
+  &__canvas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  // Empty state
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    flex: 1;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-md;
+    }
+
+    h3 {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-text-secondary;
+      margin-bottom: $spacing-sm;
+    }
+
+    p {
+      font-size: 11px;
+    }
+  }
 }
+
 // =============================================================================
-// VIEW MODE SELECTOR
+// SORT TOGGLE
 // =============================================================================
 
-.view-mode-selector {
-  display: inline-flex;
-  border-radius: $radius-sm;
-  overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.2) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+.datasets-sort-toggle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid $color-border-subtle;
+
+  &__label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
   &__btn {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 5px 8px;
+    gap: 3px;
+    padding: 3px 6px;
+    font-size: 9px;
     background: transparent;
-    border: none;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
     color: $color-text-muted;
     cursor: pointer;
     transition: all $transition-fast;
@@ -56,16 +218,15 @@
     }
 
     &--active {
-      background: rgba($color-accent-teal, 0.2);
-      color: $color-accent-teal;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 1px 2px rgba(0, 0, 0, 0.3);
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
     }
   }
 }
 
 // =============================================================================
-// DATASET PARENT (Tree node)
+// DATASET PARENT (expandable group)
 // =============================================================================
 
 .dataset-parent {
@@ -97,6 +258,8 @@
   &__chevron {
     color: $color-text-muted;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
 
   &__icon {
@@ -114,11 +277,12 @@
   }
 
   &__count {
-    font-size: 9px;
+    font-size: 10px;
     color: $color-text-muted;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: $radius-full;
+
+    .text-green {
+      color: $color-accent-green;
+    }
   }
 
   &__more-btn {
@@ -129,6 +293,8 @@
     cursor: pointer;
     border-radius: $radius-xs;
     transition: all $transition-fast;
+    display: flex;
+    align-items: center;
 
     &:hover {
       color: $color-text-secondary;
@@ -147,7 +313,7 @@
 }
 
 // =============================================================================
-// VIEW ITEM (in tree)
+// DATASET VIEW ITEM (in tree)
 // =============================================================================
 
 .dataset-view-item {
@@ -155,8 +321,8 @@
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm;
-  margin-bottom: $spacing-xs;
-  background: rgba(0, 0, 0, 0.15);
+  margin-bottom: 2px;
+  background: rgba(0, 0, 0, 0.1);
   border: 1px solid transparent;
   border-radius: $radius-sm;
   cursor: pointer;
@@ -167,13 +333,25 @@
   }
 
   &:hover {
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.2);
     border-color: $color-border-subtle;
   }
 
   &--active {
     border-color: rgba($color-accent-green, 0.4);
-    background: rgba($color-accent-green, 0.1);
+    background: rgba($color-accent-green, 0.08);
+  }
+
+  &__drag {
+    color: $color-text-muted;
+    opacity: 0;
+    cursor: grab;
+    flex-shrink: 0;
+    transition: opacity $transition-fast;
+
+    .dataset-view-item:hover & {
+      opacity: 1;
+    }
   }
 
   &__status {
@@ -188,7 +366,8 @@
     }
 
     &--inactive {
-      background: $color-text-muted;
+      border: 1.5px solid $color-text-muted;
+      background: transparent;
     }
   }
 
@@ -199,14 +378,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    .dataset-view-item--active & {
+      font-weight: $font-weight-medium;
+    }
   }
 
-  &__badges {
-    display: flex;
-    gap: 4px;
+  &__position {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    padding: 2px 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
   }
 
   &__badge {
+    display: flex;
+    align-items: center;
+    gap: 2px;
     font-size: 8px;
     padding: 2px 5px;
     background: rgba(255, 255, 255, 0.05);
@@ -218,93 +408,161 @@
       color: $color-accent-pink;
     }
   }
+
+  &__actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    .dataset-view-item:hover & {
+      opacity: 1;
+    }
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &--danger:hover {
+      color: $color-accent-red;
+      background: rgba($color-accent-red, 0.1);
+    }
+  }
 }
 
 // =============================================================================
-// FILTER BAR
+// CANVAS VIEW ITEM (for "By Canvas" view)
 // =============================================================================
 
-.datasets-filter-bar {
+.canvas-view-item {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  border-bottom: 1px solid $color-border-subtle;
-  background: rgba(0, 0, 0, 0.15);
-  flex-shrink: 0;
-}
-
-.datasets-filter-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: 9px;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid transparent;
   border-radius: $radius-sm;
   cursor: pointer;
   transition: all $transition-fast;
 
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.35) 0%,
-    rgba(0, 0, 0, 0.2) 100%
-  );
-  border: 1px solid rgba(0, 0, 0, 0.4);
-  color: $color-text-muted;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-
-  &:hover:not(&--active) {
-    color: $color-text-secondary;
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: $color-border-subtle;
   }
 
   &--active {
-    &[data-color="green"] {
-      background: rgba($color-accent-green, 0.2);
-      border-color: rgba($color-accent-green, 0.4);
-      color: $color-accent-green;
-    }
+    border-color: rgba($color-accent-green, 0.4);
+    background: rgba($color-accent-green, 0.08);
+  }
 
-    &[data-color="gray"] {
-      background: rgba($color-text-muted, 0.2);
-      border-color: rgba($color-text-muted, 0.4);
+  &__position {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    font-weight: $font-weight-medium;
+    padding: 2px 6px;
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-xs;
+    color: $color-accent-blue;
+    min-width: 32px;
+    text-align: center;
+  }
+
+  &__status {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  &__dataset {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: $color-text-muted;
+    max-width: 100px;
+    overflow: hidden;
+  }
+
+  &__dataset-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__badge {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 8px;
+    padding: 2px 5px;
+    background: rgba($color-accent-purple, 0.15);
+    border-radius: $radius-xs;
+    color: $color-accent-purple;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    .canvas-view-item:hover & {
+      opacity: 1;
+    }
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
       color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.1);
     }
 
-    &[data-color="pink"] {
-      background: rgba($color-accent-pink, 0.2);
-      border-color: rgba($color-accent-pink, 0.4);
-      color: $color-accent-pink;
+    &--danger:hover {
+      color: $color-accent-red;
+      background: rgba($color-accent-red, 0.1);
     }
   }
 }
 
 // =============================================================================
-// EMPTY STATE
+// HELPER CLASSES
 // =============================================================================
 
-.datasets-tab__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-xl;
-  text-align: center;
-  color: $color-text-muted;
-  flex: 1;
-
-  svg {
-    opacity: 0.5;
-    margin-bottom: $spacing-md;
-  }
-
-  h3 {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    margin-bottom: $spacing-sm;
-  }
-
-  p {
-    font-size: 11px;
-  }
+.text-green {
+  color: $color-accent-green;
 }

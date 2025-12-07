@@ -110,13 +110,20 @@
     }
   }
 
-  // Content area
+  // Content area - needs to flex grow to push subtab footer to bottom
   &__content {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     min-height: 0;
     padding: $spacing-sm;
+
+    // Allow subtabs to fill the content area
+    > * {
+      flex: 1;
+      min-height: 0;
+    }
   }
 
   // No instance placeholder
@@ -660,6 +667,11 @@
 // =============================================================================
 
 .annotations-subtab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
   &__info {
     font-size: 10px;
     color: $color-text-muted;
@@ -667,6 +679,22 @@
     background: rgba(0, 0, 0, 0.15);
     border-radius: $radius-sm;
     margin-bottom: $spacing-sm;
+    flex-shrink: 0;
+  }
+
+  &__loading,
+  &__error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    font-size: 11px;
+    color: $color-text-muted;
+  }
+
+  &__error {
+    color: $color-error;
   }
 
   &__empty {
@@ -677,6 +705,7 @@
     padding: $spacing-xl;
     text-align: center;
     color: $color-text-muted;
+    flex: 1;
 
     svg {
       opacity: 0.5;
@@ -698,34 +727,66 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
   }
 
-  &__open-btn {
+  // Footer - fixed to bottom of subtab
+  &__footer {
+    display: flex;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    margin-top: auto;
+    border-top: 1px solid $color-border-default;
+    background: rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+
+  &__footer-btn {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    width: 100%;
     padding: $spacing-sm;
-    margin-top: $spacing-md;
-    background: rgba($color-accent-pink, 0.1);
-    border: 1px solid rgba($color-accent-pink, 0.3);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
     border-radius: $radius-sm;
-    color: $color-accent-pink;
-    font-size: 11px;
+    color: $color-text-secondary;
+    font-size: 10px;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba($color-accent-pink, 0.2);
-      border-color: rgba($color-accent-pink, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-primary;
+    }
+
+    &--add {
+      background: rgba($color-accent-pink, 0.1);
+      border-color: rgba($color-accent-pink, 0.3);
+      color: $color-accent-pink;
+
+      &:hover {
+        background: rgba($color-accent-pink, 0.2);
+        border-color: rgba($color-accent-pink, 0.5);
+      }
+    }
+
+    &--open {
+      &:hover {
+        background: rgba($color-accent-pink, 0.1);
+        border-color: rgba($color-accent-pink, 0.3);
+        color: $color-accent-pink;
+      }
     }
   }
 }
 
 .annotation-list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm;
   background: rgba(0, 0, 0, 0.15);
@@ -733,9 +794,7 @@
   border-radius: $radius-sm;
 
   &__icon {
-    color: $color-accent-pink;
     flex-shrink: 0;
-    margin-top: 2px;
   }
 
   &__content {
@@ -748,10 +807,29 @@
     font-size: 11px;
     color: $color-text-primary;
     margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__meta {
     font-size: 9px;
     color: $color-text-muted;
+  }
+
+  &__visibility,
+  &__more {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    flex-shrink: 0;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
   }
 }

@@ -554,8 +554,8 @@ export function FilesPanelContent({
     return (
         <div className="files-tab">
             {/* Header */}
-            <div className="panel-header">
-                <FolderOpen size={14} className="panel-header__icon file-icon--nifti" />
+            <div className="panel-header panel-header--orange">
+                <FolderOpen size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
                     <button className="panel-header__action-btn" title="New Folder"><FolderPlus size={14} /></button>

@@ -215,10 +215,10 @@ export function BookmarksFiltersPanelContent() {
 
     return (
         <div className="bookmarks-filters-tab">
-            {/* Header - proper styling with purple icon */}
-            <div className="bookmarks-filters-tab__header">
-                <Bookmark size={14} className="icon-purple" />
-                <span className="bookmarks-filters-tab__title">Saved</span>
+            {/* Header - ALL CAPS like other tabs */}
+            <div className="panel-header panel-header--purple">
+                <Bookmark size={14} className="panel-header__icon" />
+                <span className="panel-header__title">Saved Bookmarks & Filters</span>
             </div>
 
             {/* Sub-tabs */}

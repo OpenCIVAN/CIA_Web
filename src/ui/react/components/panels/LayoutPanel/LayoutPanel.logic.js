@@ -370,8 +370,37 @@ export function useLayoutPanel(options) {
   // ===========================================================================
 
   const moveViewport = useCallback(
-    (deltaRow, deltaCol) => {
+    (direction) => {
       if (!canvas) return;
+
+      // Handle direction strings
+      let deltaRow = 0;
+      let deltaCol = 0;
+
+      switch (direction) {
+        case "up":
+          deltaRow = -1;
+          break;
+        case "down":
+          deltaRow = 1;
+          break;
+        case "left":
+          deltaCol = -1;
+          break;
+        case "right":
+          deltaCol = 1;
+          break;
+        case "home":
+          // Navigate to homepoint
+          setViewportPosition?.(homepoint.row, homepoint.col);
+          return;
+        default:
+          // Support numeric deltas for backwards compatibility
+          if (typeof direction === "number") {
+            deltaRow = direction;
+            deltaCol = arguments[1] || 0;
+          }
+      }
 
       const maxRow = Math.max(0, canvas.dimensions.rows - viewport.rows);
       const maxCol = Math.max(0, canvas.dimensions.cols - viewport.cols);
@@ -383,7 +412,7 @@ export function useLayoutPanel(options) {
         canvasMoveViewport?.(newRow - viewport.row, newCol - viewport.col);
       }
     },
-    [canvas, viewport, canvasMoveViewport]
+    [canvas, viewport, canvasMoveViewport, homepoint, setViewportPosition]
   );
 
   const navigateToCell = useCallback(
@@ -658,29 +687,6 @@ export function useLayoutPanel(options) {
     [canvas]
   );
 
-  // Add closeView function
-  const closeView = useCallback(
-    async (viewId) => {
-      if (!viewId) return;
-
-      // Find the placement with this view
-      const placement = rawPlacements.find(
-        (p) =>
-          p.content?.viewConfigurationId === viewId ||
-          p.getViewId?.() === viewId
-      );
-
-      if (placement) {
-        try {
-          await canvasManager.removePlacement(placement.id);
-        } catch (err) {
-          console.error("Failed to remove placement:", err);
-        }
-      }
-    },
-    [rawPlacements]
-  );
-
   // ===========================================================================
   // TOOLS STATE
   // ===========================================================================
@@ -882,7 +888,6 @@ export function useLayoutPanel(options) {
     filteredCells,
     groupedCells,
     applyQuickLayout,
-    closeView,
   };
 }
 
