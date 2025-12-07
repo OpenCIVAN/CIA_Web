@@ -47,11 +47,6 @@ export {
 // =============================================================================
 
 export { CanvasNavigator } from "./components/CanvasNavigator/CanvasNavigator";
-export { ViewItem } from "./components/ViewItem/ViewItem";
-export {
-  useViewItem,
-  LINK_PROPERTIES,
-} from "./components/ViewItem/ViewItem.logic";
 export { SpawnSizePicker } from "./components/SpawnSizePicker";
 export { FilterChips } from "./components/FilterChips";
 

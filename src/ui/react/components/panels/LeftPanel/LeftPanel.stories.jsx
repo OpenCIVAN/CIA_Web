@@ -9,8 +9,7 @@ import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
 import { LayoutPanelContent } from './tabs/LayoutTab';
 import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
-import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
-import { BookmarksPanelContent } from './tabs/BookmarksTab';
+import { BookmarksFiltersPanelContent } from './tabs/BookmarksFiltersTab';
 import './LeftPanel.scss';
 
 // Import mock data for Storybook stories
@@ -217,26 +216,28 @@ export const CursorsTab = {
     },
 };
 
-export const SavedFiltersTab = {
-    render: () => <SavedFiltersPanelContent workspaceId="ws-1" />,
-    decorators: [TabDecorator],
-    parameters: {
-        docs: {
-            description: {
-                story: 'Saved Filters tab showing filter presets with starring, sharing, and quick apply functionality.',
-            },
-        },
-    },
-};
+// NEED TO UPDATE THESE TAB STORIES AFTER MERGING THE NEW TAB
 
-export const BookmarksTab = {
-    render: () => <BookmarksPanelContent workspaceId="ws-1" />,
-    decorators: [TabDecorator],
-    parameters: {
-        docs: {
-            description: {
-                story: 'Bookmarks tab showing saved view bookmarks with thumbnails, tags, and navigation.',
-            },
-        },
-    },
-};
+// export const SavedFiltersTab = {
+//     render: () => <SavedFiltersPanelContent workspaceId="ws-1" />,
+//     decorators: [TabDecorator],
+//     parameters: {
+//         docs: {
+//             description: {
+//                 story: 'Saved Filters tab showing filter presets with starring, sharing, and quick apply functionality.',
+//             },
+//         },
+//     },
+// };
+
+// export const BookmarksTab = {
+//     render: () => <BookmarksPanelContent workspaceId="ws-1" />,
+//     decorators: [TabDecorator],
+//     parameters: {
+//         docs: {
+//             description: {
+//                 story: 'Bookmarks tab showing saved view bookmarks with thumbnails, tags, and navigation.',
+//             },
+//         },
+//     },
+// };

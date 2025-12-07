@@ -25,7 +25,7 @@ import {
     ChevronDown,
     ChevronRight,
 } from 'lucide-react';
-import { ViewItem } from '../components/ViewItem/ViewItem';
+import { ViewItem } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem';
 import { FilterChips } from '../components/FilterChips';
 import './ViewsSubtab.scss';
 
