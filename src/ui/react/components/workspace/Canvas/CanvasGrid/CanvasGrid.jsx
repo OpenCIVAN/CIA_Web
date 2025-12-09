@@ -300,31 +300,38 @@ export function CanvasGrid({
         cols: canvas?.dimensions?.cols || 10,
     }), [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
 
-    // Ref for cells container (for scroll sync and resize observation)
-    const cellsContainerRef = useRef(null);
+    // Refs for containers
+    const measureRef = useRef(null);  // For measuring available space (stable)
+    const scrollRef = useRef(null);   // For scroll container
 
-    // Calculate cell sizes to fill visible area while respecting minimums
-    const [cellSizes, setCellSizes] = useState({ width: 280, height: 200 });
+    // Constants
     const MIN_CELL_WIDTH = 280;
     const MIN_CELL_HEIGHT = 200;
     const GAP = 16; // $spacing-md
 
+    // Calculate cell sizes to fill visible area while respecting minimums
+    const [cellSizes, setCellSizes] = useState({ width: 280, height: 200 });
+
     // ResizeObserver to recalculate cell sizes when container resizes
     useEffect(() => {
-        const container = cellsContainerRef.current;
-        if (!container) return;
+        const measureContainer = measureRef.current;
+        if (!measureContainer) return;
 
         const calculateCellSizes = () => {
-            const containerWidth = container.clientWidth - GAP; // Account for padding
-            const containerHeight = container.clientHeight - GAP;
+            // Use the measurement container's size (stable, fills available space)
+            const availableWidth = measureContainer.clientWidth;
+            const availableHeight = measureContainer.clientHeight;
 
-            // Calculate ideal cell size to fit viewport cells in visible area
-            const idealWidth = (containerWidth - (effectiveViewport.cols - 1) * GAP) / effectiveViewport.cols;
-            const idealHeight = (containerHeight - (effectiveViewport.rows - 1) * GAP) / effectiveViewport.rows;
+            // Calculate ideal cell size to fit exactly viewport cells in visible area
+            // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
+            // Solving for cellSize: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
+            const idealWidth = (availableWidth - GAP * (effectiveViewport.cols - 1)) / effectiveViewport.cols;
+            const idealHeight = (availableHeight - GAP * (effectiveViewport.rows - 1)) / effectiveViewport.rows;
 
-            // Use ideal size if >= minimum, otherwise use minimum (will scroll)
-            const cellWidth = Math.max(MIN_CELL_WIDTH, Math.floor(idealWidth));
-            const cellHeight = Math.max(MIN_CELL_HEIGHT, Math.floor(idealHeight));
+            // Use ideal size if >= minimum, otherwise use minimum (will need scrolling)
+            // Don't floor - let browser handle sub-pixel rendering for exact fit
+            const cellWidth = Math.max(MIN_CELL_WIDTH, idealWidth);
+            const cellHeight = Math.max(MIN_CELL_HEIGHT, idealHeight);
 
             setCellSizes({ width: cellWidth, height: cellHeight });
         };
@@ -334,7 +341,7 @@ export function CanvasGrid({
 
         // Observe container size changes
         const resizeObserver = new ResizeObserver(calculateCellSizes);
-        resizeObserver.observe(container);
+        resizeObserver.observe(measureContainer);
 
         return () => resizeObserver.disconnect();
     }, [effectiveViewport.cols, effectiveViewport.rows]);
@@ -394,7 +401,7 @@ export function CanvasGrid({
 
     // Sync scroll position when viewport changes (from keyboard/minimap)
     useEffect(() => {
-        const container = cellsContainerRef.current;
+        const container = scrollRef.current;
         if (!container) return;
 
         // Use calculated cell sizes (includes gap)
@@ -424,7 +431,7 @@ export function CanvasGrid({
         }
     }, [viewport.row, viewport.col, cellSizes.width, cellSizes.height]);
 
-    // Build grid cells
+    // Build grid cells with absolute positioning (spacer pattern for virtual scrolling)
     const renderCells = () => {
         const cells = [];
         const placementMap = new Map();
@@ -461,39 +468,56 @@ export function CanvasGrid({
                 const isSelected = placement && selectedIds.includes(placement.id);
                 const isHighlighted = placement && highlightedPlacementId === placement.id;
 
-                // Calculate grid position (absolute position in grid, 1-indexed for CSS Grid)
-                const gridRow = row + 1;
-                const gridCol = col + 1;
+                // Calculate absolute position for spacer pattern
+                const cellLeft = col * (cellSizes.width + GAP);
+                const cellTop = row * (cellSizes.height + GAP);
+                const cellWidth = (placement?.colSpan || 1) * cellSizes.width + ((placement?.colSpan || 1) - 1) * GAP;
+                const cellHeight = (placement?.rowSpan || 1) * cellSizes.height + ((placement?.rowSpan || 1) - 1) * GAP;
 
                 // Check if cell is selected in edit mode
                 const isCellSelected = editMode && selectedCells.includes(key);
 
                 cells.push(
-                    <CanvasCell
+                    <div
                         key={key}
-                        placement={placement}
-                        row={row}
-                        col={col}
-                        gridRow={gridRow}
-                        gridCol={gridCol}
-                        rowSpan={placement?.rowSpan || 1}
-                        colSpan={placement?.colSpan || 1}
-                        isSelected={isSelected || isCellSelected}
-                        isHighlighted={isHighlighted}
-                        selectionMode={selectionMode}
-                        editMode={editMode}
-                        onClick={() => handleCellClick(placement, row, col)}
-                        onDoubleClick={() => handleCellDoubleClick(placement, row, col)}
-                        onDrop={handleCellDrop}
-                        onAddContent={handleAddContent}
-                        onRemovePlacement={onRemovePlacement}
-                    />
+                        className="canvas-grid__cell-wrapper"
+                        style={{
+                            position: 'absolute',
+                            left: cellLeft,
+                            top: cellTop,
+                            width: cellWidth,
+                            height: cellHeight,
+                        }}
+                    >
+                        <CanvasCell
+                            placement={placement}
+                            row={row}
+                            col={col}
+                            gridRow={row + 1}
+                            gridCol={col + 1}
+                            rowSpan={placement?.rowSpan || 1}
+                            colSpan={placement?.colSpan || 1}
+                            isSelected={isSelected || isCellSelected}
+                            isHighlighted={isHighlighted}
+                            selectionMode={selectionMode}
+                            editMode={editMode}
+                            onClick={() => handleCellClick(placement, row, col)}
+                            onDoubleClick={() => handleCellDoubleClick(placement, row, col)}
+                            onDrop={handleCellDrop}
+                            onAddContent={handleAddContent}
+                            onRemovePlacement={onRemovePlacement}
+                        />
+                    </div>
                 );
             }
         }
 
         return cells;
     };
+
+    // Calculate total spacer dimensions (full canvas size)
+    const spacerWidth = canvasDimensions.cols * cellSizes.width + (canvasDimensions.cols - 1) * GAP;
+    const spacerHeight = canvasDimensions.rows * cellSizes.height + (canvasDimensions.rows - 1) * GAP;
 
     // Loading state
     if (loading) {
@@ -575,25 +599,32 @@ export function CanvasGrid({
                 </div>
             )}
 
-            {/* Grid container - fills available space */}
+            {/* Measurement container - fills available space, used for cell size calculation */}
             <div
-                ref={gridRef}
-                className="canvas-grid__container"
-                style={{
-                    '--canvas-rows': canvasDimensions.rows,
-                    '--canvas-cols': canvasDimensions.cols,
-                    '--viewport-rows': effectiveViewport.rows,
-                    '--viewport-cols': effectiveViewport.cols,
-                    '--cell-width': `${cellSizes.width}px`,
-                    '--cell-height': `${cellSizes.height}px`,
-                }}
+                ref={measureRef}
+                className="canvas-grid__measure-container"
             >
+                {/* Scroll container - matches measurement container, has native scrollbar */}
                 <div
-                    ref={cellsContainerRef}
-                    className="canvas-grid__cells"
+                    ref={(el) => {
+                        gridRef.current = el;
+                        scrollRef.current = el;
+                    }}
+                    className="canvas-grid__scroll-container"
                     onScroll={handleScroll}
                 >
-                    {renderCells()}
+                    {/* Spacer - explicit dimensions create scroll area for full canvas */}
+                    <div
+                        className="canvas-grid__spacer"
+                        style={{
+                            width: spacerWidth,
+                            height: spacerHeight,
+                            position: 'relative',
+                        }}
+                    >
+                        {/* Cells - absolutely positioned within spacer */}
+                        {renderCells()}
+                    </div>
                 </div>
             </div>
 

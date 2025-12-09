@@ -58,11 +58,8 @@ export const CanvasCell = memo(function CanvasCell({
         .filter(Boolean)
         .join(' ');
 
-    // Grid positioning style
-    const style = {
-        gridRow: `${gridRow} / span ${rowSpan}`,
-        gridColumn: `${gridCol} / span ${colSpan}`,
-    };
+    // Style - positioning now handled by parent wrapper in spacer pattern
+    const style = {};
 
     // Drag and drop handlers
     const handleDragOver = useCallback((e) => {

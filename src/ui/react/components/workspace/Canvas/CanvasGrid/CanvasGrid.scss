@@ -172,46 +172,53 @@
 }
 
 // ============================================================================
-// GRID CELLS - CSS Grid with 1fr units
+// VIRTUAL SCROLLING - Spacer Pattern
 // ============================================================================
+// Uses a spacer div with explicit dimensions to create stable scroll area.
+// Only visible cells are rendered, positioned absolutely within the spacer.
+// This avoids CSS Grid track collapsing and provides smooth, stable scrolling.
 
-.canvas-grid__cells {
+// Measurement container - fills available space, provides stable size reference
+// ResizeObserver watches this to calculate cell sizes
+.canvas-grid__measure-container {
   flex: 1;
-  display: grid;
-  // VIRTUAL SCROLLING: Grid template uses CANVAS dimensions (full grid)
-  // This creates scroll area for the entire canvas
-  // Cell sizes are calculated by JS to fill visible area while respecting minimums
-  // Using fixed sizes (from CSS vars) ensures:
-  // 1. Cells fill available space (no wasted area)
-  // 2. Minimum sizes are respected (280x200)
-  // 3. No partial cells visible (exact fit)
-  grid-template-columns: repeat(
-    var(--canvas-cols, 10),
-    var(--cell-width, 280px)
-  );
-  grid-template-rows: repeat(var(--canvas-rows, 10), var(--cell-height, 200px));
-  gap: $spacing-md;
   min-height: 0;
-  overflow: auto; // Enable scrolling for virtual scrolling
-  // Add padding so scrollbars don't overlap with content
-  padding-right: $spacing-md;
-  padding-bottom: $spacing-md;
+  min-width: 0;
+  position: relative;
+  // This container's size = available space for the grid
+  // It doesn't scroll - just provides measurements
+}
 
+// Scroll container - fills measurement container, handles scrolling
+.canvas-grid__scroll-container {
+  position: absolute;
+  inset: 0; // Fill the measurement container completely
+  overflow: auto;
   // Scroll-snap: snap to complete grid cells when scrolling
   // This ensures instance views are always fully visible, not cut in half
   scroll-snap-type: both mandatory;
-  scroll-padding: $spacing-md;
+}
 
-  // Grid cells must constrain their children
-  // These are placed at absolute grid positions via grid-row/grid-column
-  > div {
-    min-width: 280px;
-    min-height: 200px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    // Snap alignment: each cell snaps to start position
-    scroll-snap-align: start;
+.canvas-grid__spacer {
+  // Dimensions set by inline style (calculated from canvas size × cell size)
+  // Position: relative to contain absolutely positioned children
+  // No other styles needed - just a sizing container
+}
+
+.canvas-grid__cell-wrapper {
+  // Position set by inline style (calculated from row/col × cell size)
+  // Snap alignment: each cell snaps to start position when scrolling
+  scroll-snap-align: start;
+
+  // Ensure wrapper fills its dimensions and constrains children
+  display: flex;
+  flex-direction: column;
+
+  // The CanvasCell inside should fill the wrapper
+  > .canvas-cell {
+    flex: 1;
+    width: 100%;
+    height: 100%;
   }
 }
 
