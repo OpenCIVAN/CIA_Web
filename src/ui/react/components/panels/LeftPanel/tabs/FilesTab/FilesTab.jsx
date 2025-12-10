@@ -278,19 +278,77 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
 /**
  * FileThumbnailImage - Shows actual thumbnail image for a file
  * Falls back to icon if no thumbnail available
+ *
+ * Uses fetch to properly handle 204 No Content responses which img tags
+ * don't handle well (neither onLoad nor onError fires for 204).
  */
 function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorClass }) {
-    const [src, setSrc] = useState(null);
-    const [hasError, setHasError] = useState(false);
+    const [status, setStatus] = useState('loading'); // 'loading' | 'loaded' | 'error' | 'no-thumbnail'
+    const [objectUrl, setObjectUrl] = useState(null);
 
+    // Fetch thumbnail using fetch API to handle 204 properly
     useEffect(() => {
-        // Construct thumbnail URL
-        const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
-        setSrc(`${apiBase}/files/${fileId}/thumbnail`);
-        setHasError(false);
-    }, [fileId]);
+        if (!fileId) {
+            setStatus('error');
+            return;
+        }
 
-    if (hasError || !src) {
+        let cancelled = false;
+        setStatus('loading');
+        setObjectUrl(null);
+
+        const loadThumbnail = async () => {
+            try {
+                const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
+                const response = await fetch(`${apiBase}/files/${fileId}/thumbnail`, {
+                    credentials: 'include',
+                });
+
+                if (cancelled) return;
+
+                // 204 No Content means no thumbnail exists
+                if (response.status === 204) {
+                    setStatus('no-thumbnail');
+                    return;
+                }
+
+                if (!response.ok) {
+                    setStatus('error');
+                    return;
+                }
+
+                // Get blob and create object URL
+                const blob = await response.blob();
+                if (cancelled) return;
+
+                if (blob.size === 0) {
+                    setStatus('no-thumbnail');
+                    return;
+                }
+
+                const url = URL.createObjectURL(blob);
+                setObjectUrl(url);
+                setStatus('loaded');
+            } catch (err) {
+                if (!cancelled) {
+                    log.warn(`Failed to load thumbnail for file ${fileId}:`, err.message);
+                    setStatus('error');
+                }
+            }
+        };
+
+        loadThumbnail();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Show fallback for error or no-thumbnail states
+    if (status === 'error' || status === 'no-thumbnail') {
         return (
             <FallbackIcon
                 size={20}
@@ -300,13 +358,23 @@ function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorCl
         );
     }
 
+    // Show loading state with semi-transparent icon
+    if (status === 'loading' || !objectUrl) {
+        return (
+            <FallbackIcon
+                size={20}
+                style={color ? { color, opacity: 0.3 } : { opacity: 0.3 }}
+                className={colorClass || ''}
+            />
+        );
+    }
+
+    // Show actual thumbnail
     return (
         <img
-            src={src}
+            src={objectUrl}
             alt="File thumbnail"
             className="thumbnail__image"
-            onError={() => setHasError(true)}
-            onLoad={() => setHasError(false)}
         />
     );
 }
