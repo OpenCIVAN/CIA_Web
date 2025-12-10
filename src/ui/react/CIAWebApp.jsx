@@ -53,6 +53,10 @@ import { FloatingPanelProvider, AllFloatingPanels } from "@UI/react/components/p
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 
+// Canvas controls (moved from CanvasGrid to secondary bars)
+import { CanvasMinimap } from "@UI/react/components/workspace/Canvas/CanvasMinimap";
+import { GridEditOverlay } from "@UI/react/components/workspace/Canvas/GridEditOverlay";
+
 /**
  * Main Application Component
  *
@@ -96,6 +100,12 @@ export function CIAWebApp({ username, userId, projectId }) {
   // Get active canvas for LayoutPanelProvider
   const { canvas } = useCanvas();
   const canvasId = canvas?.id;
+
+  // Canvas controls state (minimap, edit mode)
+  const [minimapExpanded, setMinimapExpanded] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedCells, setSelectedCells] = useState([]);
+  const [activeTool, setActiveTool] = useState('select');
 
   // Handle room change - receives both id and name from RoomSelector
   const handleRoomChange = useCallback((roomId, roomName) => {
@@ -355,10 +365,21 @@ export function CIAWebApp({ username, userId, projectId }) {
               }}
               secondaryBottomBarZones={{
                 left: (
-                  <LayoutModeToggle
-                    mode={layoutMode}
-                    onModeChange={setLayoutMode}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <LayoutModeToggle
+                      mode={layoutMode}
+                      onModeChange={setLayoutMode}
+                    />
+                    {/* Canvas Minimap - moved from CanvasGrid */}
+                    {canvasId && (
+                      <CanvasMinimap
+                        canvasId={canvasId}
+                        expanded={minimapExpanded}
+                        onToggleExpand={() => setMinimapExpanded(prev => !prev)}
+                        viewportSize={undefined}
+                      />
+                    )}
+                  </div>
                 ),
                 center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
                 right: (

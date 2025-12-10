@@ -194,6 +194,8 @@
   position: absolute;
   inset: 0; // Fill the measurement container completely
   overflow: auto;
+  // Add padding to create space around cells so they don't touch edges
+  padding: $spacing-lg;
   // Scroll-snap: snap to complete grid cells when scrolling
   // This ensures instance views are always fully visible, not cut in half
   scroll-snap-type: both mandatory;
@@ -202,7 +204,7 @@
 .canvas-grid__spacer {
   // Dimensions set by inline style (calculated from canvas size × cell size)
   // Position: relative to contain absolutely positioned children
-  // No other styles needed - just a sizing container
+  // Padding on scroll container provides space around cells
 }
 
 .canvas-grid__cell-wrapper {

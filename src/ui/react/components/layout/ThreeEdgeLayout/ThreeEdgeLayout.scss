@@ -168,6 +168,11 @@
   .three-edge-layout__workspace {
     grid-column: 3;
     grid-row: 3;
+
+    // FIX: Make this a flex container so children can use flex: 1 to fill space
+    display: flex;
+    flex-direction: column;
+
     overflow: hidden;
     background: $color-bg-base;
     min-width: 0;

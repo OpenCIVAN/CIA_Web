@@ -12,8 +12,6 @@
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { CanvasCell } from '@UI/react/components/workspace';
-import { GridEditOverlay } from '../GridEditOverlay';
-import { CanvasMinimap } from '../CanvasMinimap';
 import { ConnectionOverlay } from '../ConnectionOverlay';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
@@ -308,6 +306,7 @@ export function CanvasGrid({
     const MIN_CELL_WIDTH = 280;
     const MIN_CELL_HEIGHT = 200;
     const GAP = 16; // $spacing-md
+    const PADDING = 24; // $spacing-lg (padding on scroll container)
 
     // Calculate cell sizes to fill visible area while respecting minimums
     const [cellSizes, setCellSizes] = useState({ width: 280, height: 200 });
@@ -319,13 +318,17 @@ export function CanvasGrid({
 
         const calculateCellSizes = () => {
             // Use the measurement container's size (stable, fills available space)
-            const availableWidth = measureContainer.clientWidth;
-            const availableHeight = measureContainer.clientHeight;
+            const containerWidth = measureContainer.clientWidth;
+            const containerHeight = measureContainer.clientHeight;
 
             // Skip if container has no size yet (initial render before layout)
-            if (availableWidth <= 0 || availableHeight <= 0) {
+            if (containerWidth <= 0 || containerHeight <= 0) {
                 return;
             }
+
+            // Account for padding in scroll container (24px on each side = 48px total)
+            const availableWidth = containerWidth - (PADDING * 2);
+            const availableHeight = containerHeight - (PADDING * 2);
 
             // Calculate ideal cell size to fit exactly viewport cells in visible area
             // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
@@ -637,29 +640,6 @@ export function CanvasGrid({
                     </div>
                 </div>
             </div>
-
-            {/* Grid Edit Overlay */}
-            <GridEditOverlay
-                canvasId={canvasId}
-                editMode={editMode}
-                onToggleEditMode={handleToggleEditMode}
-                selectedCells={selectedCells}
-                onMergeCells={handleMergeCells}
-                onClearSelection={handleClearSelection}
-                onAddRow={onAddRow}
-                onAddColumn={onAddColumn}
-                layoutMode={layoutMode}
-                activeTool={activeTool}
-                onToolChange={setActiveTool}
-            />
-
-            {/* Canvas Minimap */}
-            <CanvasMinimap
-                canvasId={canvasId}
-                expanded={minimapExpanded}
-                onToggleExpand={() => setMinimapExpanded(prev => !prev)}
-                viewportSize={viewportSize}
-            />
 
             {/* Connection Overlay - shown when disconnected */}
             <ConnectionOverlay
