@@ -302,61 +302,108 @@ export function CanvasGrid({
     const measureRef = useRef(null);  // For measuring available space (stable)
     const scrollRef = useRef(null);   // For scroll container
 
-    // Constants
-    const MIN_CELL_WIDTH = 280;
-    const MIN_CELL_HEIGHT = 200;
-    const GAP = 16; // $spacing-md
-    const PADDING = 24; // $spacing-lg (padding on scroll container)
+    // Constants - UPDATED VALUES
+    const GAP = 12;               // Gap between cells ($spacing-md or smaller)
 
-    // Calculate cell sizes to fill visible area while respecting minimums
-    const [cellSizes, setCellSizes] = useState({ width: 280, height: 200 });
+    // Padding values must match CSS
+    const PADDING_TOP = 8;
+    const PADDING_RIGHT = 16;     // Extra for scrollbar
+    const PADDING_BOTTOM = 16;    // Extra for scrollbar
+    const PADDING_LEFT = 8;
+
+    // Track whether we have valid measurements (for loading state)
+    const [measurementsReady, setMeasurementsReady] = useState(false);
+
+    // Calculate cell sizes to fill visible area
+    // No minimums - cells scale to fit viewport setting (true zoom behavior)
+    const [cellSizes, setCellSizes] = useState({ width: 300, height: 200 });
 
     // ResizeObserver to recalculate cell sizes when container resizes
     useEffect(() => {
+        // Don't run if measure container isn't mounted yet
+        if (!measureRef.current) {
+            return;
+        }
+
         const measureContainer = measureRef.current;
-        if (!measureContainer) return;
+        let attemptCount = 0;
+        const MAX_ATTEMPTS = 20;
 
         const calculateCellSizes = () => {
-            // Use the measurement container's size (stable, fills available space)
+            attemptCount++;
             const containerWidth = measureContainer.clientWidth;
             const containerHeight = measureContainer.clientHeight;
 
-            // Skip if container has no size yet (initial render before layout)
+            console.log(`Measurement attempt ${attemptCount}: ${containerWidth}x${containerHeight}`);
+
+            // Skip if container has no size yet
             if (containerWidth <= 0 || containerHeight <= 0) {
+                if (attemptCount < MAX_ATTEMPTS) {
+                    console.warn(`Container has no size yet (attempt ${attemptCount}/${MAX_ATTEMPTS}), will retry...`);
+                    // Retry after a short delay
+                    setTimeout(calculateCellSizes, 50);
+                } else {
+                    console.error('Failed to get valid measurements after max attempts');
+                }
+                setMeasurementsReady(false);
                 return;
             }
 
-            // Account for padding in scroll container (24px on each side = 48px total)
-            const availableWidth = containerWidth - (PADDING * 2);
-            const availableHeight = containerHeight - (PADDING * 2);
+            // Available space after padding (for scrollbar clearance)
+            const availableWidth = containerWidth - PADDING_LEFT - PADDING_RIGHT;
+            const availableHeight = containerHeight - PADDING_TOP - PADDING_BOTTOM;
 
-            // Calculate ideal cell size to fit exactly viewport cells in visible area
+            // How many cells the user wants to see (from viewport settings)
+            const cols = effectiveViewport.cols;
+            const rows = effectiveViewport.rows;
+
+            // Calculate cell size to fit exactly viewport cells
             // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
-            // Solving for cellSize: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
-            const idealWidth = (availableWidth - GAP * (effectiveViewport.cols - 1)) / effectiveViewport.cols;
-            const idealHeight = (availableHeight - GAP * (effectiveViewport.rows - 1)) / effectiveViewport.rows;
+            // Solving: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
+            const cellWidth = (availableWidth - GAP * (cols - 1)) / cols;
+            const cellHeight = (availableHeight - GAP * (rows - 1)) / rows;
 
-            // Use ideal size if >= minimum, otherwise use minimum (will need scrolling)
-            // Don't floor - let browser handle sub-pixel rendering for exact fit
-            const cellWidth = Math.max(MIN_CELL_WIDTH, idealWidth);
-            const cellHeight = Math.max(MIN_CELL_HEIGHT, idealHeight);
+            // No minimums - true zoom behavior, cells scale to fit
+            // UI will adapt to small cells (progressive disclosure of tools)
+            // Isolation mode available for working with tiny cells
+
+            // Debug logging
+            console.log('✓ Canvas cell sizing complete:', {
+                container: { width: containerWidth, height: containerHeight },
+                available: { width: availableWidth, height: availableHeight },
+                viewport: { cols, rows },
+                final: { width: cellWidth, height: cellHeight },
+                pixelsPerCell: Math.round(cellWidth * cellHeight)
+            });
 
             setCellSizes({ width: cellWidth, height: cellHeight });
+            setMeasurementsReady(true);
         };
 
-        // Initial calculation - use requestAnimationFrame to wait for layout
+        // Initial calculation - use double RAF to ensure layout is complete
         requestAnimationFrame(() => {
-            calculateCellSizes();
+            requestAnimationFrame(() => {
+                calculateCellSizes();
+            });
         });
 
-        // Observe container size changes
+        // Fallback timer in case RAF timing doesn't work
+        const fallbackTimer = setTimeout(() => {
+            calculateCellSizes();
+        }, 100);
+
+        // ResizeObserver for ongoing size changes
         const resizeObserver = new ResizeObserver(() => {
-            // Use RAF to batch resize calculations
+            // Reset attempt count on resize
+            attemptCount = 0;
             requestAnimationFrame(calculateCellSizes);
         });
         resizeObserver.observe(measureContainer);
 
-        return () => resizeObserver.disconnect();
+        return () => {
+            clearTimeout(fallbackTimer);
+            resizeObserver.disconnect();
+        };
     }, [effectiveViewport.cols, effectiveViewport.rows]);
 
     // Filter placements to only those visible in the effective viewport
@@ -529,6 +576,8 @@ export function CanvasGrid({
     };
 
     // Calculate total spacer dimensions (full canvas size)
+    // Spacer dimensions should NOT include padding - that's handled by scroll container
+    // Spacer just needs to be big enough for all cells
     const spacerWidth = canvasDimensions.cols * cellSizes.width + (canvasDimensions.cols - 1) * GAP;
     const spacerHeight = canvasDimensions.rows * cellSizes.height + (canvasDimensions.rows - 1) * GAP;
 
@@ -612,32 +661,43 @@ export function CanvasGrid({
                 </div>
             )}
 
-            {/* Measurement container - fills available space, used for cell size calculation */}
-            <div
-                ref={measureRef}
-                className="canvas-grid__measure-container"
-            >
-                {/* Scroll container - matches measurement container, has native scrollbar */}
+            {/* Container - edge-to-edge wrapper */}
+            <div className="canvas-grid__container">
+                {/* Measurement container - fills available space, used for cell size calculation */}
                 <div
-                    ref={(el) => {
-                        gridRef.current = el;
-                        scrollRef.current = el;
-                    }}
-                    className="canvas-grid__scroll-container"
-                    onScroll={handleScroll}
+                    ref={measureRef}
+                    className="canvas-grid__measure-container"
                 >
-                    {/* Spacer - explicit dimensions create scroll area for full canvas */}
-                    <div
-                        className="canvas-grid__spacer"
-                        style={{
-                            width: spacerWidth,
-                            height: spacerHeight,
-                            position: 'relative',
-                        }}
-                    >
-                        {/* Cells - absolutely positioned within spacer */}
-                        {renderCells()}
-                    </div>
+                    {!measurementsReady ? (
+                        /* Loading state while waiting for valid measurements */
+                        <div className="canvas-grid__loader">
+                            <div className="canvas-grid__spinner"></div>
+                            <div>Loading workspace...</div>
+                        </div>
+                    ) : (
+                        /* Scroll container - matches measurement container, has native scrollbar */
+                        <div
+                            ref={(el) => {
+                                gridRef.current = el;
+                                scrollRef.current = el;
+                            }}
+                            className="canvas-grid__scroll-container"
+                            onScroll={handleScroll}
+                        >
+                            {/* Spacer - explicit dimensions create scroll area for full canvas */}
+                            <div
+                                className="canvas-grid__spacer"
+                                style={{
+                                    width: spacerWidth,
+                                    height: spacerHeight,
+                                    position: 'relative',
+                                }}
+                            >
+                                {/* Cells - absolutely positioned within spacer */}
+                                {renderCells()}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

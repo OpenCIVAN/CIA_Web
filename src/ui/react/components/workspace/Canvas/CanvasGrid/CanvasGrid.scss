@@ -78,8 +78,27 @@
 // ============================================================================
 
 .canvas-grid__loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
   color: $color-text-secondary;
   font-size: $font-size-base;
+}
+
+.canvas-grid__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $color-border-default;
+  border-top-color: $color-accent-primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .canvas-grid__error {
@@ -153,19 +172,15 @@
 }
 
 // ============================================================================
-// GRID CONTAINER - Fills available space with CSS Grid
+// GRID CONTAINER - Edge-to-edge, no boxing
 // ============================================================================
 
 .canvas-grid__container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: $spacing-md;
-  padding: $spacing-md;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-lg;
-  min-height: 200px;
+  // REMOVED: margin, padding, background, border, border-radius for edge-to-edge layout
+  min-height: 0;
   overflow: hidden;
   position: relative;
   user-select: none;
@@ -187,36 +202,39 @@
   position: relative;
   // This container's size = available space for the grid
   // It doesn't scroll - just provides measurements
+
+  // Center loading message when waiting for measurements
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-// Scroll container - fills measurement container, handles scrolling
+// Scroll container - edge-to-edge with padding for breathing room
 .canvas-grid__scroll-container {
   position: absolute;
-  inset: 0; // Fill the measurement container completely
+  inset: 0;
   overflow: auto;
-  // Add padding to create space around cells so they don't touch edges
-  padding: $spacing-lg;
-  // Scroll-snap: snap to complete grid cells when scrolling
-  // This ensures instance views are always fully visible, not cut in half
-  scroll-snap-type: both mandatory;
+
+  // Padding for visual breathing room and scrollbar clearance
+  // With true zoom behavior, cells scale to fit so scrolling is minimal
+  padding: 8px 16px 16px 8px; // top right bottom left
+
+  // No scroll-snap - cells fit exactly in viewport (true zoom)
 }
 
+// Spacer - contains all cells, dimensions set by JS
 .canvas-grid__spacer {
-  // Dimensions set by inline style (calculated from canvas size × cell size)
-  // Position: relative to contain absolutely positioned children
-  // Padding on scroll container provides space around cells
+  position: relative;
+  // No additional styling needed - dimensions come from inline style
 }
 
+// Cell wrapper - absolutely positioned within spacer
 .canvas-grid__cell-wrapper {
-  // Position set by inline style (calculated from row/col × cell size)
-  // Snap alignment: each cell snaps to start position when scrolling
+  position: absolute;
   scroll-snap-align: start;
-
-  // Ensure wrapper fills its dimensions and constrains children
   display: flex;
   flex-direction: column;
 
-  // The CanvasCell inside should fill the wrapper
   > .canvas-cell {
     flex: 1;
     width: 100%;
@@ -273,14 +291,7 @@
 // ============================================================================
 
 @media (max-width: 768px) {
-  .canvas-grid__container {
-    margin: $spacing-sm;
-    padding: $spacing-sm;
-  }
-
-  .canvas-grid__cells {
-    gap: $spacing-sm;
-  }
+  // Container remains edge-to-edge on mobile
 
   .canvas-grid__focus-banner,
   .canvas-grid__selection-banner,
