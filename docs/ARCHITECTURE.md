@@ -56,6 +56,7 @@ RIGHT (Server-First):
 ```
 
 All persistent state lives on the server:
+
 - Files and versions
 - Annotations
 - View configurations
@@ -63,6 +64,7 @@ All persistent state lives on the server:
 - Audit logs
 
 Clients maintain only:
+
 - Local cache (for performance)
 - Ephemeral UI state
 - Presence information (via Y.js)
@@ -70,12 +72,14 @@ Clients maintain only:
 ### 2. Y.js for Presence Only
 
 Y.js excels at real-time ephemeral data. We use it exclusively for:
+
 - Cursor positions (3D space)
 - User presence (who's online, what they're viewing)
 - VR avatar positions
 - Temporary selections
 
 Y.js does NOT store:
+
 - File metadata
 - Annotations
 - View configurations
@@ -84,6 +88,7 @@ Y.js does NOT store:
 ### 3. Audit Everything
 
 For research compliance:
+
 - Every mutation is logged with user, timestamp, before/after
 - Session recordings capture complete interaction history
 - Logs are immutable (append-only)
@@ -92,6 +97,7 @@ For research compliance:
 ### 4. Handler-Agnostic Core
 
 The core system knows nothing about specific file formats. Handlers (VTK, Plotly, etc.) register capabilities:
+
 - What file types they support
 - How to render cursors
 - What computations they need
@@ -100,6 +106,7 @@ The core system knows nothing about specific file formats. Handlers (VTK, Plotly
 ### 5. Computation on Server
 
 Heavy processing happens server-side:
+
 - Keeps VR headsets lightweight
 - Ensures consistent results across clients
 - Enables result caching
@@ -482,6 +489,7 @@ CREATE INDEX idx_computation_cache_key ON computation_cache(cache_key);
 ### REST Endpoints
 
 #### Authentication
+
 ```
 POST   /api/auth/login              # Keycloak redirect
 POST   /api/auth/logout
@@ -490,6 +498,7 @@ POST   /api/auth/refresh            # Refresh token
 ```
 
 #### Organizations
+
 ```
 GET    /api/orgs                    # List user's organizations
 POST   /api/orgs                    # Create organization
@@ -502,6 +511,7 @@ DELETE /api/orgs/:id/members/:uid   # Remove member
 ```
 
 #### Projects
+
 ```
 GET    /api/projects                     # List user's projects
 POST   /api/projects                     # Create project
@@ -514,6 +524,7 @@ DELETE /api/projects/:id/members/:uid    # Remove member
 ```
 
 #### Project Branches
+
 ```
 GET    /api/projects/:id/branches             # List branches
 POST   /api/projects/:id/branches             # Create branch
@@ -524,6 +535,7 @@ DELETE /api/projects/:id/branches/:bid        # Delete branch
 ```
 
 #### Files
+
 ```
 POST   /api/files/check             # Check if file exists (by hash)
 POST   /api/files                   # Upload new file
@@ -540,6 +552,7 @@ DELETE /api/projects/:id/files/:fid      # Remove file from project
 ```
 
 #### Annotations
+
 ```
 GET    /api/files/:fid/annotations            # List annotations
 POST   /api/files/:fid/annotations            # Create annotation
@@ -550,6 +563,7 @@ POST   /api/files/:fid/annotations/:aid/migrate  # Migrate to new version
 ```
 
 #### View Configurations
+
 ```
 GET    /api/projects/:id/views           # List views
 POST   /api/projects/:id/views           # Create view
@@ -559,6 +573,7 @@ DELETE /api/projects/:id/views/:vid      # Delete view
 ```
 
 #### Computation
+
 ```
 POST   /api/compute                 # Request computation
 GET    /api/compute/:jobId          # Get job status
@@ -566,6 +581,7 @@ GET    /api/compute/:jobId/result   # Get job result
 ```
 
 #### Audit
+
 ```
 GET    /api/audit                   # Query audit log (admin)
 GET    /api/projects/:id/audit      # Project audit log
@@ -576,6 +592,7 @@ GET    /api/sessions/:id            # Get session recording
 ### Request/Response Examples
 
 #### Upload File
+
 ```javascript
 // POST /api/files
 // Content-Type: multipart/form-data
@@ -604,6 +621,7 @@ formData.append('projectId', 'proj-123');
 ```
 
 #### Create Annotation
+
 ```javascript
 // POST /api/files/file-456/annotations
 
@@ -636,6 +654,7 @@ formData.append('projectId', 'proj-123');
 ```
 
 #### Request Computation
+
 ```javascript
 // POST /api/compute
 
@@ -678,9 +697,10 @@ formData.append('projectId', 'proj-123');
 ### WebSocket Events
 
 #### Connection
+
 ```javascript
 // Client connects with auth token
-const ws = new WebSocket('wss://api.example.com/ws?token=...');
+const ws = new WebSocket("wss://api.example.com/ws?token=...");
 
 // Server confirms and sends initial state
 // → { type: 'connected', userId: '...', serverTime: '...' }
@@ -693,40 +713,76 @@ const ws = new WebSocket('wss://api.example.com/ws?token=...');
 ```
 
 #### Server → Client Events
+
 ```javascript
 // File events
-{ type: 'file:added', projectId, file }
-{ type: 'file:removed', projectId, fileId }
-{ type: 'file:version-added', fileId, version }
+{
+  type: "file:added", projectId, file;
+}
+{
+  type: "file:removed", projectId, fileId;
+}
+{
+  type: "file:version-added", fileId, version;
+}
 
 // Annotation events
-{ type: 'annotation:created', fileId, annotation }
-{ type: 'annotation:updated', fileId, annotation }
-{ type: 'annotation:deleted', fileId, annotationId }
+{
+  type: "annotation:created", fileId, annotation;
+}
+{
+  type: "annotation:updated", fileId, annotation;
+}
+{
+  type: "annotation:deleted", fileId, annotationId;
+}
 
 // View events
-{ type: 'view:created', projectId, view }
-{ type: 'view:updated', projectId, view }
-{ type: 'view:deleted', projectId, viewId }
+{
+  type: "view:created", projectId, view;
+}
+{
+  type: "view:updated", projectId, view;
+}
+{
+  type: "view:deleted", projectId, viewId;
+}
 
 // Member events
-{ type: 'member:joined', projectId, user }
-{ type: 'member:left', projectId, userId }
+{
+  type: "member:joined", projectId, user;
+}
+{
+  type: "member:left", projectId, userId;
+}
 
 // Computation events
-{ type: 'compute:progress', jobId, progress }
-{ type: 'compute:complete', jobId, result }
-{ type: 'compute:failed', jobId, error }
+{
+  type: "compute:progress", jobId, progress;
+}
+{
+  type: "compute:complete", jobId, result;
+}
+{
+  type: "compute:failed", jobId, error;
+}
 ```
 
 #### Client → Server Events
+
 ```javascript
 // Heartbeat
-{ type: 'ping' }
+{
+  type: "ping";
+}
 
 // Room management
-{ type: 'join:project', projectId }
-{ type: 'leave:project', projectId }
+{
+  type: "join:project", projectId;
+}
+{
+  type: "leave:project", projectId;
+}
 ```
 
 ### Y.js Presence (Separate Connection)
@@ -855,9 +911,42 @@ function getCacheKey(fileId, versionId, operation, params) {
     { fileId, versionId, operation, params },
     Object.keys(params).sort()
   );
-  return crypto.createHash('sha256').update(normalized).digest('hex');
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 ```
+
+### Thumbnail Worker
+
+The thumbnail worker is a specialized Node.js worker that generates server-side thumbnails using a headless browser:
+
+```
+┌─────────────────┐     ┌─────────┐     ┌──────────────────┐
+│  File Upload    │────▶│  Redis  │────▶│ Thumbnail Worker │
+│  or View Create │     │  Queue  │     │   (Playwright)   │
+└─────────────────┘     └─────────┘     └────────┬─────────┘
+                                                 │
+                                                 ▼
+                                        ┌─────────────────┐
+                                        │ Headless Chrome │
+                                        │   /embed.html   │
+                                        └────────┬────────┘
+                                                 │
+                    ┌─────────┐                  │
+                    │  MinIO  │◀─────────────────┤
+                    └─────────┘                  │
+                                                 ▼
+                    ┌─────────┐         ┌───────────────┐
+                    │   API   │◀────────│ Callback      │
+                    └─────────┘         └───────────────┘
+```
+
+Key features:
+
+- **Server-authoritative**: Thumbnails cannot be spoofed by clients
+- **Queue-based**: Jobs processed asynchronously via BullMQ
+- **Optimized output**: WebP format, 400x300px, 80% quality
+
+See `docs/guides/THUMBNAIL_WORKER.md` for detailed setup instructions.
 
 ---
 
@@ -902,7 +991,10 @@ interface VisualizationHandler {
    * Project screen coordinates to 3D world position
    * Used for desktop mouse → 3D cursor
    */
-  projectToWorld(screenPos: {x: number, y: number}, camera: Camera): Vector3 | null;
+  projectToWorld(
+    screenPos: { x: number, y: number },
+    camera: Camera
+  ): Vector3 | null;
 
   /**
    * Render a remote user's cursor/avatar
@@ -920,7 +1012,10 @@ interface VisualizationHandler {
 
 ```javascript
 interface StreamingStrategy {
-  prepareForClient(file: File, clientCapabilities: ClientCapabilities): Promise<StreamPlan>;
+  prepareForClient(
+    file: File,
+    clientCapabilities: ClientCapabilities
+  ): Promise<StreamPlan>;
   stream(plan: StreamPlan, socket: WebSocket): Promise<void>;
 }
 
@@ -930,7 +1025,7 @@ function selectStreamingStrategy(file, client) {
   const clientPower = client.device.estimatedGPUPower;
 
   // Very large files + low-power client = cloud rendering
-  if (fileSize > 100_000_000 && clientPower === 'low') {
+  if (fileSize > 100_000_000 && clientPower === "low") {
     return new CloudRenderStrategy();
   }
 
@@ -966,11 +1061,11 @@ function selectStreamingStrategy(file, client) {
 
 ```javascript
 // Server-side validation using magic bytes + structure validation
-import { fileTypeFromBuffer } from 'file-type';
+import { fileTypeFromBuffer } from "file-type";
 
 async function validateFile(buffer, filename) {
   // 1. Get extension
-  const ext = filename.split('.').pop()?.toLowerCase();
+  const ext = filename.split(".").pop()?.toLowerCase();
 
   // 2. Detect actual type from magic bytes
   const detected = await fileTypeFromBuffer(buffer);
@@ -999,12 +1094,12 @@ async function validateFile(buffer, filename) {
 
 ### Audit Levels
 
-| Level | Events | Changes | Recording |
-|-------|--------|---------|-----------|
-| minimal | auth, upload, delete | No | No |
-| standard | + updates, sharing | Yes | No |
-| detailed | + access, presence | Yes | Yes (1 FPS) |
-| forensic | Everything | Yes | Yes (10 FPS) |
+| Level    | Events               | Changes | Recording    |
+| -------- | -------------------- | ------- | ------------ |
+| minimal  | auth, upload, delete | No      | No           |
+| standard | + updates, sharing   | Yes     | No           |
+| detailed | + access, presence   | Yes     | Yes (1 FPS)  |
+| forensic | Everything           | Yes     | Yes (10 FPS) |
 
 ### Session Recording
 
@@ -1018,16 +1113,19 @@ async function validateFile(buffer, filename) {
 ## Security
 
 ### Authentication
+
 - Keycloak for identity management
 - JWT tokens for API access
 - Refresh token rotation
 
 ### Authorization
+
 - Role-based access control (RBAC)
 - Per-project permissions
 - Annotation visibility (public/private/group)
 
 ### Input Validation
+
 - Zod schemas for all API inputs
 - File type validation via magic bytes
 - Size limits enforced
@@ -1037,17 +1135,20 @@ async function validateFile(buffer, filename) {
 ## Deployment
 
 ### Development
+
 - Docker Compose for local development
 - Hot reload for client and server
 - Seeded test data
 
 ### Production
+
 - Kubernetes for orchestration
 - Horizontal scaling for workers
 - Managed PostgreSQL recommended
 - S3-compatible storage (MinIO or cloud)
 
 ### Multi-tenancy
+
 - Single codebase supports both modes
 - All queries include org_id
 - Storage paths include org_id
@@ -1082,17 +1183,17 @@ async function validateFile(buffer, filename) {
 
 ### Glossary
 
-| Term | Definition |
-|------|------------|
-| **Handler** | Visualization type implementation (VTK, Plotly, etc.) |
-| **Branch** | Git-like project branch for annotation isolation |
-| **View Config** | Saved camera position and render settings |
-| **Computation** | Server-side data processing job |
-| **Presence** | Real-time user state (cursor, position) |
+| Term            | Definition                                            |
+| --------------- | ----------------------------------------------------- |
+| **Handler**     | Visualization type implementation (VTK, Plotly, etc.) |
+| **Branch**      | Git-like project branch for annotation isolation      |
+| **View Config** | Saved camera position and render settings             |
+| **Computation** | Server-side data processing job                       |
+| **Presence**    | Real-time user state (cursor, position)               |
 
 ### Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 2.0 | 2025-11 | Server-authority architecture redesign |
-| 1.0 | 2025-10 | Initial client-first architecture |
+| Version | Date    | Changes                                |
+| ------- | ------- | -------------------------------------- |
+| 2.0     | 2025-11 | Server-authority architecture redesign |
+| 1.0     | 2025-10 | Initial client-first architecture      |

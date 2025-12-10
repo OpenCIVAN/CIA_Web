@@ -226,6 +226,7 @@ const loggers = {
   auth: createLogger("auth"),
   compute: createLogger("compute"),
   thumbnails: createLogger("thumbnails"),
+  embed: createLogger("embed"),
 };
 
 // Runtime configuration API (exposed on window.log)
@@ -477,6 +478,7 @@ export const {
   auth,
   compute,
   thumbnails,
+  embed,
 } = loggers;
 
 // Default export for simple usage

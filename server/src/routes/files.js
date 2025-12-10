@@ -20,6 +20,7 @@ const {
 } = require("../services/handlerCapabilities");
 
 const { createLogger } = require("../utils/logger");
+const thumbnailService = require("../services/thumbnailService");
 
 const log = createLogger("files");
 
@@ -309,6 +310,10 @@ router.post("/", upload.single("file"), async (req, res, next) => {
       wsManager.fileAdded(projectId, newFile.rows[0]);
     }
 
+    // Note: Thumbnails are queued when views are created (in views.js),
+    // not on file upload, because the thumbnail worker needs a viewId
+    // to render the visualization correctly.
+
     res.status(201).json({
       success: true,
       file: newFile.rows[0],
@@ -463,6 +468,14 @@ router.post("/:id/versions", upload.single("file"), async (req, res, next) => {
         );
       }
     }
+
+    // Regenerate thumbnails for all views of this file (async, don't wait)
+    // Uses queueThumbnailsForFile to handle all active views
+    thumbnailService.queueThumbnailsForFile(pool, fileId).catch((err) => {
+      log.warn(
+        `Failed to queue thumbnail jobs for file version ${fileId}: ${err.message}`
+      );
+    });
 
     res.status(201).json({
       success: true,

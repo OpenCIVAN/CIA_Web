@@ -5,6 +5,10 @@
 const express = require("express");
 const router = express.Router();
 const { getUser } = require("../middleware/auth");
+const thumbnailService = require("../services/thumbnailService");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("views");
 
 // ============================================================================
 // VIEW ENDPOINTS
@@ -222,6 +226,21 @@ router.post("/", async (req, res, next) => {
         }
       }
     }
+
+    // Queue server-side thumbnail generation for the new view
+    // This runs async and doesn't block the response
+    thumbnailService
+      .queueThumbnailJob({
+        fileId,
+        viewId: view.id,
+        projectId: projectId || null,
+        priority: 5,
+      })
+      .catch((err) => {
+        log.warn(
+          `Failed to queue thumbnail job for view ${view.id}: ${err.message}`
+        );
+      });
 
     res.status(201).json({
       success: true,

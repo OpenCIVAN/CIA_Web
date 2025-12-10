@@ -4,9 +4,12 @@ const fs = require("fs");
 const webpack = require("webpack");
 
 module.exports = {
-  entry: "./src/index.js",
+  entry: {
+    main: "./src/index.js",
+    embed: "./src/embed.js",
+  },
   output: {
-    filename: "bundle.js",
+    filename: "[name].bundle.js",
     path: path.resolve(__dirname, "dist"),
     clean: true,
   },
@@ -93,6 +96,12 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/index.html",
       filename: "index.html",
+      chunks: ["main"],
+    }),
+    new HtmlWebpackPlugin({
+      template: "./src/embed.html",
+      filename: "embed.html",
+      chunks: ["embed"],
     }),
     new webpack.DefinePlugin({
       "process.env.YJS_WEBSOCKET_URL": JSON.stringify(

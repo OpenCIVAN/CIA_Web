@@ -176,6 +176,37 @@ services:
     restart: unless-stopped
 
 
+  thumbnail-worker:
+    build:
+      context: ./workers/thumbnail-node
+      dockerfile: Dockerfile
+    container_name: cia-thumbnail-worker
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: cia-files
+      MINIO_SECURE: "false"
+      # The URL the headless browser will navigate to for rendering
+      # In Docker, this should point to the frontend service or host
+      # Note: webpack dev server uses HTTPS by default
+      APP_BASE_URL: ${APP_BASE_URL:-https://host.docker.internal:8081}
+      API_URL: http://api:3001
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      api:
+        condition: service_started
+    restart: unless-stopped
+    # Chromium needs more shared memory
+    shm_size: '2gb'
+
+
 volumes:
   postgres_data:
   minio_data:

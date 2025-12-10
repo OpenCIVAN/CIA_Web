@@ -20,6 +20,8 @@ const WORKER_TYPES = {
   ISOSURFACE: "isosurface",
   // Decimation and simplification
   DECIMATION: "decimation",
+  // Thumbnail generation (headless browser)
+  THUMBNAIL: "thumbnail",
   // General compute (catch-all)
   GENERAL: "general",
 };
@@ -44,6 +46,10 @@ const OPERATION_WORKER_MAP = {
   "simplify-mesh": WORKER_TYPES.DECIMATION,
   "smooth-mesh": WORKER_TYPES.MESH,
   "clip-mesh": WORKER_TYPES.MESH,
+
+  // Thumbnail operations
+  "generate-thumbnail": WORKER_TYPES.THUMBNAIL,
+  "regenerate-thumbnail": WORKER_TYPES.THUMBNAIL,
 
   // General operations
   "compute-bounds": WORKER_TYPES.GENERAL,

@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, memo } from 'react';
 import { thumbnails as log } from '@Utils/logger.js';
+import { config } from '@Core/config/clientConfig.js';
 import './ThumbnailPreview.scss';
 
 /**
@@ -46,10 +47,13 @@ export const ThumbnailPreview = memo(function ThumbnailPreview({
 
         const loadThumbnail = async () => {
             try {
+                // Use apiBaseUrl to ensure requests go to API server, not webpack dev server
+                const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
                 const url = snapshotId
-                    ? `/api/views/${viewId}/thumbnail?snapshotId=${snapshotId}`
-                    : `/api/views/${viewId}/thumbnail`;
+                    ? `${apiBase}/views/${viewId}/thumbnail?snapshotId=${snapshotId}`
+                    : `${apiBase}/views/${viewId}/thumbnail`;
 
+                log.debug(`Fetching thumbnail from: ${url}`);
                 const response = await fetch(url);
 
                 if (!response.ok) {

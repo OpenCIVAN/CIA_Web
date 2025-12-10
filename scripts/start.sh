@@ -35,7 +35,7 @@ print_status "Docker is running"
 echo ""
 
 # Start Docker services
-echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker)..."
+echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker, Thumbnail Worker)..."
 docker-compose up -d
 
 # Wait for services to be healthy
@@ -110,12 +110,13 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "🌐 Services running:"
-echo "  • PostgreSQL:     localhost:5432"
-echo "  • MinIO:          localhost:9000 (Console: localhost:9002)"
-echo "  • Redis:          localhost:6379"
-echo "  • API:            http://localhost:3001"
-echo "  • Y.js WebSocket: ws://localhost:9001"
-echo "  • VTK Worker:     Processing jobs from Redis queue"
+echo "  • PostgreSQL:       localhost:5432"
+echo "  • MinIO:            localhost:9000 (Console: localhost:9002)"
+echo "  • Redis:            localhost:6379"
+echo "  • API:              http://localhost:3001"
+echo "  • Y.js WebSocket:   ws://localhost:9001"
+echo "  • VTK Worker:       Processing compute jobs from Redis queue"
+echo "  • Thumbnail Worker: Generating thumbnails via headless browser"
 echo ""
 
 echo "📝 Next steps:"
