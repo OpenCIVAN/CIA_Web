@@ -1,6 +1,8 @@
 algorithms
 collaboration
 core
+embed.html
+embed.js
 index.html
 index.js
 init
@@ -181,6 +183,7 @@ index.js
 appInitializer.js
 
 ./src/services:
+ThumbnailCaptureService.js
 apiClient.js
 authService.js
 serverSync.js
@@ -333,6 +336,7 @@ IconOverlay
 PillBar
 PortalPopover
 ResizableSections
+ThumbnailPreview
 Toast
 ToolPanel
 VRButton
@@ -378,6 +382,11 @@ index.js
 ./src/ui/react/components/common/ResizableSections:
 ResizableSections.jsx
 ResizableSections.scss
+index.js
+
+./src/ui/react/components/common/ThumbnailPreview:
+ThumbnailPreview.jsx
+ThumbnailPreview.scss
 index.js
 
 ./src/ui/react/components/common/Toast:
@@ -676,6 +685,7 @@ index.js
 DatasetContextHeader.jsx
 DatasetContextHeader.scss
 DatasetParent.jsx
+DatasetSettingsModal.jsx
 DatasetsTab.jsx
 DatasetsTab.scss
 ViewItem
@@ -704,6 +714,7 @@ SizePicker.jsx
 SizePicker.scss
 SlidingPanel.jsx
 SlidingPanel.scss
+ViewSettingsModal.jsx
 
 ./src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/hooks:
 useViewTree.js

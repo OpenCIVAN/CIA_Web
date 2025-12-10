@@ -39,6 +39,7 @@ utils
 
 ./server/src/middleware:
 auth.js
+validateUUID.js
 
 ./server/src/models:
 
@@ -59,6 +60,7 @@ rooms.js
 stars.js
 subsets.js
 sync.js
+thumbnails.js
 views.js
 workspaceAnnotations.js
 workspaces.js
@@ -70,6 +72,7 @@ handlerCapabilities.js
 handlerCapabilities.ts
 jobQueue.js
 recordingService.js
+thumbnailService.js
 websocket.js
 workerRegistry.js
 yjsPersistence.js

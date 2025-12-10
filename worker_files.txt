@@ -1,6 +1,0 @@
-vtk-python
-
-./workers/vtk-python:
-Dockerfile
-requirements.txt
-worker.py

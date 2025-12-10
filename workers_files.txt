@@ -1,0 +1,14 @@
+thumbnail-node
+vtk-python
+
+./workers/thumbnail-node:
+Dockerfile
+node_modules
+package-lock.json
+package.json
+worker.js
+
+./workers/vtk-python:
+Dockerfile
+requirements.txt
+worker.py
