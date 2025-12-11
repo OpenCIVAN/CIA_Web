@@ -161,6 +161,9 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
             const viewConfigId = event.detail?.viewConfigId || event.detail?.viewId;
             const spawnNew = event.detail?.spawnNew;
             const duplicateViewId = event.detail?.duplicateViewId;
+            // Extract target position if specified (from drag-drop)
+            const targetRow = event.detail?.targetRow;
+            const targetCol = event.detail?.targetCol;
 
             log.debug('Canvas instance request:', { datasetId, viewConfigId, spawnNew });
 
@@ -230,10 +233,12 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     return;
                 }
 
-                // Find empty cell and add placement
-                const { row, col } = findNextEmptyCell();
+                // Use target position if specified, otherwise find next empty cell
+                const { row, col } = (targetRow !== undefined && targetCol !== undefined)
+                    ? { row: targetRow, col: targetCol }
+                    : findNextEmptyCell();
                 log.debug(`Adding placement at (${row}, ${col}) for view ${finalViewConfigId}`);
-
+                
                 await addPlacement({
                     row,
                     col,

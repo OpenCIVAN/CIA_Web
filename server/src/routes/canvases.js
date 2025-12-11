@@ -80,57 +80,18 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Canvas not found" });
     }
 
-    // Get placements with validation
-    // Use LEFT JOIN to check if referenced views still exist
+    // Get placements (simple query - no validation for now)
     const placementsResult = await pool.query(
-      `SELECT p.*, 
-              CASE 
-                WHEN p.content_type = 'view' THEN (vc.id IS NOT NULL)
-                WHEN p.content_type = 'note' THEN (n.id IS NOT NULL OR p.content_id IS NULL)
-                WHEN p.content_type = 'image' THEN (i.id IS NOT NULL OR p.content_id IS NULL)
-                ELSE true
-              END as is_valid
-       FROM placements p
-       LEFT JOIN view_configurations vc ON p.content_type = 'view' AND p.content_id = vc.id
-       LEFT JOIN notes n ON p.content_type = 'note' AND p.content_id = n.id
-       LEFT JOIN images i ON p.content_type = 'image' AND p.content_id = i.id
-       WHERE p.canvas_id = $1
-       ORDER BY p.row_index, p.col_index`,
+      `SELECT * FROM placements WHERE canvas_id = $1 ORDER BY row_index, col_index`,
       [id]
     );
 
-    // Separate valid and invalid placements
-    const validPlacements = [];
-    const invalidPlacementIds = [];
-
-    for (const p of placementsResult.rows) {
-      if (p.is_valid) {
-        // Remove the is_valid field before sending to client
-        delete p.is_valid;
-        validPlacements.push(p);
-      } else {
-        invalidPlacementIds.push(p.id);
-        console.warn(
-          `[canvases] Found orphaned placement ${p.id} referencing missing ${p.content_type} ${p.content_id}`
-        );
-      }
-    }
-
-    // Auto-cleanup orphaned placements (optional - can be disabled)
-    if (invalidPlacementIds.length > 0) {
-      console.log(
-        `[canvases] Auto-cleaning ${invalidPlacementIds.length} orphaned placements`
-      );
-      await pool.query(`DELETE FROM placements WHERE id = ANY($1::uuid[])`, [
-        invalidPlacementIds,
-      ]);
-    }
-
     res.json({
       ...canvasResult.rows[0],
-      placements: validPlacements,
+      placements: placementsResult.rows,
     });
   } catch (error) {
+    console.error("[canvases] GET /:id error:", error);
     next(error);
   }
 });
