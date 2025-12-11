@@ -229,6 +229,7 @@ export function createFileHandlers(fileLoader, showToast) {
     e.dataTransfer.setData(
       "application/json",
       JSON.stringify({
+        type: 'file',
         ...file,
         isLoaded: loaded,
       })

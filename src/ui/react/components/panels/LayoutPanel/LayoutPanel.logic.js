@@ -628,7 +628,11 @@ export function useLayoutPanel(options) {
         }
       }
     }
-    // No empty cell found, return next row
+
+    // Canvas is full - expand by adding a new row
+    console.log("Canvas full, expanding to row", canvasSize.rows);
+
+    // Note: The server should auto-expand, but we return the new position
     return { row: canvasSize.rows, col: 0 };
   }, [cells, canvasSize]);
 

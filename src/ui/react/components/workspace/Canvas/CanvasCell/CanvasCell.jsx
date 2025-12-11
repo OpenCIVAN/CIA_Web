@@ -170,25 +170,43 @@ export const CanvasCell = memo(function CanvasCell({
     const handleDrop = useCallback((e) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (onDrop && isEmpty) {
-            try {
-                // Try ViewItem format first
-                let data = e.dataTransfer.getData('application/x-viewitem');
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
-                    return;
-                }
 
-                // Fall back to generic JSON
-                data = e.dataTransfer.getData('application/json');
-                if (data) {
-                    const parsed = JSON.parse(data);
+        if (!onDrop || !isEmpty) return;
+
+        try {
+            // Try ViewItem format first (from datasets tab)
+            let data = e.dataTransfer.getData('application/x-viewitem');
+            if (data) {
+                const parsed = JSON.parse(data);
+                console.log('ViewItem drop:', parsed);
+                onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
+                return;
+            }
+
+            // Fall back to generic JSON (from files tab or other sources)
+            data = e.dataTransfer.getData('application/json');
+            if (data) {
+                const parsed = JSON.parse(data);
+                console.log('JSON drop:', parsed);
+
+                // Determine what type of data this is
+                if (parsed.type === 'dataset') {
+                    onDrop(row, col, { datasetId: parsed.datasetId, ...parsed });
+                } else if (parsed.type === 'view-item') {
+                    onDrop(row, col, { viewConfigId: parsed.viewId, ...parsed });
+                } else if (parsed.path || parsed.isFile) {
+                    // File from FilesTab
+                    onDrop(row, col, { ...parsed, isFile: true });
+                } else {
+                    // Unknown format - pass through
                     onDrop(row, col, parsed);
                 }
-            } catch (err) {
-                console.error('Failed to parse dropped data:', err);
+                return;
             }
+
+            console.warn('No recognized data format in drop');
+        } catch (err) {
+            console.error('Failed to parse dropped data:', err);
         }
     }, [isEmpty, row, col, onDrop]);
 
