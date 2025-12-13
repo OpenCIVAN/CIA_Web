@@ -10,7 +10,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
-import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { canvasManager } from "@Core/data/managers//CanvasManager.js";
 import { ui as log } from "@Utils/logger.js";
 
 // =============================================================================

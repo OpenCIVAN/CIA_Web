@@ -2,10 +2,20 @@
 // Canvas Navigator logic hook
 //
 // This hook consumes the parent logic from useLayoutPanel and adds
-// navigator-specific state (display mode, zoom, dock position, etc.)
+// navigator-specific state (display mode, zoom, etc.)
+//
+// IMPORTANT: DOCK_POSITIONS is managed by LayoutPanelContext.
+// This hook receives dockPosition and setDockPosition from parent logic.
 
 import { useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
+
+// Import DOCK_POSITIONS from context for reference
+// (not for state management - that's done in LayoutPanelContext)
+import { DOCK_POSITIONS } from "../../LayoutPanelContext";
+
+// Re-export for backward compatibility
+export { DOCK_POSITIONS };
 
 // =============================================================================
 // CONSTANTS
@@ -20,16 +30,6 @@ export const DISPLAY_MODES = {
 export const NAV_MODES = {
   NAVIGATE: "navigate",
   EDIT: "edit",
-};
-
-export const DOCK_POSITIONS = {
-  LEFT_PANEL: "left-panel",
-  TOP_LEFT: "top-left",
-  TOP_RIGHT: "top-right",
-  BOTTOM_LEFT: "bottom-left",
-  BOTTOM_RIGHT: "bottom-right",
-  FLOAT: "float",
-  MINIMIZED: "minimized",
 };
 
 // Instance colors - matching the ones in LayoutPanel.logic.js
@@ -194,19 +194,38 @@ export function useCanvasNavigator(logic) {
     loadFromStorage(STORAGE_KEYS.DISPLAY_MODE, DISPLAY_MODES.NAMES)
   );
 
-  // Dock position
-  const [dockPosition, setDockPositionState] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.DOCK_POSITION, DOCK_POSITIONS.FLOAT)
-  );
+  // NOTE: dockPosition is managed by LayoutPanelContext, not here
+  // We receive it from parent logic
 
-  // Float position
+  // Float position (with persistence) - for when in FLOAT mode
   const [floatPosition, setFloatPositionState] = useState(() =>
     loadFromStorage(STORAGE_KEYS.FLOAT_POSITION, { x: 100, y: 100 })
   );
 
-  // Minimap zoom
+  // Minimap zoom (with persistence)
   const [minimapZoom, setMinimapZoomState] = useState(() =>
     loadFromStorage(STORAGE_KEYS.MINIMAP_ZOOM, 1)
+  );
+
+  // Get dockPosition from parent logic (comes from LayoutPanelContext)
+  const parentDockPosition = logic?.dockPosition;
+  const parentSetDockPosition = logic?.setDockPosition;
+
+  // Use parent dockPosition or default to FLOAT
+  const dockPosition = parentDockPosition || DOCK_POSITIONS.FLOAT;
+
+  // Wrapper for setDockPosition that uses parent if available
+  const setDockPosition = useCallback(
+    (position) => {
+      if (parentSetDockPosition) {
+        parentSetDockPosition(position);
+      } else {
+        console.warn(
+          "[CanvasNavigator.logic] No parent setDockPosition available"
+        );
+      }
+    },
+    [parentSetDockPosition]
   );
 
   // Local viewport size fallback
@@ -238,10 +257,7 @@ export function useCanvasNavigator(logic) {
     saveToStorage(STORAGE_KEYS.DISPLAY_MODE, mode);
   }, []);
 
-  const setDockPosition = useCallback((position) => {
-    setDockPositionState(position);
-    saveToStorage(STORAGE_KEYS.DOCK_POSITION, position);
-  }, []);
+  // NOTE: setDockPosition is defined above, using parent from context
 
   const setFloatPosition = useCallback((position) => {
     setFloatPositionState(position);

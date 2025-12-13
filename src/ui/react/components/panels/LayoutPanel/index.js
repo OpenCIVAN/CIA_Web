@@ -1,8 +1,10 @@
 // src/ui/react/components/panels/LayoutPanel/index.js
 // Layout Panel exports
 //
-// IMPORTANT: FloatingCanvasNavigator is a SEPARATE file.
-// Do NOT export it from LayoutPanel.jsx to avoid duplicates.
+// IMPORTANT NOTES:
+// 1. DOCK_POSITIONS should ONLY be imported from LayoutPanelContext
+// 2. FloatingCanvasNavigator is a SEPARATE component from LayoutPanel
+// 3. Both LayoutPanel and FloatingCanvasNavigator consume the same context
 
 // =============================================================================
 // MAIN COMPONENTS
@@ -15,15 +17,16 @@ export { FloatingCanvasNavigator } from "./FloatingCanvasNavigator";
 export default LayoutPanel;
 
 // =============================================================================
-// CONTEXT & HOOKS (for shared state)
+// CONTEXT & HOOKS
 // =============================================================================
 
+// DOCK_POSITIONS - ALWAYS import from LayoutPanelContext to avoid comparison bugs
 export {
   LayoutPanelProvider,
   useLayoutPanelContext,
   useLayoutPanelLogic,
   useNavigatorDocked,
-  DOCK_POSITIONS,
+  DOCK_POSITIONS, // Single source of truth!
 } from "./LayoutPanelContext";
 
 // =============================================================================
@@ -39,6 +42,8 @@ export {
   VIEW_MODES,
   SPAWN_SIZES,
   parseSpawnSize,
+  // NOTE: DOCK_POSITIONS is NOT exported from LayoutPanel.logic.js
+  // Use the one from LayoutPanelContext instead
 } from "./LayoutPanel.logic";
 
 export {
@@ -48,6 +53,8 @@ export {
   DISPLAY_MODES,
   NAV_MODES,
   INSTANCE_COLORS,
+  // NOTE: DOCK_POSITIONS is NOT exported from CanvasNavigator.logic.js
+  // Use the one from LayoutPanelContext instead
 } from "./components/CanvasNavigator/CanvasNavigator.logic";
 
 // =============================================================================

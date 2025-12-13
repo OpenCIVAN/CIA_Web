@@ -1,18 +1,12 @@
 // src/ui/react/components/panels/LayoutPanel/FloatingCanvasNavigator.jsx
 // Floating Canvas Navigator - renders the navigator based on dock position
 //
-// This component handles:
-// - Float position with drag-and-drop
-// - Corner snapping positions
-// - Minimized state
-// - localStorage persistence for position
-//
-// When docked to left panel, LayoutTab handles rendering instead.
+// IMPORTANT: Import DOCK_POSITIONS from LayoutPanelContext, NOT from
+// CanvasNavigator.logic.js to ensure consistent comparisons.
 
 import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { useLayoutPanelContext } from './LayoutPanelContext';
+import { useLayoutPanelContext, DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
-import { DOCK_POSITIONS } from './components/CanvasNavigator/CanvasNavigator.logic';
 import { Grid3X3, Maximize2 } from 'lucide-react';
 import './FloatingCanvasNavigator.scss';
 
@@ -35,7 +29,6 @@ function loadFloatPosition() {
         const stored = localStorage.getItem(FLOAT_POSITION_KEY);
         if (stored) {
             const parsed = JSON.parse(stored);
-            // Validate it's within viewport
             if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
                 return {
                     x: Math.max(0, Math.min(window.innerWidth - 500, parsed.x)),
@@ -44,16 +37,20 @@ function loadFloatPosition() {
             }
         }
     } catch (e) {
-        console.warn('Failed to load navigator position:', e);
+        console.warn('[FloatingCanvasNavigator] Failed to load position:', e);
     }
     return { x: 100, y: 100 };
 }
 
 /**
  * FloatingCanvasNavigator
- * 
+ *
  * Renders the CanvasNavigator in floating/corner positions.
- * When docked to left panel, rendering is handled by LayoutTab instead.
+ * 
+ * RENDER CONDITIONS:
+ * - Returns null if dockPosition === LEFT_PANEL (LayoutPanel handles that)
+ * - Returns minimized button if dockPosition === MINIMIZED
+ * - Otherwise renders the full navigator
  */
 export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     className = '',
@@ -68,16 +65,35 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     const dragStartRef = useRef(null);
     const containerRef = useRef(null);
 
-    // Don't render if no context
+    // ==========================================================================
+    // EARLY RETURNS - Check if we should render
+    // ==========================================================================
+
+    // Don't render if no context available
     if (!context?.logic) {
+        console.log('[FloatingCanvasNavigator] No context - not rendering');
         return null;
     }
 
-    const { logic } = context;
+    const { logic, dockPosition: contextDockPosition } = context;
 
-    // Get dock position from logic or default to FLOAT
-    const dockPosition = logic.dockPosition || DOCK_POSITIONS.FLOAT;
+    // Get dock position - prefer direct context property over logic
+    const dockPosition = contextDockPosition || logic.dockPosition || DOCK_POSITIONS.FLOAT;
     const setDockPosition = logic.setDockPosition || (() => { });
+
+    // DEBUG: Log render decision
+    console.log('[FloatingCanvasNavigator] dockPosition:', dockPosition,
+        '| Is LEFT_PANEL:', dockPosition === DOCK_POSITIONS.LEFT_PANEL);
+
+    // DON'T render if docked in left panel - LayoutPanel handles that
+    if (dockPosition === DOCK_POSITIONS.LEFT_PANEL) {
+        console.log('[FloatingCanvasNavigator] Docked in left panel - LayoutPanel will render');
+        return null;
+    }
+
+    // ==========================================================================
+    // DRAG HANDLING
+    // ==========================================================================
 
     // Save float position to localStorage when it changes
     useEffect(() => {
@@ -85,7 +101,7 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
             try {
                 localStorage.setItem(FLOAT_POSITION_KEY, JSON.stringify(floatPosition));
             } catch (e) {
-                console.warn('Failed to save navigator position:', e);
+                console.warn('[FloatingCanvasNavigator] Failed to save position:', e);
             }
         }
     }, [floatPosition, dockPosition, isDragging]);
@@ -101,31 +117,29 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         // Only drag from header area
         if (!e.target.closest('.canvas-navigator__header, .canvas-navigator__drag-handle')) return;
 
+        e.preventDefault();
         setIsDragging(true);
         dragStartRef.current = {
-            startX: e.clientX,
-            startY: e.clientY,
-            startPosX: floatPosition.x,
-            startPosY: floatPosition.y,
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            posX: floatPosition.x,
+            posY: floatPosition.y,
         };
-        e.preventDefault();
+
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
     }, [dockPosition, floatPosition]);
 
     // Drag move handler
     const handleDragMove = useCallback((e) => {
         if (!isDragging || !dragStartRef.current) return;
 
-        const { startX, startY, startPosX, startPosY } = dragStartRef.current;
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-
-        // Clamp to viewport bounds
-        const maxX = window.innerWidth - 500; // navigator width
-        const maxY = window.innerHeight - 400; // approximate height
+        const dx = e.clientX - dragStartRef.current.mouseX;
+        const dy = e.clientY - dragStartRef.current.mouseY;
 
         setFloatPosition({
-            x: Math.max(0, Math.min(maxX, startPosX + deltaX)),
-            y: Math.max(60, Math.min(maxY, startPosY + deltaY)), // 60px for top bar
+            x: Math.max(0, Math.min(window.innerWidth - 200, dragStartRef.current.posX + dx)),
+            y: Math.max(60, Math.min(window.innerHeight - 100, dragStartRef.current.posY + dy)),
         });
     }, [isDragging]);
 
@@ -133,16 +147,15 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
         dragStartRef.current = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
     }, []);
 
-    // Global mouse handlers for dragging
+    // Global mouse event listeners for drag
     useEffect(() => {
         if (isDragging) {
             window.addEventListener('mousemove', handleDragMove);
             window.addEventListener('mouseup', handleDragEnd);
-            document.body.style.cursor = 'grabbing';
-            document.body.style.userSelect = 'none';
-
             return () => {
                 window.removeEventListener('mousemove', handleDragMove);
                 window.removeEventListener('mouseup', handleDragEnd);
@@ -152,12 +165,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         }
     }, [isDragging, handleDragMove, handleDragEnd]);
 
-    // Don't render if docked in left panel (LayoutTab handles that)
-    if (dockPosition === DOCK_POSITIONS.LEFT_PANEL) {
-        return null;
-    }
+    // ==========================================================================
+    // RENDER - MINIMIZED STATE
+    // ==========================================================================
 
-    // Minimized state - just show a button
     if (dockPosition === DOCK_POSITIONS.MINIMIZED) {
         return (
             <button
@@ -171,6 +182,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
             </button>
         );
     }
+
+    // ==========================================================================
+    // RENDER - FLOATING/CORNER STATE
+    // ==========================================================================
 
     // Calculate position style
     let positionStyle = {};

@@ -1,15 +1,12 @@
-/**
- * LayoutPanelContext
- *
- * Provides shared state between LayoutPanel and FloatingCanvasNavigator.
- * This ensures both the docked navigator (inside panel) and floating navigator
- * (on the canvas) stay in sync - they're views of the same state.
- *
- * USAGE:
- * 1. Wrap your layout area with <LayoutPanelProvider canvasId={...}>
- * 2. Use useLayoutPanelContext() in any child component
- * 3. LayoutPanel and FloatingCanvasNavigator will share state automatically
- */
+// src/ui/react/components/panels/LayoutPanel/LayoutPanelContext.js
+// Layout Panel Context - SINGLE SOURCE OF TRUTH for navigator dock state
+//
+// IMPORTANT: This file is the ONLY place where:
+// - DOCK_POSITIONS constants should be defined
+// - dockPosition state should be managed
+//
+// All components should import DOCK_POSITIONS from THIS file, not from
+// CanvasNavigator.logic.js or LayoutPanel.logic.js to avoid comparison bugs.
 
 import React, {
   createContext,
@@ -21,9 +18,13 @@ import React, {
 import { useLayoutPanel } from "./LayoutPanel.logic";
 
 // =============================================================================
-// DOCK POSITIONS
+// DOCK POSITIONS - SINGLE SOURCE OF TRUTH
 // =============================================================================
 
+/**
+ * Navigator dock positions
+ * Import ONLY from this file to ensure consistent comparisons
+ */
 export const DOCK_POSITIONS = {
   LEFT_PANEL: "left-panel",
   TOP_LEFT: "top-left",
@@ -50,15 +51,24 @@ const LayoutPanelContext = createContext(null);
 /**
  * LayoutPanelProvider - Provides shared layout panel state to children
  *
+ * This provider creates ONE source of truth for:
+ * - Canvas/viewport state (from useLayoutPanel)
+ * - Navigator dock position
+ *
+ * Both LayoutPanel and FloatingCanvasNavigator consume this context.
+ *
  * @param {Object} props
- * @param {string} [props.canvasId] - Target canvas ID (uses active canvas if not provided)
+ * @param {string} [props.canvasId] - Target canvas ID
  * @param {React.ReactNode} props.children - Child components
  */
 export function LayoutPanelProvider({ canvasId, children }) {
-  // Create the logic instance once at the provider level
+  // Create the base logic instance (canvas state, cells, etc.)
   const baseLogic = useLayoutPanel({ canvasId });
 
-  // Dock position state (persisted to localStorage)
+  // ==========================================================================
+  // DOCK POSITION STATE (persisted to localStorage)
+  // ==========================================================================
+
   const [dockPosition, setDockPositionState] = useState(() => {
     try {
       const stored = localStorage.getItem(DOCK_POSITION_KEY);
@@ -66,29 +76,36 @@ export function LayoutPanelProvider({ canvasId, children }) {
         const parsed = JSON.parse(stored);
         // Validate it's a valid dock position
         if (Object.values(DOCK_POSITIONS).includes(parsed)) {
+          console.log("[LayoutPanelContext] Loaded dock position:", parsed);
           return parsed;
         }
       }
     } catch (e) {
-      console.warn("Failed to load dock position:", e);
+      console.warn("[LayoutPanelContext] Failed to load dock position:", e);
     }
-    return DOCK_POSITIONS.FLOAT; // Default to floating
+    // Default to FLOAT - this means FloatingCanvasNavigator renders
+    return DOCK_POSITIONS.FLOAT;
   });
 
   // Persist dock position changes
   const setDockPosition = useCallback((position) => {
+    console.log("[LayoutPanelContext] Setting dock position:", position);
     setDockPositionState(position);
     try {
       localStorage.setItem(DOCK_POSITION_KEY, JSON.stringify(position));
     } catch (e) {
-      console.warn("Failed to save dock position:", e);
+      console.warn("[LayoutPanelContext] Failed to save dock position:", e);
     }
   }, []);
 
-  // Check if docked in left panel
+  // ==========================================================================
+  // DERIVED STATE
+  // ==========================================================================
+
+  // Check if docked in left panel - used by both LayoutPanel and FloatingCanvasNavigator
   const navigatorDocked = dockPosition === DOCK_POSITIONS.LEFT_PANEL;
 
-  // Convenience functions for backward compatibility
+  // Convenience functions
   const dockNavigator = useCallback(() => {
     setDockPosition(DOCK_POSITIONS.LEFT_PANEL);
   }, [setDockPosition]);
@@ -103,10 +120,15 @@ export function LayoutPanelProvider({ canvasId, children }) {
     );
   }, [navigatorDocked, setDockPosition]);
 
-  // Combine base logic with dock position
+  // ==========================================================================
+  // COMBINED LOGIC OBJECT
+  // ==========================================================================
+
+  // Merge base logic with dock position state
   const logic = useMemo(
     () => ({
       ...baseLogic,
+      // Dock position state (THE source of truth)
       dockPosition,
       setDockPosition,
       navigatorDocked,
@@ -125,13 +147,19 @@ export function LayoutPanelProvider({ canvasId, children }) {
     ]
   );
 
-  // Memoize the context value to prevent unnecessary re-renders
+  // ==========================================================================
+  // CONTEXT VALUE
+  // ==========================================================================
+
   const contextValue = useMemo(
     () => ({
       logic,
       canvasId,
+      // Also expose dockPosition directly for easier access
+      dockPosition,
+      setDockPosition,
     }),
-    [logic, canvasId]
+    [logic, canvasId, dockPosition, setDockPosition]
   );
 
   return (
@@ -148,14 +176,13 @@ export function LayoutPanelProvider({ canvasId, children }) {
 /**
  * useLayoutPanelContext - Access shared layout panel state
  *
- * @returns {Object|null} { logic, canvasId } or null if outside provider
+ * @returns {Object|null} { logic, canvasId, dockPosition, setDockPosition } or null
  */
 export function useLayoutPanelContext() {
   const context = useContext(LayoutPanelContext);
 
   if (!context) {
-    // Return null instead of throwing - allows optional usage
-    // Components can check for null and handle gracefully
+    // Return null - allows components to check and handle gracefully
     return null;
   }
 
@@ -165,7 +192,7 @@ export function useLayoutPanelContext() {
 /**
  * useLayoutPanelLogic - Convenience hook to get just the logic object
  *
- * @returns {Object|null} The logic object from useLayoutPanel, or null
+ * @returns {Object|null} The logic object, or null if outside provider
  */
 export function useLayoutPanelLogic() {
   const context = useLayoutPanelContext();
@@ -173,10 +200,9 @@ export function useLayoutPanelLogic() {
 }
 
 /**
- * useNavigatorDocked - Hook for just the navigator docked state
- * Useful for components that only need to know if navigator is docked
+ * useNavigatorDocked - Hook for navigator dock state
  *
- * @returns {Object} { navigatorDocked, toggleNavigatorDocked, dockNavigator, undockNavigator, dockPosition, setDockPosition }
+ * @returns {Object} Dock state and controls
  */
 export function useNavigatorDocked() {
   const context = useLayoutPanelContext();

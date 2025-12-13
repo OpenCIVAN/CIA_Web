@@ -1,18 +1,13 @@
-/**
- * LayoutPanel Component
- *
- * Main container for the Layout Panel in the left sidebar.
- * Manages canvas navigation, view configuration, and layout tools.
- * 
- * IMPORTANT: This component should NOT render FloatingCanvasNavigator.
- * FloatingCanvasNavigator is rendered at the app level in CIAWebApp.jsx.
- * This component ONLY renders the docked navigator when dockPosition === 'left-panel'.
- */
+// src/ui/react/components/panels/LayoutPanel/LayoutPanel.jsx
+// Layout Panel Component
+//
+// IMPORTANT: Import DOCK_POSITIONS from LayoutPanelContext, NOT from
+// LayoutPanel.logic.js to ensure consistent comparisons with FloatingCanvasNavigator.
 
 import React, { memo, useContext } from 'react';
 import { LayoutGrid, Map, Layers, Loader2, WifiOff, AlertCircle } from 'lucide-react';
-import { useLayoutPanel, DOCK_POSITIONS } from './LayoutPanel.logic';
-import LayoutPanelContext from './LayoutPanelContext';
+import { useLayoutPanel } from './LayoutPanel.logic';
+import LayoutPanelContext, { DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
 import { CanvasSubtab } from './subtabs/CanvasSubtab';
 import { ViewsSubtab } from './subtabs/ViewsSubtab';
@@ -25,25 +20,35 @@ const SUBTABS = [
 ];
 
 /**
- * LayoutPanel - Main panel component
+ * LayoutPanel - Main panel component for canvas navigation and view management
+ *
+ * RENDER LOGIC:
+ * - Only renders docked CanvasNavigator when dockPosition === 'left-panel'
+ * - FloatingCanvasNavigator (in CIAWebApp.jsx) handles all other positions
  *
  * @param {Object} props
- * @param {string} [props.canvasId] - Target canvas ID (uses active canvas if not provided)
+ * @param {string} [props.canvasId] - Target canvas ID
  * @param {string} [props.className] - Additional CSS classes
  */
 export const LayoutPanel = memo(function LayoutPanel({
     canvasId,
     className = '',
 }) {
-    // Check if we're inside a LayoutPanelProvider (shared context)
+    // ==========================================================================
+    // CONTEXT & LOGIC
+    // ==========================================================================
+
+    // Check if we're inside a LayoutPanelProvider
     const context = useContext(LayoutPanelContext);
 
-    // Create standalone logic only if no context is available
-    // IMPORTANT: Always pass an object, never null/undefined
-    const standaloneLogic = useLayoutPanel(context ? {} : { canvasId });
-
-    // Use context logic if available, otherwise use standalone
+    // Create standalone logic only if no context available
+    // When context exists, use context.logic which has dockPosition
+    const standaloneLogic = useLayoutPanel(context ? { __existing: true } : { canvasId });
     const logic = context?.logic || standaloneLogic;
+
+    // ==========================================================================
+    // DESTRUCTURE LOGIC
+    // ==========================================================================
 
     const {
         panelSubtab,
@@ -52,74 +57,99 @@ export const LayoutPanel = memo(function LayoutPanel({
         loading,
         error,
         isConnected,
-        // Get dockPosition from logic (which comes from context)
+        // Get dockPosition from logic (which comes from LayoutPanelContext)
         dockPosition,
     } = logic;
 
-    // Check if navigator should be docked in this panel
-    // ONLY render when dockPosition is explicitly 'left-panel'
+    // ==========================================================================
+    // RENDER DECISION FOR DOCKED NAVIGATOR
+    // ==========================================================================
+
+    // Only render docked navigator when dockPosition is explicitly 'left-panel'
+    // FloatingCanvasNavigator handles all other positions
     const shouldRenderDockedNavigator = dockPosition === DOCK_POSITIONS.LEFT_PANEL;
 
-    // Loading state
+    // DEBUG: Log render decision
+    console.log('[LayoutPanel] dockPosition:', dockPosition,
+        '| shouldRenderDockedNavigator:', shouldRenderDockedNavigator);
+
+    // ==========================================================================
+    // RENDER - LOADING STATE
+    // ==========================================================================
+
     if (loading) {
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
+                <div className="layout-panel__header">
+                    <LayoutGrid size={16} className="layout-panel__icon" />
+                    <span className="layout-panel__title">LAYOUT</span>
+                </div>
                 <div className="layout-panel__loading">
-                    <Loader2 size={24} className="spin" />
+                    <Loader2 className="layout-panel__spinner" size={24} />
                     <span>Loading canvas...</span>
                 </div>
             </div>
         );
     }
 
-    // Error state
+    // ==========================================================================
+    // RENDER - ERROR STATE
+    // ==========================================================================
+
     if (error) {
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
+                <div className="layout-panel__header">
+                    <LayoutGrid size={16} className="layout-panel__icon" />
+                    <span className="layout-panel__title">LAYOUT</span>
+                </div>
                 <div className="layout-panel__error">
                     <AlertCircle size={24} />
-                    <span>{error}</span>
+                    <span>Failed to load canvas</span>
+                    <span className="layout-panel__error-detail">{error.message || 'Unknown error'}</span>
                 </div>
             </div>
         );
     }
 
+    // ==========================================================================
+    // RENDER - MAIN CONTENT
+    // ==========================================================================
+
     return (
-        <div className={`layout-panel ${!isConnected ? 'layout-panel--disabled' : ''} ${className}`}>
-            {/* Header - using standard panel-header */}
-            <div className="panel-header panel-header--amber">
-                <LayoutGrid size={14} className="panel-header__icon" />
-                <span className="panel-header__title">Layout</span>
+        <div className={`layout-panel ${className}`}>
+            {/* Header */}
+            <div className="layout-panel__header">
+                <LayoutGrid size={16} className="layout-panel__icon" />
+                <span className="layout-panel__title">LAYOUT</span>
+
+                {/* Connection indicator */}
                 {!isConnected && (
-                    <WifiOff size={12} className="layout-panel__header-offline" title="Disconnected" />
+                    <div className="layout-panel__offline" title="Offline - changes will sync when reconnected">
+                        <WifiOff size={12} />
+                    </div>
                 )}
             </div>
 
-            {/* Subtabs */}
+            {/* Subtab navigation */}
             <div className="layout-panel__tabs">
-                {SUBTABS.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = panelSubtab === tab.id;
-                    const badge = tab.id === 'views' ? cells.length : null;
-
-                    return (
-                        <button
-                            key={tab.id}
-                            className={`layout-panel__tab ${isActive ? 'layout-panel__tab--active' : ''}`}
-                            data-color={tab.color}
-                            onClick={() => setPanelSubtab(tab.id)}
-                        >
-                            <Icon size={12} />
-                            <span>{tab.label}</span>
-                            {badge !== null && badge > 0 && (
-                                <span className="layout-panel__tab-badge">{badge}</span>
-                            )}
-                        </button>
-                    );
-                })}
+                {SUBTABS.map(({ id, label, icon: Icon, color }) => (
+                    <button
+                        key={id}
+                        className={`layout-panel__tab ${panelSubtab === id ? 'layout-panel__tab--active' : ''}`}
+                        onClick={() => setPanelSubtab(id)}
+                        data-color={color}
+                    >
+                        <Icon size={12} />
+                        <span>{label}</span>
+                        {id === 'views' && cells.length > 0 && (
+                            <span className="layout-panel__tab-badge">{cells.length}</span>
+                        )}
+                    </button>
+                ))}
             </div>
 
-            {/* Subtab Content */}
+            {/* Subtab content */}
             <div className="layout-panel__content">
                 {panelSubtab === 'canvas' ? (
                     <CanvasSubtab logic={logic} />
@@ -140,9 +170,5 @@ export const LayoutPanel = memo(function LayoutPanel({
         </div>
     );
 });
-
-// NOTE: FloatingCanvasNavigator is NO LONGER exported from this file.
-// It should be imported from './FloatingCanvasNavigator' instead.
-// This prevents duplicate renders.
 
 export default LayoutPanel;
