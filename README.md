@@ -23,42 +23,79 @@ CIA_Web leverages **VTK.js**, **WebXR**, **TensorFlow.js**, and **PARIMA** (Pred
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Debugging & Troubleshoot Mode)
 
 ### Prerequisites
 
 - **Node.js** (v16+ recommended)
-- **npm** or **yarn**
 - **Python 3.7+** (for PARIMA backend)
-- **Modern browser** with WebGL support (Chrome, Firefox, Edge)
+- **Modern Chrome/Edge Browser** (for WebXR/WebGL)
 
-### Installation
+### 1. Start the Backend API (Port 5001)
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/github-pratik/Adaptive_machineLearning_VTK.git
-   cd Adaptive_machineLearning_VTK
-   ```
+The backend handles the ML models (Random Forest & LSTM) and decision logic.
 
-2. **Install Node.js dependencies:**
-   ```bash
-   npm install
-   ```
+```bash
+# Terminal 1
+npm run parima:backend
+```
+> **Success Check:** You should see `INFO:__main__:Starting PARIMA API server on port 5001`.
+> **Verify Health:** Open [http://localhost:5001/health](http://localhost:5001/health) -> Should show `{"status": "healthy"}`.
 
-3. **Install Python dependencies (for PARIMA):**
-   ```bash
-   cd backend
-   pip3 install -r requirements.txt
-   cd ..
-   ```
+### 2. Start the Frontend App (Port 8080)
 
-4. **Start the development server:**
-   ```bash
-   npm run start
-   ```
-   This automatically opens the app in your browser at `http://localhost:8080`
+The frontend is the 3D visualization interface.
 
-5. **Upload a VTP file** from the `vtp_files/` folder to begin visualizing
+```bash
+# Terminal 2
+npm run start
+```
+> **Success Check:** Browser opens automatically at `http://localhost:8080`.
+
+### 3. Usage & Model Switching
+
+1.  **Load a VTP File**: Upload one from `vtp_files/`.
+2.  **Select Model**: Use the **"Model Selection"** dropdown in the left panel to switch between:
+    *   **Random Forest** (Default, higher accuracy)
+    *   **LSTM** (Experimental, time-series based)
+3.  **Monitor**: Open Chrome DevTools (F12) -> Console. You will see logs like:
+    *   `[Random Forest] Decision: LOD 3 (latency: 12ms)`
+
+---
+
+## 🔧 Debugging & Troubleshooting
+
+### Backend Issues
+
+**1. "Address already in use" Error**
+*   **Cause**: Another process is using port 5001 (or 5000).
+*   **Fix**:
+    ```bash
+    # Find process on port 5001
+    lsof -i :5001
+    # Kill it
+    kill -9 <PID>
+    # Restart backend
+    npm run parima:backend
+    ```
+
+**2. "Model not loaded" Error**
+*   **Check**: Does `model_comparison/random_forest_model.pkl` exist?
+*   **Fix**: Train the models again:
+    ```bash
+    cd backend
+    python3 compare_models.py --data ../data/training_logs/parima_decisions_log.csv
+    ```
+
+### Frontend Issues
+
+**1. "Network Failure" / Decisions not logging**
+*   **Check**: Open DevTools (F12) -> **Network Tab**. Look for red failed requests to `predict`.
+*   **Fix**: Ensure Backend is running. Check if `config.json` points to correct URL (`http://localhost:5001`).
+
+**2. WebGL Context Lost**
+*   **Cause**: Too many tabs or GPU overload.
+*   **Fix**: Refresh the page. Close other heavy GPU apps.
 
 ---
 
