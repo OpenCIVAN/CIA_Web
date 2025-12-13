@@ -1,5 +1,8 @@
 // src/ui/react/components/panels/LayoutPanel/index.js
 // Layout Panel exports
+//
+// IMPORTANT: FloatingCanvasNavigator is a SEPARATE file.
+// Do NOT export it from LayoutPanel.jsx to avoid duplicates.
 
 // =============================================================================
 // MAIN COMPONENTS
@@ -7,7 +10,7 @@
 
 import { LayoutPanel } from "./LayoutPanel";
 
-export { LayoutPanel } from "./LayoutPanel";
+export { LayoutPanel };
 export { FloatingCanvasNavigator } from "./FloatingCanvasNavigator";
 export default LayoutPanel;
 
@@ -20,6 +23,7 @@ export {
   useLayoutPanelContext,
   useLayoutPanelLogic,
   useNavigatorDocked,
+  DOCK_POSITIONS,
 } from "./LayoutPanelContext";
 
 // =============================================================================
@@ -34,7 +38,6 @@ export {
   DROP_MODES,
   VIEW_MODES,
   SPAWN_SIZES,
-  DOCK_POSITIONS,
   parseSpawnSize,
 } from "./LayoutPanel.logic";
 
@@ -42,6 +45,9 @@ export {
   useCanvasNavigator,
   usePressAndHold,
   useViewportDrag,
+  DISPLAY_MODES,
+  NAV_MODES,
+  INSTANCE_COLORS,
 } from "./components/CanvasNavigator/CanvasNavigator.logic";
 
 // =============================================================================

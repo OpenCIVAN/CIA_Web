@@ -3,11 +3,15 @@
  *
  * Main container for the Layout Panel in the left sidebar.
  * Manages canvas navigation, view configuration, and layout tools.
+ * 
+ * IMPORTANT: This component should NOT render FloatingCanvasNavigator.
+ * FloatingCanvasNavigator is rendered at the app level in CIAWebApp.jsx.
+ * This component ONLY renders the docked navigator when dockPosition === 'left-panel'.
  */
 
-import React, { memo, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { memo, useContext } from 'react';
 import { LayoutGrid, Map, Layers, Loader2, WifiOff, AlertCircle } from 'lucide-react';
-import { useLayoutPanel } from './LayoutPanel.logic';
+import { useLayoutPanel, DOCK_POSITIONS } from './LayoutPanel.logic';
 import LayoutPanelContext from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
 import { CanvasSubtab } from './subtabs/CanvasSubtab';
@@ -20,28 +24,22 @@ const SUBTABS = [
     { id: 'views', label: 'Views', icon: Layers, color: 'purple' },
 ];
 
-
-
 /**
  * LayoutPanel - Main panel component
  *
  * @param {Object} props
  * @param {string} [props.canvasId] - Target canvas ID (uses active canvas if not provided)
- * @param {Function} [props.onPopOut] - Callback when user clicks pop-out button
  * @param {string} [props.className] - Additional CSS classes
  */
 export const LayoutPanel = memo(function LayoutPanel({
     canvasId,
-    onPopOut,
     className = '',
 }) {
     // Check if we're inside a LayoutPanelProvider (shared context)
     const context = useContext(LayoutPanelContext);
 
     // Create standalone logic only if no context is available
-    // This allows LayoutPanel to work both with and without the provider
     // IMPORTANT: Always pass an object, never null/undefined
-    // Using empty object {} when context exists (hooks must always be called)
     const standaloneLogic = useLayoutPanel(context ? {} : { canvasId });
 
     // Use context logic if available, otherwise use standalone
@@ -50,13 +48,17 @@ export const LayoutPanel = memo(function LayoutPanel({
     const {
         panelSubtab,
         setPanelSubtab,
-        navigatorDocked,
         cells,
         loading,
         error,
         isConnected,
+        // Get dockPosition from logic (which comes from context)
+        dockPosition,
     } = logic;
 
+    // Check if navigator should be docked in this panel
+    // ONLY render when dockPosition is explicitly 'left-panel'
+    const shouldRenderDockedNavigator = dockPosition === DOCK_POSITIONS.LEFT_PANEL;
 
     // Loading state
     if (loading) {
@@ -126,18 +128,21 @@ export const LayoutPanel = memo(function LayoutPanel({
                 )}
             </div>
 
-            {/* Docked Navigator */}
-            {navigatorDocked && (
+            {/* Docked Navigator - ONLY when dockPosition is 'left-panel' */}
+            {shouldRenderDockedNavigator && (
                 <div className="layout-panel__navigator">
                     <CanvasNavigator
                         isDocked={true}
                         logic={logic}
-                        onPopOut={onPopOut}
                     />
                 </div>
             )}
         </div>
     );
 });
+
+// NOTE: FloatingCanvasNavigator is NO LONGER exported from this file.
+// It should be imported from './FloatingCanvasNavigator' instead.
+// This prevents duplicate renders.
 
 export default LayoutPanel;
