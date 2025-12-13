@@ -23,6 +23,7 @@ import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
+import { useViewportEventListener } from '@UI/react/hooks/useViewportSync';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
 import './CanvasGrid.scss';
@@ -123,6 +124,36 @@ export function CanvasGrid({
     // VIEWPORT SIZE HOOK (how many cells visible)
     // ==========================================================================
 
+    useViewportEventListener({
+        onNavigateTo: useCallback((row, col) => {
+            if (process.env.NODE_ENV === 'development') {
+                log.debug(`[CanvasGrid] Viewport sync: navigate to [${row}, ${col}]`);
+            }
+            // We can't use setViewportPosition directly from useCanvas because
+            // it doesn't exist as a direct function. We need to calculate delta.
+            // Actually, useCanvas does have moveViewport and we can calculate the delta.
+            const currentRow = viewport?.row ?? 0;
+            const currentCol = viewport?.col ?? 0;
+            const deltaRow = row - currentRow;
+            const deltaCol = col - currentCol;
+
+            if (deltaRow !== 0 || deltaCol !== 0) {
+                // Use the moveViewport from useCanvas
+                moveViewport(deltaRow, deltaCol);
+            }
+        }, [viewport?.row, viewport?.col, moveViewport]),
+
+        onMoveViewport: useCallback((deltaRow, deltaCol) => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[CanvasGrid] Viewport sync: move by [${deltaRow}, ${deltaCol}]`);
+            }
+            moveViewport(deltaRow, deltaCol);
+        }, [moveViewport]),
+
+        canvasId: canvasId,
+    });
+
+
     const {
         viewportSize,
         isMinSize,
@@ -167,9 +198,40 @@ export function CanvasGrid({
         }
     }, [viewportSize.rows, viewportSize.cols, canvas?.dimensions, viewport.row, viewport.col, moveViewport]);
 
+
+    useEffect(() => {
+        const handleViewportSizeChanged = (e) => {
+            const { size, previousSize } = e.detail;
+            if (size?.rows && size?.cols) {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(`[CanvasGrid] Viewport size changed: ${previousSize?.rows}x${previousSize?.cols} → ${size.rows}x${size.cols}`);
+                }
+                // Note: We don't need to do anything here because useViewportSize
+                // is already being used in this component. The hook shares state
+                // via the event system. If viewportSize isn't updating, check that
+                // useViewportSize is correctly listening for this event.
+            }
+        };
+
+        window.addEventListener('cia:viewport-size-changed', handleViewportSizeChanged);
+        return () => window.removeEventListener('cia:viewport-size-changed', handleViewportSizeChanged);
+    }, []);
     // ==========================================================================
     // CONTAINER MEASUREMENT HOOK (robust resize handling)
     // ==========================================================================
+
+    // Memoize dimensions config to prevent re-render loop
+    const dimensionsConfig = useMemo(() => ({
+        viewportCols: effectiveViewport.cols,
+        viewportRows: effectiveViewport.rows,
+        gap: GAP,
+        padding: {
+            top: 12,
+            right: 12,
+            bottom: 12,
+            left: 12,
+        },
+    }), [effectiveViewport.cols, effectiveViewport.rows]);
 
     const {
         isReady: measurementsReady,
@@ -179,17 +241,7 @@ export function CanvasGrid({
         renderMode,
         measureRef,
         remeasure,
-    } = useCanvasDimensions({
-        viewportCols: effectiveViewport.cols,
-        viewportRows: effectiveViewport.rows,
-        gap: GAP,
-        padding: {
-            top: 12,      // Match the VIEWPORT_PADDING above
-            right: 12,
-            bottom: 12,
-            left: 12,
-        },
-    });
+    } = useCanvasDimensions(dimensionsConfig);
 
     // ==========================================================================
     // ISOLATION MODE HOOK (for tiny cells)

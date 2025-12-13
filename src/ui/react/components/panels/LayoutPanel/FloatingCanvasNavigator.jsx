@@ -13,7 +13,7 @@
 import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { useLayoutPanelContext, DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
-import { Grid3X3, Maximize2 } from 'lucide-react';
+import { Grid3X3 } from 'lucide-react';
 import './FloatingCanvasNavigator.scss';
 
 // =============================================================================
@@ -319,6 +319,9 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     // RENDER - MINIMIZED STATE
     // ==========================================================================
 
+    // When minimized, don't render anything here.
+    // The Navigator button in the secondary bottom bar (left zone) handles
+    // the "open" action. This prevents the duplicate large banner.
     if (dockPosition === DOCK_POSITIONS.MINIMIZED) {
         return null;
     }

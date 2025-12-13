@@ -124,7 +124,6 @@ const DEFAULT_CONFIG = {
  * @returns {Object} Measurement state and utilities
  */
 export function useCanvasDimensions(config = {}) {
-  log.debug("[useCanvasDimensions] Called with config:", config);
   // Merge config with defaults
   const {
     viewportCols,
@@ -224,13 +223,13 @@ export function useCanvasDimensions(config = {}) {
    */
   const attemptMeasurement = useCallback(() => {
     const container = measureRef.current;
-    log.debug(
-      "[useCanvasDimensions] attemptMeasurement called, ref:",
-      measureRef.current
-    );
+
+    // Remove excessive logging - only log in development and only occasionally
+    if (process.env.NODE_ENV === "development" && Math.random() < 0.01) {
+      log.debug("[useCanvasDimensions] attemptMeasurement called");
+    }
 
     if (!container) {
-      log.debug("[useCanvasDimensions] No container ref, returning early");
       return false;
     }
 
@@ -249,14 +248,48 @@ export function useCanvasDimensions(config = {}) {
       return false;
     }
 
-    // Update state
-    setContainerSize({ width, height });
-    setCellSize(result.cellSize);
-    setRenderMode(result.renderMode);
-    setIsReady(true);
-    setMeasurementError(null);
+    // CRITICAL: Only update state if values actually changed
+    // This prevents re-render loops
 
-    // Log success (can be removed in production)
+    setContainerSize((prev) => {
+      if (prev.width === width && prev.height === height) {
+        return prev; // Return same object to prevent re-render
+      }
+      return { width, height };
+    });
+
+    setCellSize((prev) => {
+      if (
+        Math.abs(prev.width - result.cellSize.width) < 0.1 &&
+        Math.abs(prev.height - result.cellSize.height) < 0.1
+      ) {
+        return prev; // Return same object to prevent re-render
+      }
+      return result.cellSize;
+    });
+
+    setRenderMode((prev) => {
+      if (prev === result.renderMode) {
+        return prev;
+      }
+      return result.renderMode;
+    });
+
+    setIsReady((prev) => {
+      if (prev === true) {
+        return prev;
+      }
+      return true;
+    });
+
+    setMeasurementError((prev) => {
+      if (prev === null) {
+        return prev;
+      }
+      return null;
+    });
+
+    // Only log success once when transitioning to ready state
     if (process.env.NODE_ENV === "development") {
       log.debug("✓ Canvas dimensions measured:", {
         container: { width, height },
@@ -423,12 +456,39 @@ export function useCanvasDimensions(config = {}) {
   ]);
 
   // Re-calculate when viewport settings change
+  // Use a ref to track previous values and avoid unnecessary updates
+  const prevViewportRef = useRef({ cols: viewportCols, rows: viewportRows });
+
   useEffect(() => {
+    // Only recalculate if viewport actually changed
+    if (
+      prevViewportRef.current.cols === viewportCols &&
+      prevViewportRef.current.rows === viewportRows
+    ) {
+      return;
+    }
+
+    prevViewportRef.current = { cols: viewportCols, rows: viewportRows };
+
     if (isReady && containerSize.width > 0 && containerSize.height > 0) {
       const result = calculateSizes(containerSize.width, containerSize.height);
       if (result) {
-        setCellSize(result.cellSize);
-        setRenderMode(result.renderMode);
+        setCellSize((prev) => {
+          if (
+            Math.abs(prev.width - result.cellSize.width) < 0.1 &&
+            Math.abs(prev.height - result.cellSize.height) < 0.1
+          ) {
+            return prev;
+          }
+          return result.cellSize;
+        });
+
+        setRenderMode((prev) => {
+          if (prev === result.renderMode) {
+            return prev;
+          }
+          return result.renderMode;
+        });
       }
     }
   }, [viewportCols, viewportRows, gap, isReady, containerSize, calculateSizes]);
