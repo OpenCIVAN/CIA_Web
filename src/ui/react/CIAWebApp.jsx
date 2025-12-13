@@ -32,6 +32,8 @@ import {
   useGlobalKeyboardShortcuts,
 } from "@UI/react/components/controls/ViewModeToggle";
 import { LayoutModeToggle, LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
+import NavigatorButton from "@UI/react/components/layout/SecondaryBottomBar/NavigatorButton";
+import { SecondaryBarDivider } from "./components/layout/SecondaryBarZone";
 
 // Room Navigation
 import { RoomSelector } from "@UI/react/components/navigation/RoomSelector";
@@ -365,10 +367,12 @@ export function CIAWebApp({ username, userId, projectId }) {
               secondaryBottomBarZones={{
                 left: (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <LayoutModeToggle
+                    <NavigatorButton />
+                    <SecondaryBarDivider height={12} />
+                    {/* <LayoutModeToggle
                       mode={layoutMode}
                       onModeChange={setLayoutMode}
-                    />
+                    /> */}
                   </div>
                 ),
                 center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,

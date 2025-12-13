@@ -9,6 +9,8 @@
 // =============================================================================
 
 .canvas-navigator {
+  container-name: canvas-navigator;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   background: $color-bg-secondary;
@@ -176,29 +178,34 @@
   position: relative;
   padding: $spacing-sm;
   overflow: auto;
-  flex: 1;
   min-height: 100px;
+  min-width: 150px;
 
-  // In floating mode, allow minimap to grow
+  // In floating mode, minimap flexes to fill available space
   .canvas-navigator--floating & {
+    flex: 1 1 auto;
     max-height: none;
+    // Don't let it grow too much - leave room for controls
+    max-width: calc(100% - 160px);
   }
 
+  // In docked mode, minimap has limited height
+  .canvas-navigator--docked &,
+  .canvas-navigator--compact & {
+    flex: 0 0 auto;
+    max-height: 200px;
+    max-width: 100%;
+  }
+
+  // Full width variant (when stacked vertically)
   &--full-width {
     max-height: 180px;
+    max-width: 100%;
   }
 
   &--setting-home {
     background: rgba(244, 114, 182, 0.05);
-
-    .canvas-navigator__cell--empty {
-      cursor: crosshair;
-
-      &:hover {
-        background: rgba(244, 114, 182, 0.2) !important;
-        border-color: #f472b6 !important;
-      }
-    }
+    cursor: crosshair;
   }
 }
 
@@ -342,11 +349,23 @@
 
 .canvas-navigator__body {
   display: flex;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
+
+  // Default: side-by-side layout
+  flex-direction: row;
+
+  // In floating mode, maintain side-by-side
+  .canvas-navigator--floating & {
+    flex-direction: row;
+  }
+
+  // In docked/compact mode, stack vertically
+  .canvas-navigator--docked &,
+  .canvas-navigator--compact & {
+    flex-direction: column;
+  }
 }
 
 // =============================================================================
@@ -356,18 +375,54 @@
 .canvas-navigator__controls {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
-  width: 110px;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 1px solid $color-border-subtle;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // KEY FIX: Give controls panel a proper minimum width
+  min-width: 160px;
   flex-shrink: 0;
+
+  // In floating mode, controls take fixed width on the side
+  .canvas-navigator--floating & {
+    width: 160px;
+    min-width: 160px;
+    max-width: 180px;
+    border-left: 1px solid $color-border-subtle;
+    border-top: none;
+  }
+
+  // In docked/compact mode, controls go below minimap
+  .canvas-navigator--docked &,
+  .canvas-navigator--compact & {
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-left: none;
+    border-top: 1px solid $color-border-subtle;
+  }
 }
 
 .canvas-navigator__control-section {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
-  padding: $spacing-xs;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: $radius-sm;
+
+  // In compact/docked mode, become inline groups
+  .canvas-navigator--docked &,
+  .canvas-navigator--compact & {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+  }
 }
 
 .canvas-navigator__section-label {
@@ -375,6 +430,15 @@
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: $color-text-tertiary;
+  margin-bottom: 2px;
+
+  // In compact mode, labels are inline
+  .canvas-navigator--docked &,
+  .canvas-navigator--compact & {
+    margin-bottom: 0;
+    margin-right: $spacing-xs;
+  }
 }
 
 // D-pad
@@ -422,11 +486,14 @@
   color: #f472b6;
 }
 
-// Size controls
 .canvas-navigator__size-controls {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  flex-wrap: nowrap; // Never wrap the individual controls
+
+  // Ensure the "Rows" and "Cols" text doesn't get cut off
+  white-space: nowrap;
 }
 
 .canvas-navigator__size-x {
@@ -544,12 +611,21 @@
   gap: 2px;
 
   &--compact {
+    gap: 1px;
+
     .canvas-navigator__spinner-label {
-      display: none;
+      font-size: 8px;
+      min-width: 28px;
     }
 
     .canvas-navigator__spinner-value {
       min-width: 20px;
+      font-size: 10px;
+    }
+
+    .canvas-navigator__btn {
+      width: 18px;
+      height: 18px;
     }
   }
 }
@@ -557,7 +633,7 @@
 .canvas-navigator__spinner-label {
   font-size: 9px;
   color: $color-text-muted;
-  min-width: 28px;
+  min-width: 32px; // Ensure "Rows" and "Cols" fit
 }
 
 .canvas-navigator__spinner-btn {
@@ -586,10 +662,13 @@
 
 .canvas-navigator__spinner-value {
   font-family: $font-family-mono;
-  font-size: 10px;
+  font-size: 11px;
+  color: $color-text-primary;
   min-width: 24px;
   text-align: center;
-  color: inherit;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: $radius-xs;
 }
 
 // =============================================================================
@@ -707,5 +786,23 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@container canvas-navigator (max-width: 450px) {
+  .canvas-navigator__body {
+    flex-direction: column;
+  }
+
+  .canvas-navigator__controls {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: none;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  .canvas-navigator__minimap {
+    max-width: 100%;
   }
 }
