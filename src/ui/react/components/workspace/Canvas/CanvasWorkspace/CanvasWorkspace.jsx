@@ -13,6 +13,8 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspace as log } from '@Utils/logger.js';
+import { useViewportEventListener } from '@UI/react/hooks/useViewportSync.js';
+import { FloatingCanvasNavigator, useLayoutPanelContext } from '@UI/react/components/panels/LayoutPanel';
 
 import './CanvasWorkspace.scss';
 
@@ -32,6 +34,9 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
+
+    const layoutContext = useLayoutPanelContext?.() ?? null;
+    const navigatorUndocked = layoutContext?.logic?.navigatorDocked === false;
 
     // Canvas hook for the active canvas
     const {
@@ -80,6 +85,19 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
 
         loadWorkspace();
     }, [projectId]);
+
+    // Listen for viewport sync events from CanvasNavigator
+    useViewportEventListener({
+        onNavigateTo: useCallback((row, col) => {
+            log.debug(`Viewport sync: navigate to [${row}, ${col}]`);
+            navigateTo(row, col);
+        }, [navigateTo]),
+        onMoveViewport: useCallback((deltaRow, deltaCol) => {
+            log.debug(`Viewport sync: move by [${deltaRow}, ${deltaCol}]`);
+            moveViewport(deltaRow, deltaCol);
+        }, [moveViewport]),
+        canvasId: activeCanvasId,
+    });
 
     // Add placement (server-authoritative)
     const addPlacement = useCallback(async (placementData) => {
@@ -238,7 +256,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     ? { row: targetRow, col: targetCol }
                     : findNextEmptyCell();
                 log.debug(`Adding placement at (${row}, ${col}) for view ${finalViewConfigId}`);
-                
+
                 await addPlacement({
                     row,
                     col,
@@ -478,7 +496,12 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     onExit={exitFocusMode}
                 />
             )}
+
+            {navigatorUndocked && (
+                <FloatingCanvasNavigator />
+            )}
         </div>
+
     );
 }
 

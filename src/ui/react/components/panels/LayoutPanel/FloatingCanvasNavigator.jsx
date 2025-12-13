@@ -40,10 +40,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     const handleDragStart = useCallback((e) => {
         // Only start drag from header
         if (!e.target.closest('.canvas-navigator__header')) return;
-        
+
         e.preventDefault();
         setIsDragging(true);
-        
+
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect) {
             dragOffset.current = {
@@ -58,8 +58,12 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         if (!isDragging) return;
 
         const handleMouseMove = (e) => {
-            const newX = Math.max(0, Math.min(window.innerWidth - 420, e.clientX - dragOffset.current.x));
-            const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y));
+            const maxX = window.innerWidth - 420; // Navigator width
+            const maxY = window.innerHeight - 300; // Approximate height
+
+            const newX = Math.max(0, Math.min(maxX, e.clientX - dragOffset.current.x));
+            const newY = Math.max(60, Math.min(maxY, e.clientY - dragOffset.current.y)); // 60px from top for header
+
             setPosition({ x: newX, y: newY });
         };
 
@@ -94,6 +98,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         ...(position.y !== null ? { top: `${position.y}px` } : { bottom: '16px' }),
     };
 
+    const resetPosition = useCallback(() => {
+        setPosition({ x: 16, y: window.innerHeight - 300 });
+    }, []);
+
     return (
         <div
             ref={containerRef}
@@ -101,6 +109,13 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
             style={style}
             onMouseDown={handleDragStart}
         >
+            <button
+                className="canvas-navigator__header-btn"
+                onClick={resetPosition}
+                title="Reset position"
+            >
+                <Crosshair size={12} />
+            </button>
             <CanvasNavigator
                 isDocked={false}
                 logic={logic}

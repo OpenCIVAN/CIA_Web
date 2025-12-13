@@ -19,7 +19,12 @@ import { useState, useCallback, useMemo } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
-import {workspace as log } from "@Utils/logger.js"
+import { workspace as log } from "@Utils/logger.js";
+
+import {
+  dispatchNavigateTo,
+  dispatchMoveViewport,
+} from "@UI/react/hooks/useViewportSync.js";
 
 // =============================================================================
 // CONSTANTS
@@ -370,60 +375,28 @@ export function useLayoutPanel(options) {
   // VIEWPORT NAVIGATION
   // ===========================================================================
 
+  // Viewport navigation - wraps useCanvas moveViewport and dispatches sync event
   const moveViewport = useCallback(
-    (direction) => {
-      if (!canvas) return;
+    (deltaRow, deltaCol) => {
+      // Update local viewport
+      canvasMoveViewport?.(deltaRow, deltaCol);
 
-      // Handle direction strings
-      let deltaRow = 0;
-      let deltaCol = 0;
-
-      switch (direction) {
-        case "up":
-          deltaRow = -1;
-          break;
-        case "down":
-          deltaRow = 1;
-          break;
-        case "left":
-          deltaCol = -1;
-          break;
-        case "right":
-          deltaCol = 1;
-          break;
-        case "home":
-          // Navigate to homepoint
-          setViewportPosition?.(homepoint.row, homepoint.col);
-          return;
-        default:
-          // Support numeric deltas for backwards compatibility
-          if (typeof direction === "number") {
-            deltaRow = direction;
-            deltaCol = arguments[1] || 0;
-          }
-      }
-
-      const maxRow = Math.max(0, canvas.dimensions.rows - viewport.rows);
-      const maxCol = Math.max(0, canvas.dimensions.cols - viewport.cols);
-
-      const newRow = Math.min(maxRow, Math.max(0, viewport.row + deltaRow));
-      const newCol = Math.min(maxCol, Math.max(0, viewport.col + deltaCol));
-
-      if (newRow !== viewport.row || newCol !== viewport.col) {
-        canvasMoveViewport?.(newRow - viewport.row, newCol - viewport.col);
-      }
+      // Dispatch event for CanvasGrid to sync
+      dispatchMoveViewport(deltaRow, deltaCol, canvas?.id);
     },
-    [canvas, viewport, canvasMoveViewport, homepoint, setViewportPosition]
+    [canvasMoveViewport, canvas?.id]
   );
 
+  // Navigate to specific cell
   const navigateToCell = useCallback(
     (row, col) => {
-      // Clamp to valid viewport position
-      const maxRow = Math.max(0, canvasSize.rows - viewport.rows);
-      const maxCol = Math.max(0, canvasSize.cols - viewport.cols);
-      setViewportPosition(Math.min(row, maxRow), Math.min(col, maxCol));
+      // Update local viewport
+      setViewportPosition?.(row, col);
+
+      // Dispatch event for CanvasGrid to sync
+      dispatchNavigateTo(row, col, canvas?.id);
     },
-    [canvasSize, viewport, setViewportPosition]
+    [setViewportPosition, canvas?.id]
   );
 
   const isAtHome = useMemo(() => {
