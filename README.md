@@ -5,21 +5,38 @@ A web-based, real-time collaborative platform for immersive scientific data visu
 CIA_Web leverages VTK.js, WebXR, and TensorFlow.js to support multi-user interaction and high-dimensional data exploration in both desktop and VR environments.
 
 ## ✨ Features
-- **Immersive Visualization**: Built-in WebXR support allows users to explore data in Virtual Reality directly from the browser.
 - **High-Performance Rendering**:
   - **WebGPU Support**: Next-generation graphics API integration for superior rendering performance.
   - **WASM Backend**: Utilizes C++ compiled to WebAssembly (VTK-wasm) for native-like computational speed.
-- **Real-time Performance Monitoring**: Integrated dashboard to track:
-  - Frame Rate (FPS) with min/max/average stats.
-  - Memory usage (Heap size/limit).
-  - Data utilization and load/parse times.
-- **Interactive Tools**: Full support for mouse and VR controller interactions (Zoom, Rotate, Pan).
 - **Data Support**: Seamless loading and rendering of `.vtp` (XML PolyData) files.
 
-## �️ Built With
+## 🧩 WASM Architecture
+This project implements a high-performance **hybrid architecture** combining C++ and JavaScript:
+
+### 1. C++ Backend (`vtk-wasm-app/`)
+- Contains the core visualization logic using **VTK (Visualization Toolkit)**.
+- Handles heavy computational tasks like geometry processing and scene rendering.
+- Compiled to WebAssembly using the **Emscripten SDK (`emsdk`)**.
+
+### 2. WebAssembly Bridge
+- The compiled `.wasm` binary runs at near-native speed in the browser.
+- Exposes C++ classes and methods to JavaScript via bindings.
+- Allows the frontend to control the VTK render window and interactors.
+
+### 3. JavaScript Frontend (`src/`)
+- Manages the DOM, WebXR sessions, and user inputs.
+- Communicates with the WASM module to update the scene.
+- Uses **TensorFlow.js** for client-side data analysis.
+
+## 🛠️ Built With
+
+### WASM & C++ Toolchain
+- **[Emscripten (emsdk)](https://emscripten.org/)**: Compiler toolchain for WebAssembly.
+- **[VTK C++](https://vtk.org/)**: The underlying C++ visualization library source.
+- **[CMake](https://cmake.org/)**: Build system used to configure the C++ build.
 
 ### Core Libraries
-- **[@kitware/vtk.js](https://kitware.github.io/vtk-js/)**: Core visualization library for rendering scientific data.
+- **[@kitware/vtk.js](https://kitware.github.io/vtk-js/)**: JS library used for bridging and supplementary rendering.
 - **[TensorFlow.js](https://www.tensorflow.org/js)**: Machine learning integration for data analysis.
 - **[Three.js](https://threejs.org/)**: 3D graphics library.
 - **[WebXR Polyfill](https://github.com/immersive-web/webxr-polyfill)**: Ensures VR compatibility across different browsers.
