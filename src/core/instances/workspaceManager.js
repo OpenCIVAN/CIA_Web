@@ -6,10 +6,15 @@ import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import {
   getDatasetManager,
-  getViewConfigurationManager
+  getViewConfigurationManager,
 } from "@Init/appInitializer.js";
 import { onCameraChange } from "@Collaboration/yjs/yjsObservers.js";
-import { instance as log } from "@Utils/logger.js";
+import {
+  instance as log,
+  logInfo,
+  logSuccess,
+  logError,
+} from "@Utils/logger.js";
 
 // ============================================================================
 // INSTANCE COLORS - For visual differentiation of instances
@@ -242,6 +247,7 @@ class WorkspaceManager {
           this.instances.size
         }`
       );
+      logInfo(`View created: ${type || "typeless"} instance`);
 
       // Notify listeners
       this._notifyListeners();
@@ -249,6 +255,7 @@ class WorkspaceManager {
       return instanceId;
     } catch (error) {
       log.error("Failed to create instance:", error);
+      logError("Failed to create view instance");
       throw error;
     }
   }
@@ -317,6 +324,7 @@ class WorkspaceManager {
       instance.lastActive = Date.now();
 
       log.debug(`Dataset loaded into instance ${instanceId}`);
+      logSuccess(`Data loaded: ${dataset.filename || "dataset"}`);
 
       // Emit event for workspace updates
       window.dispatchEvent(
@@ -329,6 +337,7 @@ class WorkspaceManager {
       this._notifyListeners();
     } catch (error) {
       log.error(`Failed to load dataset into instance ${instanceId}:`, error);
+      logError(`Failed to load data into view`);
       throw error;
     }
   }
@@ -617,6 +626,137 @@ class WorkspaceManager {
       return () => {};
     }
     return instance.handler.onCameraChange(instance.instanceData, callback);
+  }
+
+  // =========================================================================
+  // ANNOTATION CONTROLS (Type-agnostic delegation to handlers)
+  // =========================================================================
+
+  /**
+   * Update annotation visibility for an instance
+   * @param {string} instanceId - Instance ID
+   * @param {boolean} visible - Whether to show annotations
+   * @param {Array} annotations - Annotations to display
+   */
+  async updateInstanceAnnotations(instanceId, visible, annotations = []) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.setAnnotationVisibility) {
+      log.warn(
+        `Cannot update annotations: no handler for instance ${instanceId}`
+      );
+      return;
+    }
+
+    try {
+      await instance.handler.setAnnotationVisibility(
+        instance.instanceData,
+        visible,
+        annotations
+      );
+      log.debug(
+        `Annotations updated for instance ${instanceId}: ${annotations.length} annotations, visible=${visible}`
+      );
+    } catch (error) {
+      log.error(
+        `Failed to update annotations for instance ${instanceId}:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Get instances that are displaying a specific dataset
+   * Useful for finding which instances need annotation updates
+   * @param {string} datasetId - Dataset ID
+   * @returns {Array} Instances displaying this dataset
+   */
+  getInstancesByDatasetId(datasetId) {
+    const instances = [];
+    for (const [id, instance] of this.instances.entries()) {
+      if (instance.datasetId === datasetId) {
+        instances.push(instance);
+      }
+    }
+    return instances;
+  }
+
+  /**
+   * Raycast from screen coordinates to get 3D world position
+   * Delegates to the handler's type-specific raycasting implementation
+   *
+   * @param {string} instanceId - Instance to raycast in
+   * @param {number} screenX - Screen X coordinate
+   * @param {number} screenY - Screen Y coordinate
+   * @returns {Object|null} { hit, position: {x, y, z}, normal: {x, y, z} } or null
+   */
+  raycastAt(instanceId, screenX, screenY) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.raycastAt) {
+      log.warn(
+        `Cannot raycast: no handler with raycastAt for instance ${instanceId}`
+      );
+      return null;
+    }
+
+    return instance.handler.raycastAt(
+      instance.instanceData,
+      screenX,
+      screenY,
+      instance.container
+    );
+  }
+
+  /**
+   * Enable annotation mode for an instance
+   * When enabled, clicking on the instance will emit annotation position events
+   * @param {string} instanceId - Instance ID
+   * @param {boolean} enabled - Whether to enable annotation mode
+   */
+  setAnnotationMode(instanceId, enabled) {
+    const instance = this.getInstance(instanceId);
+    if (!instance) {
+      log.warn(`Cannot set annotation mode: instance ${instanceId} not found`);
+      return;
+    }
+
+    instance.annotationMode = enabled;
+
+    if (enabled && instance.container) {
+      // Add click handler for annotation
+      const handleAnnotationClick = (event) => {
+        if (!instance.annotationMode) return;
+
+        const result = this.raycastAt(instanceId, event.clientX, event.clientY);
+
+        if (result?.hit) {
+          // Emit event with annotation position
+          window.dispatchEvent(
+            new CustomEvent("cia:annotation-click", {
+              detail: {
+                instanceId,
+                position: result.position,
+                normal: result.normal,
+                screenX: event.clientX,
+                screenY: event.clientY,
+              },
+            })
+          );
+        }
+      };
+
+      // Store handler reference for cleanup
+      instance._annotationClickHandler = handleAnnotationClick;
+      instance.container.addEventListener("click", handleAnnotationClick);
+      log.debug(`Annotation mode enabled for instance ${instanceId}`);
+    } else if (!enabled && instance._annotationClickHandler) {
+      // Remove click handler
+      instance.container?.removeEventListener(
+        "click",
+        instance._annotationClickHandler
+      );
+      instance._annotationClickHandler = null;
+      log.debug(`Annotation mode disabled for instance ${instanceId}`);
+    }
   }
 
   // =========================================================================

@@ -25,6 +25,7 @@ import {
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { config } from "@Core/config/clientConfig.js";
 import { app as log } from "@Utils/logger.js";
+import { logInfo, logSuccess, logWarning, logError } from "@Utils/logger.js";
 import {
   checkSyncStatus,
   performReconciliation,
@@ -117,12 +118,14 @@ export async function initializePhase1() {
   log.info(
     "Phase 1: Core Services Initialization\n====================================="
   );
+  logInfo("Initializing core services...");
 
   try {
     // STEP 1: Register instance types
     // This MUST happen first so handlers are available when needed
     log.debug("Registering instance types...");
     registerInstanceTypes();
+    logInfo("Instance types registered");
 
     // STEP 2: Session management
     // Sets up room ID from URL for collaboration
@@ -142,14 +145,17 @@ export async function initializePhase1() {
     datasetManager = new DatasetManager(storageProvider);
     await datasetManager.initialize();
     log.debug("Dataset manager ready");
+    logInfo("Data storage initialized");
 
     // Initialize server sync (WebSocket for real-time updates)
     try {
       const { serverSync } = await import("@Services/serverSync.js");
       serverSync.initialize(datasetManager);
       log.debug("Server sync connected");
+      logInfo("Server sync connected");
     } catch (syncError) {
       log.warn("Server sync failed:", syncError.message);
+      logWarning("Server sync unavailable - working offline");
     }
 
     // v2.0: Sync from server API (primary source of truth)
@@ -293,8 +299,10 @@ export async function initializePhase1() {
     log.debug("Debug helpers available");
 
     log.info("Phase 1 complete - Core services ready");
+    logSuccess("Core services ready");
   } catch (error) {
     log.error("Phase 1 initialization failed:", error);
+    logError("Core initialization failed: " + error.message);
     throw error;
   }
 
@@ -318,6 +326,7 @@ export async function initializePhase2() {
   log.info(
     "Phase 2: User Services Initialization\n====================================="
   );
+  logInfo("Initializing user services...");
 
   try {
     // STEP 1: Wait for Y.js to sync
@@ -335,6 +344,7 @@ export async function initializePhase2() {
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
       log.debug("Presence system ready");
+      logInfo("Presence system ready");
       // Note: Presence system logs its own status, we don't need to query it here
     } else if (
       presenceSystem &&
@@ -342,8 +352,10 @@ export async function initializePhase2() {
     ) {
       presenceSystem.initializePresence();
       log.debug("Presence system ready");
+      logInfo("Presence system ready");
     } else {
       log.warn("Presence system not available");
+      logWarning("Presence system unavailable");
     }
 
     // STEP 3: Data managers
@@ -431,8 +443,10 @@ export async function initializePhase2() {
     }
 
     log.info("Phase 2 complete - User services ready");
+    logSuccess("Application ready");
   } catch (error) {
     log.error("Phase 2 initialization failed:", error);
+    logError("User services initialization failed: " + error.message);
     throw error;
   }
 }

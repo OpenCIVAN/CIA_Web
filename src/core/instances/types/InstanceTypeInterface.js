@@ -565,6 +565,23 @@ export class InstanceTypeHandler {
   }
 
   /**
+   * Raycast from screen coordinates to find 3D world position
+   *
+   * Used for click-to-annotate and other picking operations.
+   * Each handler implements this based on its rendering technology.
+   *
+   * @param {Object} instanceData - Instance-specific data
+   * @param {number} screenX - Screen X coordinate
+   * @param {number} screenY - Screen Y coordinate
+   * @param {HTMLElement} container - The container element
+   * @returns {Object|null} { hit: boolean, position: {x,y,z}, normal: {x,y,z} } or null
+   */
+  raycastAt(instanceData, screenX, screenY, container) {
+    // Default: no raycasting support
+    return null;
+  }
+
+  /**
    * Synchronize camera/view state from another user
    *
    * When users are in "follow mode", the handler receives camera state

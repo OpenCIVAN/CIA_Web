@@ -44,6 +44,10 @@ import vtkOpenGLRenderWindow from "@kitware/vtk.js/Rendering/OpenGL/RenderWindow
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkXMLPolyDataReader from "@kitware/vtk.js/IO/XML/XMLPolyDataReader";
+import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
+import vtkConeSource from "@kitware/vtk.js/Filters/Sources/ConeSource";
+import vtkCubeSource from "@kitware/vtk.js/Filters/Sources/CubeSource";
+import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
 import "@kitware/vtk.js/Rendering/Profiles/Geometry";
 
 /**
@@ -2058,6 +2062,55 @@ console.log('Tools:', tools);
   }
 
   /**
+   * Raycast from screen coordinates to find 3D world position
+   * Used for click-to-annotate functionality
+   *
+   * @param {Object} instanceData - Instance-specific data with sceneObjects
+   * @param {number} screenX - Screen X coordinate
+   * @param {number} screenY - Screen Y coordinate
+   * @param {HTMLElement} container - The container element
+   * @returns {Object|null} { hit: boolean, position: {x,y,z}, normal: {x,y,z} } or null
+   */
+  raycastAt(instanceData, screenX, screenY, container) {
+    if (!instanceData?.sceneObjects) {
+      return null;
+    }
+
+    try {
+      const result = raycastFromScreen(
+        instanceData.sceneObjects,
+        screenX,
+        screenY,
+        container,
+        { instanceId: instanceData.instanceId }
+      );
+
+      if (result.hit && result.worldPosition) {
+        return {
+          hit: true,
+          position: {
+            x: result.worldPosition[0],
+            y: result.worldPosition[1],
+            z: result.worldPosition[2],
+          },
+          normal: result.normal
+            ? {
+                x: result.normal[0],
+                y: result.normal[1],
+                z: result.normal[2],
+              }
+            : null,
+        };
+      }
+
+      return { hit: false, position: null, normal: null };
+    } catch (error) {
+      log.error(`Raycast error:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Get current VTK state for synchronization
    */
   async getSharedState(instanceData) {
@@ -2970,12 +3023,111 @@ console.log('Tools:', tools);
   }
 
   /**
-   * Create an annotation actor
+   * Create an annotation actor based on annotation type
+   * @param {Object} annotation - Annotation data with type, position, text, etc.
+   * @returns {vtkActor} VTK actor for the annotation marker
    */
   _createAnnotationActor(annotation) {
-    // TODO: Create annotation visualization
+    // Type-to-shape mapping
+    const ANNOTATION_SHAPES = {
+      point: "sphere",
+      note: "sphere",
+      warning: "cone",
+      info: "cube",
+      measurement: "cylinder",
+      region: "sphere",
+      text: "sphere",
+    };
+
+    // Type-to-color mapping (RGB 0-1)
+    const ANNOTATION_COLORS = {
+      point: [0.298, 0.686, 0.314], // Green (#4CAF50)
+      note: [0.298, 0.686, 0.314], // Green
+      warning: [1.0, 0.655, 0.149], // Orange (#FFA726)
+      info: [0.129, 0.588, 0.953], // Blue (#2196F3)
+      measurement: [0.612, 0.153, 0.69], // Purple (#9C27B0)
+      region: [0.0, 0.737, 0.831], // Cyan (#00BCD4)
+      text: [0.914, 0.118, 0.388], // Pink (#E91E63)
+    };
+
+    const shape = ANNOTATION_SHAPES[annotation.type] || "sphere";
+    const color = ANNOTATION_COLORS[annotation.type] || [0.298, 0.686, 0.314];
+
+    // Get position from annotation (handle array or object format)
+    const position = Array.isArray(annotation.position)
+      ? annotation.position
+      : [
+          annotation.position?.x || 0,
+          annotation.position?.y || 0,
+          annotation.position?.z || 0,
+        ];
+
+    // Create source based on shape type
+    let source;
+    const markerSize = 0.05; // Base size - will be scaled relative to data bounds
+
+    switch (shape) {
+      case "cone":
+        source = vtkConeSource.newInstance({
+          height: markerSize * 2,
+          radius: markerSize,
+          resolution: 32,
+          center: position,
+          direction: [0, 1, 0], // Point up
+        });
+        break;
+      case "cube":
+        source = vtkCubeSource.newInstance({
+          xLength: markerSize,
+          yLength: markerSize,
+          zLength: markerSize,
+          center: position,
+        });
+        break;
+      case "cylinder":
+        source = vtkCylinderSource.newInstance({
+          height: markerSize * 2,
+          radius: markerSize * 0.5,
+          resolution: 32,
+          center: position,
+        });
+        break;
+      case "sphere":
+      default:
+        source = vtkSphereSource.newInstance({
+          radius: markerSize,
+          thetaResolution: 32,
+          phiResolution: 32,
+          center: position,
+        });
+        break;
+    }
+
+    // Create mapper
+    const mapper = vtkMapper.newInstance();
+    mapper.setInputConnection(source.getOutputPort());
+
+    // Create actor
     const actor = vtkActor.newInstance();
-    // Set up actor with annotation data
+    actor.setMapper(mapper);
+
+    // Set color and properties
+    const property = actor.getProperty();
+    property.setColor(...color);
+    property.setOpacity(0.9);
+    property.setAmbient(0.3);
+    property.setDiffuse(0.7);
+    property.setSpecular(0.2);
+
+    // Store annotation data on actor for later reference (e.g., picking)
+    actor.annotationData = {
+      id: annotation.id,
+      type: annotation.type,
+      text: annotation.text,
+      label: annotation.label,
+      position: position,
+    };
+
     return actor;
   }
 

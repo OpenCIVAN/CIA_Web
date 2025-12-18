@@ -781,6 +781,23 @@
       }
     }
 
+    &--click {
+      background: rgba($color-accent-green, 0.1);
+      border-color: rgba($color-accent-green, 0.3);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.2);
+        border-color: rgba($color-accent-green, 0.5);
+      }
+
+      &.active {
+        background: rgba($color-accent-green, 0.25);
+        border-color: $color-accent-green;
+        animation: pulse-border 1.5s ease-in-out infinite;
+      }
+    }
+
     &--open {
       &:hover {
         background: rgba($color-accent-pink, 0.1);
@@ -788,6 +805,70 @@
         color: $color-accent-pink;
       }
     }
+  }
+
+  // Annotation mode indicator
+  &__mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    margin-top: $spacing-sm;
+    background: rgba($color-accent-green, 0.15);
+    border: 1px solid rgba($color-accent-green, 0.4);
+    border-radius: $radius-sm;
+    font-size: 10px;
+    color: $color-accent-green;
+
+    svg {
+      flex-shrink: 0;
+
+      &.pulse {
+        animation: pulse-scale 1s ease-in-out infinite;
+      }
+    }
+
+    span {
+      flex: 1;
+    }
+
+    button {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      border-radius: $radius-xs;
+      padding: 3px 8px;
+      font-size: 9px;
+      color: $color-accent-green;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.5);
+      }
+    }
+  }
+}
+
+// Pulse animation for annotation mode
+@keyframes pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba($color-accent-green, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba($color-accent-green, 0.2);
+  }
+}
+
+@keyframes pulse-scale {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
   }
 }
 

@@ -104,7 +104,7 @@ export class VTKOrientationWidget {
       fontFamily: "Arial",
       fontColor: "black",
       fontSizeScale: (res) => res / 2,
-      faceColor: "#0096FF", // Bright blue
+      faceColor: "#60a5fa", // Bright blue
       faceRotation: 0,
       edgeThickness: 0.1,
       edgeColor: "black",
@@ -115,13 +115,13 @@ export class VTKOrientationWidget {
     // +X (right) - Blue
     cube.setXPlusFaceProperty({
       text: "+X",
-      faceColor: config.xPlusColor || "#0096FF",
+      faceColor: config.xPlusColor || "#60a5fa",
     });
 
     // -X (left) - Yellow
     cube.setXMinusFaceProperty({
       text: "-X",
-      faceColor: config.xMinusColor || "#FFD700",
+      faceColor: config.xMinusColor || "#fbbf24",
       faceRotation: 90,
       fontStyle: "italic",
     });
@@ -129,28 +129,28 @@ export class VTKOrientationWidget {
     // +Y (top) - Green
     cube.setYPlusFaceProperty({
       text: "+Y",
-      faceColor: config.yPlusColor || "#00FF00",
+      faceColor: config.yPlusColor || "#34d399",
       fontSizeScale: (res) => res / 4,
     });
 
     // -Y (bottom) - Cyan
     cube.setYMinusFaceProperty({
       text: "-Y",
-      faceColor: config.yMinusColor || "#00FFFF",
+      faceColor: config.yMinusColor || "#7dd3fc",
       fontColor: "white",
     });
 
     // +Z (front) - Red
     cube.setZPlusFaceProperty({
       text: "+Z",
-      faceColor: config.zPlusColor || "#FF0000",
+      faceColor: config.zPlusColor || "#f87171",
       edgeColor: "yellow",
     });
 
     // -Z (back) - Magenta
     cube.setZMinusFaceProperty({
       text: "-Z",
-      faceColor: config.zMinusColor || "#FF00FF",
+      faceColor: config.zMinusColor || "#a78bfa",
       faceRotation: 45,
       edgeThickness: 0,
     });

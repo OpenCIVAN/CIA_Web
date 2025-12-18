@@ -1,0 +1,281 @@
+// FloatingAnnotationCreator.scss
+// Styles for the floating annotation creator menu
+
+.floating-annotation-creator {
+  position: fixed;
+  z-index: 10001;
+  width: 280px;
+  background: rgba(30, 30, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  font-family: var(--font-mono, "SF Mono", monospace);
+  font-size: 12px;
+
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(76, 175, 80, 0.15);
+    border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+    color: #4caf50;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  &__icon {
+    opacity: 0.9;
+  }
+
+  &__close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+  }
+
+  // Position section
+  &__position {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  &__position-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__edit-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 3px;
+    display: flex;
+    font-size: 10px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(76, 175, 80, 0.5);
+      color: #4caf50;
+    }
+  }
+
+  &__position-display {
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-family: var(--font-mono, "SF Mono", monospace);
+
+    .coord {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 11px;
+    }
+  }
+
+  &__position-edit {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__coord-input {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    label {
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      padding: 4px 6px;
+      color: #fff;
+      font-family: var(--font-mono, "SF Mono", monospace);
+      font-size: 11px;
+      text-align: center;
+
+      &:focus {
+        outline: none;
+        border-color: rgba(76, 175, 80, 0.5);
+      }
+
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+  }
+
+  // Type selection
+  &__types {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  &__type {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba(var(--type-color-rgb, 76, 175, 80), 0.15);
+      border-color: var(--type-color, #4caf50);
+    }
+  }
+
+  &__type-icon {
+    font-size: 16px;
+  }
+
+  &__type-label {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    .active & {
+      color: var(--type-color, #4caf50);
+    }
+  }
+
+  // Text input
+  &__input-wrapper {
+    padding: 10px 12px;
+  }
+
+  &__input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    resize: none;
+    transition: border-color 0.15s ease;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: rgba(76, 175, 80, 0.5);
+    }
+  }
+
+  // Actions
+  &__actions {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+
+  &__btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &--cancel {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.6);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+      }
+    }
+
+    &--submit {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+      color: #4caf50;
+
+      &:hover:not(:disabled) {
+        background: rgba(76, 175, 80, 0.3);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  // Hint
+  &__hint {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+
+    kbd {
+      display: inline-block;
+      padding: 2px 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      font-family: var(--font-mono, "SF Mono", monospace);
+      font-size: 9px;
+    }
+  }
+}

@@ -218,7 +218,9 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
 
     const handleExternalDragLeave = useCallback((e) => {
         // Only clear if leaving the grid container
-        if (!containerRef.current?.contains(e.relatedTarget)) {
+        // Check relatedTarget is a valid Node before calling contains()
+        const relatedTarget = e.relatedTarget;
+        if (!relatedTarget || !(relatedTarget instanceof Node) || !containerRef.current?.contains(relatedTarget)) {
             setExternalDragOver(null);
         }
     }, []);

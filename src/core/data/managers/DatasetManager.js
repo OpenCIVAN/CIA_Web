@@ -5,7 +5,13 @@ import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { config } from "@Core/config/clientConfig.js";
 import { apiClient, ApiError } from "@Services/apiClient.js";
-import { dataset as log } from "@Utils/logger.js";
+import {
+  dataset as log,
+  logInfo,
+  logSuccess,
+  logWarning,
+  logError,
+} from "@Utils/logger.js";
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
@@ -300,6 +306,7 @@ export class DatasetManager extends BaseManager {
    */
   async addDataset(file, userId, options = {}) {
     log.debug(`DatasetManager: Adding dataset "${file.name}"`);
+    logInfo(`Loading file: ${file.name}`);
 
     try {
       // STEP 1: Extract file type from filename
@@ -375,10 +382,12 @@ export class DatasetManager extends BaseManager {
         `DatasetManager: Dataset "${file.name}" added with ID ${dataset.id}`
       );
       log.debug(`File type: ${fileType}`);
+      logSuccess(`File loaded: ${file.name}`);
 
       return dataset;
     } catch (error) {
       log.error("DatasetManager: Failed to add dataset:", error);
+      logError(`Failed to load file: ${file.name}`);
       throw error;
     }
   }

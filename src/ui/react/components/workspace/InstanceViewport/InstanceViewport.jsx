@@ -1207,7 +1207,8 @@ export function InstanceViewport({
                         const relatedTarget = e.relatedTarget;
                         const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
 
-                        if (!dropdownElement || !dropdownElement.contains(relatedTarget)) {
+                        // Check relatedTarget is a valid Node before calling contains()
+                        if (!dropdownElement || !relatedTarget || !(relatedTarget instanceof Node) || !dropdownElement.contains(relatedTarget)) {
                             setTimeout(() => {
                                 const stillHoveringDropdown = document.querySelector('.toolbar-menu-dropdown--portal:hover');
                                 if (!stillHoveringDropdown) {

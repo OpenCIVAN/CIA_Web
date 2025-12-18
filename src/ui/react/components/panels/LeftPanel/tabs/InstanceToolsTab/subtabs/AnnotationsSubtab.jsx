@@ -3,8 +3,10 @@
 //
 // FIXED: Uses real annotations from useAnnotations hook
 // FIXED: "Open Full Annotations Panel" button is in a proper footer
+// FIXED: Renders annotations in 3D view via workspaceManager
+// ADDED: Click-to-annotate with floating annotation creator
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     MapPin,
     ArrowUpRight,
@@ -17,8 +19,12 @@ import {
     Plus,
     Loader,
     TextCursor,
+    Crosshair,
 } from 'lucide-react';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
+import { FloatingAnnotationCreator } from '@UI/react/components/modals/FloatingAnnotationCreator';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
+import { logInfo, logSuccess, logWarning } from '@Utils/logger.js';
 
 // =============================================================================
 // ANNOTATION TYPE CONFIG
@@ -71,25 +77,127 @@ function AnnotationListItem({ annotation, onToggleVisibility }) {
 // =============================================================================
 
 export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
-    // Get the dataset ID from the active instance
+    // Get the dataset ID and instance ID from the active instance
     const datasetId = activeInstance?.instanceData?.dataset?.id || null;
+    const instanceId = activeInstance?.instanceId || null;
+
+    // Floating annotation creator state
+    const [showCreator, setShowCreator] = useState(false);
+    const [annotationMode, setAnnotationMode] = useState(false);
+    const [clickPosition, setClickPosition] = useState({ x: 0, y: 0, z: 0 });
+    const [screenPosition, setScreenPosition] = useState({ x: 200, y: 200 });
 
     // Fetch real annotations for this dataset
     const {
         annotations,
         isLoading,
         error,
+        createAnnotation,
         updateAnnotation,
     } = useAnnotations({ datasetId });
 
+    // Render annotations in 3D view when annotations change
+    useEffect(() => {
+        if (!instanceId || !annotations) return;
+
+        // Get visible annotations
+        const visibleAnnotations = annotations.filter(a => a.visible !== false);
+
+        // Update the VTK instance with annotations
+        workspaceManager.updateInstanceAnnotations(instanceId, visibleAnnotations.length > 0, visibleAnnotations)
+            .catch(err => {
+                logWarning('Failed to render annotations in 3D view');
+                console.warn('Annotation render error:', err);
+            });
+    }, [instanceId, annotations]);
+
+    // Handle annotation mode toggle
+    useEffect(() => {
+        if (!instanceId) return;
+
+        workspaceManager.setAnnotationMode(instanceId, annotationMode);
+
+        return () => {
+            // Disable annotation mode on cleanup
+            workspaceManager.setAnnotationMode(instanceId, false);
+        };
+    }, [instanceId, annotationMode]);
+
+    // Listen for annotation click events
+    useEffect(() => {
+        const handleAnnotationClick = (event) => {
+            const { position, screenX, screenY, instanceId: clickInstanceId } = event.detail;
+
+            if (clickInstanceId === instanceId && position) {
+                setClickPosition(position);
+                setScreenPosition({ x: screenX + 20, y: screenY - 150 });
+                setShowCreator(true);
+                setAnnotationMode(false); // Exit annotation mode after click
+            }
+        };
+
+        window.addEventListener('cia:annotation-click', handleAnnotationClick);
+        return () => window.removeEventListener('cia:annotation-click', handleAnnotationClick);
+    }, [instanceId]);
+
     // Toggle annotation visibility
-    const handleToggleVisibility = useCallback((annotation) => {
-        updateAnnotation({
+    const handleToggleVisibility = useCallback(async (annotation) => {
+        await updateAnnotation({
             id: annotation.id,
             targetDatasetId: annotation.datasetId,
             updates: { visible: annotation.visible === false }
         });
-    }, [updateAnnotation]);
+
+        // Re-render annotations after visibility change
+        if (instanceId) {
+            const updatedAnnotations = annotations.map(a =>
+                a.id === annotation.id ? { ...a, visible: a.visible === false } : a
+            );
+            const visibleAnnotations = updatedAnnotations.filter(a => a.visible !== false);
+            workspaceManager.updateInstanceAnnotations(instanceId, visibleAnnotations.length > 0, visibleAnnotations);
+        }
+    }, [updateAnnotation, annotations, instanceId]);
+
+    // Handle creating a new annotation with position
+    const handleCreateAnnotation = useCallback(async (text, type, position) => {
+        if (!datasetId) {
+            console.warn('No dataset ID available for annotation');
+            return;
+        }
+
+        logInfo(`Creating annotation: ${type} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+
+        try {
+            const newAnnotation = await createAnnotation({
+                targetDatasetId: datasetId,
+                type: type === 'note' ? 'point' : type,
+                text,
+                position: [position.x, position.y, position.z],
+                label: text.substring(0, 50),
+            });
+            logSuccess('Annotation created');
+            setShowCreator(false);
+
+            // Immediately render the new annotation in the 3D view
+            if (instanceId && newAnnotation) {
+                const allAnnotations = [...annotations, newAnnotation].filter(a => a.visible !== false);
+                workspaceManager.updateInstanceAnnotations(instanceId, true, allAnnotations);
+            }
+        } catch (err) {
+            console.error('Failed to create annotation:', err);
+        }
+    }, [datasetId, createAnnotation, instanceId, annotations]);
+
+    // Handle position change from the floating creator
+    const handlePositionChange = useCallback((newPosition) => {
+        setClickPosition(newPosition);
+    }, []);
+
+    // Start click-to-annotate mode
+    const handleStartAnnotating = useCallback(() => {
+        setAnnotationMode(true);
+        logInfo('Click-to-annotate mode enabled. Click on the 3D model to place an annotation.');
+    }, []);
 
     // Handle opening the full panel
     const handleOpenFullPanel = useCallback(() => {
@@ -147,11 +255,13 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
             {/* Footer - fixed to bottom of subtab */}
             <div className="annotations-subtab__footer">
                 <button
-                    className="annotations-subtab__footer-btn annotations-subtab__footer-btn--add"
-                    title="Add annotation"
+                    className={`annotations-subtab__footer-btn annotations-subtab__footer-btn--click ${annotationMode ? 'active' : ''}`}
+                    title="Click on the 3D model to add annotation"
+                    onClick={handleStartAnnotating}
+                    disabled={!datasetId || annotationMode}
                 >
-                    <Plus size={11} />
-                    <span>New</span>
+                    <Crosshair size={11} />
+                    <span>{annotationMode ? 'Click model...' : 'Click to Add'}</span>
                 </button>
                 <button
                     className="annotations-subtab__footer-btn annotations-subtab__footer-btn--open"
@@ -161,6 +271,25 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                     <span>Open Panel</span>
                 </button>
             </div>
+
+            {/* Annotation mode indicator */}
+            {annotationMode && (
+                <div className="annotations-subtab__mode-indicator">
+                    <Crosshair size={12} className="pulse" />
+                    <span>Click on the 3D model to place annotation</span>
+                    <button onClick={() => setAnnotationMode(false)}>Cancel</button>
+                </div>
+            )}
+
+            {/* Floating Annotation Creator */}
+            <FloatingAnnotationCreator
+                isOpen={showCreator}
+                onClose={() => setShowCreator(false)}
+                onSubmit={handleCreateAnnotation}
+                position={clickPosition}
+                screenPosition={screenPosition}
+                onPositionChange={handlePositionChange}
+            />
         </div>
     );
 }
