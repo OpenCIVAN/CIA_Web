@@ -1,7 +1,7 @@
 // src/ui/react/components/common/Button/Button.stories.jsx
 import React from "react";
-import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight } from "lucide-react";
-import { Button, IconButton, ButtonGroup } from "./Button";
+import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight, Download, Upload, Edit } from "lucide-react";
+import { Button, IconButton, ButtonGroup } from "./index";
 
 export default {
     title: "Atoms/Button",
@@ -210,5 +210,87 @@ export const ButtonGroupWithLabels = {
             <Button variant="ghost" size="sm">Center</Button>
             <Button variant="ghost" size="sm">Right</Button>
         </ButtonGroup>
+    ),
+};
+
+// =============================================================================
+// LOADING STATE STORIES
+// =============================================================================
+
+export const Loading = {
+    args: {
+        children: "Saving...",
+        variant: "primary",
+        size: "md",
+        loading: true,
+    },
+};
+
+export const LoadingVariants = {
+    render: () => (
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <Button variant="primary" loading>Saving</Button>
+            <Button variant="secondary" loading>Loading</Button>
+            <Button variant="danger" loading>Deleting</Button>
+        </div>
+    ),
+};
+
+export const IconButtonLoading = {
+    render: () => (
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <IconButton loading tooltip="Uploading..."><Upload size={18} /></IconButton>
+            <IconButton loading variant="primary"><Download size={18} /></IconButton>
+        </div>
+    ),
+};
+
+// =============================================================================
+// CONNECTED BUTTON GROUP
+// =============================================================================
+
+export const ConnectedButtonGroup = {
+    render: () => (
+        <ButtonGroup connected>
+            <Button variant="secondary">Day</Button>
+            <Button variant="secondary">Week</Button>
+            <Button variant="secondary">Month</Button>
+        </ButtonGroup>
+    ),
+};
+
+export const ButtonGroupAlignments = {
+    render: () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "400px" }}>
+            <ButtonGroup align="start" gap="sm">
+                <Button variant="secondary">Cancel</Button>
+                <Button variant="primary">Submit</Button>
+            </ButtonGroup>
+            <ButtonGroup align="end" gap="sm">
+                <Button variant="secondary">Cancel</Button>
+                <Button variant="primary">Submit</Button>
+            </ButtonGroup>
+            <ButtonGroup align="space-between" fullWidth>
+                <Button variant="secondary">Back</Button>
+                <Button variant="primary">Continue</Button>
+            </ButtonGroup>
+        </div>
+    ),
+};
+
+// =============================================================================
+// TOOLTIP DEMOS
+// =============================================================================
+
+export const ButtonsWithTooltips = {
+    render: () => (
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <Button variant="primary" icon={Save} tooltip="Save your changes">
+                Save
+            </Button>
+            <IconButton icon={Settings} tooltip="Open settings" label="Settings" />
+            <IconButton icon={Edit} tooltip="Edit item" variant="secondary" label="Edit" />
+            <IconButton icon={Trash2} tooltip="Delete item" variant="danger" label="Delete" />
+        </div>
     ),
 };

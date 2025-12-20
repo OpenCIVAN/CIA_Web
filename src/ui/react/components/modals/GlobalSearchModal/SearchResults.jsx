@@ -1,0 +1,302 @@
+/**
+ * @file SearchResults.jsx
+ * @description Search results container component.
+ * Handles result display, grouping, empty states, and recent searches.
+ *
+ * @example
+ * <SearchResults
+ *   results={results}
+ *   groupedResults={groupedResults}
+ *   query={query}
+ *   selectedIndex={selectedIndex}
+ *   onSelect={handleSelect}
+ *   isLoading={isLoading}
+ *   recentSearches={recentSearches}
+ *   onRecentSelect={setQuery}
+ *   onClearRecent={clearRecentSearches}
+ * />
+ */
+
+import React, { memo } from 'react';
+import {
+    Search,
+    Clock,
+    Folder,
+    Database,
+    Eye,
+    Users,
+    MessageSquare,
+    FileQuestion
+} from 'lucide-react';
+import { SearchResultItem, TYPE_LABELS } from './SearchResultItem';
+
+/**
+ * @typedef {Object} SearchResult
+ * @property {string} id - Unique identifier
+ * @property {string} type - Result type
+ * @property {string} name - Display name
+ */
+
+/**
+ * @typedef {Object} SearchResultsProps
+ * @property {SearchResult[]} results - Flat list of results
+ * @property {Object<string, SearchResult[]>} [groupedResults] - Results grouped by type
+ * @property {string} query - Current search query
+ * @property {number} selectedIndex - Currently selected result index
+ * @property {(result: SearchResult) => void} onSelect - Result selection handler
+ * @property {boolean} [isLoading=false] - Whether search is in progress
+ * @property {string[]} [recentSearches=[]] - Recent search queries
+ * @property {(query: string) => void} [onRecentSelect] - Recent search selection handler
+ * @property {() => void} [onClearRecent] - Clear recent searches handler
+ * @property {string} [testId] - Data-testid for testing
+ */
+
+/**
+ * Group type icons for headers
+ */
+const GROUP_ICONS = {
+    project: Folder,
+    dataset: Database,
+    view: Eye,
+    person: Users,
+    annotation: MessageSquare,
+    room: Users,
+};
+
+/**
+ * Group labels (plural)
+ */
+const GROUP_LABELS = {
+    project: 'Projects',
+    dataset: 'Datasets',
+    view: 'Views',
+    person: 'People',
+    annotation: 'Annotations',
+    room: 'Rooms',
+};
+
+/**
+ * Empty state component
+ */
+const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
+    if (type === 'no-results') {
+        return (
+            <div className="global-search__empty">
+                <FileQuestion size={48} className="global-search__empty__icon" />
+                <div className="global-search__empty__title">
+                    No results found for "{query}"
+                </div>
+                <div className="global-search__empty__description">
+                    Try adjusting your search or filter criteria
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="global-search__empty">
+            <Search size={48} className="global-search__empty__icon" />
+            <div className="global-search__empty__title">
+                Start typing to search
+            </div>
+            <div className="global-search__empty__description">
+                Search across projects, datasets, views, and more
+            </div>
+        </div>
+    );
+});
+
+/**
+ * Recent searches section
+ */
+const RecentSearches = memo(function RecentSearches({
+    searches,
+    onSelect,
+    onClear
+}) {
+    if (!searches || searches.length === 0) return null;
+
+    return (
+        <div className="global-search__recent">
+            <div className="global-search__recent-header">
+                <span className="global-search__recent-header__title">
+                    Recent Searches
+                </span>
+                <button
+                    type="button"
+                    className="global-search__recent-header__clear"
+                    onClick={onClear}
+                >
+                    Clear
+                </button>
+            </div>
+            <div className="global-search__recent-list">
+                {searches.map((query, index) => (
+                    <button
+                        key={`${query}-${index}`}
+                        type="button"
+                        className="global-search__recent-item"
+                        onClick={() => onSelect(query)}
+                    >
+                        <Clock size={14} />
+                        <span>{query}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+});
+
+/**
+ * Result group with header
+ */
+const ResultGroup = memo(function ResultGroup({
+    type,
+    items,
+    query,
+    selectedIndex,
+    startIndex,
+    onSelect
+}) {
+    const Icon = GROUP_ICONS[type] || Folder;
+    const label = GROUP_LABELS[type] || type;
+
+    return (
+        <div className="global-search__group">
+            <div className="global-search__group-header">
+                <Icon size={14} />
+                <span>{label}</span>
+                <span className="global-search__group-count">({items.length})</span>
+            </div>
+            <div className="global-search__group-items">
+                {items.map((result, index) => (
+                    <SearchResultItem
+                        key={result.id}
+                        result={result}
+                        query={query}
+                        isSelected={startIndex + index === selectedIndex}
+                        onClick={() => onSelect(result)}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+});
+
+/**
+ * Search results container component.
+ *
+ * @param {SearchResultsProps} props - Component props
+ * @returns {React.ReactElement} The rendered results
+ */
+function SearchResults({
+    results,
+    groupedResults,
+    query,
+    selectedIndex,
+    onSelect,
+    isLoading = false,
+    recentSearches = [],
+    onRecentSelect,
+    onClearRecent,
+    testId
+}) {
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div
+                className="global-search__results global-search__results--loading"
+                data-testid={testId}
+            >
+                <div className="global-search__loading">
+                    <div className="global-search__loading-spinner" />
+                    <span>Searching...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // No query - show recent searches or initial state
+    if (!query.trim()) {
+        return (
+            <div className="global-search__results" data-testid={testId}>
+                {recentSearches.length > 0 ? (
+                    <RecentSearches
+                        searches={recentSearches}
+                        onSelect={onRecentSelect}
+                        onClear={onClearRecent}
+                    />
+                ) : (
+                    <EmptyState type="initial" />
+                )}
+            </div>
+        );
+    }
+
+    // No results
+    if (results.length === 0) {
+        return (
+            <div className="global-search__results" data-testid={testId}>
+                <EmptyState query={query} type="no-results" />
+            </div>
+        );
+    }
+
+    // Grouped results (when filter is "all")
+    if (groupedResults) {
+        let currentIndex = 0;
+
+        return (
+            <div
+                className="global-search__results"
+                role="listbox"
+                id="search-results"
+                aria-label={`${results.length} results`}
+                data-testid={testId}
+            >
+                {Object.entries(groupedResults).map(([type, items]) => {
+                    const startIndex = currentIndex;
+                    currentIndex += items.length;
+
+                    return (
+                        <ResultGroup
+                            key={type}
+                            type={type}
+                            items={items}
+                            query={query}
+                            selectedIndex={selectedIndex}
+                            startIndex={startIndex}
+                            onSelect={onSelect}
+                        />
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // Flat list (when specific filter is active)
+    return (
+        <div
+            className="global-search__results"
+            role="listbox"
+            id="search-results"
+            aria-label={`${results.length} results`}
+            data-testid={testId}
+        >
+            <div className="global-search__flat-list">
+                {results.map((result, index) => (
+                    <SearchResultItem
+                        key={result.id}
+                        result={result}
+                        query={query}
+                        isSelected={index === selectedIndex}
+                        onClick={() => onSelect(result)}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+export default memo(SearchResults);
+export { SearchResults, RecentSearches, EmptyState, ResultGroup };

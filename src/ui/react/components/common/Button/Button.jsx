@@ -1,110 +1,191 @@
-// src/ui/react/components/common/Button/Button.jsx
-// Atomic button component with all glass variants
+/**
+ * @file Button.jsx
+ * @description Comprehensive button component for CIA Web.
+ * Provides consistent button styling across the entire application,
+ * used in modals, toolbars, panels, and forms.
+ *
+ * Features:
+ * - Multiple variants: primary, secondary, danger, ghost, link
+ * - Three sizes: sm, md, lg
+ * - Loading state with spinner
+ * - Icon support (left and right positions)
+ * - Full width option
+ * - Built-in tooltip support
+ * - Full accessibility support
+ * - Ref forwarding for focus management
+ *
+ * @example
+ * // Primary button with icon
+ * <Button variant="primary" icon={Save} onClick={handleSave}>
+ *   Save Changes
+ * </Button>
+ *
+ * @example
+ * // Loading state
+ * <Button variant="primary" loading>
+ *   Saving...
+ * </Button>
+ *
+ * @example
+ * // Danger button
+ * <Button variant="danger" icon={Trash2}>
+ *   Delete
+ * </Button>
+ */
 
-import React from "react";
-import "./Button.scss";
+import React, { forwardRef, memo, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
+import './Button.scss';
 
 /**
- * Button Component
- *
- * Atomic button with multiple variants matching the glassmorphism design system.
- *
- * @param {string} variant - 'default' | 'primary' | 'accent' | 'ghost' | 'danger'
- * @param {string} size - 'sm' | 'md' | 'lg'
- * @param {boolean} fullWidth - Take full container width
- * @param {boolean} disabled - Disabled state
- * @param {React.ReactNode} icon - Optional leading icon
- * @param {React.ReactNode} iconRight - Optional trailing icon
- * @param {string} className - Additional classes
+ * @typedef {Object} ButtonProps
+ * @property {'primary'|'secondary'|'danger'|'ghost'|'link'} [variant='primary'] - Button style variant
+ * @property {'sm'|'md'|'lg'} [size='md'] - Button size
+ * @property {React.ComponentType} [icon] - Lucide icon to show before label
+ * @property {React.ComponentType} [iconRight] - Lucide icon to show after label
+ * @property {boolean} [iconOnly=false] - If true, renders as icon button (requires icon prop)
+ * @property {boolean} [loading=false] - Show loading spinner, disable button
+ * @property {boolean} [disabled=false] - Disable button
+ * @property {boolean} [fullWidth=false] - Expand to full container width
+ * @property {'button'|'submit'|'reset'} [type='button'] - HTML button type
+ * @property {string} [className] - Additional CSS classes
+ * @property {React.ReactNode} children - Button label
+ * @property {() => void} [onClick] - Click handler
+ * @property {string} [tooltip] - Tooltip text on hover
+ * @property {string} [testId] - Data-testid for testing
  */
-export function Button({
-    children,
-    variant = "default",
-    size = "md",
-    fullWidth = false,
-    disabled = false,
-    icon = null,
-    iconRight = null,
-    className = "",
-    type = "button",
-    onClick,
-    ...props
-}) {
+
+/**
+ * Icon sizes mapped to button sizes.
+ */
+const ICON_SIZES = {
+    sm: 14,
+    md: 16,
+    lg: 18
+};
+
+/**
+ * Button component with multiple variants and features.
+ * Uses forwardRef for focus management integration.
+ *
+ * @param {ButtonProps} props - Component props
+ * @param {React.Ref} ref - Forwarded ref
+ * @returns {React.ReactElement} The rendered button
+ */
+const Button = forwardRef(function Button(
+    {
+        children,
+        variant = 'primary',
+        size = 'md',
+        icon: Icon,
+        iconRight: IconRight,
+        iconOnly = false,
+        loading = false,
+        disabled = false,
+        fullWidth = false,
+        type = 'button',
+        className = '',
+        onClick,
+        tooltip,
+        testId,
+        ...props
+    },
+    ref
+) {
+    // Determine if button should be disabled
+    const isDisabled = disabled || loading;
+
+    // Get icon size based on button size
+    const iconSize = ICON_SIZES[size] || ICON_SIZES.md;
+
+    // Build class names
     const classNames = [
-        "btn",
+        'btn',
         `btn--${variant}`,
         `btn--${size}`,
-        fullWidth && "btn--full-width",
-        disabled && "btn--disabled",
-        className,
-    ].filter(Boolean).join(" ");
+        fullWidth && 'btn--full-width',
+        loading && 'btn--loading',
+        isDisabled && 'btn--disabled',
+        iconOnly && 'btn--icon-only',
+        className
+    ].filter(Boolean).join(' ');
+
+    /**
+     * Handle click events.
+     * Prevents click when loading or disabled.
+     */
+    const handleClick = useCallback((event) => {
+        if (isDisabled) {
+            event.preventDefault();
+            return;
+        }
+        if (onClick) {
+            onClick(event);
+        }
+    }, [isDisabled, onClick]);
+
+    /**
+     * Handle keyboard events for accessibility.
+     */
+    const handleKeyDown = useCallback((event) => {
+        if (isDisabled) return;
+
+        // Trigger click on Enter or Space
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (onClick) {
+                onClick(event);
+            }
+        }
+    }, [isDisabled, onClick]);
+
+    // Render the button content
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <>
+                    <Loader2 className="btn__spinner" size={iconSize} aria-hidden="true" />
+                    {!iconOnly && children && <span className="btn__text">{children}</span>}
+                </>
+            );
+        }
+
+        return (
+            <>
+                {Icon && (
+                    <span className="btn__icon btn__icon--left" aria-hidden="true">
+                        <Icon size={iconSize} />
+                    </span>
+                )}
+                {!iconOnly && children && <span className="btn__text">{children}</span>}
+                {IconRight && (
+                    <span className="btn__icon btn__icon--right" aria-hidden="true">
+                        <IconRight size={iconSize} />
+                    </span>
+                )}
+            </>
+        );
+    };
 
     return (
         <button
+            ref={ref}
             type={type}
             className={classNames}
-            disabled={disabled}
-            onClick={onClick}
+            disabled={isDisabled}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            aria-busy={loading}
+            aria-disabled={isDisabled}
+            data-testid={testId}
             {...props}
         >
-            {icon && <span className="btn__icon btn__icon--left">{icon}</span>}
-            {children && <span className="btn__text">{children}</span>}
-            {iconRight && <span className="btn__icon btn__icon--right">{iconRight}</span>}
+            {renderContent()}
+            {tooltip && <span className="btn__tooltip">{tooltip}</span>}
         </button>
     );
-}
+});
 
-/**
- * IconButton Component
- *
- * Square button for icons only (toolbar buttons, etc.)
- */
-export function IconButton({
-    children,
-    variant = "default",
-    size = "md",
-    active = false,
-    disabled = false,
-    className = "",
-    tooltip = null,
-    onClick,
-    ...props
-}) {
-    const classNames = [
-        "icon-btn",
-        `icon-btn--${variant}`,
-        `icon-btn--${size}`,
-        active && "icon-btn--active",
-        disabled && "icon-btn--disabled",
-        className,
-    ].filter(Boolean).join(" ");
-
-    return (
-        <button
-            type="button"
-            className={classNames}
-            disabled={disabled}
-            onClick={onClick}
-            aria-label={tooltip}
-            {...props}
-        >
-            {children}
-            {tooltip && <span className="icon-btn__tooltip">{tooltip}</span>}
-        </button>
-    );
-}
-
-/**
- * ButtonGroup Component
- *
- * Container for grouped buttons (like a toolbar segment)
- */
-export function ButtonGroup({ children, className = "" }) {
-    return (
-        <div className={`btn-group ${className}`}>
-            {children}
-        </div>
-    );
-}
-
-export default Button;
+// Memoize to prevent unnecessary re-renders
+export default memo(Button);
+export { Button };
