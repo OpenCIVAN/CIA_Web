@@ -22,11 +22,11 @@
 // │                        STATUS BAR (28px)                              │
 // └──────────────────────────────────────────────────────────────────────┘
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
-import { getViewConfigurationManager } from '@Init/appInitializer';
+import { getViewConfigurationManager } from "@Init/appInitializer";
 
 // =============================================================================
 // LAYOUT INFRASTRUCTURE
@@ -117,6 +117,20 @@ import { useInstanceSelector } from "@UI/react/hooks/useInstanceSelector.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
 
 // =============================================================================
+// CENTRALIZED STATE MODULES
+// =============================================================================
+import {
+  loadCanvasSize,
+  saveCanvasSize,
+} from "@UI/react/hooks/canvasState.js";
+
+// Helper to get initial canvas size
+const getInitialCanvasSize = () => {
+  const saved = loadCanvasSize();
+  return saved ?? { rows: 3, cols: 3 };
+};
+
+// =============================================================================
 // MAIN APPLICATION COMPONENT
 // =============================================================================
 
@@ -170,7 +184,38 @@ export function CIAWebApp({ username, userId, projectId }) {
   const workspaceId = currentWorkspace?.id || "personal";
 
   // ===========================================================================
-  // INSTANCE SELECTOR STATE (Fix #5)
+  // CANVAS STATE (using centralized viewportState module)
+  // ===========================================================================
+  const {
+    canvas,
+    viewport,
+    visiblePlacements,
+  } = useCanvas();
+  const canvasId = canvas?.id;
+
+  // Canvas size (grid dimensions) - persisted via viewportState.js
+  const [canvasSize, setCanvasSizeState] = useState(getInitialCanvasSize);
+
+  // Wrapper that persists canvas size changes
+  const setCanvasSize = useCallback((newSize) => {
+    if (typeof newSize === 'function') {
+      setCanvasSizeState(prev => {
+        const updated = newSize(prev);
+        saveCanvasSize(updated);
+        return updated;
+      });
+    } else {
+      setCanvasSizeState(newSize);
+      saveCanvasSize(newSize);
+    }
+  }, []);
+
+  // Canvas viewport position
+  const [canvasPosition, setCanvasPosition] = useState({ col: 0, row: 0 });
+  const isAtOrigin = canvasPosition.col === 0 && canvasPosition.row === 0;
+
+  // ===========================================================================
+  // INSTANCE SELECTOR STATE (wired via useInstanceSelector hook)
   // ===========================================================================
   const {
     activeInstance,
@@ -179,47 +224,6 @@ export function CIAWebApp({ username, userId, projectId }) {
     handleSelectInstance,
     handlePlaceView,
   } = useInstanceSelector({ workspaceId });
-
-  // ===========================================================================
-  // ROOM STATE (Space Navigation) - Now using useRoomIndicator hook
-  // ===========================================================================
-  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
-
-  const {
-    currentRoom,
-    currentRoomId,
-    currentRoomName,
-    availableRooms,
-    roomMembers,
-    isLoading: isLoadingRooms,
-    switchRoom,
-    createRoom,
-  } = useRoomIndicator({
-    projectId,
-    userId,
-    onRoomChange: (roomId, roomName) => {
-      log.info("Room changed to:", roomName);
-      // Optionally trigger workspace picker for breakout rooms
-    },
-  });
-
-  // Room/workspace transition handling (simplified)
-  const handleRoomSelect = useCallback(
-    (roomId, roomName) => {
-      switchRoom(roomId, roomName);
-    },
-    [switchRoom]
-  );
-
-  const handleCreateRoom = useCallback(() => {
-    setShowCreateRoomModal(true);
-  }, []);
-
-  // Callback to open rooms panel in right sidebar
-  const handleOpenRoomsPanel = useCallback(() => {
-    log.debug("Open rooms panel");
-    window.dispatchEvent(new CustomEvent("open:rooms-panel"));
-  }, []);
 
   // ===========================================================================
   // VIEW MODE STATE (Desktop/VR)
@@ -235,25 +239,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   // LAYOUT MODE STATE (Normal/Isolation/Subset)
   // ===========================================================================
   const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
-
-  // ===========================================================================
-  // CANVAS STATE
-  // ===========================================================================
-  const {
-    canvas,
-    viewport,
-    visiblePlacements } = useCanvas();
-  const canvasId = canvas?.id;
-
-  // State for active instance (which view is "focused")
-  const [activeInstanceId, setActiveInstanceId] = useState(null);
-
-  // Canvas size (grid dimensions)
-  const [canvasSize, setCanvasSize] = useState({ cols: 2, rows: 2 });
-
-  // Canvas viewport position
-  const [canvasPosition, setCanvasPosition] = useState({ col: 0, row: 0 });
-  const isAtOrigin = canvasPosition.col === 0 && canvasPosition.row === 0;
 
   // ===========================================================================
   // EDIT MODE STATE
@@ -283,6 +268,45 @@ export function CIAWebApp({ username, userId, projectId }) {
   // VOICE CONTROLS (from hook)
   // ===========================================================================
   const voice = useVoiceControls();
+
+  // Voice settings modal state
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+
+  // ===========================================================================
+  // ROOM STATE (Space Navigation) - Now using useRoomIndicator hook
+  // ===========================================================================
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+
+  const {
+    currentRoom,
+    currentRoomId,
+    currentRoomName,
+    availableRooms,
+    roomMembers,
+    isLoading: isLoadingRooms,
+    switchRoom,
+    createRoom,
+  } = useRoomIndicator({
+    projectId,
+    userId,
+    onRoomChange: (roomId, roomName) => {
+      log.info("Room changed to:", roomName);
+    },
+  });
+
+  // Derive rooms list for voice channels
+  const rooms = useMemo(() => availableRooms || [], [availableRooms]);
+
+  // Compute available voice channels from rooms
+  const availableVoiceChannels = useMemo(() => {
+    return rooms
+      .filter((room) => room.hasVoice)
+      .map((room) => ({
+        id: room.id,
+        name: room.name,
+        participantCount: room.voiceParticipants?.length || 0,
+      }));
+  }, [rooms]);
 
   // ===========================================================================
   // CALLBACKS - HEADER
@@ -371,24 +395,52 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, []);
 
   // ===========================================================================
-  // CALLBACKS - SECONDARY FOOTER
-  // (handleSelectInstance and handlePlaceView are now from useInstanceSelector hook)
+  // CALLBACKS - ROOM/PRESENCE
+  // ===========================================================================
+  const handleRoomSelect = useCallback(
+    (roomId, roomName) => {
+      switchRoom(roomId, roomName);
+    },
+    [switchRoom]
+  );
+
+  const handleCreateRoom = useCallback(() => {
+    setShowCreateRoomModal(true);
+  }, []);
+
+  const handleOpenRoomsPanel = useCallback(() => {
+    log.debug("Open rooms panel");
+    window.dispatchEvent(new CustomEvent("open:rooms-panel"));
+  }, []);
+
+  // ===========================================================================
+  // CALLBACKS - VOICE CONTROLS
   // ===========================================================================
   const handleOpenVoiceSettings = useCallback(() => {
     log.debug("Open voice settings");
-    // TODO: Open voice settings popout
     handleTogglePopout("voice-settings");
   }, [handleTogglePopout]);
 
-  const handleChangeVoiceChannel = useCallback((channelId) => {
-    log.debug("Change voice channel:", channelId);
-    // TODO: Switch voice channel
-  }, []);
+  const handleJoinLeaveVoice = useCallback(() => {
+    if (voice.inVoice) {
+      voice.leave();
+    } else if (currentRoomId) {
+      voice.join(currentRoomId);
+    }
+  }, [voice, currentRoomId]);
+
+  const handleChangeVoiceChannel = useCallback(
+    (channelId) => {
+      if (voice.inVoice) voice.leave();
+      voice.join(channelId);
+    },
+    [voice]
+  );
 
   // ===========================================================================
   // RENDER - CENTER PANEL (WORKSPACE)
   // ===========================================================================
-  const renderCenterPanel = () => {
+  const renderCenterPanel = useCallback(() => {
     if (phase3Status !== "ready") {
       return (
         <div className="cia-loading">
@@ -407,24 +459,12 @@ export function CIAWebApp({ username, userId, projectId }) {
         layoutMode={layoutMode}
       />
     );
-  };
-
-  const availableVoiceChannels = useMemo(() => {
-    // This would come from room service or project data
-    // For now, return the rooms that have voice enabled
-    return rooms
-      .filter(room => room.hasVoice)
-      .map(room => ({
-        id: room.id,
-        name: room.name,
-        participantCount: room.voiceParticipants?.length || 0,
-      }));
-  }, [rooms]);
+  }, [phase3Status, workspaceId, userId, projectId, layoutMode]);
 
   // ===========================================================================
   // RENDER - SECONDARY TOP BAR ZONES (44px)
   // ===========================================================================
-  const secondaryTopBarZones = {
+  const secondaryTopBarZones = useMemo(() => ({
     // Left Zone: Workspace Selector (syncs with left panel width)
     left: (
       <WorkspaceSelector
@@ -479,12 +519,35 @@ export function CIAWebApp({ username, userId, projectId }) {
         onCreateRoom={handleCreateRoom}
       />
     ),
-  };
+  }), [
+    currentWorkspace,
+    workspaces,
+    handleWorkspaceChange,
+    handleCreateWorkspace,
+    flowDirection,
+    isEditMode,
+    activeTool,
+    handleToolChange,
+    handleToggleEditMode,
+    handleUndo,
+    handleRedo,
+    canvasPosition,
+    isAtOrigin,
+    handleNavigateHome,
+    handleNavigateDirection,
+    handleOpenBookmarks,
+    currentRoom,
+    roomMembers,
+    availableRooms,
+    handleRoomSelect,
+    handleOpenRoomsPanel,
+    handleCreateRoom,
+  ]);
 
   // ===========================================================================
   // RENDER - SECONDARY BOTTOM BAR ZONES (36px)
   // ===========================================================================
-  const secondaryBottomBarZones = {
+  const secondaryBottomBarZones = useMemo(() => ({
     // Left Zone: Popout Buttons (Canvas Navigator, Scratchpad)
     left: (
       <PopoutButtons openPopouts={openPopouts} onToggle={handleTogglePopout} />
@@ -511,32 +574,53 @@ export function CIAWebApp({ username, userId, projectId }) {
       </div>
     ),
 
-    // Right Zone: Voice Quick Controls
+    // Right Zone: Voice Quick Controls (enhanced with obvious status)
     right: (
       <VoiceQuickControls
         isMuted={voice.muted}
         isDeafened={voice.deafened}
         isInChannel={voice.inVoice}
-        currentChannel={voice.currentRoom ? {
-          id: currentRoomId,
-          name: voice.currentRoom,
-        } : null}
+        currentChannel={
+          voice.currentRoom
+            ? {
+              id: currentRoomId,
+              name: voice.currentRoom,
+            }
+            : null
+        }
         participantCount={voice.participants?.length || 0}
-        channels={availableVoiceChannels}  // Need to get from room/project
+        channels={availableVoiceChannels}
         onToggleMute={voice.toggleMute}
         onToggleDeafen={voice.toggleDeafen}
-        onJoinLeave={voice.inVoice ? voice.leave : () => voice.join(currentRoomId)}
-        onChangeChannel={(channelId) => {
-          if (voice.inVoice) voice.leave();
-          voice.join(channelId);
-        }}
-        onOpenVoiceSettings={() => {
-          // Open voice settings modal or panel
-          setShowVoiceSettings(true);
-        }}
+        onJoinLeave={handleJoinLeaveVoice}
+        onChangeChannel={handleChangeVoiceChannel}
+        onOpenVoiceSettings={handleOpenVoiceSettings}
       />
     ),
-  };
+  }), [
+    openPopouts,
+    handleTogglePopout,
+    activeInstance,
+    onCanvasViews,
+    availableViews,
+    handleSelectInstance,
+    handlePlaceView,
+    layoutMode,
+    canvasSize,
+    setCanvasSize,
+    voice.muted,
+    voice.deafened,
+    voice.inVoice,
+    voice.currentRoom,
+    voice.participants,
+    voice.toggleMute,
+    voice.toggleDeafen,
+    currentRoomId,
+    availableVoiceChannels,
+    handleJoinLeaveVoice,
+    handleChangeVoiceChannel,
+    handleOpenVoiceSettings,
+  ]);
 
   // ===========================================================================
   // RENDER
@@ -625,6 +709,7 @@ export function CIAWebApp({ username, userId, projectId }) {
           </LayoutPanelProvider>
         </RightPanelProvider>
       </LeftPanelProvider>
+
       {/* Create Room Modal */}
       <CreateRoomModal
         isOpen={showCreateRoomModal}
@@ -638,7 +723,7 @@ export function CIAWebApp({ username, userId, projectId }) {
             // Error handling is in the modal
           }
         }}
-        availableUsers={roomMembers.filter(m => !m.isYou)}
+        availableUsers={roomMembers.filter((m) => !m.isYou)}
       />
     </FloatingPanelProvider>
   );
