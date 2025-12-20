@@ -3,43 +3,93 @@
  * @description Buttons to toggle floating popout panels.
  */
 
-import React from 'react';
-import { Map, StickyNote } from 'lucide-react';
-import { Tooltip } from '@UI/react/components/common/Tooltip';
+// UPDATED: Now uses useScratchPadFloating hook for proper floating panel integration
 
-import './PopoutButtons.scss';
+import React, { useCallback } from "react";
+import { Map, StickyNote } from "lucide-react";
+import { Tooltip } from "@UI/react/components/common/Tooltip";
+import { useScratchPadFloating } from "@UI/react/components/panels/FloatingPanel/ScratchPadFloating";
+import { useLayoutPanelContext, DOCK_POSITIONS } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 
-const POPOUTS = [
-    { id: 'navigator', icon: Map, label: 'Canvas Navigator' },
-    { id: 'scratchpad', icon: StickyNote, label: 'Scratchpad' },
-];
+import "./PopoutButtons.scss";
 
 /**
- * Popout toggle buttons component.
+ * PopoutButtons - Floating panel toggle buttons
  *
  * @param {Object} props - Component props
- * @param {Array} [props.openPopouts] - List of open popout IDs
- * @param {Function} [props.onToggle] - Callback to toggle popout
+ * @param {Function} [props.onToggleNavigator] - Optional override for navigator toggle
  */
-export function PopoutButtons({ openPopouts = [], onToggle }) {
+export function PopoutButtons({ onToggleNavigator }) {
+    // ScratchPad floating panel
+    const scratchPad = useScratchPadFloating();
+
+    // Canvas Navigator - uses LayoutPanelContext
+    const layoutContext = useLayoutPanelContext?.() || {};
+    const { dockPosition, setDockPosition } = layoutContext;
+
+    // Toggle canvas navigator between docked and floating
+    const handleToggleNavigator = useCallback(() => {
+        if (onToggleNavigator) {
+            onToggleNavigator();
+            return;
+        }
+
+        if (setDockPosition) {
+            const isFloating =
+                dockPosition === DOCK_POSITIONS.FLOAT ||
+                dockPosition === DOCK_POSITIONS.BOTTOM_LEFT ||
+                dockPosition === DOCK_POSITIONS.BOTTOM_RIGHT;
+
+            if (isFloating) {
+                setDockPosition(DOCK_POSITIONS.LEFT_PANEL);
+            } else {
+                setDockPosition(DOCK_POSITIONS.BOTTOM_LEFT);
+            }
+        }
+    }, [onToggleNavigator, dockPosition, setDockPosition]);
+
+    // Toggle ScratchPad
+    const handleToggleScratchPad = useCallback(
+        (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            scratchPad.toggle({
+                x: rect.left,
+                y: rect.top - 410, // Position above the button
+            });
+        },
+        [scratchPad]
+    );
+
+    const isNavigatorFloating =
+        dockPosition &&
+        dockPosition !== DOCK_POSITIONS.LEFT_PANEL &&
+        dockPosition !== DOCK_POSITIONS.MINIMIZED;
+
     return (
         <div className="popout-buttons">
-            {POPOUTS.map((popout) => {
-                const isOpen = openPopouts.includes(popout.id);
-                return (
-                    <Tooltip key={popout.id} content={popout.label}>
-                        <button
-                            className={`popout-buttons__btn ${isOpen ? 'active' : ''
-                                }`}
-                            onClick={() => onToggle?.(popout.id)}
-                            aria-pressed={isOpen}
-                            type="button"
-                        >
-                            <popout.icon size={16} />
-                        </button>
-                    </Tooltip>
-                );
-            })}
+            {/* Canvas Navigator */}
+            <Tooltip content="Canvas Navigator">
+                <button
+                    className={`popout-buttons__btn ${isNavigatorFloating ? "active" : ""}`}
+                    onClick={handleToggleNavigator}
+                    aria-pressed={isNavigatorFloating}
+                    type="button"
+                >
+                    <Map size={16} />
+                </button>
+            </Tooltip>
+
+            {/* ScratchPad */}
+            <Tooltip content="Scratch Pad">
+                <button
+                    className={`popout-buttons__btn ${scratchPad.isOpen ? "active" : ""}`}
+                    onClick={handleToggleScratchPad}
+                    aria-pressed={scratchPad.isOpen}
+                    type="button"
+                >
+                    <StickyNote size={16} />
+                </button>
+            </Tooltip>
         </div>
     );
 }

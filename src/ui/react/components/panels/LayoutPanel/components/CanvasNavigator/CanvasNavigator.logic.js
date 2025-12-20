@@ -1,419 +1,317 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.logic.js
-// Canvas Navigator logic hook
+// Complete Canvas Navigator Logic Hook
 //
-// This hook consumes the parent logic from useLayoutPanel and adds
-// navigator-specific state (display mode, zoom, etc.)
+// FEATURES:
+// - Navigation: D-pad, click-to-navigate, homepoint
+// - Edit Mode: Cell selection, merge, unmerge, delete, resize
+// - Drag & Drop: Move placements, swap on drop, external drops
+// - Undo/Redo: Full history with apply/cancel workflow
+// - Collaborator Tracking: Show who's viewing each cell
+// - Context Modes: EDIT (layout), VIEWS (navigation)
+// - Display Modes: Names, Numbers, Colors only
 //
-// IMPORTANT: DOCK_POSITIONS is managed by LayoutPanelContext.
-// This hook receives dockPosition and setDockPosition from parent logic.
+// ARCHITECTURE:
+// - Uses reducer for undo/redo history
+// - Integrates with CanvasManager for server sync
+// - Receives dockPosition from parent context (no local definition)
 
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { ui as log } from "@Utils/logger.js";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useReducer,
+  useRef,
+} from "react";
+import { createLogger } from "@Utils/logger.js";
 
-// Import DOCK_POSITIONS from context for reference
-// (not for state management - that's done in LayoutPanelContext)
-import { DOCK_POSITIONS } from "../../LayoutPanelContext";
-
-// Import viewport sync for dispatching navigation events
-import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
-import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/useViewportSize.js";
-
-// Re-export for backward compatibility
-export { DOCK_POSITIONS };
+const log = createLogger("canvas-navigator");
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
+// Context modes - what the navigator is being used for
+export const CONTEXT_MODES = {
+  EDIT: "edit", // Edit mode - merge cells, resize canvas
+  VIEWS: "views", // Views mode - navigate, view info
+  PRESENCE: "presence", // Show collaborator positions
+  HOMEPOINTS: "homepoints", // Manage homepoints
+};
+
+// Display modes for cells
 export const DISPLAY_MODES = {
-  NAMES: "names",
-  NUMBERS: "numbers",
-  COLORS: "colors",
+  NAMES: "names", // Show view names
+  NUMBERS: "numbers", // Show numbers (1, 2, 3...)
+  COLORS: "colors", // Just colored blocks, no text
 };
 
+// Navigator modes (sub-mode within context)
 export const NAV_MODES = {
-  NAVIGATE: "navigate",
-  EDIT: "edit",
+  NAVIGATE: "navigate", // Click to navigate viewport
+  SELECT: "select", // Click to select cells
 };
 
-// Instance colors - matching the ones in LayoutPanel.logic.js
-export const INSTANCE_COLORS = [
-  "#60a5fa", // blue
-  "#34d399", // green
-  "#7dd3fc", // cyan
-  "#fb7185", // pink
-  "#c084fc", // purple
-  "#fbbf24", // amber
-];
-
-// LocalStorage keys
-const STORAGE_KEYS = {
-  DOCK_POSITION: "cia-navigator-dock-position",
-  FLOAT_POSITION: "cia-navigator-float-position",
-  DISPLAY_MODE: "cia-navigator-display-mode",
-  MINIMAP_ZOOM: "cia-navigator-zoom",
+// Instance colors
+export const INSTANCE_COLORS = {
+  blue: "#60a5fa",
+  green: "#4ade80",
+  pink: "#f472b6",
+  amber: "#fbbf24",
+  teal: "#2dd4bf",
+  purple: "#a78bfa",
+  indigo: "#818cf8",
+  red: "#f87171",
 };
 
 // =============================================================================
-// HELPERS
+// HISTORY REDUCER
 // =============================================================================
 
-function loadFromStorage(key, fallback) {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) return JSON.parse(stored);
-  } catch (e) {
-    log.warn(`Failed to load ${key}:`, e);
-  }
-  return fallback;
-}
+const HISTORY_ACTIONS = {
+  SNAPSHOT: "SNAPSHOT", // Save current state to history
+  UNDO: "UNDO",
+  REDO: "REDO",
+  CLEAR_HISTORY: "CLEAR_HISTORY",
+  MARK_SAVED: "MARK_SAVED", // Mark current state as saved (apply)
+  RESET_TO_SAVED: "RESET_TO_SAVED", // Cancel - revert to saved state
+};
 
-function saveToStorage(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    log.warn(`Failed to save ${key}:`, e);
-  }
-}
+const historyReducer = (state, action) => {
+  switch (action.type) {
+    case HISTORY_ACTIONS.SNAPSHOT: {
+      // Don't create duplicate snapshots
+      const lastSnapshot = state.history[state.historyIndex];
+      if (
+        lastSnapshot &&
+        JSON.stringify(lastSnapshot) === JSON.stringify(action.payload)
+      ) {
+        return state;
+      }
 
-// =============================================================================
-// PRESS AND HOLD HOOK
-// =============================================================================
+      // Truncate any "future" history when making new changes
+      const newHistory = state.history.slice(0, state.historyIndex + 1);
+      newHistory.push(action.payload);
 
-export function usePressAndHold(callback, interval = 150) {
-  const [intervalId, setIntervalId] = useState(null);
-
-  const start = useCallback(() => {
-    callback(); // Immediate call
-    const id = setInterval(callback, interval);
-    setIntervalId(id);
-  }, [callback, interval]);
-
-  const stop = useCallback(() => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
+      return {
+        ...state,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+        isDirty: true,
+      };
     }
-  }, [intervalId]);
 
-  return { start, stop };
-}
+    case HISTORY_ACTIONS.UNDO: {
+      if (state.historyIndex <= 0) return state;
+      return {
+        ...state,
+        historyIndex: state.historyIndex - 1,
+      };
+    }
 
-// =============================================================================
-// VIEWPORT DRAG HOOK
-// =============================================================================
+    case HISTORY_ACTIONS.REDO: {
+      if (state.historyIndex >= state.history.length - 1) return state;
+      return {
+        ...state,
+        historyIndex: state.historyIndex + 1,
+      };
+    }
 
-export function useViewportDrag(onDrag) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [startPos, setStartPos] = useState(null);
+    case HISTORY_ACTIONS.CLEAR_HISTORY: {
+      return {
+        history: [action.payload],
+        historyIndex: 0,
+        savedIndex: 0,
+        isDirty: false,
+      };
+    }
 
-  const handleMouseDown = useCallback((e) => {
-    setIsDragging(true);
-    setStartPos({ x: e.clientX, y: e.clientY });
-  }, []);
+    case HISTORY_ACTIONS.MARK_SAVED: {
+      return {
+        ...state,
+        savedIndex: state.historyIndex,
+        isDirty: false,
+      };
+    }
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isDragging || !startPos) return;
-      const dx = e.clientX - startPos.x;
-      const dy = e.clientY - startPos.y;
-      onDrag?.(dx, dy);
-    },
-    [isDragging, startPos, onDrag]
-  );
+    case HISTORY_ACTIONS.RESET_TO_SAVED: {
+      return {
+        ...state,
+        historyIndex: state.savedIndex,
+        isDirty: false,
+      };
+    }
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setStartPos(null);
-  }, []);
-
-  return {
-    isDragging,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-  };
-}
+    default:
+      return state;
+  }
+};
 
 // =============================================================================
 // MAIN HOOK
 // =============================================================================
 
 /**
- * useCanvasNavigator - Main logic hook for Canvas Navigator
+ * useCanvasNavigator - Complete canvas navigator logic
  *
- * @param {Object} logic - Parent logic from useLayoutPanel (via context)
+ * @param {Object} options
+ * @param {Object} options.canvasSize - { rows, cols }
+ * @param {Object} options.viewport - { row, col }
+ * @param {Object} options.viewportSize - { rows, cols }
+ * @param {Array} options.cells - Array of cell/placement objects
+ * @param {Object} options.homepoint - { row, col } or null
+ * @param {Array} options.collaborators - Array of collaborator objects with positions
+ * @param {string} options.dockPosition - From parent context
+ * @param {boolean} options.loading - Loading state
+ * @param {boolean} options.isConnected - Connection state
+ * @param {Function} options.moveViewport - (deltaRow, deltaCol) => void
+ * @param {Function} options.navigateToCell - (row, col) => void
+ * @param {Function} options.setViewportSizeRows - (rows) => void
+ * @param {Function} options.setViewportSizeCols - (cols) => void
+ * @param {Function} options.setCanvasRows - (rows) => void
+ * @param {Function} options.setCanvasCols - (cols) => void
+ * @param {Function} options.setHomepoint - (row, col) => void
+ * @param {Function} options.clearHomepoint - () => void
+ * @param {Function} options.movePlacement - (id, row, col) => Promise
+ * @param {Function} options.swapPlacements - (id1, id2) => Promise
+ * @param {Function} options.resizePlacement - (id, rowSpan, colSpan) => Promise
+ * @param {Function} options.removePlacement - (id) => Promise
+ * @param {Function} options.mergeCells - (cellIds) => Promise
+ * @param {Function} options.unmergeCells - (id) => Promise
+ * @param {Function} options.onExternalDrop - (viewItem, { row, col }) => void
  */
-export function useCanvasNavigator(logic) {
+export function useCanvasNavigator({
+  // Data from parent
+  canvasSize = { rows: 3, cols: 3 },
+  viewport = { row: 0, col: 0 },
+  viewportSize = { rows: 3, cols: 3 },
+  cells = [],
+  homepoint = null,
+  collaborators = [],
+  dockPosition = "left-panel",
+  loading = false,
+  isConnected = true,
+
+  // Navigation callbacks
+  moveViewport: parentMoveViewport,
+  navigateToCell: parentNavigateToCell,
+  setViewportSizeRows: parentSetViewportSizeRows,
+  setViewportSizeCols: parentSetViewportSizeCols,
+  setCanvasRows: parentSetCanvasRows,
+  setCanvasCols: parentSetCanvasCols,
+  setHomepoint: parentSetHomepoint,
+  clearHomepoint: parentClearHomepoint,
+
+  // Placement callbacks
+  movePlacement: parentMovePlacement,
+  swapPlacements: parentSwapPlacements,
+  resizePlacement: parentResizePlacement,
+  removePlacement: parentRemovePlacement,
+  mergeCells: parentMergeCells,
+  unmergeCells: parentUnmergeCells,
+
+  // External drop callback
+  onExternalDrop,
+} = {}) {
   // ===========================================================================
-  // EXTRACT FROM PARENT LOGIC
-  // ===========================================================================
-
-  const {
-    // Canvas data
-    canvasSize = { rows: 4, cols: 5 },
-    viewport = { row: 0, col: 0 },
-    viewportSize: parentViewportSize,
-    cells = [],
-
-    // Connection state
-    isConnected = true,
-    loading = false,
-
-    // Homepoint from parent
-    homepoint: parentHomepoint,
-    setHomepoint: parentSetHomepoint,
-    clearHomepoint: parentClearHomepoint,
-
-    // Navigation from parent
-    moveViewport: parentMoveViewport,
-    navigateToCell: parentNavigateToCell,
-    setViewportPosition,
-
-    // Viewport size from parent
-    setViewportSizeRows: parentSetViewportSizeRows,
-    setViewportSizeCols: parentSetViewportSizeCols,
-
-    // Canvas size from parent
-    setCanvasRows: parentSetCanvasRows,
-    setCanvasCols: parentSetCanvasCols,
-
-    // Cell operations from parent
-    removePlacement,
-    movePlacement,
-    resizePlacement,
-    mergeCells: parentMergeCells,
-    unmergeCells: parentUnmergeCells,
-  } = logic || {};
-
-  // ===========================================================================
-  // LOCAL STATE (navigator-specific)
+  // LOCAL STATE
   // ===========================================================================
 
-  // Navigator mode (navigate vs edit)
-  const [mode, setMode] = useState(NAV_MODES.NAVIGATE);
+  // Context mode (EDIT vs VIEWS)
+  const [contextMode, setContextMode] = useState(CONTEXT_MODES.VIEWS);
 
-  // Display mode (names, numbers, colors)
-  const [displayMode, setDisplayModeState] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.DISPLAY_MODE, DISPLAY_MODES.NAMES)
-  );
+  // Navigator mode within context
+  const [navMode, setNavMode] = useState(NAV_MODES.NAVIGATE);
 
-  // NOTE: dockPosition is managed by LayoutPanelContext, not here
-  // We receive it from parent logic
+  // Display mode for cells
+  const [displayMode, setDisplayMode] = useState(DISPLAY_MODES.NAMES);
 
-  // Float position (with persistence) - for when in FLOAT mode
-  const [floatPosition, setFloatPositionState] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.FLOAT_POSITION, { x: 100, y: 100 })
-  );
+  // Minimap zoom level
+  const [minimapZoom, setMinimapZoom] = useState(1);
 
-  // Minimap zoom (with persistence)
-  const [minimapZoom, setMinimapZoomState] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.MINIMAP_ZOOM, 1)
-  );
+  // Float position (for floating mode)
+  const [floatPosition, setFloatPosition] = useState({ x: 100, y: 100 });
 
-  // Get dockPosition from parent logic (comes from LayoutPanelContext)
-  const parentDockPosition = logic?.dockPosition;
-  const parentSetDockPosition = logic?.setDockPosition;
-
-  // Use parent dockPosition or default to FLOAT
-  const dockPosition = parentDockPosition || DOCK_POSITIONS.FLOAT;
-
-  // Wrapper for setDockPosition that uses parent if available
-  const setDockPosition = useCallback(
-    (position) => {
-      if (parentSetDockPosition) {
-        parentSetDockPosition(position);
-      } else {
-        console.warn(
-          "[CanvasNavigator.logic] No parent setDockPosition available"
-        );
-      }
-    },
-    [parentSetDockPosition]
-  );
-
-  // Local viewport size fallback
-  const [localViewportSize, setLocalViewportSize] = useState({
-    rows: 2,
-    cols: 3,
-  });
-  const viewportSize = parentViewportSize || localViewportSize;
-
-  // Listen for viewport size changes from CanvasGrid (via useViewportSize events)
-  useEffect(() => {
-    const handleViewportSizeChanged = (e) => {
-      const { size } = e.detail;
-      if (size?.rows && size?.cols) {
-        setLocalViewportSize({
-          rows: Math.max(1, Math.min(10, size.rows)),
-          cols: Math.max(1, Math.min(10, size.cols)),
-        });
-      }
-    };
-
-    window.addEventListener(VIEWPORT_SIZE_EVENT, handleViewportSizeChanged);
-    return () =>
-      window.removeEventListener(
-        VIEWPORT_SIZE_EVENT,
-        handleViewportSizeChanged
-      );
-  }, []);
-
-  // Local homepoint fallback
-  const [localHomepoint, setLocalHomepoint] = useState(null);
-  const homepoint =
-    parentHomepoint !== undefined ? parentHomepoint : localHomepoint;
-
-  // Edit mode state
-  const [selectedCells, setSelectedCells] = useState([]);
+  // Setting homepoint mode
   const [settingHomepoint, setSettingHomepoint] = useState(false);
+
+  // Cell selection (for edit mode)
+  const [selectedCells, setSelectedCells] = useState([]);
 
   // Drag state
   const [draggedCell, setDraggedCell] = useState(null);
   const [dragOverCell, setDragOverCell] = useState(null);
 
-  // ===========================================================================
-  // PERSISTENCE
-  // ===========================================================================
+  // External drag state
+  const [externalDragOver, setExternalDragOver] = useState(null);
 
-  const setDisplayMode = useCallback((mode) => {
-    setDisplayModeState(mode);
-    saveToStorage(STORAGE_KEYS.DISPLAY_MODE, mode);
-  }, []);
-
-  // NOTE: setDockPosition is defined above, using parent from context
-
-  const setFloatPosition = useCallback((position) => {
-    setFloatPositionState(position);
-    saveToStorage(STORAGE_KEYS.FLOAT_POSITION, position);
-  }, []);
-
-  const setMinimapZoom = useCallback((zoom) => {
-    const clamped = Math.max(0.5, Math.min(2, zoom));
-    setMinimapZoomState(clamped);
-    saveToStorage(STORAGE_KEYS.MINIMAP_ZOOM, clamped);
-  }, []);
+  // Hovered cell (for tooltip)
+  const [hoveredCell, setHoveredCell] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   // ===========================================================================
-  // VIEWPORT SIZE CONTROLS
+  // HISTORY STATE (for undo/redo)
   // ===========================================================================
 
-  const setViewportSizeRows = useCallback(
-    (rows) => {
-      const value = Math.max(1, Math.min(10, rows));
-      if (parentSetViewportSizeRows) {
-        parentSetViewportSizeRows(value);
-      } else {
-        setLocalViewportSize((prev) => ({ ...prev, rows: value }));
-      }
-    },
-    [parentSetViewportSizeRows]
+  const initialHistoryState = {
+    history: [{ cells, canvasSize }],
+    historyIndex: 0,
+    savedIndex: 0,
+    isDirty: false,
+  };
+
+  const [historyState, dispatchHistory] = useReducer(
+    historyReducer,
+    initialHistoryState
   );
 
-  const setViewportSizeCols = useCallback(
-    (cols) => {
-      const value = Math.max(1, Math.min(10, cols));
-      if (parentSetViewportSizeCols) {
-        parentSetViewportSizeCols(value);
-      } else {
-        setLocalViewportSize((prev) => ({ ...prev, cols: value }));
-      }
-    },
-    [parentSetViewportSizeCols]
-  );
-
-  // ===========================================================================
-  // CANVAS SIZE CONTROLS
-  // ===========================================================================
-
-  const setCanvasRows = useCallback(
-    (rows) => {
-      parentSetCanvasRows?.(Math.max(1, Math.min(50, rows)));
-    },
-    [parentSetCanvasRows]
-  );
-
-  const setCanvasCols = useCallback(
-    (cols) => {
-      parentSetCanvasCols?.(Math.max(1, Math.min(50, cols)));
-    },
-    [parentSetCanvasCols]
-  );
-
-  // ===========================================================================
-  // HOMEPOINT
-  // ===========================================================================
-
-  const setHomepoint = useCallback(
-    (row, col) => {
-      if (parentSetHomepoint) {
-        parentSetHomepoint(row, col);
-      } else {
-        setLocalHomepoint({ row, col });
-      }
-      setSettingHomepoint(false);
-    },
-    [parentSetHomepoint]
-  );
-
-  const clearHomepoint = useCallback(() => {
-    if (parentClearHomepoint) {
-      parentClearHomepoint();
-    } else {
-      setLocalHomepoint(null);
+  // Track when cells change externally
+  const prevCellsRef = useRef(cells);
+  useEffect(() => {
+    if (JSON.stringify(prevCellsRef.current) !== JSON.stringify(cells)) {
+      // External change - reset history
+      dispatchHistory({
+        type: HISTORY_ACTIONS.CLEAR_HISTORY,
+        payload: { cells, canvasSize },
+      });
+      prevCellsRef.current = cells;
     }
-  }, [parentClearHomepoint]);
+  }, [cells, canvasSize]);
 
-  // Check if at homepoint
-  const isAtHome = useMemo(
-    () =>
+  // Get current state from history
+  const currentHistoryState = historyState.history[
+    historyState.historyIndex
+  ] || { cells, canvasSize };
+
+  // ===========================================================================
+  // COMPUTED STATE
+  // ===========================================================================
+
+  const isDisabled = loading || !isConnected;
+
+  const isAtHome = useMemo(() => {
+    return (
       homepoint &&
       viewport.row === homepoint.row &&
-      viewport.col === homepoint.col,
-    [homepoint, viewport]
-  );
+      viewport.col === homepoint.col
+    );
+  }, [homepoint, viewport]);
 
-  // ===========================================================================
-  // NAVIGATION
-  // ===========================================================================
-
-  const moveViewport = useCallback(
-    (direction) => {
-      // parentMoveViewport (from LayoutPanel.logic.js) already dispatches
-      // the viewport sync event, so we only need to call it - no double dispatch
-      if (parentMoveViewport) {
-        parentMoveViewport(direction);
-      }
-    },
-    [parentMoveViewport]
-  );
-
-  const navigateToCell = useCallback(
-    (row, col) => {
-      // Validate inputs
-      const targetRow = typeof row === "number" && !isNaN(row) ? row : 0;
-      const targetCol = typeof col === "number" && !isNaN(col) ? col : 0;
-
-      if (parentNavigateToCell) {
-        parentNavigateToCell(targetRow, targetCol);
-      } else if (setViewportPosition) {
-        setViewportPosition(targetRow, targetCol);
-      }
-      // Also dispatch viewport sync event so CanvasGrid follows
-      dispatchNavigateTo(targetRow, targetCol);
-    },
-    [parentNavigateToCell, setViewportPosition]
-  );
+  const canUndo = historyState.historyIndex > 0;
+  const canRedo = historyState.historyIndex < historyState.history.length - 1;
+  const isDirty = historyState.isDirty;
 
   // ===========================================================================
   // CELL HELPERS
   // ===========================================================================
 
+  /**
+   * Get cell at specific position (handles spanning)
+   */
   const getCellAt = useCallback(
     (row, col) => {
       return cells.find(
         (c) =>
-          c &&
           row >= c.row &&
           row < c.row + (c.rowSpan || 1) &&
           col >= c.col &&
@@ -423,6 +321,9 @@ export function useCanvasNavigator(logic) {
     [cells]
   );
 
+  /**
+   * Check if position is within current viewport
+   */
   const isInViewport = useCallback(
     (row, col) => {
       return (
@@ -436,68 +337,33 @@ export function useCanvasNavigator(logic) {
   );
 
   /**
-   * Get cell color - handles multiple data formats
+   * Get collaborators at a specific cell
    */
-  const getCellColor = useCallback((cell) => {
-    if (!cell) return null;
-
-    // If viewColor is a hex string (from LayoutPanel.logic enrichment)
-    if (typeof cell.viewColor === "string" && cell.viewColor.startsWith("#")) {
-      return cell.viewColor;
-    }
-
-    // If instanceColor is a hex string
-    if (
-      typeof cell.instanceColor === "string" &&
-      cell.instanceColor.startsWith("#")
-    ) {
-      return cell.instanceColor;
-    }
-
-    // If instanceColor is a number, use as index
-    if (typeof cell.instanceColor === "number") {
-      return INSTANCE_COLORS[cell.instanceColor % INSTANCE_COLORS.length];
-    }
-
-    // If color is a number, use as index
-    if (typeof cell.color === "number") {
-      return INSTANCE_COLORS[cell.color % INSTANCE_COLORS.length];
-    }
-
-    // If color is already a hex string
-    if (typeof cell.color === "string" && cell.color.startsWith("#")) {
-      return cell.color;
-    }
-
-    // Fallback: hash the id
-    if (cell.id) {
-      const hash = cell.id
-        .split("")
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      return INSTANCE_COLORS[hash % INSTANCE_COLORS.length];
-    }
-
-    return INSTANCE_COLORS[0];
-  }, []);
+  const getCollaboratorsAtCell = useCallback(
+    (row, col) => {
+      return collaborators.filter(
+        (c) => c.position?.row === row && c.position?.col === col
+      );
+    },
+    [collaborators]
+  );
 
   /**
-   * Get display text for cell
+   * Get display text for cell based on display mode
    */
   const getCellDisplay = useCallback(
-    (cell, index) => {
+    (cell, index, maxWidth = 60) => {
       if (!cell) return null;
 
       switch (displayMode) {
         case DISPLAY_MODES.NUMBERS:
           return index + 1;
         case DISPLAY_MODES.NAMES: {
-          const name =
-            cell.name || cell.viewName || cell.title || `View ${index + 1}`;
-          const cellWidth = (cell.colSpan || 1) * 26;
-          const maxLen = Math.max(3, Math.floor(cellWidth / 7));
+          const name = cell.name || `View ${index + 1}`;
+          const maxLen = Math.floor(maxWidth / 7); // Approximate character width
           return name.length <= maxLen
             ? name
-            : name.substring(0, maxLen - 1) + "…";
+            : name.substring(0, Math.max(2, maxLen - 1)) + "…";
         }
         case DISPLAY_MODES.COLORS:
           return null;
@@ -508,8 +374,147 @@ export function useCanvasNavigator(logic) {
     [displayMode]
   );
 
+  /**
+   * Get cell color
+   */
+  const getCellColor = useCallback((cell) => {
+    if (!cell) return null;
+    if (typeof cell.color === "string") {
+      return INSTANCE_COLORS[cell.color] || cell.color;
+    }
+    // Numeric index into color array
+    const colorKeys = Object.keys(INSTANCE_COLORS);
+    const colorKey = colorKeys[cell.color % colorKeys.length];
+    return INSTANCE_COLORS[colorKey];
+  }, []);
+
   // ===========================================================================
-  // EDIT MODE - SELECTION
+  // NAVIGATION
+  // ===========================================================================
+
+  const handleMoveViewport = useCallback(
+    (direction) => {
+      if (!parentMoveViewport) return;
+
+      switch (direction) {
+        case "up":
+          parentMoveViewport(-1, 0);
+          break;
+        case "down":
+          parentMoveViewport(1, 0);
+          break;
+        case "left":
+          parentMoveViewport(0, -1);
+          break;
+        case "right":
+          parentMoveViewport(0, 1);
+          break;
+      }
+    },
+    [parentMoveViewport]
+  );
+
+  const handleNavigateToCell = useCallback(
+    (row, col) => {
+      if (parentNavigateToCell) {
+        parentNavigateToCell(row, col);
+      }
+    },
+    [parentNavigateToCell]
+  );
+
+  const handleNavigateHome = useCallback(() => {
+    if (homepoint && parentNavigateToCell) {
+      parentNavigateToCell(homepoint.row, homepoint.col);
+    }
+  }, [homepoint, parentNavigateToCell]);
+
+  // ===========================================================================
+  // HOMEPOINT
+  // ===========================================================================
+
+  const handleSetHomepoint = useCallback(
+    (row, col) => {
+      if (parentSetHomepoint) {
+        parentSetHomepoint(row, col);
+      }
+      setSettingHomepoint(false);
+    },
+    [parentSetHomepoint]
+  );
+
+  const handleClearHomepoint = useCallback(() => {
+    if (parentClearHomepoint) {
+      parentClearHomepoint();
+    }
+  }, [parentClearHomepoint]);
+
+  // ===========================================================================
+  // VIEWPORT SIZE
+  // ===========================================================================
+
+  const handleSetViewportSizeRows = useCallback(
+    (rows) => {
+      if (parentSetViewportSizeRows) {
+        parentSetViewportSizeRows(rows);
+      }
+    },
+    [parentSetViewportSizeRows]
+  );
+
+  const handleSetViewportSizeCols = useCallback(
+    (cols) => {
+      if (parentSetViewportSizeCols) {
+        parentSetViewportSizeCols(cols);
+      }
+    },
+    [parentSetViewportSizeCols]
+  );
+
+  // ===========================================================================
+  // CANVAS SIZE
+  // ===========================================================================
+
+  const handleSetCanvasRows = useCallback(
+    (rows) => {
+      if (parentSetCanvasRows) {
+        parentSetCanvasRows(rows);
+      }
+    },
+    [parentSetCanvasRows]
+  );
+
+  const handleSetCanvasCols = useCallback(
+    (cols) => {
+      if (parentSetCanvasCols) {
+        parentSetCanvasCols(cols);
+      }
+    },
+    [parentSetCanvasCols]
+  );
+
+  const handleAddRow = useCallback(() => {
+    handleSetCanvasRows(canvasSize.rows + 1);
+  }, [canvasSize.rows, handleSetCanvasRows]);
+
+  const handleRemoveRow = useCallback(() => {
+    if (canvasSize.rows > 1) {
+      handleSetCanvasRows(canvasSize.rows - 1);
+    }
+  }, [canvasSize.rows, handleSetCanvasRows]);
+
+  const handleAddColumn = useCallback(() => {
+    handleSetCanvasCols(canvasSize.cols + 1);
+  }, [canvasSize.cols, handleSetCanvasCols]);
+
+  const handleRemoveColumn = useCallback(() => {
+    if (canvasSize.cols > 1) {
+      handleSetCanvasCols(canvasSize.cols - 1);
+    }
+  }, [canvasSize.cols, handleSetCanvasCols]);
+
+  // ===========================================================================
+  // CELL SELECTION (Edit Mode)
   // ===========================================================================
 
   const selectCell = useCallback((row, col, isMultiSelect = false) => {
@@ -533,20 +538,23 @@ export function useCanvasNavigator(logic) {
   }, [cells]);
 
   // ===========================================================================
-  // EDIT MODE - MERGE/UNMERGE/DELETE
+  // MERGE / UNMERGE / DELETE
   // ===========================================================================
 
   const canMerge = useMemo(() => {
     if (selectedCells.length < 2) return false;
+
     // Check if cells form a rectangle
     const selected = selectedCells.map((key) => {
       const [row, col] = key.split("-").map(Number);
       return { row, col };
     });
+
     const minRow = Math.min(...selected.map((s) => s.row));
     const maxRow = Math.max(...selected.map((s) => s.row));
     const minCol = Math.min(...selected.map((s) => s.col));
     const maxCol = Math.max(...selected.map((s) => s.col));
+
     const expectedCount = (maxRow - minRow + 1) * (maxCol - minCol + 1);
     return selectedCells.length === expectedCount;
   }, [selectedCells]);
@@ -559,7 +567,9 @@ export function useCanvasNavigator(logic) {
   }, [selectedCells, getCellAt]);
 
   const handleMerge = useCallback(async () => {
-    if (!canMerge) return;
+    if (!canMerge || !parentMergeCells) return;
+
+    // Get cell IDs for selected cells
     const cellIds = selectedCells
       .map((key) => {
         const [row, col] = key.split("-").map(Number);
@@ -567,18 +577,37 @@ export function useCanvasNavigator(logic) {
       })
       .filter(Boolean);
 
-    if (parentMergeCells) {
-      await parentMergeCells(cellIds);
-    }
+    // Snapshot before change
+    dispatchHistory({
+      type: HISTORY_ACTIONS.SNAPSHOT,
+      payload: { cells, canvasSize },
+    });
+
+    await parentMergeCells(cellIds);
     clearSelection();
-  }, [canMerge, selectedCells, getCellAt, parentMergeCells, clearSelection]);
+  }, [
+    canMerge,
+    selectedCells,
+    getCellAt,
+    parentMergeCells,
+    cells,
+    canvasSize,
+    clearSelection,
+  ]);
 
   const handleUnmerge = useCallback(async () => {
-    if (!canUnmerge) return;
+    if (!canUnmerge || !parentUnmergeCells) return;
+
     const [row, col] = selectedCells[0].split("-").map(Number);
     const cell = getCellAt(row, col);
 
-    if (cell && parentUnmergeCells) {
+    if (cell) {
+      // Snapshot before change
+      dispatchHistory({
+        type: HISTORY_ACTIONS.SNAPSHOT,
+        payload: { cells, canvasSize },
+      });
+
       await parentUnmergeCells(cell.id);
     }
     clearSelection();
@@ -587,30 +616,67 @@ export function useCanvasNavigator(logic) {
     selectedCells,
     getCellAt,
     parentUnmergeCells,
+    cells,
+    canvasSize,
     clearSelection,
   ]);
 
   const handleDelete = useCallback(async () => {
-    if (selectedCells.length === 0) return;
+    if (selectedCells.length === 0 || !parentRemovePlacement) return;
+
+    // Snapshot before change
+    dispatchHistory({
+      type: HISTORY_ACTIONS.SNAPSHOT,
+      payload: { cells, canvasSize },
+    });
 
     for (const key of selectedCells) {
       const [row, col] = key.split("-").map(Number);
       const cell = getCellAt(row, col);
-      if (cell && removePlacement) {
-        await removePlacement(cell.id);
+      if (cell) {
+        await parentRemovePlacement(cell.id);
       }
     }
     clearSelection();
-  }, [selectedCells, getCellAt, removePlacement, clearSelection]);
+  }, [
+    selectedCells,
+    getCellAt,
+    parentRemovePlacement,
+    cells,
+    canvasSize,
+    clearSelection,
+  ]);
 
   // ===========================================================================
-  // DRAG AND DROP
+  // PLACEMENT RESIZE
+  // ===========================================================================
+
+  const handleResizePlacement = useCallback(
+    async (id, rowSpan, colSpan) => {
+      if (!parentResizePlacement) return;
+
+      // Snapshot before change
+      dispatchHistory({
+        type: HISTORY_ACTIONS.SNAPSHOT,
+        payload: { cells, canvasSize },
+      });
+
+      await parentResizePlacement(id, rowSpan, colSpan);
+    },
+    [parentResizePlacement, cells, canvasSize]
+  );
+
+  // ===========================================================================
+  // DRAG AND DROP - Internal
   // ===========================================================================
 
   const handleDragStart = useCallback((cell, e) => {
+    if (!cell) return;
     setDraggedCell(cell);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", cell.id);
+    if (e?.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", cell.id);
+    }
   }, []);
 
   const handleDragEnd = useCallback(() => {
@@ -619,37 +685,242 @@ export function useCanvasNavigator(logic) {
   }, []);
 
   const handleDragOver = useCallback((row, col, e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    if (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
     setDragOverCell({ row, col });
   }, []);
 
   const handleDrop = useCallback(
     async (row, col, e) => {
-      e.preventDefault();
+      if (e) e.preventDefault();
 
-      if (draggedCell && movePlacement) {
+      if (draggedCell && parentMovePlacement) {
+        // Same cell - do nothing
         if (draggedCell.row === row && draggedCell.col === col) {
           handleDragEnd();
           return;
         }
 
-        log.debug(
-          `Moving cell from (${draggedCell.row}, ${draggedCell.col}) to (${row}, ${col})`
-        );
-        await movePlacement(draggedCell.id, row, col);
+        // Check if target has a cell
+        const targetCell = getCellAt(row, col);
+
+        // Snapshot before change
+        dispatchHistory({
+          type: HISTORY_ACTIONS.SNAPSHOT,
+          payload: { cells, canvasSize },
+        });
+
+        if (targetCell && targetCell.id !== draggedCell.id) {
+          // Swap positions
+          if (parentSwapPlacements) {
+            log.debug(`Swapping ${draggedCell.id} with ${targetCell.id}`);
+            await parentSwapPlacements(draggedCell.id, targetCell.id);
+          }
+        } else if (!targetCell) {
+          // Move to empty cell
+          log.debug(`Moving ${draggedCell.id} to (${row}, ${col})`);
+          await parentMovePlacement(draggedCell.id, row, col);
+        }
       }
 
       handleDragEnd();
     },
-    [draggedCell, movePlacement, handleDragEnd]
+    [
+      draggedCell,
+      getCellAt,
+      parentMovePlacement,
+      parentSwapPlacements,
+      cells,
+      canvasSize,
+      handleDragEnd,
+    ]
   );
 
   // ===========================================================================
-  // COMPUTED STATE
+  // DRAG AND DROP - External (from ViewItem)
   // ===========================================================================
 
-  const isDisabled = loading || !isConnected;
+  const handleExternalDragEnter = useCallback((e) => {
+    if (e.dataTransfer.types.includes("application/x-viewitem")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleExternalDragOver = useCallback((e, row, col) => {
+    if (e.dataTransfer.types.includes("application/x-viewitem")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setExternalDragOver({ row, col });
+    }
+  }, []);
+
+  const handleExternalDragLeave = useCallback((e, containerRef) => {
+    const relatedTarget = e.relatedTarget;
+    if (
+      !relatedTarget ||
+      !(relatedTarget instanceof Node) ||
+      !containerRef?.current?.contains(relatedTarget)
+    ) {
+      setExternalDragOver(null);
+    }
+  }, []);
+
+  const handleExternalDrop = useCallback(
+    (e, row, col) => {
+      if (!e.dataTransfer.types.includes("application/x-viewitem")) return;
+
+      e.preventDefault();
+      const viewItemData = e.dataTransfer.getData("application/x-viewitem");
+
+      try {
+        const viewItem = JSON.parse(viewItemData);
+        log.debug("External drop:", viewItem, { row, col });
+
+        if (onExternalDrop) {
+          onExternalDrop(viewItem, { row, col });
+        }
+      } catch (err) {
+        log.error("Failed to parse dropped ViewItem:", err);
+      }
+
+      setExternalDragOver(null);
+    },
+    [onExternalDrop]
+  );
+
+  // ===========================================================================
+  // UNDO / REDO
+  // ===========================================================================
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    dispatchHistory({ type: HISTORY_ACTIONS.UNDO });
+    // Note: We'd need to apply the undone state to the actual canvas
+    // This requires the parent to accept a "restore" callback
+  }, [canUndo]);
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    dispatchHistory({ type: HISTORY_ACTIONS.REDO });
+  }, [canRedo]);
+
+  // ===========================================================================
+  // APPLY / CANCEL
+  // ===========================================================================
+
+  const handleApply = useCallback(() => {
+    dispatchHistory({ type: HISTORY_ACTIONS.MARK_SAVED });
+    log.info("Changes applied");
+    // Could emit event or call callback here
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    dispatchHistory({ type: HISTORY_ACTIONS.RESET_TO_SAVED });
+    log.info("Changes cancelled");
+    // Note: Would need to restore from savedIndex state
+  }, []);
+
+  // ===========================================================================
+  // CELL CLICK HANDLER
+  // ===========================================================================
+
+  const handleCellClick = useCallback(
+    (row, col, cell, e) => {
+      // Setting homepoint mode
+      if (settingHomepoint) {
+        handleSetHomepoint(row, col);
+        return;
+      }
+
+      // Edit mode - handle selection
+      if (contextMode === CONTEXT_MODES.EDIT) {
+        if (e?.shiftKey) {
+          // Multi-select
+          selectCell(row, col, true);
+        } else {
+          // Single select
+          selectCell(row, col, false);
+        }
+        return;
+      }
+
+      // Views mode - navigate
+      handleNavigateToCell(row, col);
+    },
+    [
+      settingHomepoint,
+      contextMode,
+      handleSetHomepoint,
+      selectCell,
+      handleNavigateToCell,
+    ]
+  );
+
+  // ===========================================================================
+  // MINIMAP CELLS COMPUTATION
+  // ===========================================================================
+
+  const minimapCells = useMemo(() => {
+    const result = [];
+    const processedCells = new Set();
+    let viewIndex = 0;
+
+    for (let row = 0; row < canvasSize.rows; row++) {
+      for (let col = 0; col < canvasSize.cols; col++) {
+        const cell = getCellAt(row, col);
+        const inVP = isInViewport(row, col);
+        const isHome =
+          homepoint && row === homepoint.row && col === homepoint.col;
+        const isSelected = selectedCells.includes(`${row}-${col}`);
+        const isDragOver =
+          dragOverCell?.row === row && dragOverCell?.col === col;
+        const isExtDragOver =
+          externalDragOver?.row === row && externalDragOver?.col === col;
+        const cellCollaborators = getCollaboratorsAtCell(row, col);
+
+        // Skip non-origin cells of spanning placements
+        if (cell && (cell.row !== row || cell.col !== col)) continue;
+
+        // Track processed cells to avoid duplicates
+        const key = `${row}-${col}`;
+        if (processedCells.has(key)) continue;
+        processedCells.add(key);
+
+        const cellIndex = cell ? viewIndex++ : -1;
+
+        result.push({
+          row,
+          col,
+          cell,
+          inVP,
+          isHome,
+          isSelected,
+          isDragOver,
+          isExtDragOver,
+          cellIndex,
+          key,
+          collaborators: cellCollaborators,
+        });
+      }
+    }
+
+    return result;
+  }, [
+    canvasSize,
+    cells,
+    viewport,
+    viewportSize,
+    homepoint,
+    selectedCells,
+    dragOverCell,
+    externalDragOver,
+    getCellAt,
+    isInViewport,
+    getCollaboratorsAtCell,
+  ]);
 
   // ===========================================================================
   // RETURN API
@@ -662,10 +933,12 @@ export function useCanvasNavigator(logic) {
     viewportSize,
     cells,
     homepoint,
+    collaborators,
     minimapZoom,
     dockPosition,
     floatPosition,
-    mode,
+    contextMode,
+    navMode,
     displayMode,
     selectedCells,
     settingHomepoint,
@@ -673,56 +946,93 @@ export function useCanvasNavigator(logic) {
     isDisabled,
     loading,
     isConnected,
+    hoveredCell,
+    tooltipPos,
+    minimapCells,
+
+    // History state
+    canUndo,
+    canRedo,
+    isDirty,
+
+    // Drag state
+    draggedCell,
+    dragOverCell,
+    externalDragOver,
 
     // Mode setters
-    setMode,
+    setContextMode,
+    setNavMode,
     setDisplayMode,
     setSettingHomepoint,
-    setDockPosition,
-    setFloatPosition,
     setMinimapZoom,
+    setFloatPosition,
+    setHoveredCell,
+    setTooltipPos,
 
     // Navigation
-    moveViewport,
-    navigateToCell,
+    moveViewport: handleMoveViewport,
+    navigateToCell: handleNavigateToCell,
+    navigateHome: handleNavigateHome,
 
     // Homepoint
-    setHomepoint,
-    clearHomepoint,
+    setHomepoint: handleSetHomepoint,
+    clearHomepoint: handleClearHomepoint,
 
     // Viewport size
-    setViewportSizeRows,
-    setViewportSizeCols,
+    setViewportSizeRows: handleSetViewportSizeRows,
+    setViewportSizeCols: handleSetViewportSizeCols,
 
     // Canvas size
-    setCanvasRows,
-    setCanvasCols,
+    setCanvasRows: handleSetCanvasRows,
+    setCanvasCols: handleSetCanvasCols,
+    addRow: handleAddRow,
+    removeRow: handleRemoveRow,
+    addColumn: handleAddColumn,
+    removeColumn: handleRemoveColumn,
 
-    // Edit mode - selection
+    // Cell selection (edit mode)
     selectCell,
     clearSelection,
     selectAll,
 
-    // Edit mode - operations
+    // Edit operations
     handleMerge,
     handleUnmerge,
     handleDelete,
+    handleResizePlacement,
     canMerge,
     canUnmerge,
+
+    // Drag and drop - internal
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+
+    // Drag and drop - external
+    handleExternalDragEnter,
+    handleExternalDragOver,
+    handleExternalDragLeave,
+    handleExternalDrop,
+
+    // Undo/Redo
+    undo: handleUndo,
+    redo: handleRedo,
+
+    // Apply/Cancel
+    apply: handleApply,
+    cancel: handleCancel,
 
     // Cell helpers
     getCellAt,
     isInViewport,
     getCellDisplay,
     getCellColor,
+    getCollaboratorsAtCell,
 
-    // Drag and drop
-    draggedCell,
-    dragOverCell,
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDrop,
+    // Cell click
+    handleCellClick,
   };
 }
 
