@@ -13,7 +13,10 @@
 import { LayoutPanel } from "./LayoutPanel";
 
 export { LayoutPanel };
-export { FloatingCanvasNavigator } from "./FloatingCanvasNavigator";
+export {
+  FloatingCanvasNavigator,
+  useNavigatorButton,
+} from "./FloatingCanvasNavigator";
 export default LayoutPanel;
 
 // =============================================================================
@@ -42,27 +45,24 @@ export {
   VIEW_MODES,
   SPAWN_SIZES,
   parseSpawnSize,
-  // NOTE: DOCK_POSITIONS is NOT exported from LayoutPanel.logic.js
-  // Use the one from LayoutPanelContext instead
 } from "./LayoutPanel.logic";
 
+// =============================================================================
+// CANVAS NAVIGATOR EXPORTS
+// =============================================================================
+
+// Export CanvasNavigator and its constants
 export {
-  useCanvasNavigator,
-  // Constants
-  CONTEXT_MODES,
+  CanvasNavigator,
   DISPLAY_MODES,
   NAV_MODES,
   INSTANCE_COLORS,
-  // NOTE: usePressAndHold and useViewportDrag were removed
-  // NOTE: DOCK_POSITIONS is NOT exported from CanvasNavigator.logic.js
-  // Use the one from LayoutPanelContext instead
-} from "./components/CanvasNavigator/CanvasNavigator.logic";
+} from "./components/CanvasNavigator/CanvasNavigator";
 
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
 
-export { CanvasNavigator } from "./components/CanvasNavigator/CanvasNavigator";
 export { SpawnSizePicker } from "./components/SpawnSizePicker";
 
 // =============================================================================

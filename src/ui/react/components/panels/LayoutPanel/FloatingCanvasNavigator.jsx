@@ -1,51 +1,37 @@
 // src/ui/react/components/panels/LayoutPanel/FloatingCanvasNavigator.jsx
-// Floating Canvas Navigator - renders the navigator based on dock position
+// Floating Canvas Navigator - Draggable & Resizable wrapper for CanvasNavigator
 //
-// IMPORTANT: Import DOCK_POSITIONS from LayoutPanelContext, NOT from
-// CanvasNavigator.logic.js to ensure consistent comparisons.
-//
-// SIZE CONSTRAINTS UPDATED:
-// - MIN_SIZE: 400x300 (was 280x200) - ensures controls always fit
-// - DEFAULT_SIZE: 580x400 (was 520x380) - comfortable default
-// - MAX_SIZE: 900x700 - prevents over-sizing
-// - COMPACT_THRESHOLD: 480 (was 350) - switch to compact layout
+// FIXED: Drag handling now uses onMouseDown on the container and checks target,
+// instead of an overlay that blocks button clicks.
 
 import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { useLayoutPanelContext, DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
-import { Grid3X3 } from 'lucide-react';
 import './FloatingCanvasNavigator.scss';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-// Corner position styles
-const CORNER_POSITIONS = {
+const FLOAT_POSITION_KEY = 'cia-navigator-float-position';
+const FLOAT_SIZE_KEY = 'cia-navigator-float-size';
+
+const DEFAULT_SIZE = { width: 520, height: 380 };
+const MIN_SIZE = { width: 350, height: 280 };
+const MAX_SIZE = { width: 900, height: 700 };
+
+// Corner positions
+const CORNER_STYLES = {
     [DOCK_POSITIONS.TOP_LEFT]: { top: 70, left: 16 },
     [DOCK_POSITIONS.TOP_RIGHT]: { top: 70, right: 16 },
     [DOCK_POSITIONS.BOTTOM_LEFT]: { bottom: 70, left: 16 },
     [DOCK_POSITIONS.BOTTOM_RIGHT]: { bottom: 70, right: 16 },
 };
 
-// LocalStorage keys
-const FLOAT_POSITION_KEY = 'cia-navigator-float-position';
-const FLOAT_SIZE_KEY = 'cia-navigator-float-size';
-
-// Size constraints - UPDATED for better usability
-const DEFAULT_SIZE = { width: 580, height: 400 };   // Comfortable default
-const MIN_SIZE = { width: 430, height: 300 };      // Ensures controls always fit
-const MAX_SIZE = { width: 900, height: 700 };       // Prevents over-sizing
-const COMPACT_THRESHOLD = 480;                       // Width to switch to compact mode
-const VERY_COMPACT_HEIGHT = 360;                     // Height threshold for very compact
-
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-/**
- * Load float position from localStorage
- */
 function loadFloatPosition() {
     try {
         const stored = localStorage.getItem(FLOAT_POSITION_KEY);
@@ -64,9 +50,6 @@ function loadFloatPosition() {
     return { x: 100, y: 100 };
 }
 
-/**
- * Load float size from localStorage with MIN/MAX bounds
- */
 function loadFloatSize() {
     try {
         const stored = localStorage.getItem(FLOAT_SIZE_KEY);
@@ -89,86 +72,69 @@ function loadFloatSize() {
 // COMPONENT
 // =============================================================================
 
-/**
- * FloatingCanvasNavigator
- *
- * Renders the CanvasNavigator in floating/corner positions.
- *
- * RENDER CONDITIONS:
- * - Returns null if dockPosition === LEFT_PANEL (LayoutPanel handles that)
- * - Returns minimized button if dockPosition === MINIMIZED
- * - Otherwise renders the full navigator
- */
 export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     className = '',
 }) {
     const context = useLayoutPanelContext();
+    const containerRef = useRef(null);
 
-    // Float position state (persisted)
+    // Position & size state
     const [floatPosition, setFloatPosition] = useState(loadFloatPosition);
-
-    // Float size state (persisted)
     const [floatSize, setFloatSize] = useState(loadFloatSize);
 
     // Drag state
     const [isDragging, setIsDragging] = useState(false);
     const dragStartRef = useRef(null);
-    const containerRef = useRef(null);
 
     // Resize state
     const [isResizing, setIsResizing] = useState(false);
     const [resizeDirection, setResizeDirection] = useState(null);
     const resizeStartRef = useRef(null);
 
-    // Compact mode based on width, very compact when both narrow AND short
-    const isCompact = floatSize.width < COMPACT_THRESHOLD;
-    const isVeryCompact = isCompact && floatSize.height < VERY_COMPACT_HEIGHT;
-
-    // Extract values from context (with safe defaults)
+    // Extract dock position
     const logic = context?.logic;
-    const contextDockPosition = context?.dockPosition;
-    const dockPosition = contextDockPosition || logic?.dockPosition || DOCK_POSITIONS.FLOAT;
-    const setDockPosition = logic?.setDockPosition || (() => { });
+    const dockPosition = context?.dockPosition || logic?.dockPosition || DOCK_POSITIONS.FLOAT;
+    const setDockPosition = context?.setDockPosition || logic?.setDockPosition || (() => { });
 
     // ==========================================================================
-    // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+    // PERSISTENCE
     // ==========================================================================
 
-    // Save float position to localStorage when it changes
     useEffect(() => {
         if (dockPosition === DOCK_POSITIONS.FLOAT && !isDragging) {
             try {
                 localStorage.setItem(FLOAT_POSITION_KEY, JSON.stringify(floatPosition));
-            } catch (e) {
-                console.warn('[FloatingCanvasNavigator] Failed to save position:', e);
-            }
+            } catch (e) { }
         }
     }, [floatPosition, dockPosition, isDragging]);
 
-    // Save float size to localStorage when it changes
     useEffect(() => {
         if (dockPosition === DOCK_POSITIONS.FLOAT && !isResizing) {
             try {
                 localStorage.setItem(FLOAT_SIZE_KEY, JSON.stringify(floatSize));
-            } catch (e) {
-                console.warn('[FloatingCanvasNavigator] Failed to save size:', e);
-            }
+            } catch (e) { }
         }
     }, [floatSize, dockPosition, isResizing]);
 
     // ==========================================================================
-    // DRAG HANDLERS
+    // DRAG HANDLERS - Fixed to not block buttons
     // ==========================================================================
 
-    const handleDragStart = useCallback((e) => {
+    const handleMouseDown = useCallback((e) => {
         // Only allow dragging in float mode
         if (dockPosition !== DOCK_POSITIONS.FLOAT) return;
 
-        // Don't drag from interactive elements
-        if (e.target.closest('button, input, .canvas-navigator__grid')) return;
+        // Don't drag if clicking on interactive elements
+        if (e.target.closest('button, input, select, [role="button"]')) {
+            return;
+        }
 
-        // Only drag from header area
-        if (!e.target.closest('.canvas-navigator__header, .canvas-navigator__drag-handle')) return;
+        // Only drag from header area (check if click is in top ~45px of container)
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const clickY = e.clientY - rect.top;
+        if (clickY > 35) return; // Only drag from header region (header is ~30px tall now)
 
         e.preventDefault();
         setIsDragging(true);
@@ -190,10 +156,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         const dy = e.clientY - dragStartRef.current.mouseY;
 
         setFloatPosition({
-            x: Math.max(0, Math.min(window.innerWidth - MIN_SIZE.width, dragStartRef.current.posX + dx)),
-            y: Math.max(60, Math.min(window.innerHeight - MIN_SIZE.height, dragStartRef.current.posY + dy)),
+            x: Math.max(0, Math.min(window.innerWidth - floatSize.width, dragStartRef.current.posX + dx)),
+            y: Math.max(60, Math.min(window.innerHeight - floatSize.height, dragStartRef.current.posY + dy)),
         });
-    }, [isDragging]);
+    }, [isDragging, floatSize]);
 
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
@@ -201,20 +167,6 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
     }, []);
-
-    // Global mouse event listeners for drag
-    useEffect(() => {
-        if (isDragging) {
-            window.addEventListener('mousemove', handleDragMove);
-            window.addEventListener('mouseup', handleDragEnd);
-            return () => {
-                window.removeEventListener('mousemove', handleDragMove);
-                window.removeEventListener('mouseup', handleDragEnd);
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-            };
-        }
-    }, [isDragging, handleDragMove, handleDragEnd]);
 
     // ==========================================================================
     // RESIZE HANDLERS
@@ -251,34 +203,30 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         let newX = resizeStartRef.current.posX;
         let newY = resizeStartRef.current.posY;
 
-        // Handle horizontal resize with MIN and MAX bounds
+        // Horizontal
         if (dir.includes('e')) {
             newWidth = Math.min(MAX_SIZE.width, Math.max(MIN_SIZE.width, resizeStartRef.current.width + dx));
         }
         if (dir.includes('w')) {
             const maxDelta = resizeStartRef.current.width - MIN_SIZE.width;
-            const minDelta = resizeStartRef.current.width - MAX_SIZE.width;
-            const widthDelta = Math.max(minDelta, Math.min(maxDelta, dx));
-            newWidth = resizeStartRef.current.width - widthDelta;
-            newX = resizeStartRef.current.posX + widthDelta;
+            const widthDelta = Math.min(maxDelta, dx);
+            newWidth = Math.max(MIN_SIZE.width, resizeStartRef.current.width - widthDelta);
+            newX = resizeStartRef.current.posX + (resizeStartRef.current.width - newWidth);
         }
 
-        // Handle vertical resize with MIN and MAX bounds
+        // Vertical
         if (dir.includes('s')) {
             newHeight = Math.min(MAX_SIZE.height, Math.max(MIN_SIZE.height, resizeStartRef.current.height + dy));
         }
         if (dir.includes('n')) {
             const maxDelta = resizeStartRef.current.height - MIN_SIZE.height;
-            const minDelta = resizeStartRef.current.height - MAX_SIZE.height;
-            const heightDelta = Math.max(minDelta, Math.min(maxDelta, dy));
-            newHeight = resizeStartRef.current.height - heightDelta;
-            newY = resizeStartRef.current.posY + heightDelta;
+            const heightDelta = Math.min(maxDelta, dy);
+            newHeight = Math.max(MIN_SIZE.height, resizeStartRef.current.height - heightDelta);
+            newY = resizeStartRef.current.posY + (resizeStartRef.current.height - newHeight);
         }
 
         setFloatSize({ width: newWidth, height: newHeight });
-        if (dir.includes('w') || dir.includes('n')) {
-            setFloatPosition({ x: newX, y: newY });
-        }
+        setFloatPosition({ x: newX, y: newY });
     }, [isResizing, resizeDirection]);
 
     const handleResizeEnd = useCallback(() => {
@@ -289,7 +237,21 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         document.body.style.userSelect = '';
     }, []);
 
-    // Global mouse event listeners for resize
+    // ==========================================================================
+    // GLOBAL EVENT LISTENERS
+    // ==========================================================================
+
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', handleDragMove);
+            window.addEventListener('mouseup', handleDragEnd);
+            return () => {
+                window.removeEventListener('mousemove', handleDragMove);
+                window.removeEventListener('mouseup', handleDragEnd);
+            };
+        }
+    }, [isDragging, handleDragMove, handleDragEnd]);
+
     useEffect(() => {
         if (isResizing) {
             window.addEventListener('mousemove', handleResizeMove);
@@ -297,116 +259,105 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
             return () => {
                 window.removeEventListener('mousemove', handleResizeMove);
                 window.removeEventListener('mouseup', handleResizeEnd);
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
             };
         }
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
     // ==========================================================================
-    // CONDITIONAL RETURNS - Only AFTER all hooks have been called
+    // RENDER CONDITIONS
     // ==========================================================================
 
-    // Don't render if no context available
-    if (!context?.logic) {
-        return null;
-    }
-
-    // DON'T render if docked in left panel - LayoutPanel handles that
+    // Don't render if docked in left panel
     if (dockPosition === DOCK_POSITIONS.LEFT_PANEL) {
         return null;
     }
 
-    // ==========================================================================
-    // RENDER - MINIMIZED STATE
-    // ==========================================================================
-
-    // When minimized, don't render anything here.
-    // The Navigator button in the secondary bottom bar (left zone) handles
-    // the "open" action. This prevents the duplicate large banner.
+    // Don't render if minimized - user can access from left panel
     if (dockPosition === DOCK_POSITIONS.MINIMIZED) {
         return null;
     }
 
     // ==========================================================================
-    // RENDER - FLOATING/CORNER STATE
+    // POSITION STYLE
     // ==========================================================================
 
-    // Calculate position style
-    let positionStyle = {};
+    const isCorner = Object.keys(CORNER_STYLES).includes(dockPosition);
+    const isFloat = dockPosition === DOCK_POSITIONS.FLOAT;
 
-    if (dockPosition === DOCK_POSITIONS.FLOAT) {
-        positionStyle = {
-            position: 'fixed',
-            left: floatPosition.x,
-            top: floatPosition.y,
-            width: floatSize.width,
-            height: floatSize.height,
-        };
-    } else if (CORNER_POSITIONS[dockPosition]) {
-        positionStyle = {
-            position: 'fixed',
-            ...CORNER_POSITIONS[dockPosition],
-            // Corner positions use default size
-            width: DEFAULT_SIZE.width,
-            height: DEFAULT_SIZE.height,
-        };
-    }
+    const positionStyle = isCorner
+        ? { position: 'fixed', ...CORNER_STYLES[dockPosition], width: floatSize.width, height: floatSize.height }
+        : isFloat
+            ? { position: 'fixed', left: floatPosition.x, top: floatPosition.y, width: floatSize.width, height: floatSize.height }
+            : {};
 
-    // Check if corner docked (for opacity effect)
-    const isCornerDocked = Object.keys(CORNER_POSITIONS).includes(dockPosition);
-    const isFloating = dockPosition === DOCK_POSITIONS.FLOAT;
+    // ==========================================================================
+    // RENDER
+    // ==========================================================================
 
     return (
         <div
             ref={containerRef}
-            className={`floating-canvas-navigator ${isDragging ? 'floating-canvas-navigator--dragging' : ''} ${isResizing ? 'floating-canvas-navigator--resizing' : ''} ${isCornerDocked ? 'floating-canvas-navigator--corner' : ''} ${isCompact ? 'floating-canvas-navigator--compact' : ''} ${isVeryCompact ? 'floating-canvas-navigator--very-compact' : ''} ${className}`}
-            style={positionStyle}
-            onMouseDown={handleDragStart}
+            className={`floating-canvas-navigator ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${className}`}
+            onMouseDown={handleMouseDown}
+            style={{
+                ...positionStyle,
+                zIndex: 1000,
+                borderRadius: 12,
+                overflow: 'hidden',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                cursor: isFloat ? 'default' : 'default',
+            }}
         >
-            <CanvasNavigator
-                logic={logic}
-                onClose={() => setDockPosition(DOCK_POSITIONS.MINIMIZED)}
-                isCompact={isCompact}
-                isVeryCompact={isVeryCompact}
-            />
+            {/* Navigator Content */}
+            <CanvasNavigator isDockedInPanel={false} />
 
-            {/* Resize handles - only in float mode */}
-            {isFloating && (
+            {/* Resize Handles (only in float mode) */}
+            {isFloat && (
                 <>
-                    {/* Edge handles */}
+                    {/* Edges */}
                     <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--e"
-                        onMouseDown={(e) => handleResizeStart('e', e)}
-                    />
-                    <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--s"
-                        onMouseDown={(e) => handleResizeStart('s', e)}
-                    />
-                    <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--w"
-                        onMouseDown={(e) => handleResizeStart('w', e)}
-                    />
-                    <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--n"
+                        className="resize-handle resize-n"
                         onMouseDown={(e) => handleResizeStart('n', e)}
-                    />
-                    {/* Corner handles */}
-                    <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--se"
-                        onMouseDown={(e) => handleResizeStart('se', e)}
+                        style={{ position: 'absolute', top: 0, left: 12, right: 12, height: 6, cursor: 'ns-resize' }}
                     />
                     <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--sw"
-                        onMouseDown={(e) => handleResizeStart('sw', e)}
+                        className="resize-handle resize-s"
+                        onMouseDown={(e) => handleResizeStart('s', e)}
+                        style={{ position: 'absolute', bottom: 0, left: 12, right: 12, height: 6, cursor: 'ns-resize' }}
                     />
                     <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--ne"
-                        onMouseDown={(e) => handleResizeStart('ne', e)}
+                        className="resize-handle resize-w"
+                        onMouseDown={(e) => handleResizeStart('w', e)}
+                        style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 6, cursor: 'ew-resize' }}
                     />
                     <div
-                        className="floating-canvas-navigator__resize-handle floating-canvas-navigator__resize-handle--nw"
+                        className="resize-handle resize-e"
+                        onMouseDown={(e) => handleResizeStart('e', e)}
+                        style={{ position: 'absolute', right: 0, top: 12, bottom: 12, width: 6, cursor: 'ew-resize' }}
+                    />
+
+                    {/* Corners */}
+                    <div
+                        className="resize-handle resize-nw"
                         onMouseDown={(e) => handleResizeStart('nw', e)}
+                        style={{ position: 'absolute', top: 0, left: 0, width: 14, height: 14, cursor: 'nwse-resize' }}
+                    />
+                    <div
+                        className="resize-handle resize-ne"
+                        onMouseDown={(e) => handleResizeStart('ne', e)}
+                        style={{ position: 'absolute', top: 0, right: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
+                    />
+                    <div
+                        className="resize-handle resize-sw"
+                        onMouseDown={(e) => handleResizeStart('sw', e)}
+                        style={{ position: 'absolute', bottom: 0, left: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
+                    />
+                    <div
+                        className="resize-handle resize-se"
+                        onMouseDown={(e) => handleResizeStart('se', e)}
+                        style={{ position: 'absolute', bottom: 0, right: 0, width: 14, height: 14, cursor: 'nwse-resize' }}
                     />
                 </>
             )}
@@ -415,18 +366,17 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
 });
 
 // =============================================================================
-// HOOK EXPORT - For secondary bottom bar integration
+// HOOKS
 // =============================================================================
 
 /**
- * Hook for rendering the Navigator button in the secondary bottom bar
- * Provides state and methods to control the navigator from external components.
+ * Hook for controlling navigator from outside (e.g., buttons in footer)
  */
 export function useNavigatorButton() {
     const context = useLayoutPanelContext();
     const logic = context?.logic;
     const dockPosition = context?.dockPosition || logic?.dockPosition || DOCK_POSITIONS.FLOAT;
-    const setDockPosition = logic?.setDockPosition || (() => { });
+    const setDockPosition = context?.setDockPosition || logic?.setDockPosition || (() => { });
 
     const isMinimized = dockPosition === DOCK_POSITIONS.MINIMIZED;
     const isDocked = dockPosition === DOCK_POSITIONS.LEFT_PANEL;
