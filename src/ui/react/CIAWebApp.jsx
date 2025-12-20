@@ -57,7 +57,7 @@ import {
 import {
   PopoutButtons,
   InstanceSelector,
-  ViewModeToggle as LayoutModeToggle, // Renamed to avoid conflict with VR toggle
+  LayoutModeToggle,
   CanvasSizeDisplay,
   VoiceQuickControls,
 } from "@UI/react/components/layout/SecondaryFooter";

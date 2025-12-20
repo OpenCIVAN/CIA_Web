@@ -19,7 +19,7 @@
 import React from 'react';
 import { PopoutButtons } from './components/PopoutButtons';
 import { InstanceSelector } from './components/InstanceSelector';
-import { ViewModeToggle } from './components/ViewModeToggle';
+export { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle';
 import { CanvasSizeDisplay } from './components/CanvasSizeDisplay';
 import { VoiceQuickControls } from './components/VoiceQuickControls';
 
@@ -95,7 +95,7 @@ export function SecondaryFooter({
 
                 <div className="secondary-footer__divider" />
 
-                <ViewModeToggle
+                <LayoutModeToggle
                     mode={viewMode}
                     onChange={onViewModeChange}
                 />
