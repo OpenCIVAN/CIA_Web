@@ -111,6 +111,7 @@ import {
 } from "@UI/react/components/controls/ViewModeToggle";
 import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
+import { useInstanceSelector } from "@UI/react/hooks/useInstanceSelector.js";
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -164,6 +165,17 @@ export function CIAWebApp({ username, userId, projectId }) {
     userId,
   });
   const workspaceId = currentWorkspace?.id || "personal";
+
+  // ===========================================================================
+  // INSTANCE SELECTOR STATE (Fix #5)
+  // ===========================================================================
+  const {
+    activeInstance,
+    onCanvasViews,
+    availableViews,
+    handleSelectInstance,
+    handlePlaceView,
+  } = useInstanceSelector({ workspaceId });
 
   // ===========================================================================
   // ROOM STATE (Space Navigation)
@@ -339,17 +351,8 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   // ===========================================================================
   // CALLBACKS - SECONDARY FOOTER
+  // (handleSelectInstance and handlePlaceView are now from useInstanceSelector hook)
   // ===========================================================================
-  const handleSelectInstance = useCallback((instance) => {
-    log.debug("Select instance:", instance);
-    // TODO: Focus instance in canvas
-  }, []);
-
-  const handlePlaceView = useCallback((view) => {
-    log.debug("Place view:", view);
-    // TODO: Place view in next available canvas cell
-  }, []);
-
   const handleOpenVoiceSettings = useCallback(() => {
     log.debug("Open voice settings");
     // TODO: Open voice settings popout
@@ -435,15 +438,17 @@ export function CIAWebApp({ username, userId, projectId }) {
     // Right Zone: Room + Presence with dropdown (syncs with right panel width)
     right: (
       <RoomPresenceIndicator
-        room={{ id: currentRoomId, name: currentRoomName, type: 'main' }}
+        room={{ id: currentRoomId, name: currentRoomName, type: "main" }}
         members={[]} // TODO: Wire to presence system via presenceSystem.getUsersInRoom()
-        availableRooms={[
-          // TODO: Wire to actual rooms from RoomManager
-          // For now, showing structure expected by enhanced component
-        ]}
+        availableRooms={
+          [
+            // TODO: Wire to actual rooms from RoomManager
+            // For now, showing structure expected by enhanced component
+          ]
+        }
         onRoomChange={handleRoomSelect}
         onClick={handleOpenRoomsPanel}
-        onCreateRoom={() => log.debug('Create room')}
+        onCreateRoom={() => log.debug("Create room")}
       />
     ),
   };
@@ -461,9 +466,9 @@ export function CIAWebApp({ username, userId, projectId }) {
     center: (
       <div className="secondary-bar-zone__content">
         <InstanceSelector
-          activeInstance={null} // TODO: Wire to active instance state
-          onCanvasViews={[]} // TODO: Wire to canvas views
-          availableViews={[]} // TODO: Wire to available views
+          activeInstance={activeInstance}
+          onCanvasViews={onCanvasViews}
+          availableViews={availableViews}
           onSelectInstance={handleSelectInstance}
           onPlaceView={handlePlaceView}
         />
