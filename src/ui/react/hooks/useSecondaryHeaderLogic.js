@@ -4,8 +4,8 @@
  *
  * This hook bridges:
  * - LayoutPanelContext (canvas navigation, viewport)
+ * - workspaceManager (active instance - source of truth)
  * - ViewConfigurationManager (view names, metadata)
- * - Room/workspace state
  *
  * Usage:
  * ```jsx
@@ -17,6 +17,7 @@
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useLayoutPanelContext } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { getViewConfigurationManager } from "@Init/appInitializer";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events";
 import { ui as log } from "@Utils/logger.js";
@@ -141,7 +142,7 @@ export function useSecondaryHeaderLogic() {
   // =========================================================================
 
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeViewId, setActiveViewId] = useState(null);
+  const [activeInstance, setActiveInstance] = useState(null);
 
   // Listen for view/placement changes
   useEffect(() => {
@@ -165,61 +166,43 @@ export function useSecondaryHeaderLogic() {
     };
   }, []);
 
-  // Listen for focus events from other components to sync active view
+  // Sync with workspaceManager.getActiveInstance() - the source of truth
+  // This matches InstanceToolsTab behavior exactly
   useEffect(() => {
-    const handleViewFocused = ({ viewId }) => {
-      if (viewId && viewId !== activeViewId) {
-        log.debug("SecondaryHeader: External view focus", viewId);
-        setActiveViewId(viewId);
-      }
+    const updateActiveInstance = () => {
+      const instance = workspaceManager?.getActiveInstance?.();
+      setActiveInstance(instance || null);
     };
 
-    const handleCellFocused = (e) => {
-      const { row, col, viewId } = e.detail || {};
-      if (viewId) {
-        setActiveViewId(viewId);
-      } else if (typeof row === "number" && typeof col === "number") {
-        // Find view at this position
-        const viewAtPosition = cells.find(
-          (c) => c.row === row && c.col === col
-        );
-        if (viewAtPosition?.viewConfigurationId) {
-          setActiveViewId(viewAtPosition.viewConfigurationId);
-        }
-      }
+    // Initial check
+    updateActiveInstance();
+
+    // Listen for the same events as InstanceToolsTab
+    const handleInstanceFocus = () => {
+      updateActiveInstance();
     };
 
-    const unsub = eventBus.on(BUS_EVENTS.VIEW_FOCUSED, handleViewFocused);
-    window.addEventListener("cia:cell-focused", handleCellFocused);
-    window.addEventListener("cia:instance-focused", handleCellFocused);
+    window.addEventListener("cia:instance-focused", handleInstanceFocus);
+    window.addEventListener("cia:active-instance-changed", handleInstanceFocus);
+
+    // Also listen to eventBus
+    const unsub = eventBus.on(BUS_EVENTS.VIEW_FOCUSED, handleInstanceFocus);
 
     return () => {
       unsub?.();
-      window.removeEventListener("cia:cell-focused", handleCellFocused);
-      window.removeEventListener("cia:instance-focused", handleCellFocused);
+      window.removeEventListener("cia:instance-focused", handleInstanceFocus);
+      window.removeEventListener(
+        "cia:active-instance-changed",
+        handleInstanceFocus
+      );
     };
-  }, [activeViewId, cells]);
-
-  // Update active view when viewport changes to a cell with a view
-  useEffect(() => {
-    const viewAtViewport = cells.find(
-      (c) => c.row === viewport.row && c.col === viewport.col
-    );
-    if (viewAtViewport?.viewConfigurationId) {
-      setActiveViewId(viewAtViewport.viewConfigurationId);
-    }
-  }, [viewport.row, viewport.col, cells]);
+  }, []);
 
   /**
    * Get enriched views on canvas with names
    * Uses cells from LayoutPanelContext which are already enriched with view metadata
    */
   const onCanvasViews = useMemo(() => {
-    // Debug: log cells from context
-    if (cells.length > 0) {
-      log.debug("SecondaryHeader: cells from context:", cells.length, cells);
-    }
-
     // cells from context are already enriched with viewConfiguration data
     return cells.map((cell, index) => ({
       id: cell.viewConfigurationId || cell.id,
@@ -256,12 +239,40 @@ export function useSecondaryHeaderLogic() {
   }, [onCanvasViews, refreshKey]);
 
   /**
-   * Active view (currently selected)
+   * Active view (currently selected) - derived from workspaceManager's activeInstance
+   * Uses workspaceManager.getViewColor() for consistent coloring with InstanceToolsTab
    */
   const activeView = useMemo(() => {
-    if (!activeViewId) return null;
-    return onCanvasViews.find((v) => v.id === activeViewId) || null;
-  }, [activeViewId, onCanvasViews]);
+    if (!activeInstance) return null;
+
+    const viewConfigId = activeInstance.viewConfigId || activeInstance.viewId;
+    if (!viewConfigId) return null;
+
+    // Get color from workspaceManager for consistency
+    const instanceColor = workspaceManager.getViewColor?.(viewConfigId);
+    const colorHex =
+      instanceColor?.hex || activeInstance.color?.hex || activeInstance.color;
+
+    // Find matching view in onCanvasViews for position info
+    const canvasView = onCanvasViews.find((v) => v.id === viewConfigId);
+
+    // Get view name from ViewConfigurationManager
+    const vcm = getViewConfigurationManager?.();
+    const viewConfig = vcm?.getView?.(viewConfigId);
+
+    return {
+      id: viewConfigId,
+      name:
+        viewConfig?.name ||
+        activeInstance.name ||
+        canvasView?.name ||
+        "Active View",
+      type: viewConfig?.handlerType || activeInstance.type || "vtk",
+      position: canvasView?.position || null,
+      color: colorHex || canvasView?.color || VIEW_COLORS[0],
+      datasetName: viewConfig?.datasetName || canvasView?.datasetName,
+    };
+  }, [activeInstance, onCanvasViews, refreshKey]);
 
   // =========================================================================
   // VIEW HANDLERS
@@ -269,11 +280,17 @@ export function useSecondaryHeaderLogic() {
 
   /**
    * Select a view (focus it)
+   * Sets the active instance via workspaceManager to stay in sync with InstanceToolsTab
    */
   const handleSelectView = useCallback(
     (viewId) => {
       log.debug("SecondaryHeader: Select view", viewId);
-      setActiveViewId(viewId);
+
+      // Find the instance by viewConfigId and set it as active
+      const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
+      if (instance?.instanceId) {
+        workspaceManager.setActiveInstance(instance.instanceId);
+      }
 
       // Find the view's position and navigate to it
       const view = onCanvasViews.find((v) => v.id === viewId);
@@ -281,8 +298,13 @@ export function useSecondaryHeaderLogic() {
         navigateToCell(view.position.row, view.position.col);
       }
 
-      // Emit event for other components
+      // Emit events for other components
       eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId });
+      window.dispatchEvent(
+        new CustomEvent("cia:instance-focused", {
+          detail: { viewId, instanceId: instance?.instanceId },
+        })
+      );
     },
     [onCanvasViews, navigateToCell]
   );
@@ -308,7 +330,11 @@ export function useSecondaryHeaderLogic() {
         },
       });
 
-      setActiveViewId(viewId);
+      // Set the placed view as active
+      const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
+      if (instance?.instanceId) {
+        workspaceManager.setActiveInstance(instance.instanceId);
+      }
     },
     [viewport]
   );

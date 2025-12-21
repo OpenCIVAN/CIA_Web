@@ -23,7 +23,11 @@
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-xs $spacing-sm;
-  min-width: 120px;
+
+  // Fixed width that fits most long names, but responsive
+  width: 200px;
+  max-width: 200px;
+  min-width: 100px;
 
   background: $color-glass-subtle;
   border: 1px solid $color-border-subtle;
@@ -52,6 +56,22 @@
       color: $color-text-muted;
       font-style: italic;
     }
+  }
+
+  // Responsive: shrink on smaller screens
+  @media (max-width: 1400px) {
+    width: 180px;
+    max-width: 180px;
+  }
+
+  @media (max-width: 1200px) {
+    width: 160px;
+    max-width: 160px;
+  }
+
+  @media (max-width: 1000px) {
+    width: 140px;
+    max-width: 140px;
   }
 }
 

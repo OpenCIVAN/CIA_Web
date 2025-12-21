@@ -5,7 +5,8 @@ import {
     ChevronDown, Maximize2, Minimize2, AlertCircle,
     LayoutGrid, Wrench, MoreHorizontal, Settings,
     Glasses, Box, BarChart3, Layers, Scan, Minus, Plus,
-    Undo2, Redo2, Copy, X
+    Undo2, Redo2, Copy, X, Trash2, RotateCcw, Crosshair,
+    Camera, Bookmark, Link, Circle, Grid3X3
 } from 'lucide-react';
 
 import { instance as log } from "@Utils/logger.js";
@@ -19,9 +20,11 @@ import { ColorSwatchGrid } from '@UI/react/components/workspace/Pickers/ColorSwa
 import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/PositionGridPicker';
 import { VRButton } from '@UI/react/components/common/VRButton';
 import { vrManager } from '@Core/vr/VRManager.js';
+import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 
 import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
@@ -203,6 +206,7 @@ function GearOnlyDropdown({
     onMaximize,
     onDuplicate,
     onClose,
+    onTrash,
     instanceId,
 }) {
     return (
@@ -235,10 +239,16 @@ function GearOnlyDropdown({
                         Duplicate
                     </button>
                     <div className="instance-viewport__gear-separator" />
-                    <button className="instance-viewport__gear-item instance-viewport__gear-item--danger" onClick={onClose}>
+                    <button className="instance-viewport__gear-item" onClick={onClose}>
                         <X size={14} />
                         Close
                     </button>
+                    {onTrash && (
+                        <button className="instance-viewport__gear-item instance-viewport__gear-item--danger" onClick={onTrash}>
+                            <Trash2 size={14} />
+                            Delete View
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -282,7 +292,242 @@ const hexToRgb = (hex) => {
 };
 
 /**
- * HeaderBar - Blended dark header with instance label badge
+ * Get header mode based on viewport width
+ * @param {number} width - Viewport width in pixels
+ * @returns {'full'|'medium'|'small'}
+ */
+const getHeaderMode = (width) => {
+    if (width >= 400) return 'full';
+    if (width >= 300) return 'medium';
+    return 'small';
+};
+
+/**
+ * MoreMenu - Dropdown menu with all instance tools and actions
+ */
+function MoreMenu({
+    isOpen,
+    onClose,
+    onOpenInstanceTools,
+    onFullscreen,
+    onVRMode,
+    onResetCamera,
+    onFitView,
+    onCenterSelection,
+    onRepresentationChange,
+    currentRepresentation,
+    onCaptureThumbnail,
+    onSaveBookmark,
+    onDuplicate,
+    onLinkSettings,
+    onCloseView,
+    onDeleteView,
+    headerMode,
+    instanceId,
+    triggerRef,
+}) {
+    const menuRef = useRef(null);
+    const [position, setPosition] = useState({ top: 0, right: 0 });
+
+    // Position menu relative to trigger button
+    useEffect(() => {
+        if (!isOpen || !triggerRef?.current) return;
+
+        const updatePosition = () => {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPosition({
+                top: rect.bottom + 4,
+                right: window.innerWidth - rect.right,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        return () => window.removeEventListener('resize', updatePosition);
+    }, [isOpen, triggerRef]);
+
+    // Close on click outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        // Delay to prevent immediate close
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleEscape);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    const handleItemClick = (action) => {
+        action?.();
+        onClose();
+    };
+
+    return createPortal(
+        <div
+            className="instance-viewport__more-menu"
+            ref={menuRef}
+            style={{ top: position.top, right: position.right }}
+        >
+            {/* Tools Section */}
+            <div className="instance-viewport__more-menu__section-header">Tools</div>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onOpenInstanceTools)}
+            >
+                <Wrench size={14} />
+                <span>Instance Tools Panel</span>
+                <span className="instance-viewport__more-menu__shortcut">T</span>
+            </button>
+            {headerMode === 'small' && (
+                <button
+                    className="instance-viewport__more-menu__item"
+                    onClick={() => handleItemClick(onFullscreen)}
+                >
+                    <Maximize2 size={14} />
+                    <span>Expand</span>
+                </button>
+            )}
+            {(headerMode === 'small' || headerMode === 'medium') && (
+                <button
+                    className="instance-viewport__more-menu__item"
+                    onClick={() => handleItemClick(onVRMode)}
+                >
+                    <Glasses size={14} />
+                    <span>Enter VR Mode</span>
+                </button>
+            )}
+
+            <div className="instance-viewport__more-menu__divider" />
+
+            {/* Navigation Section */}
+            <div className="instance-viewport__more-menu__section-header">Navigation</div>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onResetCamera)}
+            >
+                <RotateCcw size={14} />
+                <span>Reset Camera</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onFitView)}
+            >
+                <Scan size={14} />
+                <span>Fit to View</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onCenterSelection)}
+            >
+                <Crosshair size={14} />
+                <span>Center on Selection</span>
+            </button>
+
+            <div className="instance-viewport__more-menu__divider" />
+
+            {/* Representation Section */}
+            <div className="instance-viewport__more-menu__section-header">Representation</div>
+            <button
+                className={`instance-viewport__more-menu__item ${currentRepresentation === 'surface' ? 'instance-viewport__more-menu__item--active' : ''}`}
+                onClick={() => handleItemClick(() => onRepresentationChange?.('surface'))}
+            >
+                <Box size={14} />
+                <span>Surface</span>
+            </button>
+            <button
+                className={`instance-viewport__more-menu__item ${currentRepresentation === 'wireframe' ? 'instance-viewport__more-menu__item--active' : ''}`}
+                onClick={() => handleItemClick(() => onRepresentationChange?.('wireframe'))}
+            >
+                <Grid3X3 size={14} />
+                <span>Wireframe</span>
+            </button>
+            <button
+                className={`instance-viewport__more-menu__item ${currentRepresentation === 'points' ? 'instance-viewport__more-menu__item--active' : ''}`}
+                onClick={() => handleItemClick(() => onRepresentationChange?.('points'))}
+            >
+                <Circle size={14} />
+                <span>Points</span>
+            </button>
+
+            <div className="instance-viewport__more-menu__divider" />
+
+            {/* View Section */}
+            <div className="instance-viewport__more-menu__section-header">View</div>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onCaptureThumbnail)}
+            >
+                <Camera size={14} />
+                <span>Capture Thumbnail</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onSaveBookmark)}
+            >
+                <Bookmark size={14} />
+                <span>Save as Bookmark</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onDuplicate)}
+            >
+                <Copy size={14} />
+                <span>Duplicate View</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item"
+                onClick={() => handleItemClick(onLinkSettings)}
+            >
+                <Link size={14} />
+                <span>Link Settings...</span>
+            </button>
+
+            <div className="instance-viewport__more-menu__divider" />
+
+            {/* Danger Section */}
+            <button
+                className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
+                onClick={() => handleItemClick(onCloseView)}
+            >
+                <X size={14} />
+                <span>Close View</span>
+            </button>
+            <button
+                className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
+                onClick={() => handleItemClick(onDeleteView)}
+            >
+                <Trash2 size={14} />
+                <span>Delete View</span>
+            </button>
+        </div>,
+        document.body
+    );
+}
+
+/**
+ * HeaderBar - Responsive blended dark header with instance label badge
+ * Shows different icons based on viewport width:
+ * - Full (≥400px): [Wrench] View Name [More] [Expand] [VR] [Close]
+ * - Medium (300-399px): [Wrench] View Name [More] [Expand] [Close] (VR in More menu)
+ * - Small (<300px): View Name [More] [Close] (Wrench, Expand in More menu)
  */
 function HeaderBar({
     displayName,
@@ -290,25 +535,51 @@ function HeaderBar({
     instanceColor,
     isFullscreen,
     onFullscreen,
-    onClose,       // Close without delete - view goes to inactive
-    onChangeSpan,
-    currentSpan,
-    showSpanPicker,
-    setShowSpanPicker,
-    spanPickerRef,
+    onClose,
+    onTrash,
+    onOpenInstanceTools,
+    onVRMode,
+    onResetCamera,
+    onFitView,
+    onCenterSelection,
+    onRepresentationChange,
+    currentRepresentation,
+    onCaptureThumbnail,
+    onSaveBookmark,
+    onDuplicate,
+    onLinkSettings,
+    viewportWidth,
     onShowToolbar,
     onHideToolbar,
+    instanceId,
 }) {
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const moreButtonRef = useRef(null);
+
     const TypeIcon = getInstanceTypeIcon(instanceType);
     const colorHex = instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
+    const headerMode = getHeaderMode(viewportWidth);
 
     return (
         <div
-            className="instance-viewport__header"
+            className={`instance-viewport__header instance-viewport__header--${headerMode}`}
             onMouseEnter={onShowToolbar}
             onMouseLeave={onHideToolbar}
         >
+            {/* Left Controls - Wrench (hidden in small mode) */}
+            <div className="instance-viewport__header-left">
+                {headerMode !== 'small' && (
+                    <button
+                        onClick={onOpenInstanceTools}
+                        className="instance-viewport__header-button instance-viewport__header-wrench"
+                        title="Instance Tools (T)"
+                    >
+                        <Wrench size={12} />
+                    </button>
+                )}
+            </div>
+
             {/* Instance Label Badge */}
             <div
                 className="instance-viewport__label"
@@ -325,89 +596,61 @@ function HeaderBar({
 
             {/* Right Controls */}
             <div className="instance-viewport__header-controls">
-                {/* Instance Type Icon */}
-                {instanceType && (
-                    <div
-                        className="instance-viewport__type-icon"
-                        title={`Type: ${instanceType}`}
+                {/* More Menu Button - Always visible */}
+                <div className="instance-viewport__more-wrapper" ref={moreButtonRef}>
+                    <button
+                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                        className={`instance-viewport__header-button ${showMoreMenu ? 'active' : ''}`}
+                        title="More options"
                     >
-                        <TypeIcon size={12} />
-                    </div>
+                        <MoreHorizontal size={12} />
+                    </button>
+                    <MoreMenu
+                        isOpen={showMoreMenu}
+                        onClose={() => setShowMoreMenu(false)}
+                        onOpenInstanceTools={onOpenInstanceTools}
+                        onFullscreen={onFullscreen}
+                        onVRMode={onVRMode}
+                        onResetCamera={onResetCamera}
+                        onFitView={onFitView}
+                        onCenterSelection={onCenterSelection}
+                        onRepresentationChange={onRepresentationChange}
+                        currentRepresentation={currentRepresentation}
+                        onCaptureThumbnail={onCaptureThumbnail}
+                        onSaveBookmark={onSaveBookmark}
+                        onDuplicate={onDuplicate}
+                        onLinkSettings={onLinkSettings}
+                        onCloseView={onClose}
+                        onDeleteView={onTrash}
+                        headerMode={headerMode}
+                        instanceId={instanceId}
+                        triggerRef={moreButtonRef}
+                    />
+                </div>
+
+                {/* Expand button - Hidden in small mode */}
+                {headerMode !== 'small' && (
+                    <button
+                        onClick={onFullscreen}
+                        className="instance-viewport__header-button instance-viewport__header-expand"
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                    </button>
                 )}
 
-                {/* Span size picker */}
-                {onChangeSpan && (
-                    <div className="span-picker-wrapper" ref={spanPickerRef}>
-                        <button
-                            onClick={() => setShowSpanPicker(!showSpanPicker)}
-                            className={`instance-viewport__header-button ${showSpanPicker ? 'active' : ''}`}
-                            title={`Window size: ${currentSpan}`}
-                        >
-                            <LayoutGrid size={12} />
-                        </button>
-                        {showSpanPicker && (
-                            <div className="span-picker-dropdown">
-                                <div className="span-picker-grid">
-                                    {[
-                                        { id: '1x1', label: '1x1', cols: 1, rows: 1 },
-                                        { id: '2x1', label: '2x1', cols: 2, rows: 1 },
-                                        { id: '1x2', label: '1x2', cols: 1, rows: 2 },
-                                        { id: '2x2', label: '2x2', cols: 2, rows: 2 },
-                                    ].map((size) => (
-                                        <button
-                                            key={size.id}
-                                            className={`span-picker-option ${currentSpan === size.id ? 'active' : ''}`}
-                                            onClick={() => {
-                                                onChangeSpan(size.id);
-                                                setShowSpanPicker(false);
-                                            }}
-                                            title={size.label}
-                                        >
-                                            <div className="span-preview" style={{
-                                                gridTemplateColumns: `repeat(2, 1fr)`,
-                                                gridTemplateRows: `repeat(2, 1fr)`
-                                            }}>
-                                                <div className={`span-cell active`} style={{
-                                                    gridColumn: `span ${size.cols}`,
-                                                    gridRow: `span ${size.rows}`
-                                                }} />
-                                                {size.id !== '2x2' && <div className="span-cell" />}
-                                                {size.id === '1x1' && (
-                                                    <>
-                                                        <div className="span-cell" />
-                                                        <div className="span-cell" />
-                                                    </>
-                                                )}
-                                                {size.id === '2x1' && <div className="span-cell" style={{ gridColumn: 'span 2' }} />}
-                                                {size.id === '1x2' && <div className="span-cell" />}
-                                            </div>
-                                            <span className="span-label">{size.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                {/* VR button - Hidden in small and medium modes */}
+                {headerMode === 'full' && (
+                    <button
+                        onClick={onVRMode}
+                        className="instance-viewport__header-button instance-viewport__header-vr"
+                        title="Enter VR Mode"
+                    >
+                        <Glasses size={12} />
+                    </button>
                 )}
 
-                {/* Settings button */}
-                <button
-                    className="instance-viewport__header-button"
-                    title="Settings"
-                >
-                    <Settings size={12} />
-                </button>
-
-                {/* Fullscreen toggle */}
-                <button
-                    onClick={onFullscreen}
-                    className="instance-viewport__header-button"
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                >
-                    {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                </button>
-
-                {/* Close button (X) - Removes from canvas, keeps view in list */}
+                {/* Close button - Always visible */}
                 {onClose && (
                     <button
                         onClick={onClose}
@@ -1065,6 +1308,84 @@ export function InstanceViewport({
     }, []);
 
     // =========================================================================
+    // KEYBOARD SHORTCUTS
+    // =========================================================================
+
+    useEffect(() => {
+        if (!isFocused) return;
+
+        const handleKeyDown = (e) => {
+            // 'T' key opens Instance Tools panel
+            if (e.key === 't' || e.key === 'T') {
+                if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+                    e.preventDefault();
+                    handleOpenInstanceTools();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isFocused, handleOpenInstanceTools]);
+
+    // =========================================================================
+    // MORE MENU HANDLERS
+    // =========================================================================
+
+    const handleResetCamera = useCallback(() => {
+        if (actualInstanceId) {
+            workspaceManager.resetCamera?.(actualInstanceId);
+        }
+    }, [actualInstanceId]);
+
+    const handleCenterSelection = useCallback(() => {
+        if (actualInstanceId) {
+            workspaceManager.centerOnSelection?.(actualInstanceId);
+        }
+    }, [actualInstanceId]);
+
+    const [currentRepresentation, setCurrentRepresentation] = useState('surface');
+
+    const handleRepresentationChange = useCallback((representation) => {
+        setCurrentRepresentation(representation);
+        if (actualInstanceId) {
+            workspaceManager.setRepresentation?.(actualInstanceId, representation);
+        }
+    }, [actualInstanceId]);
+
+    const handleCaptureThumbnail = useCallback(() => {
+        if (viewConfigId) {
+            window.dispatchEvent(new CustomEvent('cia:capture-thumbnail', {
+                detail: { viewConfigId, instanceId: actualInstanceId }
+            }));
+        }
+    }, [viewConfigId, actualInstanceId]);
+
+    const handleSaveBookmark = useCallback(() => {
+        if (viewConfigId) {
+            window.dispatchEvent(new CustomEvent('cia:save-bookmark', {
+                detail: { viewConfigId, instanceId: actualInstanceId }
+            }));
+        }
+    }, [viewConfigId, actualInstanceId]);
+
+    const handleDuplicate = useCallback(() => {
+        if (viewConfigId) {
+            window.dispatchEvent(new CustomEvent('cia:duplicate-view', {
+                detail: { viewConfigId }
+            }));
+        }
+    }, [viewConfigId]);
+
+    const handleLinkSettings = useCallback(() => {
+        if (viewConfigId) {
+            window.dispatchEvent(new CustomEvent('cia:open-link-settings', {
+                detail: { viewConfigId }
+            }));
+        }
+    }, [viewConfigId]);
+
+    // =========================================================================
     // SPAN PICKER CLICK OUTSIDE
     // =========================================================================
 
@@ -1344,15 +1665,21 @@ export function InstanceViewport({
     }, [viewConfigId, onClose]);
 
     // Trash handler - moves to Recently Deleted
-    const handleTrash = useCallback(() => {
-        // Clean up the instance
+    const handleTrash = useCallback(async () => {
+        // Clean up the instance first
         if (instanceIdRef.current) {
             workspaceManager.deleteInstance(instanceIdRef.current);
         }
 
-        // Move view to Recently Deleted (recoverable for 24h)
+        // Use viewLifecycleService for proper trash workflow
+        // (removes from canvas AND trashes the view)
         if (viewConfigId) {
-            getViewConfigurationManager()?.trashView(viewConfigId);
+            try {
+                await viewLifecycleService.trashView(viewConfigId);
+                log.info(`View ${viewConfigId} moved to trash`);
+            } catch (err) {
+                log.error(`Failed to trash view ${viewConfigId}:`, err);
+            }
         }
 
         // Notify parent
@@ -1438,14 +1765,23 @@ export function InstanceViewport({
                 instanceColor={instanceColor}
                 isFullscreen={isFullscreen}
                 onFullscreen={handleFullscreen}
-                onClose={handleClose}     // X button
-                onChangeSpan={onChangeSpan}
-                currentSpan={currentSpan}
-                showSpanPicker={showSpanPicker}
-                setShowSpanPicker={setShowSpanPicker}
-                spanPickerRef={spanPickerRef}
+                onClose={handleClose}
+                onTrash={handleTrash}
+                onOpenInstanceTools={handleOpenInstanceTools}
+                onVRMode={handleVRMode}
+                onResetCamera={handleResetCamera}
+                onFitView={handleFit}
+                onCenterSelection={handleCenterSelection}
+                onRepresentationChange={handleRepresentationChange}
+                currentRepresentation={currentRepresentation}
+                onCaptureThumbnail={handleCaptureThumbnail}
+                onSaveBookmark={handleSaveBookmark}
+                onDuplicate={handleDuplicate}
+                onLinkSettings={handleLinkSettings}
+                viewportWidth={width}
                 onShowToolbar={showToolbar}
                 onHideToolbar={hideToolbar}
+                instanceId={actualInstanceId}
             />
 
             {/* VR Mode Indicator - Shows when in VR */}
@@ -1510,6 +1846,7 @@ export function InstanceViewport({
                     onMaximize={handleFullscreen}
                     onDuplicate={() => { }}
                     onClose={handleClose}
+                    onTrash={handleTrash}
                     instanceId={actualInstanceId}
                 />
             )}

@@ -195,6 +195,135 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
+// Header left section (for wrench button)
+.instance-viewport__header-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+// More menu wrapper
+.instance-viewport__more-wrapper {
+  position: relative;
+}
+
+// Header responsive modes
+.instance-viewport__header--full {
+  .instance-viewport__header-vr,
+  .instance-viewport__header-wrench,
+  .instance-viewport__header-expand {
+    display: flex;
+  }
+}
+
+.instance-viewport__header--medium {
+  .instance-viewport__header-vr {
+    display: none;
+  }
+  .instance-viewport__header-wrench,
+  .instance-viewport__header-expand {
+    display: flex;
+  }
+}
+
+.instance-viewport__header--small {
+  .instance-viewport__header-vr,
+  .instance-viewport__header-wrench,
+  .instance-viewport__header-expand {
+    display: none;
+  }
+}
+
+// ============================================================================
+// MORE MENU DROPDOWN - Portal to document.body
+// ============================================================================
+
+.instance-viewport__more-menu {
+  position: fixed;
+  top: 50px;
+  right: 20px;
+  z-index: 10000;
+  min-width: 220px;
+  padding: 4px;
+  background: rgba(25, 25, 30, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  // Section headers
+  &__section-header {
+    padding: 8px 12px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  // Menu items
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-align: left;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    // Danger variant
+    &--danger {
+      color: #f87171;
+
+      &:hover {
+        background: rgba(248, 113, 113, 0.15);
+      }
+    }
+
+    // Radio button active state
+    &--active {
+      background: rgba(100, 150, 255, 0.15);
+      color: #60a5fa;
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    span {
+      flex: 1;
+    }
+  }
+
+  // Shortcut hint
+  &__shortcut {
+    margin-left: auto;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+  }
+
+  // Divider between sections
+  &__divider {
+    height: 1px;
+    margin: 4px 8px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
 // ============================================================================
 // TOP TOOLBAR OVERLAY - Slides down from behind header
 // ============================================================================
