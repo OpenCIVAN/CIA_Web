@@ -299,15 +299,19 @@ export function Bootstrap() {
             </div>
         );
     } else if (bootstrapState === 'ready') {
+        // Show dev banner when either config bypass is enabled OR user logged in via dev login
+        const showDevBanner = isDevBypass || isDevMode;
         content = (
-            <div className={isDevBypass ? 'dev-mode-active' : ''}>
-                {isDevBypass && <DevModeBanner />}
-                <CIAWebApp
-                    username={username}
-                    userId={getUserId()}
-                    projectId={sessionManager.getRoomId()}
-                />
-            </div>
+            <DevUserProvider forceDevMode={isDevMode}>
+                <div className={showDevBanner ? 'dev-mode-active' : ''}>
+                    {showDevBanner && <DevModeBanner />}
+                    <CIAWebApp
+                        username={username}
+                        userId={getUserId()}
+                        projectId={sessionManager.getRoomId()}
+                    />
+                </div>
+            </DevUserProvider>
         );
     }
 

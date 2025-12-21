@@ -42,12 +42,15 @@ const DevUserContext = createContext(null);
  * - Persists selected user across page reloads
  * - Exposes switchUser() for changing identity
  * - Provides user info for API headers
- * - Only active when DEV_BYPASS_AUTH is enabled
+ * - Only active when DEV_BYPASS_AUTH is enabled or forceDevMode prop is true
+ *
+ * @param {Object} props
+ * @param {boolean} props.forceDevMode - Override to enable dev mode (e.g., when user logged in via dev login)
  */
-export function DevUserProvider({ children }) {
-    // Check if dev mode is enabled
+export function DevUserProvider({ children, forceDevMode = false }) {
+    // Check if dev mode is enabled (config or forced via prop)
     const isDevMode =
-        config.devBypassAuth === true || config.devBypassAuth === "true";
+        forceDevMode || config.devBypassAuth === true || config.devBypassAuth === "true";
 
     // Current mock user state
     const [currentUser, setCurrentUser] = useState(() => {

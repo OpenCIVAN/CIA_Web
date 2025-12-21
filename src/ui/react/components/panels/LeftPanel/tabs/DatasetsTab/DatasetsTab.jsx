@@ -24,12 +24,13 @@ import {
     Archive,
     Users,
     ChevronDown,
-    ChevronRight,
     FolderOpen,
     RefreshCw,
-    Trash2,
     Plus,
     Settings,
+    MoreHorizontal,
+    HardDrive,
+    Clock,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -39,9 +40,10 @@ import { getViewConfigurationManager } from '@Init/appInitializer.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
-import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
+import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { viewLifecycleService } from '@Services';
+import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
 import './DatasetsTab.scss';
 
 // =============================================================================
@@ -68,46 +70,44 @@ const getDatasetTypeConfig = (fileType) => {
         return {
             icon: IconComponent,
             color: displayInfo.color,
-            colorClass: null,
+            label: displayInfo.label || fileType?.toUpperCase() || 'Data',
         };
     }
 
-    return { icon: LucideIcons.Database, colorClass: 'file-icon--default', color: null };
+    return {
+        icon: LucideIcons.Database,
+        color: '#6B7280',
+        label: fileType?.toUpperCase() || 'Data',
+    };
 };
 
 // =============================================================================
-// VIEW ITEM WRAPPER - Provides callbacks for ViewItem
+// VIEW ITEM WRAPPER - Provides callbacks for ViewItem component
 // =============================================================================
 
-function DatasetViewItemWrapper({ view, datasetId }) {
+function DatasetViewItemWrapper({ view }) {
     const isActive = view.status === 'active';
 
-    // Select/focus a view
     const handleSelect = useCallback((viewId) => {
         viewLifecycleService.focusView(viewId);
     }, []);
 
-    // Close view (remove from canvas)
     const handleClose = useCallback(async (viewId) => {
         await viewLifecycleService.removeViewFromCanvas(viewId);
     }, []);
 
-    // Trash view
     const handleTrash = useCallback(async (viewId) => {
         await viewLifecycleService.trashView(viewId);
     }, []);
 
-    // Rename view
     const handleRename = useCallback((viewId, newName) => {
         viewLifecycleService.renameView(viewId, newName);
     }, []);
 
-    // Navigate to view on canvas
     const handleNavigate = useCallback((viewId) => {
         viewLifecycleService.focusView(viewId);
     }, []);
 
-    // Place view on canvas
     const handlePlaceOnCanvas = useCallback(async (viewId) => {
         await viewLifecycleService.placeView(viewId);
     }, []);
@@ -116,6 +116,7 @@ function DatasetViewItemWrapper({ view, datasetId }) {
         <ViewItem
             view={view}
             isActive={isActive}
+            showPosition={true}
             onSelect={handleSelect}
             onClose={handleClose}
             onTrash={handleTrash}
@@ -127,22 +128,42 @@ function DatasetViewItemWrapper({ view, datasetId }) {
 }
 
 // =============================================================================
-// DATASET PARENT COMPONENT
+// DATASET PARENT COMPONENT - Hybrid 2 Design
 // =============================================================================
 
 function DatasetParent({ dataset, views, isExpanded, onToggle }) {
+    const [isHovered, setIsHovered] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+
     const typeConfig = getDatasetTypeConfig(dataset.fileType || dataset.type);
     const TypeIcon = typeConfig.icon;
 
     const activeCount = views.filter(v => v.status === 'active').length;
     const totalCount = views.length;
 
-    const handleCreateView = useCallback(() => {
+    // Format metadata
+    const sizeDisplay = dataset.fileSize ? formatFileSize(dataset.fileSize) : null;
+    const loadedDisplay = dataset.loadedAt ? formatRelativeTime(dataset.loadedAt) : null;
+    const handlerLabel = typeConfig.label || dataset.handlerType || 'Data';
+
+    const handleCreateView = useCallback((e) => {
+        e?.stopPropagation();
         window.dispatchEvent(new CustomEvent('cia:create-view', {
             detail: { datasetId: dataset.id }
         }));
     }, [dataset.id]);
+
+    const handleOpenSettings = useCallback((e) => {
+        e?.stopPropagation();
+        setShowSettingsModal(true);
+        setMenuOpen(false);
+    }, []);
+
+    const handleMoreActions = useCallback((e) => {
+        e?.stopPropagation();
+        setMenuOpen(!menuOpen);
+    }, [menuOpen]);
 
     const handleUnloadDataset = useCallback(() => {
         window.dispatchEvent(new CustomEvent('cia:unload-dataset', {
@@ -151,64 +172,125 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     }, [dataset.id]);
 
     return (
-        <div className="dataset-parent">
-            {/* Header row */}
-            <div className="dataset-parent__header" onClick={onToggle}>
-                <button className="dataset-parent__toggle">
-                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
+        <div
+            className={`dataset-parent ${isHovered ? 'dataset-parent--hovered' : ''}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
+        >
+            <div className="dataset-parent__card">
+                {/* Header row with content + action buttons */}
+                <div className="dataset-parent__header">
+                    {/* Main header content (clickable for expand/collapse) */}
+                    <div className="dataset-parent__header-content" onClick={onToggle}>
+                        {/* Chevron - centered vertically, rotates on expand */}
+                        <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
+                            <ChevronDown size={12} />
+                        </span>
 
-                <span
-                    className={`dataset-parent__icon ${typeConfig.colorClass || ''}`}
-                    style={typeConfig.color ? { color: typeConfig.color } : undefined}
-                >
-                    <TypeIcon size={14} />
-                </span>
+                        {/* Type icon with colored background */}
+                        <div
+                            className="dataset-parent__type-icon"
+                            style={{ '--type-color': typeConfig.color || '#6B7280' }}
+                        >
+                            <TypeIcon size={14} />
+                        </div>
 
-                <span className="dataset-parent__name">{dataset.name}</span>
+                        {/* Name and metadata */}
+                        <div className="dataset-parent__info">
+                            <span className="dataset-parent__info-name">
+                                {dataset.name || dataset.filename || 'Untitled'}
+                            </span>
+                            <div className="dataset-parent__info-meta">
+                                <span
+                                    className="dataset-parent__handler-badge"
+                                    style={{ '--type-color': typeConfig.color || '#6B7280' }}
+                                >
+                                    {handlerLabel}
+                                </span>
+                                {sizeDisplay && (
+                                    <span className="dataset-parent__meta-item">
+                                        <HardDrive size={8} />
+                                        {sizeDisplay}
+                                    </span>
+                                )}
+                                {loadedDisplay && (
+                                    <span className="dataset-parent__meta-item">
+                                        <Clock size={8} />
+                                        {loadedDisplay}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
 
-                <span className="dataset-parent__count">
-                    <span className="dataset-parent__count-active">{activeCount}</span>
-                    /
-                    <span className="dataset-parent__count-total">{totalCount}</span>
-                </span>
+                        {/* View count badge */}
+                        <div className={`dataset-parent__view-count ${activeCount > 0 ? 'dataset-parent__view-count--has-active' : ''}`}>
+                            <span className="dataset-parent__view-count-number">{activeCount}</span>
+                            <span className="dataset-parent__view-count-total">of {totalCount}</span>
+                        </div>
+                    </div>
 
-                <button
-                    className="dataset-parent__settings"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setShowSettingsModal(true);
-                    }}
-                    title="Dataset settings"
-                >
-                    <Settings size={12} />
-                </button>
-            </div>
+                    {/* Vertical action buttons */}
+                    <div className="dataset-parent__actions">
+                        <button
+                            className="dataset-parent__actions-btn dataset-parent__actions-btn--create"
+                            onClick={handleCreateView}
+                            title="Create View"
+                        >
+                            <Plus size={11} />
+                        </button>
+                        <button
+                            className="dataset-parent__actions-btn"
+                            onClick={handleOpenSettings}
+                            title="Settings"
+                        >
+                            <Settings size={11} />
+                        </button>
+                        <button
+                            className="dataset-parent__actions-btn"
+                            onClick={handleMoreActions}
+                            title="More actions"
+                        >
+                            <MoreHorizontal size={11} />
+                        </button>
+                    </div>
+                </div>
 
-            {/* Expanded content - views list */}
-            {isExpanded && (
-                <div className="dataset-parent__children">
-                    {views.length === 0 ? (
-                        <div className="dataset-parent__empty">
+                {/* Expanded content - views list */}
+                {isExpanded && (
+                    <div className="dataset-parent__expanded">
+                        {views.length > 0 ? (
+                            <div className="dataset-parent__views">
+                                {views.map(view => (
+                                    <DatasetViewItemWrapper key={view.id} view={view} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="dataset-parent__empty">
+                                <Database size={20} />
+                                <span>No views created yet</span>
+                            </div>
+                        )}
+
+                        {/* Footer actions */}
+                        <div className="dataset-parent__footer">
                             <button
-                                className="dataset-parent__create-view-btn"
+                                className="dataset-parent__footer-btn dataset-parent__footer-btn--primary"
                                 onClick={handleCreateView}
                             >
-                                <Plus size={12} />
-                                <span>Create View</span>
+                                <Plus size={11} />
+                                Add View
+                            </button>
+                            <button
+                                className="dataset-parent__footer-btn dataset-parent__footer-btn--secondary"
+                                onClick={handleOpenSettings}
+                            >
+                                <Settings size={11} />
+                                Settings
                             </button>
                         </div>
-                    ) : (
-                        views.map(view => (
-                            <DatasetViewItemWrapper
-                                key={view.id}
-                                view={view}
-                                datasetId={dataset.id}
-                            />
-                        ))
-                    )}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
 
             {/* Settings Modal */}
             <DatasetSettingsModal
