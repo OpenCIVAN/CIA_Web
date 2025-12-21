@@ -1,78 +1,100 @@
 /**
  * @file SecondaryHeader.scss
- * @description Styles for secondary header bar with v6 layout.
+ * @description Styles for secondary header bar with proper 3-zone flexbox layout.
  * 
- * NEW LAYOUT:
- * - Left: Workspace Selector (tinted, min-width synced with left panel)
- * - Center: StackedNavBlock + ActiveViewSelector + ViewModeToggle
- * - Right: Room + Presence (min-width synced with right panel)
+ * CRITICAL: Class names must match JSX:
+ * - .secondary-header__zone--left (not __left)
+ * - .secondary-header__zone--center (not __center)
+ * - .secondary-header__zone--right (not __right)
  * 
- * Height increased from 44px to 48px to accommodate stacked navigation block.
+ * Layout:
+ * ┌─────────────────┬──────────────────────────────────────┬─────────────────┐
+ * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE    │
+ * │  (fixed width)  │        (flexible, fills)             │  (fixed width)  │
+ * └─────────────────┴──────────────────────────────────────┴─────────────────┘
  */
 
 @use "theme" as *;
+
+// =============================================================================
+// VARIABLES
+// =============================================================================
+
+$header-height: 48px;
+$left-zone-width: 200px; // Fixed width for workspace selector
+$right-zone-width: 240px; // Fixed width for room + avatars
 
 // =============================================================================
 // SECONDARY HEADER CONTAINER
 // =============================================================================
 
 .secondary-header {
-  // Increased height to accommodate stacked navigation block
-  height: 48px;
+  width: 100%;
+  height: $header-height;
   background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-default;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 $spacing-md;
   z-index: 90;
-  position: relative;
   flex-shrink: 0;
+
+  // NO padding - zones handle their own padding
+  // NO position: relative - not needed without absolute children
+  // NO justify-content: space-between - using flex: 1 on center
 }
 
 // =============================================================================
-// LEFT ZONE: Workspace Selector
+// ZONE BASE STYLES
 // =============================================================================
 
-.secondary-header__left {
+.secondary-header__zone {
   display: flex;
   align-items: center;
+  height: 100%;
   gap: $spacing-sm;
-
-  // Min width synced with left panel (when collapsed, this is the min)
-  min-width: 180px;
 }
 
 // =============================================================================
-// CENTER ZONE: Navigation + View Context
+// LEFT ZONE: Workspace Selector (fixed width)
 // =============================================================================
 
-.secondary-header__center {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-
-  // Center content horizontally
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-
-  // Ensure content doesn't overlap with left/right zones
-  max-width: calc(100% - 400px);
+.secondary-header__zone--left {
+  width: $left-zone-width;
+  min-width: $left-zone-width;
+  flex-shrink: 0;
+  padding: 0 $spacing-md;
+  border-right: 1px solid $color-border-subtle;
+  justify-content: flex-start;
 }
 
 // =============================================================================
-// RIGHT ZONE: Room + Presence
+// CENTER ZONE: Navigation + View Context (FILLS available space)
 // =============================================================================
 
-.secondary-header__right {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
+.secondary-header__zone--center {
+  flex: 1; // CRITICAL: Fill available space
+  min-width: 0; // Allow shrinking below content size
+  padding: 0 $spacing-lg;
+  justify-content: center;
+  gap: $spacing-md;
+  overflow: hidden;
+
+  // REMOVED: position: absolute - this was breaking the layout!
+  // REMOVED: left: 50%; transform: translateX(-50%);
+  // Content centers naturally via justify-content: center
+}
+
+// =============================================================================
+// RIGHT ZONE: Room + Presence (fixed width for avatars)
+// =============================================================================
+
+.secondary-header__zone--right {
+  width: $right-zone-width;
+  min-width: $right-zone-width;
+  flex-shrink: 0;
+  padding: 0 $spacing-md;
+  border-left: 1px solid $color-border-subtle;
   justify-content: flex-end;
-
-  // Min width synced with right panel (when collapsed, this is the min)
-  min-width: 180px;
 }
 
 // =============================================================================
@@ -91,29 +113,44 @@
 // RESPONSIVE BEHAVIOR
 // =============================================================================
 
-// On narrower screens, allow center to wrap or reduce gaps
-@media (max-width: 1200px) {
-  .secondary-header__center {
-    gap: $spacing-xs;
-    max-width: calc(100% - 360px);
+@media (max-width: 1400px) {
+  .secondary-header__zone--left {
+    width: 180px;
+    min-width: 180px;
+  }
+
+  .secondary-header__zone--right {
+    width: 200px;
+    min-width: 200px;
+  }
+
+  .secondary-header__zone--center {
+    gap: $spacing-sm;
+    padding: 0 $spacing-md;
   }
 }
 
-// On very narrow screens, hide some center elements
-@media (max-width: 900px) {
-  .secondary-header__center {
-    // Allow natural positioning instead of absolute centering
-    position: static;
-    transform: none;
-    flex: 1;
-    justify-content: center;
-    max-width: none;
-    overflow: hidden;
+@media (max-width: 1100px) {
+  .secondary-header__zone--left {
+    width: 160px;
+    min-width: 140px;
   }
 
-  .secondary-header__left,
-  .secondary-header__right {
-    min-width: 140px;
-    flex-shrink: 0;
+  .secondary-header__zone--right {
+    width: 180px;
+    min-width: 160px;
+  }
+
+  .secondary-header__zone--center {
+    gap: $spacing-xs;
+    padding: 0 $spacing-sm;
+  }
+}
+
+@media (max-width: 900px) {
+  .secondary-header__zone--left,
+  .secondary-header__zone--right {
+    min-width: 120px;
+    width: auto;
   }
 }

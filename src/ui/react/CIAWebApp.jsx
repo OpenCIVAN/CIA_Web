@@ -1,26 +1,25 @@
 // src/ui/react/CIAWebApp.jsx
 // =============================================================================
-// MAIN APPLICATION COMPONENT
+// MAIN APPLICATION COMPONENT - SIMPLIFIED VERSION
 // =============================================================================
-// CSS Grid layout with separated activity bars and panel content.
-// Uses zone-based approach for secondary bars to enable automatic
-// width synchronization with collapsible panels.
+// 
+// KEY CHANGE: Uses self-contained SecondaryHeader and SecondaryFooter components
+// instead of assembling zone objects. This makes the code cleaner and keeps
+// all secondary bar logic contained within those components.
 //
-// Layout Structure (per Header_Footer_Bars_Design_Specification.docx):
-// ┌──────────────────────────────────────────────────────────────────────┐
-// │                         HEADER (48px)                                 │
-// ├────────┬──────────┬─────────────────────┬─────────────┬──────────────┤
-// │        │ SEC-TOP  │   SEC-TOP-CENTER    │  SEC-TOP    │              │
-// │  LEFT  │  LEFT    │      (44px)         │   RIGHT     │    RIGHT     │
-// │  ACT   ├──────────┼─────────────────────┼─────────────┤    ACT       │
-// │  BAR   │  LEFT    │                     │   RIGHT     │    BAR       │
-// │        │  PANEL   │   CANVAS WORKSPACE  │   PANEL     │              │
-// │        ├──────────┼─────────────────────┼─────────────┤              │
-// │        │ SEC-BOT  │   SEC-BOT-CENTER    │  SEC-BOT    │              │
-// │        │  LEFT    │      (36px)         │   RIGHT     │              │
-// ├────────┴──────────┴─────────────────────┴─────────────┴──────────────┤
-// │                        STATUS BAR (28px)                              │
-// └──────────────────────────────────────────────────────────────────────┘
+// BEFORE (zone objects pattern):
+//   const secondaryTopBarZones = useMemo(() => ({
+//     left: <WorkspaceSelector .../>,
+//     center: <div>...</div>,
+//     right: <RoomPresenceIndicator .../>,
+//   }), [...deps...]);
+//   <ThreeEdgeLayout secondaryTopBarZones={secondaryTopBarZones} />
+//
+// AFTER (component pattern):
+//   <ThreeEdgeLayout 
+//     secondaryTopBar={<SecondaryHeader workspace={...} onNavigate={...} />}
+//     secondaryBottomBar={<SecondaryFooter voice={...} onToolChange={...} />}
+//   />
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
@@ -32,7 +31,6 @@ import { getViewConfigurationManager } from "@Init/appInitializer";
 // LAYOUT INFRASTRUCTURE
 // =============================================================================
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
-import { SecondaryBarDivider } from "@UI/react/components/layout/SecondaryBarZone";
 
 // =============================================================================
 // HEADER COMPONENTS (48px - Global App Controls)
@@ -40,28 +38,10 @@ import { SecondaryBarDivider } from "@UI/react/components/layout/SecondaryBarZon
 import { Header } from "@UI/react/components/layout/Header";
 
 // =============================================================================
-// SECONDARY HEADER COMPONENTS (44px - Workspace Context)
-// Zone-based: WorkspaceSelector | FlowDirection, EditTools, Navigation | RoomPresence
+// SECONDARY BARS (Self-contained - manage their own zones internally)
 // =============================================================================
-import {
-  WorkspaceSelector,
-  RoomPresenceIndicator,
-  FlowDirectionToggle,
-  EditToolbar,
-  CanvasNavigation,
-} from "@UI/react/components/layout/SecondaryHeader";
-
-// =============================================================================
-// SECONDARY FOOTER COMPONENTS (36px - Instance Context)
-// Zone-based: Popouts | InstanceSelector, ViewMode, CanvasSize | VoiceControls
-// =============================================================================
-import {
-  PopoutButtons,
-  InstanceSelector,
-  LayoutModeToggle,
-  CanvasSizeDisplay,
-  VoiceQuickControls,
-} from "@UI/react/components/layout/SecondaryFooter";
+import { SecondaryHeader } from "@UI/react/components/layout/SecondaryHeader";
+import { SecondaryFooter } from "@UI/react/components/layout/SecondaryFooter";
 
 // =============================================================================
 // FOOTER / STATUS BAR (28px - System Status)
@@ -96,7 +76,6 @@ import { FloatingCanvasNavigator } from "@UI/react/components/panels/LayoutPanel
 // =============================================================================
 // MODALS
 // =============================================================================
-import { WorkspacePickerModal } from "@UI/react/components/modals/WorkspacePickerModal/WorkspacePickerModal.jsx";
 import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 
 // =============================================================================
@@ -134,21 +113,6 @@ const getInitialCanvasSize = () => {
 // MAIN APPLICATION COMPONENT
 // =============================================================================
 
-/**
- * CIAWebApp - Main Application Component
- *
- * Manages:
- * - Layout with resizable panels (activity bars always visible)
- * - Workspace selection and navigation
- * - View mode (Desktop/VR) switching
- * - Layout mode (Normal/Isolation/Subset)
- * - Phase 3 initialization
- *
- * @param {Object} props
- * @param {string} props.username - Current user's display name
- * @param {string} props.userId - Current user's ID
- * @param {string} props.projectId - Current project ID
- */
 export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // PHASE 3 INITIALIZATION
@@ -178,62 +142,33 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // WORKSPACE STATE
   // ===========================================================================
-  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspaces({
-    userId,
-  });
-  const workspaceId = currentWorkspace?.id || "personal";
-
-  // ===========================================================================
-  // CANVAS STATE (using centralized viewportState module)
-  // ===========================================================================
   const {
-    canvas,
-    viewport,
-    visiblePlacements,
-  } = useCanvas();
-  const canvasId = canvas?.id;
+    workspaces,
+    currentWorkspace,
+    workspaceId,
+    handleWorkspaceChange,
+    handleCreateWorkspace,
+  } = useWorkspaces(projectId);
 
-  // Canvas size (grid dimensions) - persisted via viewportState.js
-  const [canvasSize, setCanvasSizeState] = useState(getInitialCanvasSize);
-
-  // Wrapper that persists canvas size changes
-  const setCanvasSize = useCallback((newSize) => {
-    if (typeof newSize === 'function') {
-      setCanvasSizeState(prev => {
-        const updated = newSize(prev);
-        saveCanvasSize(updated);
-        return updated;
-      });
-    } else {
-      setCanvasSizeState(newSize);
-      saveCanvasSize(newSize);
-    }
-  }, []);
-
-  // Canvas viewport position
+  // ===========================================================================
+  // CANVAS STATE
+  // ===========================================================================
+  const { canvasId } = useCanvas(workspaceId);
+  const [canvasSize, setCanvasSize] = useState(getInitialCanvasSize);
   const [canvasPosition, setCanvasPosition] = useState({ col: 0, row: 0 });
   const isAtOrigin = canvasPosition.col === 0 && canvasPosition.row === 0;
 
-  // ===========================================================================
-  // INSTANCE SELECTOR STATE (wired via useInstanceSelector hook)
-  // ===========================================================================
-  const {
-    activeInstance,
-    onCanvasViews,
-    availableViews,
-    handleSelectInstance,
-    handlePlaceView,
-  } = useInstanceSelector({ workspaceId });
+  // Persist canvas size
+  useEffect(() => {
+    saveCanvasSize(canvasSize);
+  }, [canvasSize]);
 
   // ===========================================================================
   // VIEW MODE STATE (Desktop/VR)
   // ===========================================================================
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
   const vrAvailable = useWebXRAvailability();
-
-  // Keyboard shortcuts for view mode
-  useViewModeKeyboardShortcut(viewMode, setViewMode, vrAvailable);
-  useGlobalKeyboardShortcuts();
+  useViewModeKeyboardShortcut(setViewMode);
 
   // ===========================================================================
   // LAYOUT MODE STATE (Normal/Isolation/Subset)
@@ -241,39 +176,32 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
 
   // ===========================================================================
-  // EDIT MODE STATE
-  // ===========================================================================
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [activeTool, setActiveTool] = useState("select");
-
-  // ===========================================================================
-  // FLOW DIRECTION STATE
+  // EDIT STATE (Secondary Footer)
   // ===========================================================================
   const [flowDirection, setFlowDirection] = useState("row");
-
-  // ===========================================================================
-  // POPOUT STATE
-  // ===========================================================================
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [activeTool, setActiveTool] = useState("select");
   const [openPopouts, setOpenPopouts] = useState([]);
 
-  const handleTogglePopout = useCallback((popoutId) => {
-    setOpenPopouts((prev) =>
-      prev.includes(popoutId)
-        ? prev.filter((id) => id !== popoutId)
-        : [...prev, popoutId]
-    );
-  }, []);
+  // ===========================================================================
+  // INSTANCE SELECTOR STATE
+  // ===========================================================================
+  const {
+    activeInstance,
+    onCanvasViews,
+    availableViews,
+    handleSelectInstance,
+    handlePlaceView,
+  } = useInstanceSelector(workspaceId);
 
   // ===========================================================================
-  // VOICE CONTROLS (from hook)
+  // VOICE CONTROLS
   // ===========================================================================
   const voice = useVoiceControls();
-
-  // Voice settings modal state
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
 
   // ===========================================================================
-  // ROOM STATE (Space Navigation) - Now using useRoomIndicator hook
+  // ROOM STATE
   // ===========================================================================
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
 
@@ -294,19 +222,16 @@ export function CIAWebApp({ username, userId, projectId }) {
     },
   });
 
-  // Derive rooms list for voice channels
-  const rooms = useMemo(() => availableRooms || [], [availableRooms]);
-
-  // Compute available voice channels from rooms
+  // Derive voice channels from rooms
   const availableVoiceChannels = useMemo(() => {
-    return rooms
+    return (availableRooms || [])
       .filter((room) => room.hasVoice)
       .map((room) => ({
         id: room.id,
         name: room.name,
         participantCount: room.voiceParticipants?.length || 0,
       }));
-  }, [rooms]);
+  }, [availableRooms]);
 
   // ===========================================================================
   // CALLBACKS - HEADER
@@ -328,122 +253,110 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   const handleProjectChange = useCallback((project) => {
     log.debug("Project changed:", project);
-    // TODO: Navigate to project
   }, []);
 
   const handleCreateProject = useCallback(() => {
-    log.debug("Create new project");
-    window.dispatchEvent(new CustomEvent("open:new-project"));
+    log.debug("Create project");
   }, []);
 
   const handleNotificationClick = useCallback((notification) => {
     log.debug("Notification clicked:", notification);
-    // TODO: Navigate to notification target
   }, []);
 
   // ===========================================================================
-  // CALLBACKS - SECONDARY HEADER
+  // CALLBACKS - SECONDARY HEADER (Navigation)
   // ===========================================================================
-  const handleWorkspaceChange = useCallback(
-    (workspace) => {
-      log.debug("Workspace changed:", workspace);
-      selectWorkspace(workspace.id);
-    },
-    [selectWorkspace]
-  );
-
-  const handleCreateWorkspace = useCallback(() => {
-    log.debug("Create new workspace");
-    window.dispatchEvent(new CustomEvent("open:new-workspace"));
-  }, []);
-
-  const handleToggleEditMode = useCallback(() => {
-    setIsEditMode((prev) => !prev);
-  }, []);
-
-  const handleToolChange = useCallback((tool) => {
-    setActiveTool(tool);
-  }, []);
-
-  const handleUndo = useCallback(() => {
-    log.debug("Undo action");
-    // TODO: Implement undo via workspace history
-  }, []);
-
-  const handleRedo = useCallback(() => {
-    log.debug("Redo action");
-    // TODO: Implement redo via workspace history
-  }, []);
-
   const handleNavigateHome = useCallback(() => {
     setCanvasPosition({ col: 0, row: 0 });
   }, []);
 
   const handleNavigateDirection = useCallback((direction) => {
     setCanvasPosition((prev) => ({
-      col:
-        prev.col +
-        (direction === "right" ? 1 : direction === "left" ? -1 : 0),
-      row:
-        prev.row + (direction === "down" ? 1 : direction === "up" ? -1 : 0),
+      col: prev.col + (direction === "right" ? 1 : direction === "left" ? -1 : 0),
+      row: prev.row + (direction === "down" ? 1 : direction === "up" ? -1 : 0),
     }));
   }, []);
 
   const handleOpenBookmarks = useCallback(() => {
     log.debug("Open bookmarks");
-    // TODO: Open bookmarks popout or panel
+  }, []);
+
+  const handleSelectView = useCallback((view) => {
+    handleSelectInstance(view);
+  }, [handleSelectInstance]);
+
+  const handleViewModeChange = useCallback((mode) => {
+    setLayoutMode(mode);
   }, []);
 
   // ===========================================================================
-  // CALLBACKS - ROOM/PRESENCE
+  // CALLBACKS - SECONDARY HEADER (Room)
   // ===========================================================================
-  const handleRoomSelect = useCallback(
-    (roomId, roomName) => {
-      switchRoom(roomId, roomName);
-    },
-    [switchRoom]
-  );
+  const handleRoomSelect = useCallback((roomId) => {
+    switchRoom(roomId);
+  }, [switchRoom]);
+
+  const handleOpenRoomsPanel = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("navigate:right-panel", { detail: { tab: "rooms" } }));
+  }, []);
 
   const handleCreateRoom = useCallback(() => {
     setShowCreateRoomModal(true);
   }, []);
 
-  const handleOpenRoomsPanel = useCallback(() => {
-    log.debug("Open rooms panel");
-    window.dispatchEvent(new CustomEvent("open:rooms-panel"));
+  // ===========================================================================
+  // CALLBACKS - SECONDARY FOOTER (Edit Tools)
+  // ===========================================================================
+  const handleToolChange = useCallback((tool) => {
+    setActiveTool(tool);
+  }, []);
+
+  const handleToggleEditMode = useCallback(() => {
+    setIsEditMode((prev) => !prev);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    log.debug("Undo");
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    log.debug("Redo");
+  }, []);
+
+  const handleTogglePopout = useCallback((popoutId) => {
+    setOpenPopouts((prev) =>
+      prev.includes(popoutId)
+        ? prev.filter((id) => id !== popoutId)
+        : [...prev, popoutId]
+    );
   }, []);
 
   // ===========================================================================
-  // CALLBACKS - VOICE CONTROLS
+  // CALLBACKS - SECONDARY FOOTER (Voice)
   // ===========================================================================
-  const handleOpenVoiceSettings = useCallback(() => {
-    log.debug("Open voice settings");
-    handleTogglePopout("voice-settings");
-  }, [handleTogglePopout]);
-
   const handleJoinLeaveVoice = useCallback(() => {
     if (voice.inVoice) {
-      voice.leave();
-    } else if (currentRoomId) {
-      voice.join(currentRoomId);
+      voice.leaveVoice?.();
+    } else {
+      voice.joinVoice?.();
     }
-  }, [voice, currentRoomId]);
+  }, [voice]);
 
-  const handleChangeVoiceChannel = useCallback(
-    (channelId) => {
-      if (voice.inVoice) voice.leave();
-      voice.join(channelId);
-    },
-    [voice]
-  );
+  const handleChangeVoiceChannel = useCallback((channelId) => {
+    voice.switchChannel?.(channelId);
+  }, [voice]);
+
+  const handleOpenVoiceSettings = useCallback(() => {
+    setShowVoiceSettings(true);
+  }, []);
 
   // ===========================================================================
-  // RENDER - CENTER PANEL (WORKSPACE)
+  // RENDER CENTER PANEL
   // ===========================================================================
   const renderCenterPanel = useCallback(() => {
     if (phase3Status !== "ready") {
       return (
-        <div className="cia-loading">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
           {phase3Status === "loading"
             ? "Initializing..."
             : "Initialization failed"}
@@ -462,174 +375,12 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, [phase3Status, workspaceId, userId, projectId, layoutMode]);
 
   // ===========================================================================
-  // RENDER - SECONDARY TOP BAR ZONES (44px)
-  // ===========================================================================
-  const secondaryTopBarZones = useMemo(() => ({
-    // Left Zone: Workspace Selector (syncs with left panel width)
-    left: (
-      <WorkspaceSelector
-        workspace={currentWorkspace}
-        workspaces={workspaces}
-        onSelect={handleWorkspaceChange}
-        onCreate={handleCreateWorkspace}
-      />
-    ),
-
-    // Center Zone: Flow Direction + Edit Tools + Canvas Navigation
-    center: (
-      <div className="secondary-bar-zone__content">
-        <FlowDirectionToggle
-          direction={flowDirection}
-          onChange={setFlowDirection}
-        />
-
-        <SecondaryBarDivider height={20} />
-
-        <EditToolbar
-          isEditMode={isEditMode}
-          activeTool={activeTool}
-          onToolChange={handleToolChange}
-          onToggleEditMode={handleToggleEditMode}
-          canUndo={false} // TODO: Wire to workspace history
-          canRedo={false}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-        />
-
-        <SecondaryBarDivider height={20} />
-
-        <CanvasNavigation
-          position={canvasPosition}
-          isAtOrigin={isAtOrigin}
-          onHome={handleNavigateHome}
-          onMove={handleNavigateDirection}
-          onBookmark={handleOpenBookmarks}
-        />
-      </div>
-    ),
-
-    // Right Zone: Room + Presence with dropdown (syncs with right panel width)
-    right: (
-      <RoomPresenceIndicator
-        room={currentRoom}
-        members={roomMembers}
-        availableRooms={availableRooms}
-        onRoomChange={handleRoomSelect}
-        onClick={handleOpenRoomsPanel}
-        onCreateRoom={handleCreateRoom}
-      />
-    ),
-  }), [
-    currentWorkspace,
-    workspaces,
-    handleWorkspaceChange,
-    handleCreateWorkspace,
-    flowDirection,
-    isEditMode,
-    activeTool,
-    handleToolChange,
-    handleToggleEditMode,
-    handleUndo,
-    handleRedo,
-    canvasPosition,
-    isAtOrigin,
-    handleNavigateHome,
-    handleNavigateDirection,
-    handleOpenBookmarks,
-    currentRoom,
-    roomMembers,
-    availableRooms,
-    handleRoomSelect,
-    handleOpenRoomsPanel,
-    handleCreateRoom,
-  ]);
-
-  // ===========================================================================
-  // RENDER - SECONDARY BOTTOM BAR ZONES (36px)
-  // ===========================================================================
-  const secondaryBottomBarZones = useMemo(() => ({
-    // Left Zone: Popout Buttons (Canvas Navigator, Scratchpad)
-    left: (
-      <PopoutButtons openPopouts={openPopouts} onToggle={handleTogglePopout} />
-    ),
-
-    // Center Zone: Instance Selector + Layout Mode + Canvas Size
-    center: (
-      <div className="secondary-bar-zone__content">
-        <InstanceSelector
-          activeInstance={activeInstance}
-          onCanvasViews={onCanvasViews}
-          availableViews={availableViews}
-          onSelectInstance={handleSelectInstance}
-          onPlaceView={handlePlaceView}
-        />
-
-        <SecondaryBarDivider height={20} />
-
-        <LayoutModeToggle mode={layoutMode} onChange={setLayoutMode} />
-
-        <SecondaryBarDivider height={20} />
-
-        <CanvasSizeDisplay size={canvasSize} onChange={setCanvasSize} />
-      </div>
-    ),
-
-    // Right Zone: Voice Quick Controls (enhanced with obvious status)
-    right: (
-      <VoiceQuickControls
-        isMuted={voice.muted}
-        isDeafened={voice.deafened}
-        isInChannel={voice.inVoice}
-        currentChannel={
-          voice.currentRoom
-            ? {
-              id: currentRoomId,
-              name: voice.currentRoom,
-            }
-            : null
-        }
-        participantCount={voice.participants?.length || 0}
-        channels={availableVoiceChannels}
-        onToggleMute={voice.toggleMute}
-        onToggleDeafen={voice.toggleDeafen}
-        onJoinLeave={handleJoinLeaveVoice}
-        onChangeChannel={handleChangeVoiceChannel}
-        onOpenVoiceSettings={handleOpenVoiceSettings}
-      />
-    ),
-  }), [
-    openPopouts,
-    handleTogglePopout,
-    activeInstance,
-    onCanvasViews,
-    availableViews,
-    handleSelectInstance,
-    handlePlaceView,
-    layoutMode,
-    canvasSize,
-    setCanvasSize,
-    voice.muted,
-    voice.deafened,
-    voice.inVoice,
-    voice.currentRoom,
-    voice.participants,
-    voice.toggleMute,
-    voice.toggleDeafen,
-    currentRoomId,
-    availableVoiceChannels,
-    handleJoinLeaveVoice,
-    handleChangeVoiceChannel,
-    handleOpenVoiceSettings,
-  ]);
-
-  // ===========================================================================
   // RENDER
   // ===========================================================================
   return (
     <FloatingPanelProvider>
       <LeftPanelProvider>
         <RightPanelProvider>
-          {/* LayoutPanelProvider shares state between LayoutPanel and FloatingCanvasNavigator */}
           <LayoutPanelProvider canvasId={canvasId}>
             <ThreeEdgeLayout
               // ─────────────────────────────────────────────────────────────
@@ -637,16 +388,10 @@ export function CIAWebApp({ username, userId, projectId }) {
               // ─────────────────────────────────────────────────────────────
               topBar={
                 <Header
-                  currentProject={
-                    projectId ? { id: projectId, name: projectId } : null
-                  }
-                  projects={[]} // TODO: Wire to user's projects
-                  user={
-                    userId
-                      ? { id: userId, name: username, avatar: null }
-                      : null
-                  }
-                  notifications={[]} // TODO: Wire to notifications
+                  currentProject={projectId ? { id: projectId, name: projectId } : null}
+                  projects={[]}
+                  user={userId ? { id: userId, name: username, avatar: null } : null}
+                  notifications={[]}
                   unreadCount={0}
                   viewMode={viewMode}
                   vrAvailable={vrAvailable}
@@ -661,9 +406,38 @@ export function CIAWebApp({ username, userId, projectId }) {
                 />
               }
               // ─────────────────────────────────────────────────────────────
-              // SECONDARY TOP BAR ZONES (44px)
+              // SECONDARY TOP BAR (48px - Self-contained component)
               // ─────────────────────────────────────────────────────────────
-              secondaryTopBarZones={secondaryTopBarZones}
+              secondaryTopBar={
+                <SecondaryHeader
+                  // Workspace props
+                  workspace={currentWorkspace}
+                  workspaces={workspaces}
+                  onWorkspaceChange={handleWorkspaceChange}
+                  onCreateWorkspace={handleCreateWorkspace}
+                  // Navigation props
+                  canvasPosition={canvasPosition}
+                  isAtOrigin={isAtOrigin}
+                  onNavigate={handleNavigateDirection}
+                  onHome={handleNavigateHome}
+                  onBookmark={handleOpenBookmarks}
+                  // View props
+                  activeView={activeInstance}
+                  onCanvasViews={onCanvasViews}
+                  availableViews={availableViews}
+                  onSelectView={handleSelectView}
+                  onPlaceView={handlePlaceView}
+                  viewMode={layoutMode}
+                  onViewModeChange={handleViewModeChange}
+                  // Room props
+                  room={currentRoom}
+                  members={roomMembers}
+                  availableRooms={availableRooms}
+                  onRoomChange={handleRoomSelect}
+                  onOpenRoomsPanel={handleOpenRoomsPanel}
+                  onCreateRoom={handleCreateRoom}
+                />
+              }
               // ─────────────────────────────────────────────────────────────
               // LEFT PANEL (Activity Bar + Content)
               // ─────────────────────────────────────────────────────────────
@@ -679,9 +453,48 @@ export function CIAWebApp({ username, userId, projectId }) {
               rightActivityBar={<RightActivityBar />}
               rightPanelContent={<RightPanelContent />}
               // ─────────────────────────────────────────────────────────────
-              // SECONDARY BOTTOM BAR ZONES (36px)
+              // SECONDARY BOTTOM BAR (36px - Self-contained component)
               // ─────────────────────────────────────────────────────────────
-              secondaryBottomBarZones={secondaryBottomBarZones}
+              secondaryBottomBar={
+                <SecondaryFooter
+                  // Popout state
+                  navigatorOpen={openPopouts.includes("navigator")}
+                  scratchpadOpen={openPopouts.includes("scratchpad")}
+                  onToggleNavigator={() => handleTogglePopout("navigator")}
+                  onToggleScratchpad={() => handleTogglePopout("scratchpad")}
+                  // Flow direction
+                  flowDirection={flowDirection}
+                  onFlowDirectionChange={setFlowDirection}
+                  // Edit tools
+                  isEditMode={isEditMode}
+                  activeTool={activeTool}
+                  onToolChange={handleToolChange}
+                  onToggleEditMode={handleToggleEditMode}
+                  canUndo={false}
+                  canRedo={false}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  // Canvas size
+                  canvasSize={canvasSize}
+                  onCanvasSizeChange={setCanvasSize}
+                  // Voice controls
+                  isMuted={voice.muted}
+                  isDeafened={voice.deafened}
+                  isInChannel={voice.inVoice}
+                  currentChannel={
+                    voice.currentRoom
+                      ? { id: currentRoomId, name: voice.currentRoom }
+                      : null
+                  }
+                  participantCount={voice.participants?.length || 0}
+                  voiceChannels={availableVoiceChannels}
+                  onToggleMute={voice.toggleMute}
+                  onToggleDeafen={voice.toggleDeafen}
+                  onJoinLeaveVoice={handleJoinLeaveVoice}
+                  onChangeVoiceChannel={handleChangeVoiceChannel}
+                  onOpenVoiceSettings={handleOpenVoiceSettings}
+                />
+              }
               // ─────────────────────────────────────────────────────────────
               // BOTTOM BAR (28px Status Bar)
               // ─────────────────────────────────────────────────────────────
@@ -689,42 +502,26 @@ export function CIAWebApp({ username, userId, projectId }) {
             >
               {/* Floating panels rendered inside LayoutContext */}
               <AllFloatingPanels workspaceId={workspaceId} />
-
-              {/* Canvas Navigator - floating/corner/minimized positions */}
               <FloatingCanvasNavigator />
             </ThreeEdgeLayout>
 
-            {/* ─────────────────────────────────────────────────────────────
-                MODALS (Rendered outside layout)
-                ───────────────────────────────────────────────────────────── */}
-            {/* {showWorkspacePicker && (
-              <WorkspacePickerModal
-                room={pendingRoomChange}
-                workspaces={workspaces}
-                onSelect={handleWorkspaceSelect}
-                onCreate={handleCreateWorkspaceForRoom}
-                onCancel={handleCancelWorkspacePicker}
-              />
-            )} */}
+            {/* Create Room Modal */}
+            <CreateRoomModal
+              isOpen={showCreateRoomModal}
+              onClose={() => setShowCreateRoomModal(false)}
+              onCreate={async (roomData) => {
+                try {
+                  await createRoom(roomData);
+                  setShowCreateRoomModal(false);
+                } catch (error) {
+                  log.error("Failed to create room:", error);
+                }
+              }}
+              availableUsers={roomMembers.filter((m) => !m.isYou)}
+            />
           </LayoutPanelProvider>
         </RightPanelProvider>
       </LeftPanelProvider>
-
-      {/* Create Room Modal */}
-      <CreateRoomModal
-        isOpen={showCreateRoomModal}
-        onClose={() => setShowCreateRoomModal(false)}
-        onCreate={async (roomData) => {
-          try {
-            await createRoom(roomData);
-            setShowCreateRoomModal(false);
-          } catch (error) {
-            log.error("Failed to create room:", error);
-            // Error handling is in the modal
-          }
-        }}
-        availableUsers={roomMembers.filter((m) => !m.isYou)}
-      />
     </FloatingPanelProvider>
   );
 }

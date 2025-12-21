@@ -1,45 +1,158 @@
 /**
  * @file SecondaryFooter.scss
- * @description Styles for secondary footer bar.
- * Uses BEM naming convention and design tokens.
+ * @description Styles for secondary footer bar with proper 3-zone flexbox layout.
+ * 
+ * CRITICAL: Class names must match JSX:
+ * - .secondary-footer__zone--left (not &__left)
+ * - .secondary-footer__zone--center (not &__center)
+ * - .secondary-footer__zone--right (not &__right)
+ * 
+ * Layout:
+ * ┌─────────────────┬──────────────────────────────────────┬─────────────────────┐
+ * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE        │
+ * │  (auto width)   │        (flexible, fills)             │  (fixed, tinted)    │
+ * └─────────────────┴──────────────────────────────────────┴─────────────────────┘
  */
 
 @use "theme" as *;
+
+// =============================================================================
+// VARIABLES
+// =============================================================================
+
+$footer-height: 36px;
+$right-zone-width: 280px; // Fixed width for voice controls
 
 // =============================================================================
 // SECONDARY FOOTER CONTAINER
 // =============================================================================
 
 .secondary-footer {
-  height: 36px;
+  width: 100%;
+  height: $footer-height;
   background: $color-bg-secondary;
   border-top: 1px solid $color-border-subtle;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 $spacing-md;
   z-index: 90;
-  position: relative;
   flex-shrink: 0;
 
-  &__left,
-  &__center,
-  &__right {
-    display: flex;
-    align-items: center;
+  // NO padding - zones handle their own padding
+  // NO position: relative - not needed
+  // NO justify-content: space-between - using flex: 1 on center
+}
+
+// =============================================================================
+// ZONE BASE STYLES
+// =============================================================================
+
+.secondary-footer__zone {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: $spacing-sm;
+}
+
+// =============================================================================
+// LEFT ZONE: Popout Buttons (auto width)
+// =============================================================================
+
+.secondary-footer__zone--left {
+  flex-shrink: 0;
+  padding: 0 $spacing-md;
+  border-right: 1px solid $color-border-subtle;
+  justify-content: flex-start;
+  gap: $spacing-xs;
+}
+
+// =============================================================================
+// CENTER ZONE: Edit Tools (FILLS available space)
+// =============================================================================
+
+.secondary-footer__zone--center {
+  flex: 1; // CRITICAL: Fill available space
+  min-width: 0; // Allow shrinking below content size
+  padding: 0 $spacing-lg;
+  justify-content: center;
+  gap: $spacing-md;
+  overflow: hidden;
+
+  // REMOVED: position: absolute - this was breaking the layout!
+  // REMOVED: left: 50%; transform: translateX(-50%);
+  // Content centers naturally via justify-content: center
+}
+
+// =============================================================================
+// RIGHT ZONE: Voice Controls (fixed width, tinted background)
+// =============================================================================
+
+.secondary-footer__zone--right {
+  width: $right-zone-width;
+  min-width: $right-zone-width;
+  flex-shrink: 0;
+  padding: 0 $spacing-md;
+  border-left: 1px solid $color-border-subtle;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  // Tinted background for voice section
+  background: rgba(96, 165, 250, 0.04); // blue tint
+  border-left-color: rgba(96, 165, 250, 0.2);
+}
+
+// =============================================================================
+// DIVIDER
+// =============================================================================
+
+.secondary-footer__divider {
+  width: 1px;
+  height: 20px;
+  background: $color-border-subtle;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
+
+  &--small {
+    height: 12px;
+    margin: 0 2px;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE BEHAVIOR
+// =============================================================================
+
+@media (max-width: 1400px) {
+  .secondary-footer__zone--right {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .secondary-footer__zone--center {
     gap: $spacing-sm;
+    padding: 0 $spacing-md;
+  }
+}
+
+@media (max-width: 1100px) {
+  .secondary-footer__zone--right {
+    width: 200px;
+    min-width: 180px;
   }
 
-  &__center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+  .secondary-footer__zone--center {
+    gap: $spacing-xs;
+    padding: 0 $spacing-sm;
+  }
+}
+
+@media (max-width: 900px) {
+  .secondary-footer__zone--left {
+    padding: 0 $spacing-sm;
   }
 
-  &__divider {
-    width: 1px;
-    height: 20px;
-    background: $color-border-subtle;
-    margin: 0 $spacing-xs;
+  .secondary-footer__zone--right {
+    min-width: 160px;
+    width: auto;
+    padding: 0 $spacing-sm;
   }
 }
