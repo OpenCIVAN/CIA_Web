@@ -25,7 +25,6 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { ui as log } from "@Utils/logger.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
-import { getViewConfigurationManager } from "@Init/appInitializer";
 
 // =============================================================================
 // LAYOUT INFRASTRUCTURE
@@ -92,9 +91,7 @@ import {
 } from "@UI/react/components/controls/ViewModeToggle";
 import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
-import { useInstanceSelector } from "@UI/react/hooks/useInstanceSelector.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
-import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
 
 // =============================================================================
 // CENTRALIZED STATE MODULES
@@ -120,9 +117,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const [phase3Status, setPhase3Status] = useState("pending");
   const phase3Started = useRef(false);
-
-  // Get wired logic for SecondaryHeader
-  const headerLogic = useSecondaryHeaderLogic();
 
   useEffect(() => {
     if (phase3Started.current) return;
@@ -159,8 +153,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const { canvasId } = useCanvas(workspaceId);
   const [canvasSize, setCanvasSize] = useState(getInitialCanvasSize);
-  const [canvasPosition, setCanvasPosition] = useState({ col: 0, row: 0 });
-  const isAtOrigin = canvasPosition.col === 0 && canvasPosition.row === 0;
 
   // Persist canvas size
   useEffect(() => {
@@ -186,17 +178,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeTool, setActiveTool] = useState("select");
   const [openPopouts, setOpenPopouts] = useState([]);
-
-  // ===========================================================================
-  // INSTANCE SELECTOR STATE
-  // ===========================================================================
-  const {
-    activeInstance,
-    onCanvasViews,
-    availableViews,
-    handleSelectInstance,
-    handlePlaceView,
-  } = useInstanceSelector(workspaceId);
 
   // ===========================================================================
   // VOICE CONTROLS
@@ -268,27 +249,8 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, []);
 
   // ===========================================================================
-  // CALLBACKS - SECONDARY HEADER (Navigation)
+  // CALLBACKS - SECONDARY HEADER (View Mode)
   // ===========================================================================
-  const handleNavigateHome = useCallback(() => {
-    setCanvasPosition({ col: 0, row: 0 });
-  }, []);
-
-  const handleNavigateDirection = useCallback((direction) => {
-    setCanvasPosition((prev) => ({
-      col: prev.col + (direction === "right" ? 1 : direction === "left" ? -1 : 0),
-      row: prev.row + (direction === "down" ? 1 : direction === "up" ? -1 : 0),
-    }));
-  }, []);
-
-  const handleOpenBookmarks = useCallback(() => {
-    log.debug("Open bookmarks");
-  }, []);
-
-  const handleSelectView = useCallback((view) => {
-    handleSelectInstance(view);
-  }, [handleSelectInstance]);
-
   const handleViewModeChange = useCallback((mode) => {
     setLayoutMode(mode);
   }, []);
@@ -419,18 +381,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                   workspaces={workspaces}
                   onWorkspaceChange={handleWorkspaceChange}
                   onCreateWorkspace={handleCreateWorkspace}
-                  // Navigation (from hook - properly wired to canvas)
-                  canvasPosition={headerLogic.canvasPosition}
-                  isAtOrigin={headerLogic.isAtOrigin}
-                  onNavigate={headerLogic.onNavigate}
-                  onHome={headerLogic.onHome}
-                  onBookmark={headerLogic.onBookmark}
-                  // Views (from hook - enriched with names)
-                  activeView={headerLogic.activeView}
-                  onCanvasViews={headerLogic.onCanvasViews}
-                  availableViews={headerLogic.availableViews}
-                  onSelectView={headerLogic.onSelectView}
-                  onPlaceView={headerLogic.onPlaceView}
+                  // View mode
                   viewMode={layoutMode}
                   onViewModeChange={handleViewModeChange}
                   // Room props

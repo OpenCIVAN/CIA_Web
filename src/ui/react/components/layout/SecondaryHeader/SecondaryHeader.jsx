@@ -7,6 +7,9 @@
  * zone content from the parent. This makes it self-contained and easier
  * to reason about.
  *
+ * IMPORTANT: This component uses useSecondaryHeaderLogic internally for
+ * navigation and view props. It must be rendered inside a LayoutPanelProvider.
+ *
  * Layout:
  * ┌─────────────────┬──────────────────────────────────────┬─────────────────┐
  * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE    │
@@ -19,12 +22,9 @@
  *   workspace={currentWorkspace}
  *   workspaces={workspaces}
  *   onWorkspaceChange={handleWorkspaceChange}
- *   // Navigation props
- *   canvasPosition={{ col: 0, row: 0 }}
- *   onNavigate={handleNavigate}
- *   // View props
- *   activeView={currentView}
+ *   // View mode
  *   viewMode="normal"
+ *   onViewModeChange={handleViewModeChange}
  *   // Room props
  *   room={currentRoom}
  *   members={roomMembers}
@@ -36,6 +36,9 @@ import { LayoutGrid, Maximize2, Layers } from 'lucide-react';
 
 // Shared bar components (from common bars/ folder)
 import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
+
+// Hook for navigation and view logic - uses LayoutPanelContext internally
+import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
 
 import './SecondaryHeader.scss';
 
@@ -56,31 +59,22 @@ const VIEW_MODE_OPTIONS = [
 /**
  * Secondary Header bar component.
  * Manages its own internal zones for workspace, navigation, and room context.
+ *
+ * Navigation and view props are obtained from useSecondaryHeaderLogic hook,
+ * which must be called inside LayoutPanelProvider context.
  */
 function SecondaryHeader({
-    // Workspace props
+    // Workspace props (passed from parent)
     workspace,
     workspaces = [],
     onWorkspaceChange,
     onCreateWorkspace,
 
-    // Navigation props
-    canvasPosition = { col: 0, row: 0 },
-    isAtOrigin = true,
-    onNavigate,
-    onHome,
-    onBookmark,
-
-    // View props
-    activeView,
-    onCanvasViews = [],
-    availableViews = [],
-    onSelectView,
-    onPlaceView,
+    // View mode (passed from parent)
     viewMode = 'normal',
     onViewModeChange,
 
-    // Room props
+    // Room props (passed from parent)
     room,
     members = [],
     availableRooms = [],
@@ -90,6 +84,20 @@ function SecondaryHeader({
 
     className = '',
 }) {
+    // Get navigation and view logic from context (MUST be inside LayoutPanelProvider)
+    const {
+        canvasPosition,
+        isAtOrigin,
+        onNavigate,
+        onHome,
+        onBookmark,
+        activeView,
+        onCanvasViews,
+        availableViews,
+        onSelectView,
+        onPlaceView,
+    } = useSecondaryHeaderLogic();
+
     return (
         <div className={`secondary-header ${className}`}>
             {/* ================================================================= */}
