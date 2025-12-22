@@ -62,7 +62,7 @@ export function LabeledIconButton({
             title={label}
             data-hovered={hovered}
         >
-            <Icon size={14} strokeWidth={1.5} className="labeled-icon-button__icon" />
+            <Icon sx={{ fontSize: 14 }} className="labeled-icon-button__icon" />
             <span className="labeled-icon-button__label">{label}</span>
         </button>
     );

@@ -21,14 +21,7 @@
  */
 
 import React, { useState, useCallback, memo } from 'react';
-import {
-    Home,
-    Bookmark,
-    ChevronUp,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-} from 'lucide-react';
+import { IconHome, IconBookmark, IconChevronUp, IconChevronDown, IconChevronLeft, IconChevronRight } from '@UI/react/components/common/Icon';
 
 import './StackedNavBlock.scss';
 
@@ -118,7 +111,7 @@ function StackedNavBlock({
             <div className="stacked-nav-block__quick-jump">
                 <NavButton
                     id="home"
-                    icon={Home}
+                    icon={IconHome}
                     label="Go to Origin (0, 0)"
                     active={isAtOrigin}
                     accent="var(--color-accent-amber)"
@@ -126,7 +119,7 @@ function StackedNavBlock({
                 />
                 <NavButton
                     id="bookmark"
-                    icon={Bookmark}
+                    icon={IconBookmark}
                     label="Saved Positions"
                     onClick={onBookmark}
                 />
@@ -143,25 +136,25 @@ function StackedNavBlock({
                 <div className="stacked-nav-block__dpad">
                     <NavButton
                         id={NAV_DIRECTIONS.LEFT}
-                        icon={ChevronLeft}
+                        icon={IconChevronLeft}
                         label="Pan Left"
                         onClick={() => handleNavigate(NAV_DIRECTIONS.LEFT)}
                     />
                     <NavButton
                         id={NAV_DIRECTIONS.UP}
-                        icon={ChevronUp}
+                        icon={IconChevronUp}
                         label="Pan Up"
                         onClick={() => handleNavigate(NAV_DIRECTIONS.UP)}
                     />
                     <NavButton
                         id={NAV_DIRECTIONS.DOWN}
-                        icon={ChevronDown}
+                        icon={IconChevronDown}
                         label="Pan Down"
                         onClick={() => handleNavigate(NAV_DIRECTIONS.DOWN)}
                     />
                     <NavButton
                         id={NAV_DIRECTIONS.RIGHT}
-                        icon={ChevronRight}
+                        icon={IconChevronRight}
                         label="Pan Right"
                         onClick={() => handleNavigate(NAV_DIRECTIONS.RIGHT)}
                     />

@@ -51,8 +51,6 @@ export {
   MoreVertOutlined as IconMoreVertical,
   SettingsOutlined as IconSettings,
   MenuOutlined as IconMenu,
-  EastOutlined as IconFlowRow,
-  SouthOutlined as IconFlowColumn,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -193,6 +191,10 @@ export {
   CameraAltOutlined as IconCamera,
   PhotoCameraOutlined as IconPhotoCamera,
   RadioOutlined as IconRadio,
+  HeadsetOutlined as IconHeadset,
+  HeadsetOffOutlined as IconHeadsetOff,
+  PhoneEnabledOutlined as IconPhone,
+  PhoneDisabledOutlined as IconPhoneOff,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -224,6 +226,8 @@ export {
   AccountTreeOutlined as IconGitBranch,
   ListOutlined as IconList,
   PhotoSizeSelectSmallOutlined as IconCanvasSize,
+  EastOutlined as IconFlowRow,
+  SouthOutlined as IconFlowColumn,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -561,10 +565,10 @@ export function getIconByName(name) {
 }
 
 // =============================================================================
-// SIZE HELPER (Optional)
+// SIZE HELPER
 // =============================================================================
 // Convert Lucide size to Material size (reduces by ~2px)
-// Usage: <IconClose sx={{ fontSize: lucifeToMaterial(16) }} />
+// Usage: <IconClose sx={{ fontSize: lucideToMaterial(16) }} />
 // =============================================================================
 export function lucideToMaterial(lucideSize) {
   return Math.max(lucideSize - 2, 10);
@@ -578,3 +582,59 @@ export const ICON_SIZES = {
   lg: 22, // Was 24 in Lucide
   xl: 30, // Was 32 in Lucide
 };
+
+// =============================================================================
+// ICON WRAPPER COMPONENT
+// =============================================================================
+// Provides a Lucide-like API for easier migration.
+// Automatically converts size and ignores strokeWidth.
+//
+// Usage:
+//   import { Icon, IconClose, IconVR } from '@UI/react/components/common/Icon';
+//
+//   // With size (auto-converted from Lucide scale)
+//   <Icon component={IconClose} size={16} className="my-class" />
+//
+//   // With color
+//   <Icon component={IconVR} size={20} color="#60a5fa" />
+//
+//   // Direct usage (no wrapper needed)
+//   <IconClose sx={{ fontSize: 14 }} />
+//
+// =============================================================================
+import React from "react";
+
+export function Icon({
+  component: IconComponent,
+  size,
+  strokeWidth, // Ignored - Material icons don't support this
+  className,
+  color,
+  style,
+  sx,
+  ...props
+}) {
+  // Convert Lucide size to Material (reduce by 2px)
+  const fontSize = size ? lucideToMaterial(size) : undefined;
+
+  // Merge sx prop with computed styles
+  const mergedSx = {
+    fontSize,
+    color,
+    ...sx,
+  };
+
+  // Remove undefined values
+  Object.keys(mergedSx).forEach((key) => {
+    if (mergedSx[key] === undefined) delete mergedSx[key];
+  });
+
+  return (
+    <IconComponent
+      className={className}
+      style={style}
+      sx={Object.keys(mergedSx).length > 0 ? mergedSx : undefined}
+      {...props}
+    />
+  );
+}

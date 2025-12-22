@@ -20,7 +20,6 @@ export { CanvasNavigation } from './CanvasNavigation';
 
 // View Selection
 export { ActiveViewSelector } from './ActiveViewSelector';
-export { InstanceSelector } from './InstanceSelector';
 
 // Toggle Controls
 export { FlowDirectionToggle } from './FlowDirectionToggle';
@@ -33,7 +32,6 @@ export { PopoutButtons } from './PopoutButtons';
 
 // Voice
 export { VoiceControlsPanel } from './VoiceControlsPanel';
-export { VoiceQuickControls } from './VoiceQuickControls';
 
 // Selectors
 export { RoomPresenceIndicator } from './RoomPresenceIndicator';
