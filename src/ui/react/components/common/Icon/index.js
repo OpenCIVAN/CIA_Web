@@ -5,27 +5,26 @@
 // All icons are imported from this file. If we ever need to switch libraries
 // or customize icons, only this file needs to be edited.
 //
-// IMPORTANT: We use OUTLINED variants to match Lucide's stroke style!
-// Material icons render ~2px larger, so reduce size accordingly:
-//   Lucide size={16} ≈ Material fontSize: 14
-//   Lucide size={18} ≈ Material fontSize: 16
-//   Lucide size={20} ≈ Material fontSize: 18
-//   Lucide size={24} ≈ Material fontSize: 22
+// We use OUTLINED variants to match Lucide's stroke style.
+// Sizes are the same as Lucide - no conversion needed!
 //
 // Usage:
 //   import { IconClose, IconAdd, IconVR } from '@UI/react/components/common/Icon';
+//
+// With wrapper (Lucide-like API):
+//   import { Icon, IconClose } from '@UI/react/components/common/Icon';
+//   <Icon component={IconClose} size={16} className="my-class" />
+//
+// Direct usage:
+//   <IconClose sx={{ fontSize: 16 }} />
 //
 // For loading spinner:
 //   import { IconLoader } from '@UI/react/components/common/Icon';
 //   <IconLoader size={16} />
 //
-// Sizing:
-//   <IconClose sx={{ fontSize: 14 }} />
-//   <IconVR sx={{ fontSize: 18 }} />
-//
 // Color:
 //   <IconCheck sx={{ color: '#34d399' }} />
-//   <IconCheck htmlColor="#34d399" />
+//   <Icon component={IconCheck} size={16} color="#34d399" />
 //
 // =============================================================================
 
@@ -565,41 +564,34 @@ export function getIconByName(name) {
 }
 
 // =============================================================================
-// SIZE HELPER
+// SIZE PRESETS
 // =============================================================================
-// Convert Lucide size to Material size (reduces by ~2px)
-// Usage: <IconClose sx={{ fontSize: lucideToMaterial(16) }} />
-// =============================================================================
-export function lucideToMaterial(lucideSize) {
-  return Math.max(lucideSize - 2, 10);
-}
-
-// Standard size presets
 export const ICON_SIZES = {
-  xs: 10, // Was 12 in Lucide
-  sm: 14, // Was 16 in Lucide
-  md: 18, // Was 20 in Lucide
-  lg: 22, // Was 24 in Lucide
-  xl: 30, // Was 32 in Lucide
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
 };
 
 // =============================================================================
 // ICON WRAPPER COMPONENT
 // =============================================================================
 // Provides a Lucide-like API for easier migration.
-// Automatically converts size and ignores strokeWidth.
+// Size is passed through directly (no conversion needed).
+// strokeWidth is safely ignored (Material icons don't support it).
 //
 // Usage:
 //   import { Icon, IconClose, IconVR } from '@UI/react/components/common/Icon';
 //
-//   // With size (auto-converted from Lucide scale)
+//   // With size (same as Lucide!)
 //   <Icon component={IconClose} size={16} className="my-class" />
 //
 //   // With color
 //   <Icon component={IconVR} size={20} color="#60a5fa" />
 //
 //   // Direct usage (no wrapper needed)
-//   <IconClose sx={{ fontSize: 14 }} />
+//   <IconClose sx={{ fontSize: 16 }} />
 //
 // =============================================================================
 import React from "react";
@@ -614,12 +606,9 @@ export function Icon({
   sx,
   ...props
 }) {
-  // Convert Lucide size to Material (reduce by 2px)
-  const fontSize = size ? lucideToMaterial(size) : undefined;
-
   // Merge sx prop with computed styles
   const mergedSx = {
-    fontSize,
+    fontSize: size,
     color,
     ...sx,
   };
