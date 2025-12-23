@@ -27,29 +27,31 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-    Settings,
-    Folder,
-    Globe,
-    Save,
-    RefreshCw,
-    Lock,
-    Users,
-    Layers,
-    ExternalLink,
-    Maximize2,
-    Link2,
-    Camera,
-    Filter,
-    Palette,
-    Target,
-    Zap,
-    MousePointer2,
-    Move,
-    Trash2,
-    Copy,
-    Pencil,
-    X,
-} from 'lucide-react';
+    PublicOutlined,
+    LinkOutlined,
+    PaletteOutlined,
+    GpsFixedOutlined,
+    BoltOutlined,
+    MouseOutlined,
+    OpenWithOutlined
+} from '@mui/icons-material';
+import {
+    IconSettings,
+    IconFolder,
+    IconSave,
+    IconRefresh,
+    IconLock,
+    IconUsers,
+    IconLayers,
+    IconExternalLink,
+    IconMaximize,
+    IconCamera,
+    IconFilter,
+    IconDelete,
+    IconCopy,
+    IconEdit,
+    IconClose
+} from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 
@@ -57,11 +59,11 @@ import './ViewSettingsModal.scss';
 
 // Link property configuration
 const LINK_PROPERTIES = [
-    { id: 'camera', icon: Camera, label: 'Link Camera', color: 'teal' },
-    { id: 'filters', icon: Filter, label: 'Link Filters', color: 'purple' },
-    { id: 'colorMap', icon: Palette, label: 'Link Color Map', color: 'pink' },
-    { id: 'widgets', icon: Layers, label: 'Link Widgets', color: 'amber' },
-    { id: 'cursor', icon: Target, label: 'Link Cursor', color: 'blue' },
+    { id: 'camera', icon: IconCamera, label: 'Link Camera', color: 'teal' },
+    { id: 'filters', icon: IconFilter, label: 'Link Filters', color: 'purple' },
+    { id: 'colorMap', icon: PaletteOutlined, label: 'Link Color Map', color: 'pink' },
+    { id: 'widgets', icon: IconLayers, label: 'Link Widgets', color: 'amber' },
+    { id: 'cursor', icon: GpsFixedOutlined, label: 'Link Cursor', color: 'blue' },
 ];
 
 export function ViewSettingsModal({
@@ -188,7 +190,7 @@ export function ViewSettingsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="View Settings"
-            icon={Settings}
+            icon={IconSettings}
             size="md"
             footer={renderFooter()}
         >
@@ -218,7 +220,7 @@ export function ViewSettingsModal({
                             title="Double-click to rename"
                         >
                             <span>{editName}</span>
-                            <Pencil size={10} className="view-settings-modal__name-hint" />
+                            <IconEdit size={10} className="view-settings-modal__name-hint" />
                         </div>
                     )}
                     <span className="view-settings-modal__subtitle">
@@ -230,14 +232,14 @@ export function ViewSettingsModal({
                 <div className="view-settings-modal__quick-actions">
                     <span className="view-settings-modal__quick-label">Quick Actions:</span>
                     <QuickToggle
-                        icon={Folder}
+                        icon={IconFolder}
                         label="Workspace"
                         active={view.starredWorkspace}
                         activeColor="purple"
                         onClick={onStarWorkspace}
                     />
                     <QuickToggle
-                        icon={Globe}
+                        icon={PublicOutlined}
                         label="Personal"
                         active={view.starredPersonal}
                         activeColor="amber"
@@ -245,20 +247,20 @@ export function ViewSettingsModal({
                     />
                     <div className="view-settings-modal__quick-divider" />
                     <QuickToggle
-                        icon={Save}
+                        icon={IconSave}
                         label="Save State"
                         active={view.hasSavedState}
                         activeColor="amber"
                         onClick={onSaveState}
                     />
                     <QuickToggle
-                        icon={RefreshCw}
+                        icon={IconRefresh}
                         label="Load State"
                         onClick={onLoadState}
                     />
                     <div className="view-settings-modal__quick-divider" />
                     <QuickToggle
-                        icon={Lock}
+                        icon={IconLock}
                         label="Lock"
                         active={view.isLocked}
                         activeColor="amber"
@@ -269,10 +271,10 @@ export function ViewSettingsModal({
                 {/* Sections */}
                 <div className="view-settings-modal__sections">
                     {/* Source Dataset */}
-                    <ModalSection icon={Layers} title="Source Dataset">
+                    <ModalSection icon={IconLayers} title="Source Dataset">
                         <div className="view-settings-modal__dataset">
                             <div className="view-settings-modal__dataset-icon">
-                                <Layers size={18} />
+                                <IconLayers size={18} />
                             </div>
                             <div className="view-settings-modal__dataset-info">
                                 <div className="view-settings-modal__dataset-name">
@@ -283,7 +285,7 @@ export function ViewSettingsModal({
                                 </div>
                             </div>
                             <button className="view-settings-modal__dataset-btn">
-                                <ExternalLink size={10} />
+                                <IconExternalLink size={10} />
                                 Open
                             </button>
                         </div>
@@ -291,7 +293,7 @@ export function ViewSettingsModal({
 
                     {/* Sharing */}
                     <ModalSection
-                        icon={Users}
+                        icon={IconUsers}
                         title="Sharing"
                         badge={view.isShared ? `${localSharedUsers.length} people` : 'Private'}
                     >
@@ -302,7 +304,7 @@ export function ViewSettingsModal({
                                     className="view-settings-modal__share-btn"
                                     onClick={onShare}
                                 >
-                                    <Users size={12} />
+                                    <IconUsers size={12} />
                                     Share View
                                 </button>
                             </div>
@@ -352,7 +354,7 @@ export function ViewSettingsModal({
                                                 className="view-settings-modal__share-remove"
                                                 onClick={() => handleRemoveShare(user.id)}
                                             >
-                                                <X size={12} />
+                                                <IconClose size={12} />
                                             </button>
                                         </div>
                                     ))}
@@ -372,7 +374,7 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Canvas Size */}
-                    <ModalSection icon={Maximize2} title="Canvas Size">
+                    <ModalSection icon={IconMaximize} title="Canvas Size">
                         <div className="view-settings-modal__size-grid">
                             {[1, 2, 3].map(row =>
                                 [1, 2, 3].map(col => (
@@ -393,7 +395,7 @@ export function ViewSettingsModal({
 
                     {/* Link Properties */}
                     <ModalSection
-                        icon={Link2}
+                        icon={LinkOutlined}
                         title="Link Properties"
                         badge={view.linkedCount > 0 ? `${view.linkedCount} linked` : null}
                     >
@@ -428,7 +430,7 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Annotation Display */}
-                    <ModalSection icon={Target} title="Annotation Display" badge="Dataset Level">
+                    <ModalSection icon={GpsFixedOutlined} title="Annotation Display" badge="Dataset Level">
                         <div className="view-settings-modal__note view-settings-modal__note--info">
                             Annotations belong to the <strong>Dataset</strong>. This view can filter which annotations to display.
                         </div>
@@ -462,7 +464,7 @@ export function ViewSettingsModal({
                                     }
                                 </select>
                                 <button className="view-settings-modal__annotation-copy-btn">
-                                    <Copy size={10} />
+                                    <IconCopy size={10} />
                                     Copy
                                 </button>
                             </div>
@@ -470,9 +472,9 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Display Options (Handler-specific) */}
-                    <ModalSection icon={Palette} title="Display Options" badge={view.instanceType || 'VTK'}>
+                    <ModalSection icon={PaletteOutlined} title="Display Options" badge={view.instanceType || 'VTK'}>
                         <div className="view-settings-modal__note view-settings-modal__note--warning">
-                            <Zap size={10} />
+                            <BoltOutlined style={{ fontSize: 10 }} />
                             <span>Options from <strong>{view.instanceType || 'VTK'}InstanceHandler</strong> — varies by type</span>
                         </div>
                         <div className="view-settings-modal__display-options">
@@ -500,10 +502,10 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Advanced (Stub) */}
-                    <ModalSection icon={Zap} title="Advanced" badge="Stub">
+                    <ModalSection icon={BoltOutlined} title="Advanced" badge="Stub">
                         <div className="view-settings-modal__advanced">
                             <div className="view-settings-modal__advanced-row">
-                                <MousePointer2 size={12} />
+                                <MouseOutlined style={{ fontSize: 12 }} />
                                 <span>Cursor Style</span>
                                 <select disabled>
                                     <option>Crosshair</option>
@@ -512,7 +514,7 @@ export function ViewSettingsModal({
                                 </select>
                             </div>
                             <div className="view-settings-modal__advanced-row">
-                                <Move size={12} />
+                                <OpenWithOutlined style={{ fontSize: 12 }} />
                                 <span>Interaction Mode</span>
                                 <select disabled>
                                     <option>Trackball</option>
@@ -527,9 +529,9 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Danger Zone */}
-                    <ModalSection icon={Trash2} title="Danger Zone">
+                    <ModalSection icon={IconDelete} title="Danger Zone">
                         <button className="view-settings-modal__delete-btn" onClick={onTrash}>
-                            <Trash2 size={14} />
+                            <IconDelete size={14} />
                             Delete View Permanently
                         </button>
                         <p className="view-settings-modal__delete-hint">

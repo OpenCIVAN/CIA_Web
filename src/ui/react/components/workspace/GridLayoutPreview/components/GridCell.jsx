@@ -23,7 +23,7 @@
  */
 
 import { memo, useCallback } from 'react';
-import { Plus, Home, AlertTriangle } from 'lucide-react';
+import { IconAdd, IconHome, IconAlertTriangle } from '@UI/react/components/common/Icon';
 import { CollaboratorAvatar } from './CollaboratorAvatar';
 import './GridCell.scss';
 
@@ -135,7 +135,7 @@ export const GridCell = memo(function GridCell({
                     {/* Overlap warning */}
                     {hasOverlap && (
                         <div className="grid-cell__overlap-indicator">
-                            <AlertTriangle size={12} />
+                            <IconAlertTriangle size={12} />
                         </div>
                     )}
                 </>
@@ -144,7 +144,7 @@ export const GridCell = memo(function GridCell({
             {type === 'empty' && (
                 <div className="grid-cell__empty">
                     {isEditMode && (
-                        <Plus size={12} className="grid-cell__add-icon" />
+                        <IconAdd size={12} className="grid-cell__add-icon" />
                     )}
                 </div>
             )}
@@ -152,7 +152,7 @@ export const GridCell = memo(function GridCell({
             {/* Homepoint marker */}
             {isHomepoint && (
                 <div className="grid-cell__homepoint-marker">
-                    <Home size={10} />
+                    <IconHome size={10} />
                 </div>
             )}
 

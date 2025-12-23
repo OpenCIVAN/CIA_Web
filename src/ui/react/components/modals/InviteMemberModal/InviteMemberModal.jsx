@@ -26,12 +26,12 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
+import { ShieldOutlined } from '@mui/icons-material';
 import {
-    UserPlus,
-    Eye,
-    User,
-    Shield
-} from 'lucide-react';
+    IconUserPlus,
+    IconEye,
+    IconUser
+} from '@UI/react/components/common/Icon';
 import { FormModal, FormField } from '../FormModal';
 import EmailTagInput, { isValidEmail } from './EmailTagInput';
 import './InviteMemberModal.scss';
@@ -44,19 +44,19 @@ const ROLE_OPTIONS = [
         value: 'viewer',
         label: 'Viewer',
         description: 'Can view content but not make changes',
-        icon: Eye,
+        icon: IconEye,
     },
     {
         value: 'member',
         label: 'Member',
         description: 'Can view, edit, and create content',
-        icon: User,
+        icon: IconUser,
     },
     {
         value: 'admin',
         label: 'Admin',
         description: 'Full access including project settings',
-        icon: Shield,
+        icon: ShieldOutlined,
     },
 ];
 
@@ -240,7 +240,7 @@ function InviteMemberModal({
             isOpen={isOpen}
             onClose={onClose}
             title={`Invite to ${projectName}`}
-            icon={UserPlus}
+            icon={IconUserPlus}
             submitLabel={submitLabel}
             submittingLabel="Sending..."
             onSubmit={handleSubmit}

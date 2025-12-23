@@ -7,7 +7,8 @@
 // Place this in the Header or SecondaryFooter for easy access.
 
 import React, { useState, useRef, useEffect, memo } from "react";
-import { Users, ChevronDown, Check, Building, UserCircle } from 'lucide-react';
+import { IconUsers, IconChevronDown, IconCheck } from '@UI/react/components/common/Icon';
+import BusinessOutlined from '@mui/icons-material/BusinessOutlined';
 import { useDevUser } from "@UI/react/context/DevUserContext.jsx";
 import { getUserInitials } from "@Config/mockUsers.js";
 import "./DevUserSwitcher.scss";
@@ -111,8 +112,8 @@ export const DevUserSwitcher = memo(function DevUserSwitcher({
                     </span>
                 )}
 
-                <ChevronDown
-                    size={12}
+                <IconChevronDown
+                    sx={{ fontSize: 12 }}
                     className={`dev-user-switcher__chevron ${isOpen ? "dev-user-switcher__chevron--open" : ""}`}
                 />
 
@@ -124,7 +125,7 @@ export const DevUserSwitcher = memo(function DevUserSwitcher({
             {isOpen && (
                 <div className="dev-user-switcher__dropdown">
                     <div className="dev-user-switcher__header">
-                        <Users size={14} />
+                        <IconUsers sx={{ fontSize: 14 }} />
                         <span>Switch User</span>
                     </div>
 
@@ -146,14 +147,14 @@ export const DevUserSwitcher = memo(function DevUserSwitcher({
                                         </span>
                                         {user.department && (
                                             <span className="dev-user-switcher__option-dept">
-                                                <Building size={10} />
+                                                <BusinessOutlined sx={{ fontSize: 10 }} />
                                                 {user.department}
                                             </span>
                                         )}
                                     </div>
 
                                     {isSelected && (
-                                        <Check size={14} className="dev-user-switcher__check" />
+                                        <IconCheck sx={{ fontSize: 14 }} className="dev-user-switcher__check" />
                                     )}
                                 </button>
                             );

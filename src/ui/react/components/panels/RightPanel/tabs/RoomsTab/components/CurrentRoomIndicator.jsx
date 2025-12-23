@@ -4,17 +4,18 @@
  */
 
 import React from 'react';
-import { Globe, Layout, LogOut, User as UserIcon } from 'lucide-react';
+import { IconLogout, IconUser } from '@UI/react/components/common/Icon';
+import { PublicOutlined, ViewQuiltOutlined } from '@mui/icons-material';
 
 /**
  * Get icon for room type
  */
 function getTypeIcon(type) {
     switch (type) {
-        case 'project': return Globe;
-        case 'breakout': return Layout;
-        case 'personal': return UserIcon;
-        default: return Layout;
+        case 'project': return PublicOutlined;
+        case 'breakout': return ViewQuiltOutlined;
+        case 'personal': return IconUser;
+        default: return ViewQuiltOutlined;
     }
 }
 
@@ -51,7 +52,7 @@ export function CurrentRoomIndicator({ room, onLeave }) {
                     onClick={onLeave}
                     title="Leave room"
                 >
-                    <LogOut size={14} />
+                    <IconLogout size={14} />
                     Leave
                 </button>
             )}

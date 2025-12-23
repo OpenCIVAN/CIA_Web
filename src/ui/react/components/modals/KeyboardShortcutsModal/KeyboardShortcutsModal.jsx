@@ -38,7 +38,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Keyboard, Search } from 'lucide-react';
+import { IconKeyboard, IconSearch } from '@UI/react/components/common/Icon';
 import Modal from '../Modal/Modal';
 import ShortcutCategory from './ShortcutCategory';
 import ShortcutItem from './ShortcutItem';
@@ -234,7 +234,7 @@ function KeyboardShortcutsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Keyboard Shortcuts"
-            icon={Keyboard}
+            icon={IconKeyboard}
             severity="info"
             size="lg"
             testId={testId}
@@ -266,7 +266,7 @@ function KeyboardShortcutsModal({
                     {/* Search input */}
                     {searchable && (
                         <div className="shortcuts-modal__search">
-                            <Search size={16} className="shortcuts-modal__search-icon" />
+                            <IconSearch size={16} className="shortcuts-modal__search-icon" />
                             <input
                                 ref={searchInputRef}
                                 type="text"

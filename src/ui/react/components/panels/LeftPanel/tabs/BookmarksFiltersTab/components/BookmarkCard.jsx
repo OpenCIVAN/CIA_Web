@@ -14,19 +14,19 @@
 
 import React, { useState, memo } from 'react';
 import {
-    Camera,
-    Share2,
-    Pin,
-    PinOff,
-    Trash2,
-    Play,
-    Edit3,
-    Copy,
-    MoreHorizontal,
-    Navigation,
-    Layers,
-    GitCompare,
-} from 'lucide-react';
+    IconCamera,
+    IconShare,
+    IconPin,
+    IconDelete,
+    IconPlay,
+    IconEdit,
+    IconCopy,
+    IconMoreHorizontal,
+    IconLayers,
+} from '@UI/react/components/common/Icon';
+import PushPinOutlined from '@mui/icons-material/PushPinOutlined';
+import ExploreOutlined from '@mui/icons-material/ExploreOutlined';
+import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined';
 import { formatTimestamp } from '@Utils/formatters.js';
 import { BOOKMARK_TYPES } from '../hooks/useBookmarksTab';
 import { getScopeConfig } from '../constants';
@@ -40,13 +40,13 @@ import { getScopeConfig } from '../constants';
 function getBookmarkTypeConfig(type) {
     switch (type) {
         case 'position':
-            return { icon: Navigation, color: 'blue', label: 'Position' };
+            return { icon: ExploreOutlined, color: 'blue', label: 'Position' };
         case 'state':
-            return { icon: Layers, color: 'purple', label: 'State' };
+            return { icon: IconLayers, color: 'purple', label: 'State' };
         case 'comparison':
-            return { icon: GitCompare, color: 'amber', label: 'Comparison' };
+            return { icon: CompareArrowsOutlined, color: 'amber', label: 'Comparison' };
         default:
-            return { icon: Camera, color: 'gray', label: 'Bookmark' };
+            return { icon: IconCamera, color: 'gray', label: 'Bookmark' };
     }
 }
 
@@ -123,14 +123,14 @@ export const BookmarkCard = memo(function BookmarkCard({
                 <TypeIcon size={14} className={`icon-${typeConfig.color}`} />
                 <span className="bookmark-card__name">{bookmark.name}</span>
                 {bookmark.isPinned && (
-                    <Pin size={10} className="bookmark-card__pin-indicator" fill="currentColor" />
+                    <IconPin size={10} className="bookmark-card__pin-indicator" fill="currentColor" />
                 )}
                 <button
                     className="bookmark-card__go-btn"
                     onClick={handleNavigate}
                     style={{ opacity: isHovered ? 1 : 0 }}
                 >
-                    <Play size={10} />
+                    <IconPlay size={10} />
                 </button>
             </div>
         );
@@ -170,7 +170,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                         {bookmark.name}
                     </span>
                     {bookmark.scope !== 'personal' && (
-                        <Share2 size={9} className="icon-pink" title="Shared" />
+                        <IconShare size={9} className="icon-pink" title="Shared" />
                     )}
                 </div>
                 <div className="bookmark-card__meta">
@@ -214,9 +214,9 @@ export const BookmarkCard = memo(function BookmarkCard({
                     title={bookmark.isPinned ? 'Unpin' : 'Pin'}
                 >
                     {bookmark.isPinned ? (
-                        <Pin size={10} fill="currentColor" />
+                        <IconPin size={10} fill="currentColor" />
                     ) : (
-                        <PinOff size={10} />
+                        <PushPinOutlined size={10} />
                     )}
                 </button>
 
@@ -227,22 +227,22 @@ export const BookmarkCard = memo(function BookmarkCard({
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                             title="More actions"
                         >
-                            <MoreHorizontal size={10} />
+                            <IconMoreHorizontal size={10} />
                         </button>
 
                         {/* Context menu */}
                         {showMenu && (
                             <div className="bookmark-card__menu">
                                 <button onClick={handleEdit}>
-                                    <Edit3 size={10} />
+                                    <IconEdit size={10} />
                                     Edit
                                 </button>
                                 <button onClick={handleDuplicate}>
-                                    <Copy size={10} />
+                                    <IconCopy size={10} />
                                     Duplicate
                                 </button>
                                 <button onClick={handleDelete} className="danger">
-                                    <Trash2 size={10} />
+                                    <IconDelete size={10} />
                                     Delete
                                 </button>
                             </div>
@@ -257,7 +257,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                 onClick={handleNavigate}
                 title="Navigate to bookmark"
             >
-                <Play size={10} /> Go
+                <IconPlay size={10} /> Go
             </button>
         </div>
     );

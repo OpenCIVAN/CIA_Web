@@ -27,15 +27,15 @@ import React, {
     useEffect,
 } from 'react';
 import {
-    FolderOpen, // Files
-    Database, // Datasets
-    Eye, // Views
-    Wrench, // Instance Tools
-    LayoutGrid, // Layout
-    MapPin, // Annotations
-    Bookmark, // Bookmarks & Filters
-    MousePointer2, // Cursors
-} from 'lucide-react';
+    IconFolderOpen, // Files
+    IconDatabase, // Datasets
+    IconEye, // Views
+    IconTools, // Instance Tools
+    IconLayoutGrid, // Layout
+    IconMapPin, // Annotations
+    IconBookmark, // Bookmarks & Filters
+} from '@UI/react/components/common/Icon';
+import TouchAppOutlined from '@mui/icons-material/TouchAppOutlined'; // Cursors - MousePointer2 equivalent
 
 // =============================================================================
 // TAB CONTENT COMPONENTS - Lazy imports to avoid circular dependencies
@@ -56,7 +56,7 @@ export const LEFT_PANEL_TABS = [
     // DATA SOURCES
     {
         id: 'files',
-        icon: FolderOpen,
+        icon: IconFolderOpen,
         label: 'Files',
         color: 'blue',
         group: 'data',
@@ -64,7 +64,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'datasets',
-        icon: Database,
+        icon: IconDatabase,
         label: 'Datasets',
         color: 'teal',
         group: 'data',
@@ -73,7 +73,7 @@ export const LEFT_PANEL_TABS = [
     // VISUALIZATION
     {
         id: 'views',
-        icon: Eye,
+        icon: IconEye,
         label: 'Views',
         color: 'purple',
         group: 'visualization',
@@ -81,7 +81,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'tools',
-        icon: Wrench,
+        icon: IconTools,
         label: 'Instance Tools',
         color: 'amber',
         group: 'visualization',
@@ -89,7 +89,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'layout',
-        icon: LayoutGrid,
+        icon: IconLayoutGrid,
         label: 'Layout',
         color: 'green',
         group: 'visualization',
@@ -98,7 +98,7 @@ export const LEFT_PANEL_TABS = [
     // SPATIAL & STATE
     {
         id: 'annotations',
-        icon: MapPin,
+        icon: IconMapPin,
         label: 'Annotations',
         color: 'pink',
         group: 'spatial',
@@ -106,7 +106,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'bookmarks',
-        icon: Bookmark,
+        icon: IconBookmark,
         label: 'Bookmarks & Filters',
         color: 'indigo',
         group: 'spatial',
@@ -115,7 +115,7 @@ export const LEFT_PANEL_TABS = [
     // PRESENCE (future VR expansion)
     {
         id: 'cursors',
-        icon: MousePointer2,
+        icon: TouchAppOutlined,
         label: 'Cursors',
         color: 'cyan',
         group: 'presence',

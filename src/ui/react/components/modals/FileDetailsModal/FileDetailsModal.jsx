@@ -22,16 +22,15 @@
 
 import React from 'react';
 import {
-    FileText,
-    Calendar,
-    HardDrive,
-    Tag,
-    Eye,
-    Download,
-    Trash2,
-    Folder
-} from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+    IconFile,
+    IconCalendar,
+    IconEye,
+    IconDownload,
+    IconDelete,
+    IconFolder
+} from '@UI/react/components/common/Icon';
+import StorageOutlined from '@mui/icons-material/StorageOutlined';
+import LabelOutlined from '@mui/icons-material/LabelOutlined';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import './FileDetailsModal.scss';
@@ -103,12 +102,7 @@ export function FileDetailsModal({
 
     // Get file type display info for icon
     const displayInfo = getFileTypeDisplayInfo(file.fileType);
-    let Icon = FileText;
-
-    if (displayInfo) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        Icon = LucideIcons[iconName] || FileText;
-    }
+    let Icon = IconFile;
 
     /**
      * Handle open action.
@@ -139,15 +133,15 @@ export function FileDetailsModal({
     const renderFooter = () => (
         <>
             <button className="btn btn--primary" onClick={handleOpen}>
-                <Eye size={14} />
+                <IconEye size={14} />
                 Open
             </button>
             <button className="btn btn--secondary" onClick={handleDownload}>
-                <Download size={14} />
+                <IconDownload size={14} />
                 Download
             </button>
             <button className="btn btn--danger" onClick={handleDelete}>
-                <Trash2 size={14} />
+                <IconDelete size={14} />
                 Delete
             </button>
         </>
@@ -176,26 +170,26 @@ export function FileDetailsModal({
                 {/* File Info */}
                 <div className="file-details-modal__info">
                     <div className="file-details-modal__row">
-                        <Tag size={14} />
+                        <LabelOutlined style={{ fontSize: 14 }} />
                         <span className="label">Type</span>
                         <span className="value">{file.fileType || 'Unknown'}</span>
                     </div>
 
                     <div className="file-details-modal__row">
-                        <HardDrive size={14} />
+                        <StorageOutlined style={{ fontSize: 14 }} />
                         <span className="label">Size</span>
                         <span className="value">{formatFileSize(file.size)}</span>
                     </div>
 
                     <div className="file-details-modal__row">
-                        <Calendar size={14} />
+                        <IconCalendar size={14} />
                         <span className="label">Modified</span>
                         <span className="value">{formatDate(file.modifiedAt || file.uploadedAt)}</span>
                     </div>
 
                     {file.path && (
                         <div className="file-details-modal__row">
-                            <Folder size={14} />
+                            <IconFolder size={14} />
                             <span className="label">Path</span>
                             <span className="value">{file.path}</span>
                         </div>

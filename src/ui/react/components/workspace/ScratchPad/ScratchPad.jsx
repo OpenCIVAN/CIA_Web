@@ -4,48 +4,53 @@
 
 import React, { memo } from 'react';
 import {
-    Clipboard,
-    ChevronUp,
-    ChevronDown,
-    Pin,
-    PinOff,
-    ExternalLink,
-    X,
-    Plus,
-    Trash2,
-    Ruler,
-    Triangle,
-    StickyNote,
-    Link2,
-    GitCompare,
-    Zap,
-    Database,
-    Eye,
-    FileText,
-    Filter,
-    Bookmark,
-    Settings,
-} from 'lucide-react';
+    IconChevronUp,
+    IconChevronDown,
+    IconPin,
+    IconExternalLink,
+    IconClose,
+    IconAdd,
+    IconDelete,
+    IconRuler,
+    IconLink,
+    IconEye,
+    IconFile,
+    IconFilter,
+    IconBookmark,
+    IconSettings,
+    IconStickyNote,
+    IconMacro,
+    IconGitCompare
+} from '@UI/react/components/common/Icon';
+import {
+    DescriptionOutlined as Clipboard,
+    PushPinOutlined as PinOff,
+    ChangeHistoryOutlined as Triangle,
+    StickyNote2Outlined as StickyNote,
+    CompareArrowsOutlined as GitCompare,
+    BoltOutlined as Zap,
+    StorageOutlined as Database,
+} from '@mui/icons-material';
 import { useScratchPad, useScratchPadListener } from './ScratchPad.logic.js';
 import './ScratchPad.scss';
 
 // Icon mapping for clipboard item types
 const ITEM_TYPE_ICONS = {
     dataset: Database,
-    view: Eye,
-    note: StickyNote,
-    filter: Filter,
-    bookmark: Bookmark,
+    view: IconEye,
+    note: IconStickyNote,
+    filter: IconFilter,
+    bookmark: IconBookmark,
 };
 
 // Icon mapping for quick tools
 const TOOL_ICONS = {
-    measure: Ruler,
+    measure: IconRuler,
     angle: Triangle,
-    note: StickyNote,
-    link: Link2,
-    compare: GitCompare,
-    macro: Zap,
+    note: IconStickyNote,
+    link: IconLink,
+    compare: IconGitCompare,
+    macro: IconMacro,
 };
 
 /**
@@ -57,7 +62,7 @@ const ClipboardItem = memo(function ClipboardItem({
     onDragStart,
     onDragEnd,
 }) {
-    const Icon = ITEM_TYPE_ICONS[item.type] || FileText;
+    const Icon = ITEM_TYPE_ICONS[item.type] || IconFile;
 
     return (
         <div
@@ -77,7 +82,7 @@ const ClipboardItem = memo(function ClipboardItem({
                 }}
                 title="Remove"
             >
-                <X size={10} />
+                <IconClose size={10} />
             </button>
         </div>
     );
@@ -120,7 +125,7 @@ export function ScratchPadCollapsed({ onClick, itemCount = 0 }) {
             {itemCount > 0 && (
                 <span className="scratchpad-trigger__count">{itemCount}</span>
             )}
-            <ChevronUp size={12} />
+            <IconChevronUp size={12} />
         </button>
     );
 }
@@ -170,21 +175,21 @@ export function ScratchPadExpanded({
                         onClick={onTogglePin}
                         title={isPinned ? 'Unpin' : 'Pin'}
                     >
-                        {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                        {isPinned ? <PinOff size={12} /> : <IconPin size={12} />}
                     </button>
                     <button
                         className="scratchpad-panel__action"
                         onClick={onToggleDetach}
                         title={isDetached ? 'Dock' : 'Detach'}
                     >
-                        <ExternalLink size={12} />
+                        <IconExternalLink size={12} />
                     </button>
                     <button
                         className="scratchpad-panel__action"
                         onClick={onClose}
                         title="Close"
                     >
-                        <X size={12} />
+                        <IconClose size={12} />
                     </button>
                 </div>
             </div>
@@ -199,7 +204,7 @@ export function ScratchPadExpanded({
                             onClick={onClearClipboard}
                             title="Clear all"
                         >
-                            <Trash2 size={10} />
+                            <IconDelete size={10} />
                         </button>
                     )}
                 </div>
@@ -232,7 +237,7 @@ export function ScratchPadExpanded({
                 <div className="scratchpad-tools__header">
                     <span>Quick Tools</span>
                     <button className="scratchpad-tools__customize" title="Customize">
-                        <Settings size={10} />
+                        <IconSettings size={10} />
                     </button>
                 </div>
 

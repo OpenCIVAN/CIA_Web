@@ -3,7 +3,8 @@
 // Designed for use in SecondaryBottomBar left zone
 
 import React from 'react';
-import { Monitor, Glasses } from 'lucide-react';
+import { IconVR } from '@UI/react/components/common/Icon';
+import MonitorOutlined from '@mui/icons-material/MonitorOutlined';
 import { useViewModeToggle, VIEW_MODES } from './ViewModeToggle.logic.js';
 import './ViewModeToggle.scss';
 
@@ -71,7 +72,7 @@ export function ViewModeToggle({
                 disabled={disabled}
                 title="Desktop Mode - Standard 2D interface"
             >
-                <Monitor size={compact ? 14 : 12} className="view-mode-toggle__icon" />
+                <MonitorOutlined sx={{ fontSize: compact ? 14 : 12 }} className="view-mode-toggle__icon" />
                 {!compact && <span className="view-mode-toggle__label">Desktop</span>}
             </button>
 
@@ -85,7 +86,7 @@ export function ViewModeToggle({
                 disabled={disabled || !canEnterVR}
                 title={canEnterVR ? "VR Mode - Immersive 3D experience" : vrUnavailableReason}
             >
-                <Glasses size={compact ? 14 : 12} className="view-mode-toggle__icon" />
+                <IconVR sx={{ fontSize: compact ? 14 : 12 }} className="view-mode-toggle__icon" />
                 {!compact && <span className="view-mode-toggle__label">VR</span>}
                 {!canEnterVR && !compact && (
                     <span className="view-mode-toggle__unavailable-indicator" title={vrUnavailableReason}>
@@ -103,7 +104,7 @@ export function ViewModeToggle({
  */
 export function ViewModeIndicator({ mode, compact = false }) {
     const isVR = mode === VIEW_MODES.VR;
-    const Icon = isVR ? Glasses : Monitor;
+    const Icon = isVR ? IconVR : MonitorOutlined;
     const label = isVR ? 'VR Mode' : 'Desktop';
 
     return (

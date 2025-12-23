@@ -2,10 +2,18 @@
  * CanvasSubtab Component - Canvas configuration for Layout Panel
  */
 import React, { memo, useCallback } from 'react';
-import {
-    Grid3X3, Rows, ArrowRight, ArrowDown, PlusCircle, MousePointer2,
-    Hand, Combine, Pencil, Undo, Redo, Replace, LayoutGrid,
-} from 'lucide-react';
+import { IconGrid3x3, IconArrowRight } from '@UI/react/components/common/Icon';
+import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+import TableRowsOutlined from '@mui/icons-material/TableRowsOutlined';
+import ArrowDownwardOutlined from '@mui/icons-material/ArrowDownwardOutlined';
+import AddCircleOutlineOutlined from '@mui/icons-material/AddCircleOutlineOutlined';
+import MouseOutlined from '@mui/icons-material/MouseOutlined';
+import PanToolOutlined from '@mui/icons-material/PanToolOutlined';
+import CallMergeOutlined from '@mui/icons-material/CallMergeOutlined';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import UndoOutlined from '@mui/icons-material/UndoOutlined';
+import RedoOutlined from '@mui/icons-material/RedoOutlined';
+import FindReplaceOutlined from '@mui/icons-material/FindReplaceOutlined';
 import { SpawnSizePicker } from '../components/SpawnSizePicker';
 import { LAYOUT_MODES, FLOW_DIRECTIONS, TOOLS, DROP_MODES } from '../LayoutPanel.logic';
 import './CanvasSubtab.scss';
@@ -53,7 +61,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Layout Mode */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <Grid3X3 size={10} />
+                    <IconGrid3x3 sx={{ fontSize: 10 }} />
                     <span>Layout Mode</span>
                 </div>
 
@@ -63,14 +71,14 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             className={`etched-toggle__btn etched-toggle__btn--grid ${layoutMode === LAYOUT_MODES.GRID ? 'etched-toggle__btn--active' : ''}`}
                             onClick={() => setLayoutMode?.(LAYOUT_MODES.GRID)}
                         >
-                            <Grid3X3 size={12} />
+                            <IconGrid3x3 sx={{ fontSize: 12 }} />
                             <span>Grid</span>
                         </button>
                         <button
                             className={`etched-toggle__btn etched-toggle__btn--flow ${layoutMode === LAYOUT_MODES.FLOW ? 'etched-toggle__btn--active' : ''}`}
                             onClick={() => setLayoutMode?.(LAYOUT_MODES.FLOW)}
                         >
-                            <Rows size={12} />
+                            <TableRowsOutlined sx={{ fontSize: 12 }} />
                             <span>Flow</span>
                         </button>
                     </div>
@@ -84,13 +92,13 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                                 className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.ROW ? 'etched-toggle__btn--active' : ''}`}
                                 onClick={() => setFlowDirection?.(FLOW_DIRECTIONS.ROW)}
                             >
-                                <ArrowRight size={12} /> Row
+                                <IconArrowRight sx={{ fontSize: 12 }} /> Row
                             </button>
                             <button
                                 className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'etched-toggle__btn--active' : ''}`}
                                 onClick={() => setFlowDirection?.(FLOW_DIRECTIONS.COLUMN)}
                             >
-                                <ArrowDown size={12} /> Col
+                                <ArrowDownwardOutlined sx={{ fontSize: 12 }} /> Col
                             </button>
                         </div>
                     </div>
@@ -104,7 +112,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* New View Size */}
             <div className="canvas-subtab__card" data-color="green">
                 <div className="canvas-subtab__card-header">
-                    <PlusCircle size={10} />
+                    <AddCircleOutlineOutlined sx={{ fontSize: 10 }} />
                     <span>New View Size</span>
                 </div>
                 <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
@@ -116,7 +124,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Quick Layouts */}
             <div className="canvas-subtab__card" data-color="amber">
                 <div className="canvas-subtab__card-header">
-                    <LayoutGrid size={10} />
+                    <GridViewOutlined sx={{ fontSize: 10 }} />
                     <span>Quick Layouts</span>
                 </div>
                 <div className="canvas-subtab__quick-layouts">
@@ -129,7 +137,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Tools */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <MousePointer2 size={10} />
+                    <MouseOutlined sx={{ fontSize: 10 }} />
                     <span>Tools</span>
                 </div>
 
@@ -140,21 +148,21 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             onClick={() => setTool?.(TOOLS.SELECT)}
                             title="Select"
                         >
-                            <MousePointer2 size={14} />
+                            <MouseOutlined sx={{ fontSize: 14 }} />
                         </button>
                         <button
                             className={`layout-tool-btn layout-tool-btn--teal ${tool === TOOLS.PAN ? 'layout-tool-btn--active' : ''}`}
                             onClick={() => setTool?.(TOOLS.PAN)}
                             title="Pan"
                         >
-                            <Hand size={14} />
+                            <PanToolOutlined sx={{ fontSize: 14 }} />
                         </button>
                         <button
                             className={`layout-tool-btn layout-tool-btn--purple ${tool === TOOLS.MERGE ? 'layout-tool-btn--active' : ''}`}
                             onClick={() => setTool?.(TOOLS.MERGE)}
                             title="Merge"
                         >
-                            <Combine size={14} />
+                            <CallMergeOutlined sx={{ fontSize: 14 }} />
                         </button>
 
                         <div className="layout-divider" />
@@ -163,17 +171,17 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             className={`canvas-subtab__edit-btn ${editMode ? 'canvas-subtab__edit-btn--active' : ''}`}
                             onClick={toggleEditMode}
                         >
-                            <Pencil size={12} />
+                            <EditOutlined sx={{ fontSize: 12 }} />
                             {editMode ? 'Done' : 'Edit'}
                         </button>
 
                         <div className="layout-divider" />
 
                         <button className="layout-tool-btn" onClick={undo} disabled={!canUndo} title="Undo">
-                            <Undo size={14} />
+                            <UndoOutlined sx={{ fontSize: 14 }} />
                         </button>
                         <button className="layout-tool-btn" onClick={redo} disabled={!canRedo} title="Redo">
-                            <Redo size={14} />
+                            <RedoOutlined sx={{ fontSize: 14 }} />
                         </button>
                     </div>
 
@@ -185,13 +193,13 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                                     className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${dropMode === DROP_MODES.ADD ? 'etched-toggle__btn--active' : ''}`}
                                     onClick={() => setDropMode?.(DROP_MODES.ADD)}
                                 >
-                                    <PlusCircle size={10} /> Add
+                                    <AddCircleOutlineOutlined sx={{ fontSize: 10 }} /> Add
                                 </button>
                                 <button
                                     className={`etched-toggle__btn etched-toggle__btn--amber etched-toggle__btn--compact ${dropMode === DROP_MODES.REPLACE ? 'etched-toggle__btn--active' : ''}`}
                                     onClick={() => setDropMode?.(DROP_MODES.REPLACE)}
                                 >
-                                    <Replace size={10} /> Replace
+                                    <FindReplaceOutlined sx={{ fontSize: 10 }} /> Replace
                                 </button>
                             </div>
                         </div>

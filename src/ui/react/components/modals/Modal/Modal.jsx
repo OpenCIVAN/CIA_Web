@@ -19,7 +19,7 @@
  *
  * @example
  * import { Modal, useModal } from '@UI/react/components/modals/Modal';
- * import { Trash2 } from 'lucide-react';
+ * import { IconDelete } from '@UI/react/components/common/Icon';
  *
  * function DeleteConfirmation({ itemName, onDelete }) {
  *   const { isOpen, open, close } = useModal();
@@ -36,7 +36,7 @@
  *         isOpen={isOpen}
  *         onClose={close}
  *         title="Delete Item?"
- *         icon={Trash2}
+ *         icon={IconDelete}
  *         severity="danger"
  *         size="sm"
  *         footer={

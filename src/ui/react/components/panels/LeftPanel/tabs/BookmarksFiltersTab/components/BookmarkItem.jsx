@@ -2,7 +2,8 @@
 // Individual bookmark item component
 
 import React, { useState } from 'react';
-import { Camera, Share2, Pin, PinOff, Trash2, Play } from 'lucide-react';
+import { IconCamera, IconShare, IconPin, IconDelete, IconPlay } from '@UI/react/components/common/Icon';
+import PushPinOutlined from '@mui/icons-material/PushPinOutlined';
 import { formatTimestamp } from '@Utils/formatters.js';
 
 export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getThumbnailUrl }) {
@@ -20,7 +21,7 @@ export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getT
                 {thumbnailUrl ? (
                     <img src={thumbnailUrl} alt={bookmark.name} />
                 ) : (
-                    <Camera size={16} />
+                    <IconCamera size={16} />
                 )}
             </div>
 
@@ -28,7 +29,7 @@ export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getT
             <div className="bookmark-item__content">
                 <div className="bookmark-item__name">
                     {bookmark.name}
-                    {bookmark.scope !== 'personal' && <Share2 size={9} className="icon-pink" />}
+                    {bookmark.scope !== 'personal' && <IconShare size={9} className="icon-pink" />}
                 </div>
                 <div className="bookmark-item__meta">
                     <span>{bookmark.datasetName || 'No dataset'}</span>
@@ -44,7 +45,7 @@ export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getT
                     onClick={(e) => { e.stopPropagation(); onTogglePin(bookmark.id); }}
                     title={bookmark.isPinned ? 'Unpin' : 'Pin'}
                 >
-                    {bookmark.isPinned ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+                    {bookmark.isPinned ? <IconPin size={10} fill="currentColor" /> : <PushPinOutlined size={10} />}
                 </button>
                 {bookmark.isOwn && (
                     <button
@@ -52,7 +53,7 @@ export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getT
                         onClick={(e) => { e.stopPropagation(); onDelete(bookmark.id); }}
                         title="Delete"
                     >
-                        <Trash2 size={10} />
+                        <IconDelete size={10} />
                     </button>
                 )}
             </div>
@@ -62,7 +63,7 @@ export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getT
                 className="bookmark-item__go-btn"
                 onClick={() => onNavigate(bookmark.id)}
             >
-                <Play size={10} /> Go
+                <IconPlay size={10} /> Go
             </button>
         </div>
     );

@@ -5,24 +5,22 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-    Play,
-    Pause,
-    Square,
-    Circle,
-    Monitor,
-    Maximize,
-    Layers,
-    Mic,
-    MicOff,
-} from 'lucide-react';
+    IconPlay,
+    IconPause,
+    IconCircle,
+    IconLayers,
+    IconMic,
+    IconMicOff,
+} from '@UI/react/components/common/Icon';
+import { StopOutlined, MonitorOutlined, FullscreenOutlined } from '@mui/icons-material';
 
 /**
  * Recording modes configuration
  */
 const RECORDING_MODES = [
-    { id: 'full', label: 'Full Session', icon: Monitor, description: 'Record entire workspace grid' },
-    { id: 'isolation', label: 'Isolation', icon: Maximize, description: 'Record single focused instance' },
-    { id: 'subset', label: 'Subset', icon: Layers, description: 'Record selected instances only' },
+    { id: 'full', label: 'Full Session', icon: MonitorOutlined, description: 'Record entire workspace grid' },
+    { id: 'isolation', label: 'Isolation', icon: FullscreenOutlined, description: 'Record single focused instance' },
+    { id: 'subset', label: 'Subset', icon: IconLayers, description: 'Record selected instances only' },
 ];
 
 /**
@@ -108,11 +106,11 @@ export function RecordingControls({
                 {/* Recording info */}
                 <div className="recording-controls__info">
                     <span className="recording-controls__info-item">
-                        <Monitor size={12} />
+                        <MonitorOutlined size={12} />
                         {RECORDING_MODES.find(m => m.id === recordingMode)?.label}
                     </span>
                     <span className="recording-controls__info-item">
-                        {includeAudio ? <Mic size={12} /> : <MicOff size={12} />}
+                        {includeAudio ? <IconMic size={12} /> : <IconMicOff size={12} />}
                         {includeAudio ? 'Audio on' : 'Audio off'}
                     </span>
                 </div>
@@ -123,14 +121,14 @@ export function RecordingControls({
                         className="recording-controls__stop-btn"
                         onClick={onStop}
                     >
-                        <Square size={14} />
+                        <StopOutlined size={14} />
                         Stop Recording
                     </button>
                     <button
                         className="recording-controls__pause-btn"
                         onClick={isPaused ? onResume : onPause}
                     >
-                        {isPaused ? <Play size={14} /> : <Pause size={14} />}
+                        {isPaused ? <IconPlay size={14} /> : <IconPause size={14} />}
                     </button>
                 </div>
             </div>
@@ -182,7 +180,7 @@ export function RecordingControls({
             {/* Audio toggle */}
             <div className="recording-controls__audio-toggle">
                 <div className="recording-controls__audio-info">
-                    <Mic size={14} className={includeAudio ? 'icon-green' : ''} />
+                    <IconMic size={14} className={includeAudio ? 'icon-green' : ''} />
                     <span>Include audio</span>
                 </div>
                 <button
@@ -198,7 +196,7 @@ export function RecordingControls({
                 className="recording-controls__start-btn"
                 onClick={handleStartClick}
             >
-                <Circle size={16} />
+                <IconCircle size={16} />
                 {showNameInput ? 'Start' : 'Start Recording'}
             </button>
         </div>

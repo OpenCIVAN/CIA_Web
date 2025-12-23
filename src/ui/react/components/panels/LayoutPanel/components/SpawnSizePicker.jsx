@@ -6,7 +6,7 @@
  */
 
 import React, { memo, useState, useCallback } from 'react';
-import { Check, X } from 'lucide-react';
+import { IconCheck, IconClose } from '@UI/react/components/common/Icon';
 import './SpawnSizePicker.scss';
 
 // Preset size options
@@ -108,7 +108,7 @@ export const SpawnSizePicker = memo(function SpawnSizePicker({
                             className="spawn-size-picker__custom-btn spawn-size-picker__custom-btn--apply"
                             onClick={handleApplyCustom}
                         >
-                            <Check size={12} /> Apply
+                            <IconCheck sx={{ fontSize: 12 }} /> Apply
                         </button>
                         <button
                             className="spawn-size-picker__custom-btn"

@@ -5,7 +5,8 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Shield, Video, Lock, UserPlus } from 'lucide-react';
+import { IconUsers, IconVideo, IconLock, IconUserPlus } from '@UI/react/components/common/Icon';
+import { ShieldOutlined } from '@mui/icons-material';
 import { Button } from '@UI/react/components/common/Button';
 import '../SettingsTab.scss';
 
@@ -87,7 +88,7 @@ export function AdminSettings({ projectId }) {
     return (
         <div className="settings-tab__section">
             {/* Member Management */}
-            <SettingsGroup icon={Users} title="Member Management">
+            <SettingsGroup icon={IconUsers} title="Member Management">
                 <ToggleSwitch
                     label="Allow Self-Join"
                     description="Users can join with project link"
@@ -110,14 +111,14 @@ export function AdminSettings({ projectId }) {
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={UserPlus}
+                        icon={IconUserPlus}
                     >
                         Invite Members
                     </Button>
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Users}
+                        icon={IconUsers}
                     >
                         Manage Members
                     </Button>
@@ -125,7 +126,7 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Recording Policy */}
-            <SettingsGroup icon={Video} title="Recording Policy">
+            <SettingsGroup icon={IconVideo} title="Recording Policy">
                 <ToggleSwitch
                     label="Allow Member Recording"
                     description="Members can start recordings"
@@ -147,7 +148,7 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Security */}
-            <SettingsGroup icon={Lock} title="Security">
+            <SettingsGroup icon={IconLock} title="Security">
                 <ToggleSwitch
                     label="Require MFA"
                     description="Members must use two-factor auth"
@@ -169,13 +170,13 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Roles & Permissions */}
-            <SettingsGroup icon={Shield} title="Roles & Permissions">
+            <SettingsGroup icon={ShieldOutlined} title="Roles & Permissions">
                 <div className="settings-tab__roles-info">
                     <p>Configure custom roles and permissions for project members.</p>
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Shield}
+                        icon={ShieldOutlined}
                     >
                         Manage Roles
                     </Button>

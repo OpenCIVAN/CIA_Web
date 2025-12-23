@@ -5,13 +5,13 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-    Users,
-    MapPin,
-    Box,
-    Eye,
-    EyeOff,
-    ChevronRight,
-} from 'lucide-react';
+    IconUsers,
+    IconMapPin,
+    IconBox,
+    IconEye,
+    IconEyeOff,
+    IconChevronRight,
+} from '@UI/react/components/common/Icon';
 
 // =============================================================================
 // LAYER TOGGLE COMPONENT
@@ -24,7 +24,7 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
                 className={`layer-toggle__btn ${enabled ? 'layer-toggle__btn--active' : ''}`}
                 onClick={onToggle}
             >
-                {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                {enabled ? <IconEye size={14} /> : <IconEyeOff size={14} />}
             </button>
             <div className="layer-toggle__info">
                 <div className="layer-toggle__label">
@@ -50,7 +50,7 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
                 </div>
             )}
             <button className="layer-toggle__manage">
-                <ChevronRight size={14} />
+                <IconChevronRight size={14} />
             </button>
         </div>
     );
@@ -109,7 +109,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
             </div>
             <div className="layers-subtab__list">
                 <LayerToggle
-                    icon={Users}
+                    icon={IconUsers}
                     label="Remote Cursors"
                     enabled={cursors.enabled}
                     count={cursors.count}
@@ -117,7 +117,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
                     onToggle={() => handleToggleLayer('cursors')}
                 />
                 <LayerToggle
-                    icon={MapPin}
+                    icon={IconMapPin}
                     label="Annotations"
                     enabled={annotations.enabled}
                     count={annotations.count}
@@ -125,7 +125,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
                     onToggle={() => handleToggleLayer('annotations')}
                 />
                 <LayerToggle
-                    icon={Box}
+                    icon={IconBox}
                     label="Widgets"
                     enabled={widgets.enabled}
                     count={widgets.count}

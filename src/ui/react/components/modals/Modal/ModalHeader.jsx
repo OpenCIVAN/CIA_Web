@@ -21,7 +21,7 @@
  */
 
 import React, { memo } from 'react';
-import { X } from 'lucide-react';
+import { IconClose } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} ModalHeaderProps
@@ -70,7 +70,7 @@ function ModalHeader({
                     onClick={onClose}
                     aria-label="Close modal"
                 >
-                    <X size={18} aria-hidden="true" />
+                    <IconClose size={18} aria-hidden="true" />
                 </button>
             )}
         </div>

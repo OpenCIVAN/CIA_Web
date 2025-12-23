@@ -22,7 +22,7 @@
  */
 
 import React, { memo, useRef, useId } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { IconChevronDown } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} HelpSectionProps
@@ -93,7 +93,7 @@ function HelpSection({
                     <span>{title}</span>
                 </span>
                 <span className="help-section__chevron">
-                    <ChevronDown size={18} />
+                    <IconChevronDown size={18} />
                 </span>
             </button>
 

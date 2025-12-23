@@ -20,7 +20,8 @@
  */
 
 import React, { memo, forwardRef, useCallback } from 'react';
-import { Check, Image } from 'lucide-react';
+import { ImageOutlined } from '@mui/icons-material';
+import { IconCheck } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} ViewOption
@@ -101,7 +102,7 @@ const ViewCard = forwardRef(function ViewCard(
                 {view.thumbnail ? (
                     <img src={view.thumbnail} alt={`${view.name} thumbnail`} />
                 ) : (
-                    <Image size={24} aria-hidden="true" />
+                    <ImageOutlined style={{ fontSize: 24 }} aria-hidden="true" />
                 )}
             </div>
 
@@ -129,7 +130,7 @@ const ViewCard = forwardRef(function ViewCard(
 
             {/* Selection checkmark */}
             <span className="view-card__check" aria-hidden="true">
-                <Check size={12} />
+                <IconCheck size={12} />
             </span>
         </div>
     );

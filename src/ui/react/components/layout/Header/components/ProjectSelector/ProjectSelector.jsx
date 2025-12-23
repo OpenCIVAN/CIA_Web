@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Folder, ChevronDown, Plus, Search, Clock } from 'lucide-react';
+import { IconFolder, IconChevronDown, IconAdd, IconSearch } from '@UI/react/components/common/Icon';
+import AccessTimeOutlined from '@mui/icons-material/AccessTimeOutlined';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 /**
@@ -54,11 +55,11 @@ export function ProjectSelector({
         <Dropdown
             trigger={
                 <button className="project-selector__trigger" type="button">
-                    <Folder size={16} />
+                    <IconFolder sx={{ fontSize: 16 }} />
                     <span className="project-selector__name">
                         {currentProject?.name || 'Select Project'}
                     </span>
-                    <ChevronDown size={14} />
+                    <IconChevronDown sx={{ fontSize: 14 }} />
                 </button>
             }
             placement="bottom-start"
@@ -66,7 +67,7 @@ export function ProjectSelector({
             <div className="project-selector__dropdown">
                 {/* Search */}
                 <div className="project-selector__search">
-                    <Search size={14} />
+                    <IconSearch sx={{ fontSize: 14 }} />
                     <input
                         type="text"
                         placeholder="Search projects..."
@@ -80,7 +81,7 @@ export function ProjectSelector({
                 {!searchTerm && recentProjects.length > 0 && (
                     <div className="project-selector__section">
                         <div className="project-selector__section-header">
-                            <Clock size={12} />
+                            <AccessTimeOutlined sx={{ fontSize: 12 }} />
                             Recent
                         </div>
                         {recentProjects.map((project) => (
@@ -134,7 +135,7 @@ export function ProjectSelector({
                         onClick={handleCreate}
                         type="button"
                     >
-                        <Plus size={14} />
+                        <IconAdd sx={{ fontSize: 14 }} />
                         New Project
                     </button>
                 </div>

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Send, Smile, Paperclip, AtSign } from 'lucide-react';
+import { IconSend, IconSmile, IconPaperclip, IconAtSign } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} MessageInputProps
@@ -42,7 +42,7 @@ export function MessageInput({ onSend, disabled }) {
         <div className="chat-input">
             <div className="chat-input__wrapper">
                 <button className="chat-input__btn" disabled={disabled}>
-                    <Paperclip size={16} />
+                    <IconPaperclip size={16} />
                 </button>
 
                 <textarea
@@ -57,11 +57,11 @@ export function MessageInput({ onSend, disabled }) {
                 />
 
                 <button className="chat-input__btn" disabled={disabled}>
-                    <AtSign size={16} />
+                    <IconAtSign size={16} />
                 </button>
 
                 <button className="chat-input__btn" disabled={disabled}>
-                    <Smile size={16} />
+                    <IconSmile size={16} />
                 </button>
 
                 <button
@@ -69,7 +69,7 @@ export function MessageInput({ onSend, disabled }) {
                     onClick={handleSend}
                     disabled={!message.trim() || disabled}
                 >
-                    <Send size={14} />
+                    <IconSend size={14} />
                 </button>
             </div>
         </div>

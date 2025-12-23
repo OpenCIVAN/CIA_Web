@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { MessageSquare } from 'lucide-react';
+import { IconMessageSquare } from '@UI/react/components/common/Icon';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 
 /**
@@ -43,7 +43,7 @@ export function ClearChatDialog({
             onClose={onClose}
             title="Clear Chat History?"
             description={`All messages in "${roomName}" will be cleared for all participants. Messages are retained in the audit log for compliance.`}
-            icon={MessageSquare}
+            icon={IconMessageSquare}
             severity="danger"
             confirmLabel="Clear Chat"
             onConfirm={onConfirm}

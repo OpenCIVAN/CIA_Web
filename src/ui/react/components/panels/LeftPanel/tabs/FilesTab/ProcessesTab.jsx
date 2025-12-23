@@ -2,7 +2,15 @@
 // Sub-tab showing running compute processes/jobs
 
 import React from 'react';
-import { Loader2, CheckCircle2, XCircle, Clock, Play, Pause, X } from 'lucide-react';
+import {
+    IconLoader,
+    IconClock,
+    IconPlay,
+    IconClose,
+} from '@UI/react/components/common/Icon';
+import CheckCircle2Outlined from '@mui/icons-material/CheckCircle2Outlined';
+import CancelOutlined from '@mui/icons-material/CancelOutlined';
+import PauseOutlined from '@mui/icons-material/PauseOutlined';
 import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
 
 /**
@@ -11,17 +19,17 @@ import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
 function ProcessStatusIcon({ status }) {
     switch (status) {
         case 'running':
-            return <Loader2 size={14} className="spin icon-amber" />;
+            return <IconLoader size={14} className="spin icon-amber" />;
         case 'completed':
-            return <CheckCircle2 size={14} className="icon-green" />;
+            return <CheckCircle2Outlined size={14} className="icon-green" />;
         case 'failed':
-            return <XCircle size={14} className="icon-red" />;
+            return <CancelOutlined size={14} className="icon-red" />;
         case 'queued':
-            return <Clock size={14} className="icon-blue" />;
+            return <IconClock size={14} className="icon-blue" />;
         case 'paused':
-            return <Pause size={14} className="icon-gray" />;
+            return <PauseOutlined size={14} className="icon-gray" />;
         default:
-            return <Clock size={14} className="icon-gray" />;
+            return <IconClock size={14} className="icon-gray" />;
     }
 }
 
@@ -60,7 +68,7 @@ function ProcessItem({ job, onCancel, onRetry }) {
                         onClick={() => onCancel?.(job.id)}
                         title="Cancel"
                     >
-                        <X size={10} />
+                        <IconClose size={10} />
                     </button>
                 )}
                 {job.status === 'failed' && (
@@ -69,7 +77,7 @@ function ProcessItem({ job, onCancel, onRetry }) {
                         onClick={() => onRetry?.(job.id)}
                         title="Retry"
                     >
-                        <Play size={10} />
+                        <IconPlay size={10} />
                     </button>
                 )}
             </div>
@@ -86,7 +94,7 @@ export function ProcessesTab({ workspaceId }) {
     if (isLoading) {
         return (
             <div className="processes-tab__loading">
-                <Loader2 size={24} className="spin" />
+                <IconLoader size={24} className="spin" />
                 <span>Loading processes...</span>
             </div>
         );
@@ -95,7 +103,7 @@ export function ProcessesTab({ workspaceId }) {
     if (!jobs || jobs.length === 0) {
         return (
             <div className="processes-tab__empty">
-                <Clock size={24} />
+                <IconClock size={24} />
                 <p>No active processes</p>
                 <span>Compute jobs will appear here</span>
             </div>
@@ -112,7 +120,7 @@ export function ProcessesTab({ workspaceId }) {
             {running.length > 0 && (
                 <div className="processes-tab__section">
                     <div className="processes-tab__section-header">
-                        <Loader2 size={12} className="spin icon-amber" />
+                        <IconLoader size={12} className="spin icon-amber" />
                         Running ({running.length})
                     </div>
                     {running.map(job => (
@@ -128,7 +136,7 @@ export function ProcessesTab({ workspaceId }) {
             {queued.length > 0 && (
                 <div className="processes-tab__section">
                     <div className="processes-tab__section-header">
-                        <Clock size={12} className="icon-blue" />
+                        <IconClock size={12} className="icon-blue" />
                         Queued ({queued.length})
                     </div>
                     {queued.map(job => (

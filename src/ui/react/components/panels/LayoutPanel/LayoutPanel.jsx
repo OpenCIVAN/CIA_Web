@@ -5,7 +5,11 @@
 // LayoutPanel.logic.js to ensure consistent comparisons with FloatingCanvasNavigator.
 
 import React, { memo, useContext } from 'react';
-import { LayoutGrid, Map, Layers, Loader2, WifiOff, AlertCircle } from 'lucide-react';
+import { IconLayers, IconLoader } from '@UI/react/components/common/Icon';
+import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+import MapOutlined from '@mui/icons-material/MapOutlined';
+import WifiOffOutlined from '@mui/icons-material/WifiOffOutlined';
+import ErrorOutlineOutlined from '@mui/icons-material/ErrorOutlineOutlined';
 import { useLayoutPanel } from './LayoutPanel.logic';
 import LayoutPanelContext, { DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
@@ -15,8 +19,8 @@ import './LayoutPanel.scss';
 
 // Subtab configuration
 const SUBTABS = [
-    { id: 'canvas', label: 'Canvas', icon: Map, color: 'amber' },
-    { id: 'views', label: 'Views', icon: Layers, color: 'purple' },
+    { id: 'canvas', label: 'Canvas', icon: MapOutlined, color: 'amber' },
+    { id: 'views', label: 'Views', icon: IconLayers, color: 'purple' },
 ];
 
 /**
@@ -81,11 +85,11 @@ export const LayoutPanel = memo(function LayoutPanel({
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
                 <div className="panel-header panel-header--indigo">
-                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <GridViewOutlined sx={{ fontSize: 14 }} className="panel-header__icon" />
                     <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__loading">
-                    <Loader2 className="layout-panel__spinner" size={24} />
+                    <IconLoader className="layout-panel__spinner" sx={{ fontSize: 24 }} />
                     <span>Loading canvas...</span>
                 </div>
             </div>
@@ -100,11 +104,11 @@ export const LayoutPanel = memo(function LayoutPanel({
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
                 <div className="panel-header panel-header--indigo">
-                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <GridViewOutlined sx={{ fontSize: 14 }} className="panel-header__icon" />
                     <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__error">
-                    <AlertCircle size={24} />
+                    <ErrorOutlineOutlined sx={{ fontSize: 24 }} />
                     <span>Failed to load canvas</span>
                     <span className="layout-panel__error-detail">{error.message || 'Unknown error'}</span>
                 </div>
@@ -120,13 +124,13 @@ export const LayoutPanel = memo(function LayoutPanel({
         <div className={`layout-panel ${className}`}>
             {/* Header */}
             <div className="panel-header panel-header--indigo">
-                <LayoutGrid size={14} className="panel-header__icon" />
+                <GridViewOutlined sx={{ fontSize: 14 }} className="panel-header__icon" />
                 <span className="panel-header__title">Layout</span>
 
                 {/* Connection indicator */}
                 {!isConnected && (
                     <div className="panel-header__offline" title="Offline - changes will sync when reconnected">
-                        <WifiOff size={12} />
+                        <WifiOffOutlined sx={{ fontSize: 12 }} />
                     </div>
                 )}
             </div>
@@ -140,7 +144,7 @@ export const LayoutPanel = memo(function LayoutPanel({
                         onClick={() => setPanelSubtab(id)}
                         data-color={color}
                     >
-                        <Icon size={12} />
+                        <Icon sx={{ fontSize: 12 }} />
                         <span>{label}</span>
                         {id === 'views' && cells.length > 0 && (
                             <span className="layout-panel__tab-badge">{cells.length}</span>

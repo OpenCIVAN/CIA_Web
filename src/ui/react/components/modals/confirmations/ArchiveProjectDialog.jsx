@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { Archive } from 'lucide-react';
+import { IconArchive } from '@UI/react/components/common/Icon';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 
 /**
@@ -62,7 +62,7 @@ export function ArchiveProjectDialog({
             onClose={onClose}
             title="Archive Project?"
             description={`"${project?.name}" will be archived. Members will lose access but all data will be preserved. You can restore this project at any time.`}
-            icon={Archive}
+            icon={IconArchive}
             severity="warning"
             confirmLabel="Archive Project"
             onConfirm={onConfirm}

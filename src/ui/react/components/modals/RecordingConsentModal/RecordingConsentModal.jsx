@@ -22,15 +22,15 @@
  */
 
 import React, { memo, useRef, useEffect, useCallback } from 'react';
+import { MonitorOutlined } from '@mui/icons-material';
 import {
-    Video,
-    Monitor,
-    Mic,
-    Camera,
-    MessageSquare,
-    Check,
-    X
-} from 'lucide-react';
+    IconVideo,
+    IconMic,
+    IconCamera,
+    IconMessageSquare,
+    IconCheck,
+    IconClose
+} from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 import './RecordingConsentModal.scss';
 
@@ -40,28 +40,28 @@ import './RecordingConsentModal.scss';
 const RECORDING_ITEMS = [
     {
         key: 'screen',
-        icon: Monitor,
+        icon: MonitorOutlined,
         label: 'Screen / Canvas activity',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'audio',
-        icon: Mic,
+        icon: IconMic,
         label: 'Voice audio',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'webcam',
-        icon: Camera,
+        icon: IconCamera,
         label: 'Webcam video',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'chat',
-        icon: MessageSquare,
+        icon: IconMessageSquare,
         label: 'Chat messages',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
@@ -105,7 +105,7 @@ const RecordingItem = memo(function RecordingItem({
     return (
         <div className={itemClassNames} role="listitem">
             <span className="recording-item__icon" aria-hidden="true">
-                {isActive ? <Check size={14} /> : <X size={14} />}
+                {isActive ? <IconCheck size={14} /> : <IconClose size={14} />}
             </span>
             <span className="recording-item__type-icon" aria-hidden="true">
                 <Icon size={16} />
@@ -125,7 +125,7 @@ const RecordingIcon = memo(function RecordingIcon() {
     return (
         <span className="recording-consent-modal__icon-wrapper">
             <span className="recording-dot" aria-hidden="true" />
-            <Video size={20} className="recording-consent-modal__icon" />
+            <IconVideo size={20} className="recording-consent-modal__icon" />
         </span>
     );
 });

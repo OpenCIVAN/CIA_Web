@@ -6,18 +6,20 @@
 
 import React, { useState } from 'react';
 import {
-    X,
-    Save,
-    Check,
-    Bold,
-    Italic,
-    List,
-    ListOrdered,
-    Code,
-    Quote,
-    Image,
-    Link2,
-} from 'lucide-react';
+    IconClose,
+    IconSave,
+    IconCheck,
+    IconImage,
+} from '@UI/react/components/common/Icon';
+import {
+    FormatBoldOutlined,
+    FormatItalicOutlined,
+    FormatListBulletedOutlined,
+    FormatListNumberedOutlined,
+    CodeOutlined,
+    FormatQuoteOutlined,
+    LinkOutlined,
+} from '@mui/icons-material';
 
 /**
  * @typedef {Object} NoteEditorProps
@@ -47,7 +49,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
         }
     };
 
-    const toolbarIcons = [Bold, Italic, List, ListOrdered, Code, Quote, Image, Link2];
+    const toolbarIcons = [FormatBoldOutlined, FormatItalicOutlined, FormatListBulletedOutlined, FormatListNumberedOutlined, CodeOutlined, FormatQuoteOutlined, IconImage, LinkOutlined];
 
     return (
         <div className="note-edit-view">
@@ -56,7 +58,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
                     {isNew ? 'New Note' : note?.title || 'Edit Note'}
                 </span>
                 <button className="note-edit-view__close" onClick={onCancel}>
-                    <X size={16} />
+                    <IconClose size={16} />
                 </button>
             </div>
 
@@ -97,7 +99,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
                     onClick={handleSave}
                     disabled={isNew && !title.trim()}
                 >
-                    {isNew ? <Check size={12} /> : <Save size={12} />}
+                    {isNew ? <IconCheck size={12} /> : <IconSave size={12} />}
                     {isNew ? 'Create' : 'Save'}
                 </button>
             </div>

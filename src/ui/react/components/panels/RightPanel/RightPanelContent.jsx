@@ -9,7 +9,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { IconExternalLink } from '@UI/react/components/common/Icon';
 
 import {
     useRightPanelContext,
@@ -100,7 +100,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
                     onClick={handlePopOut}
                     title="Pop out to floating window"
                 >
-                    <ExternalLink size={12} />
+                    <IconExternalLink size={12} />
                 </button>
             </div>
 

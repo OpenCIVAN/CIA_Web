@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { IconSun, IconMoon } from '@UI/react/components/common/Icon';
 
 /**
  * Theme toggle button.
@@ -45,7 +45,7 @@ export function ThemeToggle() {
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             type="button"
         >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {isDark ? <IconSun sx={{ fontSize: 18 }} /> : <IconMoon sx={{ fontSize: 18 }} />}
         </button>
     );
 }

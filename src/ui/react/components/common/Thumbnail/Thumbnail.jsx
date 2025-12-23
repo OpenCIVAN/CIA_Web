@@ -5,7 +5,8 @@
 // This component can only DISPLAY thumbnails - generation is handled server-side.
 
 import React, { memo } from 'react';
-import { Loader2, ImageOff, Box, BarChart3, Image } from 'lucide-react';
+import { IconLoader, IconImageOff, IconBox, IconImage } from '@UI/react/components/common/Icon';
+import ShowChartOutlined from '@mui/icons-material/ShowChartOutlined';
 import { useThumbnail, THUMBNAIL_STATUS } from '@UI/react/hooks/useThumbnail.js';
 import './Thumbnail.scss';
 
@@ -13,14 +14,14 @@ import './Thumbnail.scss';
  * Get icon component for instance type
  */
 const TYPE_ICONS = {
-    vtk: Box,
-    '3d': Box,
-    mesh: Box,
-    volume: Box,
-    chart: BarChart3,
-    plot: BarChart3,
-    image: Image,
-    default: Image,
+    vtk: IconBox,
+    '3d': IconBox,
+    mesh: IconBox,
+    volume: IconBox,
+    chart: ShowChartOutlined,
+    plot: ShowChartOutlined,
+    image: IconImage,
+    default: IconImage,
 };
 
 function getTypeIcon(instanceType) {
@@ -72,7 +73,7 @@ export const Thumbnail = memo(function Thumbnail({
         return (
             <div {...wrapperProps} className={`${wrapperProps.className} thumbnail--loading`}>
                 <div className="thumbnail__loader">
-                    <Loader2 className="thumbnail__spinner" />
+                    <IconLoader className="thumbnail__spinner" />
                 </div>
             </div>
         );
@@ -106,7 +107,7 @@ export const Thumbnail = memo(function Thumbnail({
             >
                 {fallback || (
                     <div className="thumbnail__fallback thumbnail__fallback--error">
-                        <ImageOff className="thumbnail__icon" />
+                        <IconImageOff className="thumbnail__icon" />
                     </div>
                 )}
             </div>

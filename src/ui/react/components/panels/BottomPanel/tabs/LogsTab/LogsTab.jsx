@@ -9,27 +9,21 @@
 // - Timestamp display
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import {
-    Trash2,
-    Filter,
-    Info,
-    CheckCircle,
-    AlertTriangle,
-    XCircle,
-    Clock,
-    ChevronDown,
-} from 'lucide-react';
+import { IconDelete, IconFilter, IconInfo, IconClock, IconChevronDown } from '@UI/react/components/common/Icon';
+import CheckCircleOutlineOutlined from '@mui/icons-material/CheckCircleOutlineOutlined';
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
+import CancelOutlined from '@mui/icons-material/CancelOutlined';
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
 import "./LogsTab.scss";
 
 // Icon mapping for log types
 const LOG_ICONS = {
-    [LogType.INFO]: Info,
-    [LogType.SUCCESS]: CheckCircle,
-    [LogType.WARNING]: AlertTriangle,
-    [LogType.ERROR]: XCircle,
-    [LogType.PROGRESS]: Clock,
+    [LogType.INFO]: IconInfo,
+    [LogType.SUCCESS]: CheckCircleOutlineOutlined,
+    [LogType.WARNING]: WarningAmberOutlined,
+    [LogType.ERROR]: CancelOutlined,
+    [LogType.PROGRESS]: IconClock,
 };
 
 // Color classes for log types
@@ -110,13 +104,13 @@ export function LogsTab() {
                             className="logs-tab__filter-btn"
                             onClick={() => setShowFilterMenu(!showFilterMenu)}
                         >
-                            <Filter size={14} />
+                            <IconFilter sx={{ fontSize: 14 }} />
                             <span>
                                 {filter === "all" && "All"}
                                 {filter === "errors" && `Errors (${counts.errors})`}
                                 {filter === "warnings" && `Warnings+ (${counts.warnings})`}
                             </span>
-                            <ChevronDown size={12} />
+                            <IconChevronDown sx={{ fontSize: 12 }} />
                         </button>
 
                         {showFilterMenu && (
@@ -168,7 +162,7 @@ export function LogsTab() {
                         onClick={clearLogs}
                         title="Clear all logs"
                     >
-                        <Trash2 size={14} />
+                        <IconDelete sx={{ fontSize: 14 }} />
                         Clear
                     </button>
                 </div>
@@ -189,7 +183,7 @@ export function LogsTab() {
                     </div>
                 ) : (
                     filteredLogs.map((log, index) => {
-                        const Icon = LOG_ICONS[log.type] || Info;
+                        const Icon = LOG_ICONS[log.type] || IconInfo;
                         const colorClass = LOG_CLASSES[log.type] || "";
 
                         return (
@@ -200,7 +194,7 @@ export function LogsTab() {
                                 <span className="logs-tab__entry-time">
                                     {formatTime(log.timestamp)}
                                 </span>
-                                <Icon size={14} className="logs-tab__entry-icon" />
+                                <Icon sx={{ fontSize: 14 }} className="logs-tab__entry-icon" />
                                 <span className="logs-tab__entry-message">
                                     {log.message}
                                 </span>

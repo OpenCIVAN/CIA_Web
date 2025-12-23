@@ -7,7 +7,7 @@
 //      "Soon" badge when explicitly marked as not implemented
 
 import React from 'react';
-import { PanelRightClose, ChevronLeft } from 'lucide-react';
+import { IconPanelRightClose, IconChevronLeft } from '@UI/react/components/common/Icon';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Uses existing styles from RightPanel.scss - no separate SCSS needed
@@ -88,7 +88,7 @@ export function RightActivityBar() {
                 title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isOpen ? <PanelRightClose size={18} /> : <ChevronLeft size={18} />}
+                {isOpen ? <IconPanelRightClose size={18} /> : <IconChevronLeft size={18} />}
             </button>
         </div>
     );

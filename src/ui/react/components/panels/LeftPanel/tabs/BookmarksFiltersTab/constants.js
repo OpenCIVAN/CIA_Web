@@ -2,7 +2,7 @@
 // Scope configuration for bookmarks and filters
 // Used by ChipGroup, ScopedSection, FilterItem, BookmarkItem
 
-import { Globe, Users, UserCircle } from 'lucide-react';
+import { IconGlobe, IconUsers, IconUserCircle } from '@UI/react/components/common/Icon';
 
 /**
  * Scope configuration for collaboration levels
@@ -12,23 +12,23 @@ import { Globe, Users, UserCircle } from 'lucide-react';
  * - personal: Private to the user
  */
 export const SCOPE_CONFIG = {
-    project: { 
+    project: {
         id: 'project',
-        label: 'Project', 
-        icon: Globe, 
-        color: 'amber' 
+        label: 'Project',
+        icon: IconGlobe,
+        color: 'amber'
     },
-    room: { 
+    room: {
         id: 'room',
-        label: 'This Room', 
-        icon: Users, 
-        color: 'teal' 
+        label: 'This Room',
+        icon: IconUsers,
+        color: 'teal'
     },
-    personal: { 
+    personal: {
         id: 'personal',
-        label: 'Personal', 
-        icon: UserCircle, 
-        color: 'blue' 
+        label: 'Personal',
+        icon: IconUserCircle,
+        color: 'blue'
     },
 };
 

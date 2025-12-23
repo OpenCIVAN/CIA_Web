@@ -20,7 +20,7 @@
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { IconSearch, IconUserPlus } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} User
@@ -244,7 +244,7 @@ function PersonSearch({
         <div ref={containerRef} className={containerClassNames}>
             {/* Search input */}
             <div className="person-search__input-wrapper">
-                <Search size={16} className="person-search__icon" aria-hidden="true" />
+                <IconSearch size={16} className="person-search__icon" aria-hidden="true" />
                 <input
                     ref={inputRef}
                     type="text"
@@ -293,7 +293,7 @@ function PersonSearch({
                                     <div className="person-search__result__name">{user.name}</div>
                                     <div className="person-search__result__email">{user.email}</div>
                                 </div>
-                                <UserPlus size={16} className="person-search__result__add-icon" />
+                                <IconUserPlus size={16} className="person-search__result__add-icon" />
                             </div>
                         ))
                     ) : (

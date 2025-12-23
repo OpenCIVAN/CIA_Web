@@ -24,16 +24,12 @@
  */
 
 import React, { memo, useCallback } from 'react';
-import {
-    MapPin,
-    MessageSquare,
-    Eye,
-    EyeOff,
-    MoreHorizontal,
-    Mic,
-    MicOff,
-    Crown,
-} from 'lucide-react';
+import { IconEye, IconEyeOff, IconMoreHorizontal } from '@UI/react/components/common/Icon';
+import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
+import ChatBubbleOutlineOutlined from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import MicOutlined from '@mui/icons-material/MicOutlined';
+import MicOffOutlined from '@mui/icons-material/MicOffOutlined';
+import StarOutlined from '@mui/icons-material/StarOutlined';
 import { PresenceIndicator } from '@UI/react/components/common/PresenceIndicator';
 import { UserAvatar } from '@UI/react/components/common/UserAvatar';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
@@ -165,7 +161,7 @@ export const MemberRow = memo(function MemberRow({
                     {isYou && <span className="member-row__you-badge">(You)</span>}
                     {isRoomOwner && (
                         <Tooltip content="Room Owner">
-                            <Crown size={10} className="member-row__crown" />
+                            <StarOutlined sx={{ fontSize: 10 }} className="member-row__crown" />
                         </Tooltip>
                     )}
                 </div>
@@ -173,7 +169,7 @@ export const MemberRow = memo(function MemberRow({
                 {/* Voice status */}
                 {showVoiceStatus && inVoice && (
                     <div className="member-row__voice-status">
-                        {isMuted ? <MicOff size={10} /> : <Mic size={10} />}
+                        {isMuted ? <MicOffOutlined sx={{ fontSize: 10 }} /> : <MicOutlined sx={{ fontSize: 10 }} />}
                         <span>{isMuted ? 'Muted' : isSpeaking ? 'Speaking' : 'In Voice'}</span>
                     </div>
                 )}
@@ -181,7 +177,7 @@ export const MemberRow = memo(function MemberRow({
                 {/* Viewing info */}
                 {showViewing && viewingView && (
                     <div className="member-row__viewing">
-                        <Eye size={10} />
+                        <IconEye sx={{ fontSize: 10 }} />
                         <span>{viewingView}</span>
                     </div>
                 )}
@@ -198,27 +194,27 @@ export const MemberRow = memo(function MemberRow({
                     {onGoToView && (
                         <Tooltip content="Go to View">
                             <button className="member-row__action" onClick={handleGoToView}>
-                                <MapPin size={12} />
+                                <LocationOnOutlined sx={{ fontSize: 12 }} />
                             </button>
                         </Tooltip>
                     )}
                     {onMessage && (
                         <Tooltip content="Message">
                             <button className="member-row__action" onClick={handleMessage}>
-                                <MessageSquare size={12} />
+                                <ChatBubbleOutlineOutlined sx={{ fontSize: 12 }} />
                             </button>
                         </Tooltip>
                     )}
                     {onToggleCursor && (
                         <Tooltip content={cursorVisible ? 'Hide Cursor' : 'Show Cursor'}>
                             <button className="member-row__action" onClick={handleToggleCursor}>
-                                {cursorVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                                {cursorVisible ? <IconEye sx={{ fontSize: 12 }} /> : <IconEyeOff sx={{ fontSize: 12 }} />}
                             </button>
                         </Tooltip>
                     )}
                     {onMoreMenu && (
                         <button className="member-row__action member-row__action--more" onClick={handleMoreClick}>
-                            <MoreHorizontal size={12} />
+                            <IconMoreHorizontal sx={{ fontSize: 12 }} />
                         </button>
                     )}
                 </div>

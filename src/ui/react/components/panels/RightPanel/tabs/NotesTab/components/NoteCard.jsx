@@ -6,15 +6,15 @@
 
 import React from 'react';
 import {
-    Edit3,
-    Trash2,
-    Pin,
-    PinOff,
-    Share2,
-    Image,
-    Clock,
-    User,
-} from 'lucide-react';
+    IconEdit,
+    IconDelete,
+    IconPin,
+    IconShare,
+    IconImage,
+    IconClock,
+    IconUser,
+} from '@UI/react/components/common/Icon';
+import { PushPinOutlined } from '@mui/icons-material';
 
 /**
  * @typedef {Object} Note
@@ -54,9 +54,9 @@ export function NoteCard({ note, isSelected, onSelect, onTogglePin, onEdit, onDe
             <div className="note-card__header">
                 <span className="note-card__title">{note.title}</span>
                 <div className="note-card__badges">
-                    {note.pinned && <Pin size={10} className="icon-amber" />}
-                    {note.shared && <Share2 size={10} className="icon-pink" />}
-                    {note.hasImage && <Image size={10} className="icon-teal" />}
+                    {note.pinned && <IconPin size={10} className="icon-amber" />}
+                    {note.shared && <IconShare size={10} className="icon-pink" />}
+                    {note.hasImage && <IconImage size={10} className="icon-teal" />}
                 </div>
             </div>
 
@@ -64,11 +64,11 @@ export function NoteCard({ note, isSelected, onSelect, onTogglePin, onEdit, onDe
 
             <div className="note-card__meta">
                 <span className="note-card__meta-item">
-                    <User size={8} />
+                    <IconUser size={8} />
                     {note.createdBy}
                 </span>
                 <span className="note-card__meta-item">
-                    <Clock size={8} />
+                    <IconClock size={8} />
                     {note.timestamp}
                 </span>
             </div>
@@ -81,7 +81,7 @@ export function NoteCard({ note, isSelected, onSelect, onTogglePin, onEdit, onDe
                         data-color="blue"
                         onClick={(e) => { e.stopPropagation(); onEdit(note); }}
                     >
-                        <Edit3 size={10} />
+                        <IconEdit size={10} />
                         Edit
                     </button>
                     <button
@@ -89,7 +89,7 @@ export function NoteCard({ note, isSelected, onSelect, onTogglePin, onEdit, onDe
                         data-color="amber"
                         onClick={(e) => { e.stopPropagation(); onTogglePin(note.id); }}
                     >
-                        {note.pinned ? <PinOff size={10} /> : <Pin size={10} />}
+                        {note.pinned ? <PushPinOutlined size={10} /> : <IconPin size={10} />}
                         {note.pinned ? 'Unpin' : 'Pin'}
                     </button>
                     <button
@@ -97,13 +97,13 @@ export function NoteCard({ note, isSelected, onSelect, onTogglePin, onEdit, onDe
                         data-color="pink"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <Share2 size={10} />
+                        <IconShare size={10} />
                     </button>
                     <button
                         className="note-card__action-btn"
                         onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}
                     >
-                        <Trash2 size={10} />
+                        <IconDelete size={10} />
                     </button>
                 </div>
             )}

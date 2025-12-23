@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { Bell, MousePointer, Eye, Headphones } from 'lucide-react';
+import { IconBell, IconEye, IconHeadphones } from '@UI/react/components/common/Icon';
+import { MouseOutlined } from '@mui/icons-material';
 import '../SettingsTab.scss';
 
 /**
@@ -65,7 +66,7 @@ export function YourPreferences({ preferences, onChange }) {
     return (
         <div className="settings-tab__section">
             {/* Notifications */}
-            <SettingsGroup icon={Bell} title="Notifications">
+            <SettingsGroup icon={IconBell} title="Notifications">
                 <ToggleSwitch
                     label="Mentions"
                     description="Notify when someone mentions you"
@@ -93,7 +94,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Cursors */}
-            <SettingsGroup icon={MousePointer} title="Cursors">
+            <SettingsGroup icon={MouseOutlined} title="Cursors">
                 <ToggleSwitch
                     label="Show My Cursor"
                     description="Let others see your cursor position"
@@ -115,7 +116,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Display */}
-            <SettingsGroup icon={Eye} title="Display">
+            <SettingsGroup icon={IconEye} title="Display">
                 <ToggleSwitch
                     label="Compact Mode"
                     description="Use smaller UI elements"
@@ -137,7 +138,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Audio */}
-            <SettingsGroup icon={Headphones} title="Audio">
+            <SettingsGroup icon={IconHeadphones} title="Audio">
                 <ToggleSwitch
                     label="Mute on Join"
                     description="Start muted when joining voice"

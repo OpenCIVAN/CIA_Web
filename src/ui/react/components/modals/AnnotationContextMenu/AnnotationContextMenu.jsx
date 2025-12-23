@@ -29,7 +29,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Edit3, Move, Trash2, Eye, EyeOff, X } from 'lucide-react';
+import { IconEdit, IconDelete, IconEye, IconEyeOff, IconClose, IconMove } from '@UI/react/components/common/Icon';
 import { createPortal } from 'react-dom';
 import './AnnotationContextMenu.scss';
 
@@ -130,7 +130,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__close"
                     onClick={onClose}
                 >
-                    <X size={12} />
+                    <IconClose size={12} />
                 </button>
             </div>
 
@@ -139,7 +139,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item"
                     onClick={() => handleAction(onEdit)}
                 >
-                    <Edit3 size={14} />
+                    <IconEdit size={14} />
                     <span>Edit</span>
                 </button>
 
@@ -147,7 +147,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item"
                     onClick={() => handleAction(onMove)}
                 >
-                    <Move size={14} />
+                    <IconMove style={{ fontSize: 14 }} />
                     <span>Move</span>
                 </button>
 
@@ -155,7 +155,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item"
                     onClick={() => handleAction(onToggleVisibility)}
                 >
-                    {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {isVisible ? <IconEyeOff size={14} /> : <IconEye size={14} />}
                     <span>{isVisible ? 'Hide' : 'Show'}</span>
                 </button>
 
@@ -165,7 +165,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item annotation-context-menu__item--danger"
                     onClick={() => handleAction(onDelete)}
                 >
-                    <Trash2 size={14} />
+                    <IconDelete size={14} />
                     <span>Delete</span>
                 </button>
             </div>

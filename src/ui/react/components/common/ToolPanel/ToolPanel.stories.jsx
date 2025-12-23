@@ -1,6 +1,7 @@
 // src/ui/react/components/common/ToolPanel.stories.jsx
 import React from "react";
-import { Folder, Settings, Database, Users } from 'lucide-react';
+import { IconFolder, IconSettings, IconUsers } from '@UI/react/components/common/Icon';
+import StorageOutlined from '@mui/icons-material/StorageOutlined';
 import { ToolPanel } from "./ToolPanel";
 
 export default {
@@ -47,7 +48,7 @@ export const FileExplorer = {
     args: {
         isOpen: true,
         title: "Files",
-        icon: <Folder size={18} />,
+        icon: <IconFolder size={18} />,
         children: (
             <div style={{ color: "rgba(255,255,255,0.9)" }}>
                 <div style={{
@@ -83,7 +84,7 @@ export const Closed = {
     args: {
         isOpen: false,
         title: "Files",
-        icon: <Folder size={18} />,
+        icon: <IconFolder size={18} />,
         children: <div>Hidden content</div>,
     },
 };
@@ -92,7 +93,7 @@ export const SettingsPanel = {
     args: {
         isOpen: true,
         title: "Settings",
-        icon: <Settings size={18} />,
+        icon: <IconSettings size={18} />,
         width: 400,
         children: (
             <div style={{ color: "rgba(255,255,255,0.9)", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -150,7 +151,7 @@ export const DataPanel = {
     args: {
         isOpen: true,
         title: "Datasets",
-        icon: <Database size={18} />,
+        icon: <StorageOutlined size={18} />,
         children: (
             <div style={{ color: "rgba(255,255,255,0.9)" }}>
                 <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "14px", marginBottom: "16px" }}>
@@ -166,7 +167,7 @@ export const DataPanel = {
                         alignItems: "center",
                         gap: "12px"
                     }}>
-                        <Database size={16} style={{ color: "rgba(255,255,255,0.5)" }} />
+                        <StorageOutlined size={16} style={{ color: "rgba(255,255,255,0.5)" }} />
                         <span>{name}</span>
                     </div>
                 ))}

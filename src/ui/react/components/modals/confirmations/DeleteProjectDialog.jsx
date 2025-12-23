@@ -28,7 +28,7 @@
  */
 
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { IconDelete } from '@UI/react/components/common/Icon';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 
 /**
@@ -83,7 +83,7 @@ export function DeleteProjectDialog({
                     All project data will be permanently deleted.
                 </>
             }
-            icon={Trash2}
+            icon={IconDelete}
             severity="danger"
             confirmLabel="Delete Project"
             onConfirm={onConfirm}

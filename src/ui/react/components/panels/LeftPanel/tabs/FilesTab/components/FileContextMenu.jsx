@@ -9,7 +9,15 @@
 
 import React, { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, Info, Pencil, Star, ChevronRight, Loader, Cpu } from 'lucide-react';
+import {
+    IconEye,
+    IconStar,
+    IconChevronRight,
+    IconLoader,
+    IconCpu,
+    IconPencil,
+} from '@UI/react/components/common/Icon';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import { ui as log } from '@Utils/logger.js';
 import { config } from '@Core/config/clientConfig.js';
 import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.js';
@@ -71,13 +79,13 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
     }, [activeSubmenu, file]);
 
     const menuItems = [
-        { id: 'open', icon: Eye, label: 'Load in Instance' },
-        { id: 'info', icon: Info, label: 'File Details...' },
+        { id: 'open', icon: IconEye, label: 'Load in Instance' },
+        { id: 'info', icon: InfoOutlined, label: 'File Details...' },
         { divider: true },
-        { id: 'process', icon: Cpu, label: 'Process', hasSubmenu: true },
+        { id: 'process', icon: IconCpu, label: 'Process', hasSubmenu: true },
         { divider: true },
-        { id: 'rename', icon: Pencil, label: 'Rename...' },
-        { id: 'star', icon: Star, label: file?.starred ? 'Unstar' : 'Star' },
+        { id: 'rename', icon: IconPencil, label: 'Rename...' },
+        { id: 'star', icon: IconStar, label: file?.starred ? 'Unstar' : 'Star' },
     ];
 
     const handleMouseEnter = (itemId) => {
@@ -117,7 +125,7 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
                                 <item.icon size={12} />
                                 <span>{item.label}</span>
                                 {item.hasSubmenu && (
-                                    <ChevronRight size={10} className="submenu-arrow" />
+                                    <IconChevronRight size={10} className="submenu-arrow" />
                                 )}
                             </button>
 
@@ -126,7 +134,7 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
                                 <div className="context-menu__submenu">
                                     {loadingOps ? (
                                         <div className="context-menu__item context-menu__item--loading">
-                                            <Loader size={12} className="spin" />
+                                            <IconLoader size={12} className="spin" />
                                             <span>Loading...</span>
                                         </div>
                                     ) : operations.length === 0 ? (

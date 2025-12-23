@@ -2,7 +2,8 @@
 // Individual filter item component
 
 import React, { useState } from 'react';
-import { Filter, Pin, PinOff, Trash2, Play } from 'lucide-react';
+import { IconFilter, IconPin, IconDelete, IconPlay } from '@UI/react/components/common/Icon';
+import PushPinOutlined from '@mui/icons-material/PushPinOutlined';
 import { getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants';
 
 export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
@@ -17,7 +18,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
         >
             {/* Type icon */}
             <div className="filter-item__icon">
-                <Filter size={14} />
+                <IconFilter size={14} />
             </div>
 
             {/* Content */}
@@ -43,7 +44,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                     onClick={(e) => { e.stopPropagation(); onTogglePin(filter.id); }}
                     title={filter.isPinned ? 'Unpin' : 'Pin'}
                 >
-                    {filter.isPinned ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+                    {filter.isPinned ? <IconPin size={10} fill="currentColor" /> : <PushPinOutlined size={10} />}
                 </button>
                 {filter.isOwn && (
                     <button
@@ -51,7 +52,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                         onClick={(e) => { e.stopPropagation(); onDelete(filter.id); }}
                         title="Delete"
                     >
-                        <Trash2 size={10} />
+                        <IconDelete size={10} />
                     </button>
                 )}
             </div>
@@ -61,7 +62,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                 className="filter-item__apply-btn"
                 onClick={() => onApply(filter.id)}
             >
-                <Play size={10} /> Apply
+                <IconPlay size={10} /> Apply
             </button>
         </div>
     );

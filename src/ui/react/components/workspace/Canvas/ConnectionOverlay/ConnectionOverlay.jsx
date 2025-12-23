@@ -8,7 +8,8 @@
 // - VR-compatible design
 
 import React from 'react';
-import { WifiOff, RefreshCw, AlertCircle } from 'lucide-react';
+import { IconRefresh, IconAlertCircle } from '@UI/react/components/common/Icon';
+import { WifiOffOutlined as WifiOff } from '@mui/icons-material';
 import './ConnectionOverlay.scss';
 
 /**
@@ -28,9 +29,9 @@ export function ConnectionOverlay({
             <div className="connection-overlay__content">
                 <div className={`connection-overlay__icon ${isReconnecting ? 'connection-overlay__icon--reconnecting' : ''}`}>
                     {isReconnecting ? (
-                        <RefreshCw size={32} />
+                        <IconRefresh size={32} />
                     ) : (
-                        <WifiOff size={32} />
+                        <WifiOff sx={{ fontSize: 32 }} />
                     )}
                 </div>
 
@@ -46,7 +47,7 @@ export function ConnectionOverlay({
 
                 {error && (
                     <div className="connection-overlay__error">
-                        <AlertCircle size={14} />
+                        <IconAlertCircle size={14} />
                         <span>{error.message || 'Network error'}</span>
                     </div>
                 )}
@@ -56,7 +57,7 @@ export function ConnectionOverlay({
                         className="connection-overlay__retry-btn"
                         onClick={onRetry}
                     >
-                        <RefreshCw size={14} />
+                        <IconRefresh size={14} />
                         Try Again
                     </button>
                 )}

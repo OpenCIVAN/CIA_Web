@@ -13,18 +13,11 @@
  */
 
 import { memo } from 'react';
+import { IconAdd, IconRemove } from '@UI/react/components/common/Icon';
 import {
-    Plus,
-    Minus,
-    Rows,
-    Columns,
-    Merge,
-    Split,
-    ArrowUpFromLine,
-    ArrowDownFromLine,
-    ArrowLeftFromLine,
-    ArrowRightFromLine,
-} from 'lucide-react';
+    MergeTypeOutlined as Merge,
+    CallSplitOutlined as Split,
+} from '@mui/icons-material';
 import './ToolsSidebar.scss';
 
 export const ToolsSidebar = memo(function ToolsSidebar({
@@ -57,7 +50,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         onClick={onAddRow}
                         title="Add row"
                     >
-                        <Plus size={12} />
+                        <IconAdd size={12} />
                     </button>
                     <button
                         className="tools-sidebar__btn"
@@ -65,7 +58,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={gridSize.rows <= 1}
                         title="Remove row"
                     >
-                        <Minus size={12} />
+                        <IconRemove size={12} />
                     </button>
                 </div>
             </div>
@@ -79,7 +72,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         onClick={onAddColumn}
                         title="Add column"
                     >
-                        <Plus size={12} />
+                        <IconAdd size={12} />
                     </button>
                     <button
                         className="tools-sidebar__btn"
@@ -87,7 +80,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={gridSize.cols <= 1}
                         title="Remove column"
                     >
-                        <Minus size={12} />
+                        <IconRemove size={12} />
                     </button>
                 </div>
             </div>
