@@ -9,14 +9,10 @@
 // Or for direct component access:
 //   import { IconClose, IconVR } from '@UI/react/components/common/Icon';
 //
-// For dynamic file type icons:
-//   import { getLucideIcon } from '@UI/react/components/common/Icon';
-//   const TypeIcon = getLucideIcon(fileTypeInfo.icon);
+// For utility functions:
+//   import { getIconComponent, hasIcon, getAvailableIcons } from '@UI/react/components/common/Icon';
 //
 // =============================================================================
-
-// Re-export getLucideIcon from IconRegistry for dynamic file type icons
-export { getLucideIcon } from './IconRegistry.js';
 
 export {
   // Main component

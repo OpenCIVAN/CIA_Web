@@ -1,39 +1,33 @@
-// DatasetParent.jsx
-// Parent/folder node for a dataset in the tree view
+/**
+ * @file DatasetParent.jsx
+ * @description Parent/folder node for a dataset in the tree view
+ * 
+ * CLEAN MIGRATION: Uses <Icon name={...} /> directly with semantic names
+ */
 
 import React, { useState, useCallback } from 'react';
-import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
 
 /**
- * Get display configuration for a dataset based on its file type
+ * Get display configuration - returns STRING icon names (not components!)
  */
-const getDatasetTypeConfig = (fileType) => {
+function getDatasetTypeConfig(fileType) {
     const displayInfo = getFileTypeDisplayInfo(fileType);
 
     if (displayInfo) {
-        const IconComponent = getLucideIcon(displayInfo.icon);
-
         return {
-            icon: IconComponent,
+            icon: displayInfo.icon,  // Already semantic!
             color: displayInfo.color,
         };
     }
 
-    return { icon: getLucideIcon('Database'), color: null };
-};
+    return { icon: 'database', color: null };
+}
 
 /**
  * DatasetParent - Tree node representing a loaded dataset
- *
- * @param {Object} dataset - Dataset object from DatasetManager
- * @param {boolean} isExpanded - Whether the node is expanded
- * @param {Function} onToggle - Toggle expansion callback
- * @param {React.ReactNode} children - Child view items
- * @param {Array} views - Views associated with this dataset
- * @param {Function} onCreateView - Callback to create a new view
- * @param {Function} onUnloadDataset - Callback to unload the dataset
  */
 export function DatasetParent({
     dataset,
@@ -48,7 +42,6 @@ export function DatasetParent({
     const [isHovered, setIsHovered] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const typeConfig = getDatasetTypeConfig(dataset.fileType);
-    const TypeIcon = typeConfig.icon;
 
     const handleContextMenu = useCallback((e) => {
         e.preventDefault();
@@ -65,14 +58,14 @@ export function DatasetParent({
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <span className="dataset-parent__chevron">
-                    {isExpanded ? <Icon name="chevronDown" size={10} /> : <Icon name="chevronRight" size={10} />}
+                    <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={10} />
                 </span>
 
                 <span
                     className="dataset-parent__icon"
                     style={typeConfig.color ? { color: typeConfig.color } : undefined}
                 >
-                    <TypeIcon size={14} />
+                    <Icon name={typeConfig.icon} size={14} />
                 </span>
 
                 <span className="dataset-parent__name">

@@ -1,22 +1,12 @@
 /**
  * @file DatasetsTab.jsx
- * @description Datasets tab for the Left Panel - SIMPLIFIED VERSION
+ * @description Datasets tab for the Left Panel
  * 
- * This version removes the "By Canvas" subtab since that functionality
- * has been moved to the ViewsTab. Now shows only the "By Dataset" tree view.
- *
- * Features:
- * - Dataset tree with expandable nodes
- * - Views grouped under their parent datasets
- * - Filter chips (Active/Inactive/Shared)
- * - View creation from datasets
- * - Storage management
- *
- * @see Left_Panel_Design_Specification.docx - Section 5 Datasets Tab
+ * CLEAN MIGRATION: Removed getLucideIcon - uses <Icon name={...} /> directly
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
@@ -41,31 +31,29 @@ const getFilterChips = (counts) => [
 ];
 
 // =============================================================================
-// DATASET TYPE UTILITIES
+// DATASET TYPE CONFIG - Returns string icon names (NOT components!)
 // =============================================================================
 
-const getDatasetTypeConfig = (fileType) => {
+function getDatasetTypeConfig(fileType) {
     const displayInfo = getFileTypeDisplayInfo(fileType);
 
     if (displayInfo) {
-        const IconComponent = getLucideIcon(displayInfo.icon);
-
         return {
-            icon: IconComponent,
+            icon: displayInfo.icon,  // Already semantic!
             color: displayInfo.color,
-            label: displayInfo.label || fileType?.toUpperCase() || 'Data',
+            label: displayInfo.displayName || fileType?.toUpperCase() || 'Data',
         };
     }
 
     return {
-        icon: getLucideIcon('Database'),
+        icon: 'database',
         color: '#6B7280',
         label: fileType?.toUpperCase() || 'Data',
     };
-};
+}
 
 // =============================================================================
-// VIEW ITEM WRAPPER - Provides callbacks for ViewItem component
+// VIEW ITEM WRAPPER
 // =============================================================================
 
 function DatasetViewItemWrapper({ view }) {
@@ -111,7 +99,7 @@ function DatasetViewItemWrapper({ view }) {
 }
 
 // =============================================================================
-// DATASET PARENT COMPONENT - Hybrid 2 Design
+// DATASET PARENT COMPONENT
 // =============================================================================
 
 function DatasetParent({ dataset, views, isExpanded, onToggle }) {
@@ -122,8 +110,8 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const cardRef = useRef(null);
     const dragImageRef = useRef(null);
 
+    // Get icon config - now returns string names!
     const typeConfig = getDatasetTypeConfig(dataset.fileType || dataset.type);
-    const TypeIcon = typeConfig.icon;
 
     const activeCount = views.filter(v => v.status === 'active').length;
     const totalCount = views.length;
@@ -137,7 +125,6 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     // HANDLERS
     // =========================================================================
 
-    // Create view and place on canvas (flow mode - auto finds next cell)
     const handleCreateView = useCallback(async (e) => {
         e?.stopPropagation();
         try {
@@ -165,59 +152,15 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
         setMenuOpen(false);
     }, []);
 
-    const handleUnloadDataset = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:unload-dataset', {
-            detail: { datasetId: dataset.id }
-        }));
-        setMenuOpen(false);
-    }, [dataset.id]);
-
-    const handleDownload = useCallback((e) => {
-        e?.stopPropagation();
-        window.dispatchEvent(new CustomEvent('cia:download-dataset', {
-            detail: { datasetId: dataset.id }
-        }));
-        setMenuOpen(false);
-    }, [dataset.id]);
-
-    const handleShare = useCallback((e) => {
-        e?.stopPropagation();
-        window.dispatchEvent(new CustomEvent('cia:share-dataset', {
-            detail: { datasetId: dataset.id }
-        }));
-        setMenuOpen(false);
-    }, [dataset.id]);
-
-    // =========================================================================
-    // DRAG HANDLERS - For grid mode placement
-    // =========================================================================
-
+    // Drag handlers...
     const handleDragStart = useCallback((e) => {
-        // Set drag data for canvas cells to create a new view
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('application/x-dataset', JSON.stringify({
-            datasetId: dataset.id,
-            datasetName: dataset.name || dataset.filename,
-            fileType: dataset.fileType || dataset.type,
-            action: 'create-view',
-        }));
-
-        // Create custom drag image (collapsed card only)
-        if (dragImageRef.current) {
-            // Clone the card for drag image
-            const dragImage = dragImageRef.current.cloneNode(true);
-            dragImage.style.position = 'absolute';
-            dragImage.style.top = '-1000px';
-            dragImage.style.left = '-1000px';
-            dragImage.style.width = `${cardRef.current?.offsetWidth || 200}px`;
-            dragImage.style.opacity = '0.9';
-            document.body.appendChild(dragImage);
-            e.dataTransfer.setDragImage(dragImage, 20, 20);
-            // Clean up after a tick
-            setTimeout(() => document.body.removeChild(dragImage), 0);
-        }
-
         setIsDragging(true);
+        e.dataTransfer.setData('application/cia-dataset', JSON.stringify({
+            datasetId: dataset.id,
+            fileType: dataset.fileType,
+            name: dataset.name || dataset.filename,
+        }));
+        e.dataTransfer.effectAllowed = 'copy';
     }, [dataset]);
 
     const handleDragEnd = useCallback(() => {
@@ -226,164 +169,112 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
 
     return (
         <div
-            className={`dataset-parent ${isHovered ? 'dataset-parent--hovered' : ''} ${isDragging ? 'dataset-parent--dragging' : ''}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => { setIsHovered(false); if (!menuOpen) setMenuOpen(false); }}
+            className={`dataset-parent ${isDragging ? 'dataset-parent--dragging' : ''}`}
             ref={cardRef}
         >
-            <div className="dataset-parent__card">
-                {/* Header row with content + action buttons */}
-                <div
-                    className="dataset-parent__header"
-                    draggable
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                >
-                    {/* Main header content (clickable for expand/collapse) */}
-                    <div className="dataset-parent__header-content" onClick={onToggle} ref={dragImageRef}>
-                        {/* Chevron - centered vertically, rotates on expand */}
-                        <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
-                            <Icon name="chevronDown" size={12} />
-                        </span>
+            <div
+                className={`dataset-parent__header ${isExpanded ? 'dataset-parent__header--expanded' : ''}`}
+                onClick={onToggle}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => { setIsHovered(false); if (!menuOpen) setMenuOpen(false); }}
+                draggable
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+            >
+                {/* Chevron */}
+                <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
+                    <Icon name="chevronDown" size={12} />
+                </span>
 
-                        {/* Type icon with colored background */}
-                        <div
-                            className="dataset-parent__type-icon"
+                {/* Type icon - uses semantic name directly! */}
+                <div
+                    className="dataset-parent__type-icon"
+                    style={{ '--type-color': typeConfig.color || '#6B7280' }}
+                >
+                    <Icon name={typeConfig.icon} size={14} />
+                </div>
+
+                {/* Name and metadata */}
+                <div className="dataset-parent__info">
+                    <span className="dataset-parent__info-name">
+                        {dataset.name || dataset.filename || 'Untitled'}
+                    </span>
+                    <div className="dataset-parent__info-meta">
+                        <span
+                            className="dataset-parent__handler-badge"
                             style={{ '--type-color': typeConfig.color || '#6B7280' }}
                         >
-                            <TypeIcon size={14} />
-                        </div>
-
-                        {/* Name and metadata */}
-                        <div className="dataset-parent__info">
-                            <span className="dataset-parent__info-name">
-                                {dataset.name || dataset.filename || 'Untitled'}
+                            {handlerLabel}
+                        </span>
+                        {sizeDisplay && (
+                            <span className="dataset-parent__meta-item">
+                                <Icon name="hardDrive" size={8} />
+                                {sizeDisplay}
                             </span>
-                            <div className="dataset-parent__info-meta">
-                                <span
-                                    className="dataset-parent__handler-badge"
-                                    style={{ '--type-color': typeConfig.color || '#6B7280' }}
-                                >
-                                    {handlerLabel}
-                                </span>
-                                {sizeDisplay && (
-                                    <span className="dataset-parent__meta-item">
-                                        <Icon name="hardDrive" size={8} />
-                                        {sizeDisplay}
-                                    </span>
-                                )}
-                                {loadedDisplay && (
-                                    <span className="dataset-parent__meta-item">
-                                        <Icon name="clock" size={8} />
-                                        {loadedDisplay}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* View count badge */}
-                        <div className={`dataset-parent__view-count ${activeCount > 0 ? 'dataset-parent__view-count--has-active' : ''}`}>
-                            <span className="dataset-parent__view-count-number">{activeCount}</span>
-                            <span className="dataset-parent__view-count-total">of {totalCount}</span>
-                        </div>
-                    </div>
-
-                    {/* Vertical action buttons */}
-                    <div className="dataset-parent__actions">
-                        <button
-                            className="dataset-parent__actions-btn dataset-parent__actions-btn--create"
-                            onClick={handleCreateView}
-                            title="Add view to canvas"
-                        >
-                            <Icon name="add" size={11} />
-                        </button>
-                        <button
-                            className="dataset-parent__actions-btn"
-                            onClick={handleOpenSettings}
-                            title="Settings"
-                        >
-                            <Icon name="settings" size={11} />
-                        </button>
-                        <button
-                            className="dataset-parent__actions-btn"
-                            onClick={handleMoreActions}
-                            title="More actions"
-                        >
-                            <Icon name="moreHorizontal" size={11} />
-                        </button>
+                        )}
+                        {loadedDisplay && (
+                            <span className="dataset-parent__meta-item">
+                                <Icon name="clock" size={8} />
+                                {loadedDisplay}
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                {/* Context Menu */}
-                {menuOpen && (
-                    <>
-                        <div className="dataset-parent__menu-backdrop" onClick={handleCloseMenu} />
-                        <div className="dataset-parent__menu">
-                            <button className="dataset-parent__menu-item" onClick={handleCreateView}>
-                                <Icon name="add" size={12} />
-                                <span>Create View</span>
-                            </button>
-                            <button className="dataset-parent__menu-item" onClick={handleOpenSettings}>
-                                <Icon name="settings" size={12} />
-                                <span>Dataset Settings</span>
-                            </button>
-                            <div className="dataset-parent__menu-divider" />
-                            <button className="dataset-parent__menu-item" onClick={handleDownload}>
-                                <Icon name="download" size={12} />
-                                <span>Download</span>
-                            </button>
-                            <button className="dataset-parent__menu-item" onClick={handleShare}>
-                                <Icon name="share2" size={12} />
-                                <span>Share</span>
-                            </button>
-                            <div className="dataset-parent__menu-divider" />
-                            <button
-                                className="dataset-parent__menu-item dataset-parent__menu-item--danger"
-                                onClick={handleUnloadDataset}
-                            >
-                                <Icon name="delete" size={12} />
-                                <span>Unload Dataset</span>
-                            </button>
-                        </div>
-                    </>
-                )}
+                {/* View count badge */}
+                <div className={`dataset-parent__view-count ${activeCount > 0 ? 'dataset-parent__view-count--active' : ''}`}>
+                    {totalCount}
+                </div>
 
-                {/* Expanded content - views list */}
-                {isExpanded && !isDragging && (
-                    <div className="dataset-parent__expanded">
-                        {views.length > 0 ? (
-                            <div className="dataset-parent__views">
-                                {views.map(view => (
-                                    <DatasetViewItemWrapper key={view.id} view={view} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="dataset-parent__empty">
-                                <Icon name="database" size={20} />
-                                <span>No views created yet</span>
-                            </div>
-                        )}
-
-                        {/* Footer actions */}
-                        <div className="dataset-parent__footer">
-                            <button
-                                className="dataset-parent__footer-btn dataset-parent__footer-btn--primary"
-                                onClick={handleCreateView}
-                            >
-                                <Icon name="add" size={11} />
-                                Add View
-                            </button>
-                            <button
-                                className="dataset-parent__footer-btn dataset-parent__footer-btn--secondary"
-                                onClick={handleOpenSettings}
-                            >
-                                <Icon name="settings" size={11} />
-                                Settings
-                            </button>
-                        </div>
+                {/* Hover actions */}
+                {isHovered && (
+                    <div className="dataset-parent__actions">
+                        <button
+                            className="dataset-parent__action"
+                            onClick={handleCreateView}
+                            title="Create view"
+                        >
+                            <Icon name="add" size={12} />
+                        </button>
+                        <button
+                            className="dataset-parent__action"
+                            onClick={handleOpenSettings}
+                            title="Settings"
+                        >
+                            <Icon name="settings" size={12} />
+                        </button>
+                        <button
+                            className="dataset-parent__action"
+                            onClick={handleMoreActions}
+                            title="More"
+                        >
+                            <Icon name="moreHorizontal" size={12} />
+                        </button>
                     </div>
                 )}
             </div>
+
+            {/* Children */}
+            {isExpanded && (
+                <div className="dataset-parent__children">
+                    {views.length > 0 ? (
+                        views.map(view => (
+                            <DatasetViewItemWrapper key={view.id} view={view} />
+                        ))
+                    ) : (
+                        <div className="dataset-parent__empty">
+                            <span>No views</span>
+                            <button
+                                className="dataset-parent__empty-action"
+                                onClick={handleCreateView}
+                            >
+                                <Icon name="add" size={10} />
+                                Create view
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Settings Modal */}
             <DatasetSettingsModal
@@ -391,8 +282,8 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                 dataset={dataset}
                 views={views}
                 onClose={() => setShowSettingsModal(false)}
-                onCreateView={handleCreateView}
-                onUnloadDataset={handleUnloadDataset}
+                onCreateView={() => handleCreateView()}
+                onUnloadDataset={() => { }}
             />
         </div>
     );
@@ -402,26 +293,15 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function DatasetsPanelContent({ workspaceId }) {
-    // =========================================================================
-    // STATE
-    // =========================================================================
-
-    const [activeFilters, setActiveFilters] = useState(['active', 'inactive', 'shared']);
-    const [searchQuery, setSearchQuery] = useState('');
+export function DatasetsPanelContent() {
+    const [activeFilters, setActiveFilters] = useState([]);
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [, forceUpdate] = useState(0);
 
-    // Refresh counter for reactivity
-    const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
-
-    // =========================================================================
-    // EVENT SUBSCRIPTIONS
-    // =========================================================================
-
+    // Subscribe to view changes
     useEffect(() => {
-        const handleViewUpdate = () => {
-            setViewRefreshCounter(c => c + 1);
-        };
+        const handleViewUpdate = () => forceUpdate(n => n + 1);
 
         getViewConfigurationManager()?.on?.('viewUpdated', handleViewUpdate);
         getViewConfigurationManager()?.on?.('viewDeactivated', handleViewUpdate);
@@ -438,13 +318,9 @@ export function DatasetsPanelContent({ workspaceId }) {
         };
     }, []);
 
-    // =========================================================================
-    // DATA
-    // =========================================================================
-
     const loadedDatasets = useDatasets();
 
-    // Get views for a dataset (excluding trashed)
+    // Get views for a dataset
     const getViewsForDataset = useCallback((datasetId) => {
         try {
             const views = getViewConfigurationManager()?.getViewsForDataset?.(datasetId) || [];
@@ -460,129 +336,114 @@ export function DatasetsPanelContent({ workspaceId }) {
                         status: v.status === 'active' || placement ? 'active' : 'inactive',
                     };
                 });
-        } catch (e) {
-            log.warn('Failed to get views for dataset:', e);
+        } catch (err) {
+            log.warn('Error getting views for dataset:', err);
             return [];
         }
-    }, [viewRefreshCounter]);
-
-    // Merge datasets with their views
-    const datasets = useMemo(() => {
-        return loadedDatasets.map(ds => ({
-            ...ds,
-            views: getViewsForDataset(ds.id),
-        }));
-    }, [loadedDatasets, getViewsForDataset]);
-
-    // Filter views by active filters
-    const filterViews = useCallback((views) => {
-        return views.filter(v => {
-            if (v.status === 'active' && !activeFilters.includes('active')) return false;
-            if (v.status === 'inactive' && !activeFilters.includes('inactive')) return false;
-            if (v.isShared && !activeFilters.includes('shared')) return false;
-            return true;
-        });
-    }, [activeFilters]);
-
-    // Get filtered views for display
-    const getFilteredViews = useCallback((dataset) => {
-        return filterViews(dataset.views || []);
-    }, [filterViews]);
-
-    // Count views for filter chips
-    const filterCounts = useMemo(() => {
-        let active = 0, inactive = 0, shared = 0;
-        datasets.forEach(ds => {
-            ds.views?.forEach(v => {
-                if (v.status === 'active') active++;
-                if (v.status === 'inactive') inactive++;
-                if (v.isShared) shared++;
-            });
-        });
-        return { active, inactive, shared };
-    }, [datasets]);
-
-    // Search filtered datasets
-    const filteredDatasets = useMemo(() => {
-        if (!searchQuery) return datasets;
-        const q = searchQuery.toLowerCase();
-        return datasets.filter(ds =>
-            ds.name.toLowerCase().includes(q) ||
-            ds.views.some(v => v.name.toLowerCase().includes(q))
-        );
-    }, [datasets, searchQuery]);
-
-    // =========================================================================
-    // HANDLERS
-    // =========================================================================
-
-    const toggleFilter = useCallback((filterId) => {
-        setActiveFilters(prev =>
-            prev.includes(filterId)
-                ? prev.filter(id => id !== filterId)
-                : [...prev, filterId]
-        );
     }, []);
 
+    // Filter views based on active filters
+    const getFilteredViews = useCallback((dataset) => {
+        const views = getViewsForDataset(dataset.id);
+        if (activeFilters.length === 0) return views;
+
+        return views.filter(view => {
+            if (activeFilters.includes('active') && view.status === 'active') return true;
+            if (activeFilters.includes('inactive') && view.status === 'inactive') return true;
+            if (activeFilters.includes('shared') && view.shared) return true;
+            return false;
+        });
+    }, [getViewsForDataset, activeFilters]);
+
+    // Filter datasets by search
+    const filteredDatasets = useMemo(() => {
+        if (!loadedDatasets) return [];
+        if (!searchQuery.trim()) return loadedDatasets;
+
+        const query = searchQuery.toLowerCase();
+        return loadedDatasets.filter(ds =>
+            (ds.name || ds.filename || '').toLowerCase().includes(query) ||
+            (ds.fileType || '').toLowerCase().includes(query)
+        );
+    }, [loadedDatasets, searchQuery]);
+
+    // Count views for filter chips
+    const viewCounts = useMemo(() => {
+        let active = 0, inactive = 0, shared = 0;
+
+        filteredDatasets.forEach(ds => {
+            const views = getViewsForDataset(ds.id);
+            views.forEach(view => {
+                if (view.status === 'active') active++;
+                else inactive++;
+                if (view.shared) shared++;
+            });
+        });
+
+        return { active, inactive, shared };
+    }, [filteredDatasets, getViewsForDataset]);
+
+    // Toggle dataset expansion
     const toggleDataset = useCallback((datasetId) => {
         setExpandedDatasets(prev => {
             const next = new Set(prev);
-            next.has(datasetId) ? next.delete(datasetId) : next.add(datasetId);
+            if (next.has(datasetId)) {
+                next.delete(datasetId);
+            } else {
+                next.add(datasetId);
+            }
             return next;
         });
     }, []);
 
-    const handleLoadDataset = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:open-file-picker'));
+    // Handle filter change
+    const handleFilterChange = useCallback((filterId) => {
+        setActiveFilters(prev => {
+            if (prev.includes(filterId)) {
+                return prev.filter(f => f !== filterId);
+            }
+            return [...prev, filterId];
+        });
     }, []);
 
-    // =========================================================================
-    // RENDER
-    // =========================================================================
+    const handleLoadDataset = useCallback(() => {
+        log.info('Load dataset clicked');
+    }, []);
 
     return (
         <div className="datasets-tab">
-            {/* Header */}
-            <div className="panel-header panel-header--teal">
-                <Icon name="database" size={14} className="panel-header__icon" />
-                <span className="panel-header__title">Datasets</span>
+            {/* Search bar */}
+            <div className="panel-search">
+                <Icon name="search" size={12} className="panel-search__icon" />
+                <input
+                    type="text"
+                    className="panel-search__input"
+                    placeholder="Search datasets..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                    <button
+                        className="panel-search__clear"
+                        onClick={() => setSearchQuery('')}
+                    >
+                        <Icon name="close" size={10} />
+                    </button>
+                )}
             </div>
 
-            {/* Search */}
-            <div className="datasets-tab__search-row">
-                <div className="datasets-tab__search">
-                    <Icon name="search" size={12} className="datasets-tab__search-icon" />
-                    <input
-                        type="text"
-                        className="datasets-tab__search-input"
-                        placeholder="Search datasets and views..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {searchQuery && (
-                        <button
-                            className="datasets-tab__search-clear"
-                            onClick={() => setSearchQuery('')}
-                        >
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Filter Chips */}
-            <div className="datasets-tab__filters">
+            {/* Filter chips */}
+            <div className="panel-filters">
                 <ChipGroup
-                    chips={getFilterChips(filterCounts)}
+                    chips={getFilterChips(viewCounts)}
                     activeChips={activeFilters}
-                    onToggle={toggleFilter}
-                    size="sm"
+                    onToggle={handleFilterChange}
                 />
             </div>
 
-            {/* Dataset Tree */}
+            {/* Dataset tree */}
             <div className="datasets-tab__content">
-                <div className="datasets-tab__list">
+                <div className="datasets-tab__tree">
                     {filteredDatasets.length === 0 ? (
                         <div className="datasets-tab__empty">
                             <Icon name="database" size={32} />

@@ -1,57 +1,36 @@
 /**
  * @file FileItem.jsx
  * @description File item component for list and grid views.
- * Displays file info with state indicator, actions, and drag support.
- *
- * @example
- * <FileItem file={file} variant="list" onSelect={handleSelect} onStar={handleStar} />
+ * 
+ * CLEAN MIGRATION: Uses <Icon name={...} /> directly with semantic names.
  */
 
 import React, { useState, memo } from 'react';
-import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { FileThumbnail } from './FileThumbnail';
 
 /**
- * Get icon and color config for a file type
+ * Get icon config for a file - returns STRING icon names (not components!)
  * @param {Object} file - File object
- * @returns {Object} Icon config
+ * @returns {{ icon: string, color: string|null, colorClass: string|null }}
  */
-export const getFileTypeConfig = (file) => {
-    if (file.isFolder) {
-        return { icon: getLucideIcon('Folder'), colorClass: 'file-icon--folder', color: null };
+export function getFileTypeConfig(file) {
+    if (file.isFolder || file.type === 'folder') {
+        return { icon: 'folder', color: null, colorClass: 'file-icon--folder' };
     }
 
     const displayInfo = getFileTypeDisplayInfo(file.fileType);
-
     if (displayInfo) {
-        const IconComponent = getLucideIcon(displayInfo.icon);
-
         return {
-            icon: IconComponent,
+            icon: displayInfo.icon,  // Already semantic!
             color: displayInfo.color,
             colorClass: null,
         };
     }
 
-    return { icon: getLucideIcon('FileText'), colorClass: 'file-icon--default', color: null };
-};
-
-/**
- * @typedef {Object} FileItemProps
- * @property {Object} file - File data object
- * @property {'list'|'grid'} [variant='list'] - Display variant
- * @property {number} [depth=0] - Nesting depth for tree view
- * @property {boolean} [isSelected] - Whether file is selected
- * @property {Set} [expandedFolders] - Set of expanded folder IDs
- * @property {Function} [onSelect] - Selection handler
- * @property {Function} [onStar] - Star toggle handler
- * @property {Function} [onDragStart] - Drag start handler
- * @property {Function} [onContextMenu] - Context menu handler
- * @property {Function} [onMenuClick] - Menu button click handler
- * @property {Function} [onDoubleClick] - Double-click handler
- * @property {Function} [onToggleFolder] - Folder toggle handler
- */
+    return { icon: 'file', color: null, colorClass: 'file-icon--default' };
+}
 
 /**
  * List view file item
@@ -70,8 +49,8 @@ export const FileItemList = memo(function FileItemList({
     onToggleFolder,
 }) {
     const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
-    const isFolder = file.type === 'folder';
+    const { icon, colorClass, color } = getFileTypeConfig(file);
+    const isFolder = file.type === 'folder' || file.isFolder;
     const isExpanded = expandedFolders?.has(file.id);
 
     return (
@@ -83,78 +62,88 @@ export const FileItemList = memo(function FileItemList({
                 onDragStart={(e) => !isFolder && onDragStart?.(e, file)}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                onClick={() => (isFolder ? onToggleFolder(file.id) : onSelect(file.id))}
-                onDoubleClick={(e) => {
-                    if (!isFolder) {
-                        e.stopPropagation();
-                        onDoubleClick?.(file);
-                    }
-                }}
-                onContextMenu={(e) => !isFolder && onContextMenu?.(e, file)}
+                onClick={() => (isFolder ? onToggleFolder?.(file.id) : onSelect?.(file))}
+                onDoubleClick={() => !isFolder && onDoubleClick?.(file)}
+                onContextMenu={(e) => onContextMenu?.(e, file)}
             >
-                {isFolder ? (
-                    <span className="chevron">
-                        {isExpanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
+                {/* Folder chevron */}
+                {isFolder && (
+                    <span className="tree-item__chevron">
+                        <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={10} />
                     </span>
-                ) : (
-                    <Icon
-                        name="gripVertical"
-                        size={10}
-                        className="drag-handle"
-                        style={{ opacity: isHovered ? 0.6 : 0 }}
-                    />
                 )}
-                <TypeIcon
-                    size={14}
+
+                {/* File type icon - uses semantic name directly */}
+                <span
+                    className={`tree-item__icon ${colorClass || ''}`}
                     style={color ? { color } : undefined}
-                    className={colorClass || ''}
-                />
-                <span className="item-name">{file.name}</span>
-                {!isFolder && (isHovered || file.starred) && (
-                    <button
-                        className={`star-btn ${file.starred ? 'star-btn--starred' : ''}`}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onStar(file.id);
-                        }}
-                    >
-                        <Icon name="star" size={10} fill={file.starred ? 'currentColor' : 'none'} />
-                    </button>
-                )}
-                {!isFolder && isHovered && (
-                    <button
-                        className="menu-btn"
-                        onClick={(e) => onMenuClick?.(e, file)}
-                        title="More actions"
-                    >
-                        <Icon name="moreHorizontal" size={12} />
-                    </button>
-                )}
+                >
+                    <Icon name={icon} size={14} />
+                </span>
+
+                {/* File name */}
+                <span className="tree-item__name" title={file.name}>
+                    {file.name}
+                </span>
+
+                {/* Status indicators */}
                 {file.loaded && (
-                    <Icon name="circle" size={6} fill="currentColor" className="status-indicator__dot--active" />
+                    <span className="tree-item__loaded-indicator" title="Loaded in workspace">
+                        <Icon name="check" size={10} />
+                    </span>
+                )}
+
+                {/* Hover actions */}
+                {isHovered && !isFolder && (
+                    <div className="tree-item__actions">
+                        <button
+                            className={`tree-item__action ${file.starred ? 'starred' : ''}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onStar?.(file);
+                            }}
+                            title={file.starred ? 'Remove star' : 'Add star'}
+                        >
+                            <Icon name={file.starred ? "star" : "starOutline"} size={12} />
+                        </button>
+                        <button
+                            className="tree-item__action"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onMenuClick?.(e, file);
+                            }}
+                            title="More actions"
+                        >
+                            <Icon name="moreHorizontal" size={12} />
+                        </button>
+                    </div>
+                )}
+
+                {file.loaded && (
+                    <Icon name="circle" size={6} className="status-indicator__dot--active" />
                 )}
                 <span className="item-meta">
                     {isFolder ? `${file.children?.length || 0}` : file.size}
                 </span>
             </div>
-            {isFolder &&
-                isExpanded &&
-                file.children?.map((child) => (
-                    <FileItemList
-                        key={child.id}
-                        file={child}
-                        depth={depth + 1}
-                        isSelected={isSelected}
-                        onSelect={onSelect}
-                        onStar={onStar}
-                        onDragStart={onDragStart}
-                        onContextMenu={onContextMenu}
-                        onMenuClick={onMenuClick}
-                        onDoubleClick={onDoubleClick}
-                        expandedFolders={expandedFolders}
-                        onToggleFolder={onToggleFolder}
-                    />
-                ))}
+
+            {/* Children if folder is expanded */}
+            {isFolder && isExpanded && file.children?.map((child) => (
+                <FileItemList
+                    key={child.id}
+                    file={child}
+                    depth={depth + 1}
+                    isSelected={isSelected}
+                    onSelect={onSelect}
+                    onStar={onStar}
+                    onDragStart={onDragStart}
+                    onContextMenu={onContextMenu}
+                    onMenuClick={onMenuClick}
+                    onDoubleClick={onDoubleClick}
+                    expandedFolders={expandedFolders}
+                    onToggleFolder={onToggleFolder}
+                />
+            ))}
         </>
     );
 });
@@ -173,7 +162,7 @@ export const FileItemGrid = memo(function FileItemGrid({
     onDoubleClick,
 }) {
     const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
+    const { icon, colorClass, color } = getFileTypeConfig(file);
 
     if (file.type === 'folder') return null;
 
@@ -195,7 +184,7 @@ export const FileItemGrid = memo(function FileItemGrid({
                 <div className="thumbnail__preview">
                     <FileThumbnail
                         fileId={file.id}
-                        fallbackIcon={TypeIcon}
+                        fallbackIcon={icon}
                         color={color}
                         colorClass={colorClass}
                     />
@@ -208,7 +197,7 @@ export const FileItemGrid = memo(function FileItemGrid({
                             onStar(file.id);
                         }}
                     >
-                        <Icon name="star" size={10} fill={file.starred ? 'currentColor' : 'none'} />
+                        <Icon name="star" size={10} />
                     </button>
                     <button
                         className="thumbnail-action"
@@ -223,6 +212,16 @@ export const FileItemGrid = memo(function FileItemGrid({
             <div className="file-size">{file.size}</div>
         </div>
     );
+});
+
+/**
+ * FileItem - Main export
+ */
+export const FileItem = memo(function FileItem({ variant = 'list', ...props }) {
+    if (variant === 'grid') {
+        return <FileItemGrid {...props} />;
+    }
+    return <FileItemList {...props} />;
 });
 
 export default FileItemList;

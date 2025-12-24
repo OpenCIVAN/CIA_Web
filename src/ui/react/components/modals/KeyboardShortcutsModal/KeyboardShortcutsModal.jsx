@@ -234,7 +234,7 @@ function KeyboardShortcutsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Keyboard Shortcuts"
-            icon={Keyboard}
+            icon="keyboard"
             severity="info"
             size="lg"
             testId={testId}

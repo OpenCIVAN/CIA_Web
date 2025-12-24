@@ -270,7 +270,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={MessageSquare}
+                        icon="messageSquare"
                         onClick={handleMessage}
                         className="profile-modal__action-btn"
                     >
@@ -281,7 +281,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Phone}
+                        icon="phone"
                         onClick={handleInviteToVoice}
                         className="profile-modal__action-btn"
                     >
@@ -292,7 +292,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Navigation}
+                        icon="navigation"
                         onClick={handleGoToView}
                         className="profile-modal__action-btn"
                     >

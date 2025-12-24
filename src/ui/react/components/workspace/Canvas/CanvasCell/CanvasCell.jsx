@@ -559,7 +559,7 @@ export const CanvasCell = memo(function CanvasCell({
             {/* Isolation mode indicator (for small cells) */}
             {(renderMode === RENDER_MODES.THUMBNAIL || renderMode === RENDER_MODES.SNAPSHOT) && !isEmpty && (
                 <div className="canvas-cell__isolation-hint">
-                    <ZoomIn size={12} />
+                    <Icon name="zoomIn" size={12} />
                 </div>
             )}
 
@@ -853,7 +853,7 @@ function ViewContent({
                         instanceType="vtk"
                         fallback={
                             <div className="canvas-cell__thumbnail-placeholder">
-                                <Box size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
+                                <Icon name="box" size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
                             </div>
                         }
                     />

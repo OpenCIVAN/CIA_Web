@@ -25,224 +25,211 @@
 import React from 'react';
 
 // =============================================================================
-// ICON REGISTRY
+// MATERIAL ICON IMPORTS
 // =============================================================================
-// Maps semantic names to Material Outlined icons.
-// Add new icons here - they're instantly available everywhere.
-// =============================================================================
+// Organized alphabetically for easy maintenance
 
 import {
-    // UI Actions
-    CloseOutlined,
+    // A
     AddOutlined,
-    RemoveOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    CheckOutlined,
-    DoneOutlined,
-    SaveOutlined,
-    ContentCopyOutlined,
-    UndoOutlined,
-    RedoOutlined,
-    RefreshOutlined,
-    SyncOutlined,
-    SearchOutlined,
-    MoreHorizOutlined,
-    MoreVertOutlined,
-    SettingsOutlined,
-    MenuOutlined,
-
-    // Navigation
-    ExpandMoreOutlined,
-    ExpandLessOutlined,
-    ChevronLeftOutlined,
-    ChevronRightOutlined,
-    KeyboardDoubleArrowLeftOutlined,
-    KeyboardDoubleArrowRightOutlined,
-    ArrowForwardOutlined,
+    AlternateEmailOutlined,
+    ApartmentOutlined,
+    ArchiveOutlined,
     ArrowBackOutlined,
     ArrowDownwardOutlined,
+    ArrowForwardOutlined,
     ArrowUpwardOutlined,
-    SwapHorizOutlined,
-    SwapVertOutlined,
-    HomeOutlined,
-    OpenInNewOutlined,
-
-    // View & Visibility
-    VisibilityOutlined,
-    VisibilityOffOutlined,
-    OpenInFullOutlined,
-    CloseFullscreenOutlined,
-    FullscreenOutlined,
-    FullscreenExitOutlined,
-    ZoomInOutlined,
-    ZoomOutOutlined,
-    CenterFocusStrongOutlined,
-    PreviewOutlined,
-
-    // VR & 3D
-    ViewInArOutlined,
-    ThreeDRotationOutlined,
-    Inventory2Outlined,
-    LayersOutlined,
-    OpenWithOutlined,
-    GestureOutlined,
-    SpatialAudioOffOutlined,
-
-    // Tools & Editing
-    ContentCutOutlined,
-    StraightenOutlined,
-    SquareFootOutlined,
-    PaletteOutlined,
-    FilterAltOutlined,
-    FilterListOutlined,
-    TuneOutlined,
-    BuildOutlined,
-    GpsFixedOutlined,
-    MyLocationOutlined,
-    CreateOutlined,
-    NearMeOutlined,
-
-    // Data & Files
-    FolderOutlined,
-    CreateNewFolderOutlined,
-    FolderOpenOutlined,
     AccountTreeOutlined,
-    DescriptionOutlined,
-    InsertDriveFileOutlined,
-    ImageOutlined,
-    HideImageOutlined,
-    BrokenImageOutlined,
-    StorageOutlined,
-    DatasetOutlined,
-    DownloadOutlined,
-    FileDownloadOutlined,
-    UploadOutlined,
-    FileUploadOutlined,
-    AttachFileOutlined,
-    DnsOutlined,
 
-    // Communication
-    ChatOutlined,
-    ChatBubbleOutlineOutlined,
-    CommentOutlined,
-    SendOutlined,
-    NotificationsOutlined,
-    NotificationsNoneOutlined,
-    AlternateEmailOutlined,
-
-    // Users & Collaboration
-    PersonOutlined,
-    GroupOutlined,
-    PeopleOutlined,
-    AccountCircleOutlined,
-    PersonAddOutlined,
-    PersonOffOutlined,
-    PersonRemoveOutlined,
-    ManageAccountsOutlined,
-    HowToRegOutlined,
-
-    // Media & Recording
-    PlayArrowOutlined,
-    PauseOutlined,
-    StopOutlined,
-    VideocamOutlined,
-    VideocamOffOutlined,
-    MicOutlined,
-    MicOffOutlined,
-    VolumeUpOutlined,
-    CameraAltOutlined,
-    PhotoCameraOutlined,
-    RadioOutlined,
-
-    // Status & Feedback
-    InfoOutlined,
-    HelpOutlineOutlined,
-    WarningAmberOutlined,
-    ReportProblemOutlined,
-    ErrorOutlineOutlined,
-    CancelOutlined,
-    CheckCircleOutlined,
-
-    // Layout & Grid
-    GridViewOutlined,
-    GridOnOutlined,
-    DashboardOutlined,
-    ViewModuleOutlined,
-    MapOutlined,
-    ListOutlined,
-
-    // Pins, Bookmarks & Favorites
-    PushPinOutlined,
-    StarOutlined,
-    StarBorderOutlined,
+    // B
+    BiotechOutlined,
     BookmarkBorderOutlined,
+    BrokenImageOutlined,
+    BuildOutlined,
+    BusinessOutlined,
 
-    // Drag & Grip
+    // C
+    CalendarTodayOutlined,
+    CameraAltOutlined,
+    CancelOutlined,
+    CenterFocusStrongOutlined,
+    ChangeHistoryOutlined,
+    ChatOutlined,
+    CheckCircleOutlined,
+    CheckOutlined,
+    ChevronLeftOutlined,
+    ChevronRightOutlined,
+    CircleOutlined,
+    CloseFullscreenOutlined,
+    CloseOutlined,
+    CommentOutlined,
+    ContentCopyOutlined,
+    ContentCutOutlined,
+    CreateNewFolderOutlined,
+
+    // D
+    DashboardOutlined,
+    DatasetOutlined,
+    DeleteOutlined,
+    DescriptionOutlined,
+    DesktopWindowsOutlined,
+    DeveloperBoardOutlined,
+    DoDisturbOutlined,
+    DoneOutlined,
+    DownloadOutlined,
     DragHandleOutlined,
     DragIndicatorOutlined,
 
-    // Lock & Security
-    LockOutlined,
-    LockOpenOutlined,
-    SecurityOutlined,
-
-    // Time & Calendar
-    ScheduleOutlined,
-    AccessTimeOutlined,
-    CalendarTodayOutlined,
-    EventOutlined,
-
-    // Share & Links
-    ShareOutlined,
-    LinkOutlined,
-    InsertLinkOutlined,
-    LinkOffOutlined,
-
-    // Shapes & Indicators
-    CircleOutlined,
-    FiberManualRecordOutlined,
-    RadioButtonCheckedOutlined,
-    HexagonOutlined,
-
-    // Network & Connection
-    WifiOutlined,
-    WifiOffOutlined,
-    LanguageOutlined,
-    PublicOutlined,
-
-    // Scientific
-    BiotechOutlined,
-    ScienceOutlined,
-    MemoryOutlined,
-    DeveloperBoardOutlined,
-
-    // Theme & Display
-    LightModeOutlined,
-    DarkModeOutlined,
-    MonitorOutlined,
-    DesktopWindowsOutlined,
-    HeadphonesOutlined,
-
-    // Misc
-    KeyboardOutlined,
-    EmojiEmotionsOutlined,
-    PlaceOutlined,
-    LocationOnOutlined,
-    NoteOutlined,
-    StickyNote2Outlined,
-    ArchiveOutlined,
-    LogoutOutlined,
-    LoginOutlined,
-    MeetingRoomOutlined,
-    MergeOutlined,
-    CallMergeOutlined,
+    // E
+    EditOutlined,
     EmojiEventsOutlined,
-    RotateLeftOutlined,
-    BusinessOutlined,
-    ApartmentOutlined,
-    PhotoSizeSelectSmallOutlined,
+    ErrorOutlineOutlined,
+    EventOutlined,
+    ExpandLessOutlined,
+    ExpandMoreOutlined,
+    ExploreOffOutlined,
+    ExploreOutlined,
+
+    // F
+    FiberManualRecordOutlined,
+    FilterAltOutlined,
+    FilterListOutlined,
+    FolderOpenOutlined,
+    FolderOutlined,
+    FormatListBulletedOutlined,
+    FullscreenExitOutlined,
+    FullscreenOutlined,
+
+    // G
+    GpsFixedOutlined,
+    GridOnOutlined,
+    GridViewOutlined,
+
+    // H
     HandymanOutlined,
+    HeadphonesOutlined,
+    HelpOutlineOutlined,
+    HexagonOutlined,
+    HomeOutlined,
+    HowToRegOutlined,
+
+    // I
+    ImageOutlined,
+    InfoOutlined,
+    Inventory2Outlined,
+
+    // K
+    KeyboardOutlined,
+
+    // L
+    LayersOutlined,
+    LinkOffOutlined,
+    LinkOutlined,
+    ListOutlined,
+    LocalCafeOutlined,
+    LocationOnOutlined,
+    LockOpenOutlined,
+    LockOutlined,
+    LoginOutlined,
+    LogoutOutlined,
+
+    // M
+    ManageAccountsOutlined,
+    MapOutlined,
+    MeetingRoomOutlined,
+    MemoryOutlined,
+    MergeOutlined,
+    MicOffOutlined,
+    MicOutlined,
+    MonitorOutlined,
+    MoreHorizOutlined,
+    MoreVertOutlined,
+    MyLocationOutlined,
+
+    // N
+    NearMeOutlined,
+    NightlightOutlined,
+    NotesOutlined,
+    NotificationsNoneOutlined,
+    NotificationsOutlined,
+
+    // O
+    OpenInFullOutlined,
+    OpenInNewOutlined,
+    OpenWithOutlined,
+
+    // P
+    PaletteOutlined,
+    PanToolOutlined,
+    PauseOutlined,
+    PeopleOutlined,
+    PersonAddOutlined,
+    PersonOffOutlined,
+    PersonOutlined,
+    PersonRemoveOutlined,
+    PhoneOutlined,
+    PhotoCameraOutlined,
+    PhotoSizeSelectSmallOutlined,
+    PinDropOutlined,
+    PlayArrowOutlined,
+    PublicOutlined,
+    PushPinOutlined,
+
+    // R
+    RadioButtonCheckedOutlined,
+    RadioOutlined,
+    RedoOutlined,
+    RefreshOutlined,
+    RemoveOutlined,
+    RotateLeftOutlined,
+
+    // S
+    SaveOutlined,
+    ScatterPlotOutlined,
+    ScheduleOutlined,
+    ScienceOutlined,
+    SearchOutlined,
+    SendOutlined,
+    SentimentSatisfiedOutlined,
+    SettingsOutlined,
+    ShareOutlined,
+    ShieldOutlined,
+    SignalWifiOffOutlined,
+    SquareOutlined,
+    StarBorderOutlined,
+    StarOutlined,
+    StopOutlined,
+    StorageOutlined,
+    StraightenOutlined,
+    SwapHorizOutlined,
+    SwapVertOutlined,
+
+    // T
+    ThreeDRotationOutlined,
+    TuneOutlined,
+
+    // U
+    UndoOutlined,
+    UploadOutlined,
+
+    // V
+    VerifiedUserOutlined,
+    VideocamOffOutlined,
+    VideocamOutlined,
+    ViewInArOutlined,
+    VisibilityOffOutlined,
+    VisibilityOutlined,
+    VolumeUpOutlined,
+
+    // W
+    WarningAmberOutlined,
+    WbSunnyOutlined,
+    WifiOffOutlined,
+    WifiOutlined,
+
+    // Z
+    ZoomInOutlined,
+    ZoomOutOutlined,
 } from '@mui/icons-material';
 
 // Loading spinner (special case - from @mui/material, not icons)
@@ -281,6 +268,7 @@ const ICON_MAP = {
     calendar: CalendarTodayOutlined,
     camera: CameraAltOutlined,
     cancel: CancelOutlined,
+    cube: Inventory2Outlined,  // Alias for box (used in manifests)
     canvasSize: PhotoSizeSelectSmallOutlined,
     chat: ChatOutlined,
     check: CheckOutlined,
@@ -293,7 +281,10 @@ const ICON_MAP = {
     clip: ContentCutOutlined,
     clock: ScheduleOutlined,
     close: CloseOutlined,
+    coffee: LocalCafeOutlined,
     comment: CommentOutlined,
+    compass: ExploreOutlined,
+    compassOff: ExploreOffOutlined,
     copy: ContentCopyOutlined,
     cpu: DeveloperBoardOutlined,
     crosshair: MyLocationOutlined,
@@ -305,6 +296,7 @@ const ICON_MAP = {
     dataset: DatasetOutlined,
     delete: DeleteOutlined,
     desktop: DesktopWindowsOutlined,
+    disabled: DoDisturbOutlined,
     done: DoneOutlined,
     doorOpen: MeetingRoomOutlined,
     dot: FiberManualRecordOutlined,
@@ -322,12 +314,13 @@ const ICON_MAP = {
 
     // F
     file: DescriptionOutlined,
-    fileDownload: FileDownloadOutlined,
-    fileType: InsertDriveFileOutlined,
-    fileUpload: FileUploadOutlined,
+    fileDownload: DownloadOutlined,
+    fileType: DescriptionOutlined,
+    fileUpload: UploadOutlined,
     filter: FilterAltOutlined,
     filterList: FilterListOutlined,
     fitView: CenterFocusStrongOutlined,
+    focus: GpsFixedOutlined,
     folder: FolderOutlined,
     folderOpen: FolderOpenOutlined,
     folderPlus: CreateNewFolderOutlined,
@@ -336,15 +329,17 @@ const ICON_MAP = {
     fullscreenExit: FullscreenExitOutlined,
 
     // G
-    gesture: GestureOutlined,
+    gesture: PanToolOutlined,
     gitBranch: AccountTreeOutlined,
-    globe: LanguageOutlined,
-    grid3x3: GridOnOutlined,
+    globe: PublicOutlined,
+    grid: GridOnOutlined,
+    grid3x3: GridViewOutlined,
     gripHorizontal: DragHandleOutlined,
     gripVertical: DragIndicatorOutlined,
 
     // H
-    hardDrive: DnsOutlined,
+    hand: PanToolOutlined,
+    hardDrive: StorageOutlined,
     headphones: HeadphonesOutlined,
     help: HelpOutlineOutlined,
     helpCircle: HelpOutlineOutlined,
@@ -353,7 +348,7 @@ const ICON_MAP = {
 
     // I
     image: ImageOutlined,
-    imageOff: HideImageOutlined,
+    imageOff: BrokenImageOutlined,
     info: InfoOutlined,
 
     // K
@@ -364,10 +359,9 @@ const ICON_MAP = {
     layout: DashboardOutlined,
     layoutGrid: GridViewOutlined,
     link: LinkOutlined,
-    link2: InsertLinkOutlined,
+    link2: LinkOutlined,
     linkOff: LinkOffOutlined,
     list: ListOutlined,
-    loader: 'loader', // Special case - handled separately
     location: LocationOnOutlined,
     lock: LockOutlined,
     login: LoginOutlined,
@@ -375,38 +369,42 @@ const ICON_MAP = {
 
     // M
     map: MapOutlined,
-    mapPin: PlaceOutlined,
+    mapPin: PinDropOutlined,
     maximize: OpenInFullOutlined,
+    maximize2: OpenInFullOutlined,
     memory: MemoryOutlined,
-    menu: MenuOutlined,
+    menu: MoreHorizOutlined,
     merge: MergeOutlined,
-    messageSquare: ChatBubbleOutlineOutlined,
+    messageSquare: ChatOutlined,
     mic: MicOutlined,
     micOff: MicOffOutlined,
     minimize: CloseFullscreenOutlined,
+    minimize2: CloseFullscreenOutlined,
     monitor: MonitorOutlined,
-    moon: DarkModeOutlined,
+    moon: NightlightOutlined,
     moreHorizontal: MoreHorizOutlined,
     moreVertical: MoreVertOutlined,
     mousePointer: NearMeOutlined,
     move: OpenWithOutlined,
 
     // N
-    note: NoteOutlined,
+    navigation: NearMeOutlined,
+    note: NotesOutlined,
 
     // P
     palette: PaletteOutlined,
-    panelLeftClose: KeyboardDoubleArrowLeftOutlined,
-    panelRightClose: KeyboardDoubleArrowRightOutlined,
-    paperclip: AttachFileOutlined,
+    panelLeftClose: ChevronLeftOutlined,
+    panelRightClose: ChevronRightOutlined,
+    paperclip: LinkOutlined,
     pause: PauseOutlined,
-    pencil: CreateOutlined,
+    pencil: EditOutlined,
     people: PeopleOutlined,
+    phone: PhoneOutlined,
     photoCamera: PhotoCameraOutlined,
     pin: PushPinOutlined,
-    pinOff: PushPinOutlined, // Same icon, use CSS for "off" state
+    pinOff: PushPinOutlined,
     play: PlayArrowOutlined,
-    preview: PreviewOutlined,
+    preview: VisibilityOutlined,
     public: PublicOutlined,
 
     // R
@@ -415,34 +413,40 @@ const ICON_MAP = {
     redo: RedoOutlined,
     refresh: RefreshOutlined,
     remove: RemoveOutlined,
-    rotateCcw: RotateLeftOutlined,
+    rocket: ScienceOutlined,
     rotate3d: ThreeDRotationOutlined,
+    rotateCcw: RotateLeftOutlined,
     ruler: StraightenOutlined,
 
     // S
     save: SaveOutlined,
+    scatterChart: ScatterPlotOutlined,
+    'scatter-chart': ScatterPlotOutlined,  // Alias for manifest compatibility
     science: ScienceOutlined,
     scissors: ContentCutOutlined,
     search: SearchOutlined,
     send: SendOutlined,
     settings: SettingsOutlined,
     share: ShareOutlined,
-    shield: SecurityOutlined,
+    share2: ShareOutlined,  // Alias for manifest compatibility
+    shield: ShieldOutlined,
+    slash: DoDisturbOutlined,
     sliders: TuneOutlined,
-    smile: EmojiEmotionsOutlined,
-    spatialAudio: SpatialAudioOffOutlined,
+    smile: SentimentSatisfiedOutlined,
+    spatialAudio: VolumeUpOutlined,
+    square: SquareOutlined,
     star: StarOutlined,
     starOutline: StarBorderOutlined,
-    stickyNote: StickyNote2Outlined,
+    stickyNote: NotesOutlined,
     stop: StopOutlined,
-    sun: LightModeOutlined,
-    sync: SyncOutlined,
+    sun: WbSunnyOutlined,
 
     // T
     target: GpsFixedOutlined,
-    time: AccessTimeOutlined,
+    time: ScheduleOutlined,
     tools: BuildOutlined,
     trash: DeleteOutlined,
+    triangle: ChangeHistoryOutlined,
 
     // U
     undo: UndoOutlined,
@@ -450,12 +454,12 @@ const ICON_MAP = {
     upload: UploadOutlined,
     user: PersonOutlined,
     userCheck: HowToRegOutlined,
-    userCircle: AccountCircleOutlined,
+    userCircle: PersonOutlined,
     userCog: ManageAccountsOutlined,
     userPlus: PersonAddOutlined,
     userRemove: PersonRemoveOutlined,
     userX: PersonOffOutlined,
-    users: GroupOutlined,
+    users: PeopleOutlined,
 
     // V
     video: VideocamOutlined,
@@ -470,10 +474,10 @@ const ICON_MAP = {
     wrench: HandymanOutlined,
 
     // X
-    x: CloseOutlined,
     xCircle: CancelOutlined,
 
     // Z
+    zap: ScienceOutlined,
     zoomIn: ZoomInOutlined,
     zoomOut: ZoomOutOutlined,
 };
@@ -481,9 +485,8 @@ const ICON_MAP = {
 // =============================================================================
 // LEGACY ALIASES
 // =============================================================================
-// Maps old Lucide names to new semantic names for easy migration.
-// These allow: <Icon name="X" /> instead of <Icon name="close" />
-// =============================================================================
+// Maps old Lucide names to new semantic names for backwards compatibility
+// This allows: <Icon name="X" /> → resolves to "close"
 
 const LEGACY_ALIASES = {
     // Lucide name → semantic name
@@ -492,28 +495,49 @@ const LEGACY_ALIASES = {
     Minus: 'remove',
     Trash2: 'delete',
     Edit3: 'edit',
-    Eye: 'eye',
-    EyeOff: 'eyeOff',
+    Check: 'check',
+    Save: 'save',
+    Copy: 'copy',
+    Undo2: 'undo',
+    Redo2: 'redo',
+    RefreshCw: 'refresh',
+    Search: 'search',
+    Settings: 'settings',
+    MoreHorizontal: 'moreHorizontal',
+    MoreVertical: 'moreVertical',
     ChevronDown: 'chevronDown',
     ChevronUp: 'chevronUp',
     ChevronLeft: 'chevronLeft',
     ChevronRight: 'chevronRight',
-    Maximize2: 'maximize',
-    Minimize2: 'minimize',
+    Eye: 'eye',
+    EyeOff: 'eyeOff',
+    Maximize: 'maximize',
+    Maximize2: 'maximize2',
+    Minimize: 'minimize',
+    Minimize2: 'minimize2',
+    Fullscreen: 'fullscreen',
+    ZoomIn: 'zoomIn',
+    ZoomOut: 'zoomOut',
     Glasses: 'vr',
     Box: 'box',
     Layers: 'layers',
     Move: 'move',
+    Hand: 'hand',
     Scissors: 'scissors',
     Ruler: 'ruler',
     Palette: 'palette',
     Filter: 'filter',
     Sliders: 'sliders',
-    Wrench: 'tools',
+    Wrench: 'wrench',
     Target: 'target',
+    Crosshair: 'crosshair',
     MousePointer: 'mousePointer',
+    MousePointer2: 'mousePointer',
     Pencil: 'pencil',
     Folder: 'folder',
+    FolderPlus: 'folderPlus',
+    FolderOpen: 'folderOpen',
+    FolderTree: 'folderTree',
     FileText: 'file',
     FileType: 'fileType',
     Image: 'image',
@@ -534,14 +558,16 @@ const LEGACY_ALIASES = {
     UserCheck: 'userCheck',
     Play: 'play',
     Pause: 'pause',
+    Stop: 'stop',
     Video: 'video',
+    VideoOff: 'videoOff',
     Mic: 'mic',
     MicOff: 'micOff',
     Volume2: 'volume',
     Camera: 'camera',
     Radio: 'radio',
     Info: 'info',
-    HelpCircle: 'helpCircle',
+    HelpCircle: 'help',
     AlertTriangle: 'warning',
     AlertCircle: 'error',
     XCircle: 'xCircle',
@@ -552,37 +578,36 @@ const LEGACY_ALIASES = {
     Grid3x3: 'grid3x3',
     Layout: 'layout',
     Map: 'map',
-    FolderTree: 'folderTree',
-    GitBranch: 'gitBranch',
-    List: 'list',
-    Pin: 'pin',
-    PinOff: 'pinOff',
+    MapPin: 'mapPin',
+    Home: 'home',
     Star: 'star',
     Bookmark: 'bookmark',
-    GripHorizontal: 'gripHorizontal',
-    GripVertical: 'gripVertical',
+    Pin: 'pin',
+    PinOff: 'pinOff',
     Lock: 'lock',
     Unlock: 'unlock',
     Shield: 'shield',
-    Clock: 'clock',
-    Calendar: 'calendar',
-    Share: 'share',
-    Share2: 'share',
     Link: 'link',
     Link2: 'link2',
+    ExternalLink: 'externalLink',
+    Share: 'share',
+    Share2: 'share',
+    Clock: 'clock',
+    Calendar: 'calendar',
     Circle: 'circle',
+    CircleDot: 'radioDot',
     Hexagon: 'hexagon',
+    Globe: 'globe',
     Wifi: 'wifi',
     WifiOff: 'wifiOff',
-    Globe: 'globe',
     Sun: 'sun',
     Moon: 'moon',
     Monitor: 'monitor',
     Headphones: 'headphones',
     Keyboard: 'keyboard',
     Smile: 'smile',
-    MapPin: 'mapPin',
     StickyNote: 'stickyNote',
+    Note: 'note',
     Archive: 'archive',
     LogOut: 'logout',
     DoorOpen: 'doorOpen',
@@ -591,29 +616,31 @@ const LEGACY_ALIASES = {
     Cpu: 'cpu',
     Crown: 'crown',
     RotateCcw: 'rotateCcw',
-    RefreshCw: 'refresh',
-    Home: 'home',
-    ExternalLink: 'externalLink',
-    ZoomIn: 'zoomIn',
-    ZoomOut: 'zoomOut',
-    Check: 'check',
-    Save: 'save',
-    Search: 'search',
-    Settings: 'settings',
-    Copy: 'copy',
-    Undo: 'undo',
-    Redo: 'redo',
-    MoreHorizontal: 'moreHorizontal',
-    MoreVertical: 'moreVertical',
+    Loader2: 'loader',
+    Loader: 'loader',
+    GripHorizontal: 'gripHorizontal',
+    GripVertical: 'gripVertical',
     PanelLeftClose: 'panelLeftClose',
     PanelRightClose: 'panelRightClose',
     ArrowRight: 'arrowRight',
     ArrowDown: 'arrowDown',
+    ArrowUp: 'arrowUp',
+    ArrowLeft: 'arrowLeft',
     ArrowLeftRight: 'arrowLeftRight',
     ArrowUpDown: 'arrowUpDown',
     AtSign: 'atSign',
     HardDrive: 'hardDrive',
-    Loader2: 'loader',
+    Combine: 'merge',
+    GitBranch: 'gitBranch',
+    Compass: 'compass',
+    Navigation: 'navigation',
+    Phone: 'phone',
+    Coffee: 'coffee',
+    Slash: 'slash',
+    Triangle: 'triangle',
+    Zap: 'zap',
+    Rocket: 'rocket',
+    Science: 'science',
 };
 
 // =============================================================================
@@ -732,7 +759,6 @@ export function getIconComponent(name) {
 // =============================================================================
 // These allow: import { IconClose } from '@UI/react/components/common/Icon';
 // Prefer using <Icon name="close" /> for new code.
-// =============================================================================
 
 export {
     CloseOutlined as IconClose,
@@ -778,7 +804,7 @@ export {
     DownloadOutlined as IconDownload,
     UploadOutlined as IconUpload,
     PersonOutlined as IconUser,
-    GroupOutlined as IconUsers,
+    PeopleOutlined as IconUsers,
     MicOutlined as IconMic,
     MicOffOutlined as IconMicOff,
     VideocamOutlined as IconVideo,

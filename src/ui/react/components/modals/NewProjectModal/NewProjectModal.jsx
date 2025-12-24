@@ -277,7 +277,7 @@ function NewProjectModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Create New Project"
-            icon={FolderPlus}
+            icon="folderPlus"
             submitLabel="Create Project"
             submittingLabel="Creating..."
             onSubmit={handleSubmit}

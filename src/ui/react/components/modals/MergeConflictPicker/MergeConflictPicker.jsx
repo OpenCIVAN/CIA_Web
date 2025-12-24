@@ -205,7 +205,7 @@ function MergeConflictPicker({
             isOpen={isOpen}
             onClose={onClose}
             title="Choose View for Merged Cell"
-            icon={Merge}
+            icon="merge"
             severity="info"
             size="md"
             testId={testId}
@@ -218,7 +218,7 @@ function MergeConflictPicker({
                         variant="primary"
                         onClick={handleMerge}
                         disabled={!canMerge}
-                        icon={Merge}
+                        icon="merge"
                     >
                         Merge
                     </Button>

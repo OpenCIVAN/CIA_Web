@@ -296,7 +296,7 @@ function HelpModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Help & Resources"
-            icon={HelpCircle}
+            icon="help"
             severity="info"
             size="lg"
             footer={footer}
@@ -350,7 +350,7 @@ function HelpModal({
                     <HelpSection
                         id="shortcuts"
                         title="Keyboard Shortcuts"
-                        icon={Keyboard}
+                        icon="keyboard"
                         isExpanded={isSectionExpanded('shortcuts')}
                         onToggle={() => toggleSection('shortcuts')}
                     >
@@ -393,7 +393,7 @@ function HelpModal({
                     <HelpSection
                         id="documentation"
                         title="Documentation"
-                        icon={FileText}
+                        icon="file"
                         isExpanded={isSectionExpanded('documentation')}
                         onToggle={() => toggleSection('documentation')}
                     >
@@ -427,7 +427,7 @@ function HelpModal({
                     <HelpSection
                         id="videos"
                         title="Video Tutorials"
-                        icon={Video}
+                        icon="video"
                         isExpanded={isSectionExpanded('videos')}
                         onToggle={() => toggleSection('videos')}
                     >
@@ -464,7 +464,7 @@ function HelpModal({
                     <HelpSection
                         id="support"
                         title="Contact Support"
-                        icon={Headphones}
+                        icon="headphones"
                         isExpanded={isSectionExpanded('support')}
                         onToggle={() => toggleSection('support')}
                     >

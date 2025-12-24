@@ -3,18 +3,19 @@
  * @description Centralized user status configuration for CIA Web.
  * Single source of truth for status colors, icons, and labels.
  *
+ * MIGRATED: Now uses string icon names instead of lucide-react imports
+ *
  * @example
  * import { STATUS_CONFIG, getStatusIcon, getStatusColor } from '@UI/react/utils/statusConfig';
  *
  * const config = STATUS_CONFIG[user.status];
  * // or
- * const StatusIcon = getStatusIcon(user.status);
+ * const iconName = getStatusIconName(user.status);
  * const color = getStatusColor(user.status);
  */
 
-import { Circle, Clock, Coffee, XCircle } from 'lucide-react';
-import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import React from "react";
+import { Icon } from "@UI/react/components/common/Icon";
 
 /**
  * Status types available in CIA Web
@@ -23,11 +24,12 @@ import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * Complete status configuration
+ * Icons are now string names that reference the centralized Icon system
  */
 export const STATUS_CONFIG = {
   online: {
     id: "online",
-    icon: 'circle',
+    icon: "circle", // Filled circle for online
     label: "Online",
     description: "Available and active",
     color: "var(--status-online)",
@@ -36,7 +38,7 @@ export const STATUS_CONFIG = {
   },
   idle: {
     id: "idle",
-    icon: 'clock',
+    icon: "clock", // Clock for idle
     label: "Idle",
     description: "Temporarily away",
     color: "var(--status-idle)",
@@ -45,7 +47,7 @@ export const STATUS_CONFIG = {
   },
   away: {
     id: "away",
-    icon: 'coffee',
+    icon: "coffee", // Coffee cup for away
     label: "Away",
     description: "Away for a while",
     color: "var(--status-away)",
@@ -54,7 +56,7 @@ export const STATUS_CONFIG = {
   },
   dnd: {
     id: "dnd",
-    icon: 'xCircle',
+    icon: "xCircle", // X in circle for do not disturb
     label: "Do Not Disturb",
     description: "Mute notifications",
     color: "var(--status-dnd)",
@@ -63,76 +65,64 @@ export const STATUS_CONFIG = {
   },
   offline: {
     id: "offline",
-    icon: 'circle',
+    icon: "circle", // Empty circle for offline
     label: "Offline",
     description: "Not connected",
     color: "var(--status-offline)",
-    colorHex: "#404040",
-    fill: false,
-  },
-  // Alias for 'online' - some components use 'active' instead
-  active: {
-    id: "active",
-    icon: 'circle',
-    label: "Active",
-    description: "Available and active",
-    color: "var(--status-online)",
-    colorHex: "#34d399",
-    fill: true,
-  },
-  // Alias for 'busy' - ProfileModal uses this instead of 'dnd'
-  busy: {
-    id: "busy",
-    icon: 'xCircle',
-    label: "Busy",
-    description: "Do not disturb",
-    color: "var(--status-dnd)",
-    colorHex: "#f44336",
+    colorHex: "#666666",
     fill: false,
   },
 };
 
 /**
- * Array of primary statuses for iteration (excludes aliases)
- */
-export const STATUS_OPTIONS = [
-  STATUS_CONFIG.online,
-  STATUS_CONFIG.idle,
-  STATUS_CONFIG.away,
-  STATUS_CONFIG.dnd,
-];
-
-/**
- * All statuses including offline (for user lists)
- */
-export const ALL_STATUSES = [
-  STATUS_CONFIG.online,
-  STATUS_CONFIG.idle,
-  STATUS_CONFIG.away,
-  STATUS_CONFIG.dnd,
-  STATUS_CONFIG.offline,
-];
-
-/**
- * Get the icon component for a status
+ * Get the icon name for a status
  * @param {StatusType} status - Status type
- * @returns {React.ComponentType} Icon component
+ * @returns {string} Icon name for use with <Icon name="..." />
  */
-export function getStatusIcon(status) {
-  return <Icon name={STATUS_CONFIG[status]?.icon || 'circle'} />;
+export function getStatusIconName(status) {
+  return STATUS_CONFIG[status]?.icon || STATUS_CONFIG.offline.icon;
 }
 
 /**
- * Get the CSS variable color for a status
+ * Get the icon component for a status (renders the Icon)
  * @param {StatusType} status - Status type
- * @returns {string} CSS color value
+ * @param {Object} props - Props to pass to Icon (size, className, etc.)
+ * @returns {React.ReactElement} Rendered Icon component
+ */
+export function getStatusIcon(status, props = {}) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+  const { size = 10, className = "", ...rest } = props;
+
+  return (
+    <Icon
+      name={config.icon}
+      size={size}
+      color={config.colorHex}
+      className={`status-icon ${className}`.trim()}
+      sx={
+        config.fill
+          ? {
+              color: config.colorHex,
+              // For filled appearance, we use the dot icon which is naturally filled
+            }
+          : undefined
+      }
+      {...rest}
+    />
+  );
+}
+
+/**
+ * Get the CSS color variable for a status
+ * @param {StatusType} status - Status type
+ * @returns {string} CSS variable reference
  */
 export function getStatusColor(status) {
   return STATUS_CONFIG[status]?.color || STATUS_CONFIG.offline.color;
 }
 
 /**
- * Get the hex color for a status (for contexts without CSS vars)
+ * Get the hex color for a status
  * @param {StatusType} status - Status type
  * @returns {string} Hex color value
  */
@@ -168,13 +158,13 @@ export function isStatusFilled(status) {
 }
 
 /**
- * Render a status icon with proper styling
+ * Get props for rendering a status icon
  * @param {StatusType} status - Status type
  * @param {Object} options - Options
  * @param {number} options.size - Icon size (default: 10)
  * @param {boolean} options.useHex - Use hex colors instead of CSS vars (default: false)
  * @param {string} options.className - Additional CSS class
- * @returns {Object} Props to spread onto icon component
+ * @returns {Object} Props to spread onto Icon component
  */
 export function getStatusIconProps(status, options = {}) {
   const { size = 10, useHex = false, className = "" } = options;
@@ -182,11 +172,37 @@ export function getStatusIconProps(status, options = {}) {
   const color = useHex ? config.colorHex : config.color;
 
   return {
+    name: config.icon,
     size,
     color,
-    fill: config.fill ? color : "none",
     className: `status-icon ${className}`.trim(),
   };
+}
+
+/**
+ * Render a status indicator (icon + optional label)
+ * @param {StatusType} status - Status type
+ * @param {Object} options - Options
+ * @param {boolean} options.showLabel - Show label text
+ * @param {number} options.size - Icon size
+ * @returns {React.ReactElement} Status indicator element
+ */
+export function StatusIndicator({ status, showLabel = false, size = 10 }) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+
+  return (
+    <span className="status-indicator" data-status={status}>
+      <Icon
+        name={config.fill ? "dot" : config.icon}
+        size={size}
+        color={config.colorHex}
+        className="status-indicator__icon"
+      />
+      {showLabel && (
+        <span className="status-indicator__label">{config.label}</span>
+      )}
+    </span>
+  );
 }
 
 export default STATUS_CONFIG;

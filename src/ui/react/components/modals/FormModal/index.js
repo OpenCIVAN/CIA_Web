@@ -29,7 +29,7 @@
  *       isOpen={isOpen}
  *       onClose={onClose}
  *       title="Create New Project"
- *       icon={FolderPlus}
+ *       icon="folderPlus"
  *       submitLabel="Create Project"
  *       onSubmit={handleSubmit}
  *       isSubmitting={isSubmitting}
