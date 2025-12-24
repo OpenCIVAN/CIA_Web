@@ -2,6 +2,7 @@
 import React from "react";
 import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight, Download, Upload, Edit } from '@UI/react/components/common/Icon';
 import { Button, IconButton, ButtonGroup } from "./index";
+import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
     title: "Atoms/Button",
@@ -70,7 +71,7 @@ export const Danger = {
         children: "Delete",
         variant: "danger",
         size: "md",
-        icon: <Trash2 size={16} />,
+        icon: <Icon name="trash2" size={16} />,
     },
 };
 
@@ -88,7 +89,7 @@ export const WithIcon = {
         children: "Add Item",
         variant: "primary",
         size: "md",
-        icon: <Plus size={16} />,
+        icon: <Icon name="plus" size={16} />,
     },
 };
 
@@ -97,7 +98,7 @@ export const WithIconRight = {
         children: "Continue",
         variant: "primary",
         size: "md",
-        iconRight: <ChevronRight size={16} />,
+        iconRight: <Icon name="chevronRight" size={16} />,
     },
 };
 
@@ -158,7 +159,7 @@ export const AllVariants = {
 export const IconButtonDefault = {
     render: () => (
         <IconButton variant="default" size="md" tooltip="Settings">
-            <Settings size={18} />
+            <Icon name="settings" size={18} />
         </IconButton>
     ),
 };
@@ -166,7 +167,7 @@ export const IconButtonDefault = {
 export const IconButtonPrimary = {
     render: () => (
         <IconButton variant="primary" size="md" tooltip="Add">
-            <Plus size={18} />
+            <Icon name="plus" size={18} />
         </IconButton>
     ),
 };
@@ -182,9 +183,9 @@ export const IconButtonActive = {
 export const IconButtonSizes = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <IconButton size="sm"><Settings size={14} /></IconButton>
-            <IconButton size="md"><Settings size={18} /></IconButton>
-            <IconButton size="lg"><Settings size={22} /></IconButton>
+            <IconButton size="sm"><Icon name="settings"  size={14} /></IconButton>
+            <IconButton size="md"><Icon name="settings"  size={18} /></IconButton>
+            <IconButton size="lg"><Icon name="settings"  size={22} /></IconButton>
         </div>
     ),
 };
@@ -198,7 +199,7 @@ export const ButtonGroupExample = {
         <ButtonGroup>
             <IconButton><Play size={16} /></IconButton>
             <IconButton><Pause size={16} /></IconButton>
-            <IconButton active><Settings size={16} /></IconButton>
+            <IconButton active><Icon name="settings" size={16} /></IconButton>
         </ButtonGroup>
     ),
 };

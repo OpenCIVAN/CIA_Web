@@ -165,7 +165,7 @@ export function ViewSettingsModal({
             isOpen={isOpen}
             onClose={onClose}
             title="View Settings"
-            icon={Settings}
+            icon="settings"
             size="md"
             footer={renderFooter()}
         >
@@ -195,7 +195,7 @@ export function ViewSettingsModal({
                             title="Double-click to rename"
                         >
                             <span>{editName}</span>
-                            <Pencil size={10} className="view-settings-modal__name-hint" />
+                            <Icon name='pencil' size={10} className="view-settings-modal__name-hint" />
                         </div>
                     )}
                     <span className="view-settings-modal__subtitle">
@@ -207,14 +207,14 @@ export function ViewSettingsModal({
                 <div className="view-settings-modal__quick-actions">
                     <span className="view-settings-modal__quick-label">Quick Actions:</span>
                     <QuickToggle
-                        icon={Folder}
+                        icon="folder"
                         label="Workspace"
                         active={view.starredWorkspace}
                         activeColor="purple"
                         onClick={onStarWorkspace}
                     />
                     <QuickToggle
-                        icon={Globe}
+                        icon="globe"
                         label="Personal"
                         active={view.starredPersonal}
                         activeColor="amber"
@@ -222,20 +222,20 @@ export function ViewSettingsModal({
                     />
                     <div className="view-settings-modal__quick-divider" />
                     <QuickToggle
-                        icon={Save}
+                        icon="save"
                         label="Save State"
                         active={view.hasSavedState}
                         activeColor="amber"
                         onClick={onSaveState}
                     />
                     <QuickToggle
-                        icon={RefreshCw}
+                        icon="refreshCw"
                         label="Load State"
                         onClick={onLoadState}
                     />
                     <div className="view-settings-modal__quick-divider" />
                     <QuickToggle
-                        icon={Lock}
+                        icon="lock"
                         label="Lock"
                         active={view.isLocked}
                         activeColor="amber"
@@ -246,10 +246,10 @@ export function ViewSettingsModal({
                 {/* Sections */}
                 <div className="view-settings-modal__sections">
                     {/* Source Dataset */}
-                    <ModalSection icon={Layers} title="Source Dataset">
+                    <ModalSection icon="layers" title="Source Dataset">
                         <div className="view-settings-modal__dataset">
                             <div className="view-settings-modal__dataset-icon">
-                                <Layers size={18} />
+                                <Icon name="layers" size={18} />
                             </div>
                             <div className="view-settings-modal__dataset-info">
                                 <div className="view-settings-modal__dataset-name">
@@ -260,7 +260,7 @@ export function ViewSettingsModal({
                                 </div>
                             </div>
                             <button className="view-settings-modal__dataset-btn">
-                                <ExternalLink size={10} />
+                                <Icon name="externalLink" size={10} />
                                 Open
                             </button>
                         </div>
@@ -268,7 +268,7 @@ export function ViewSettingsModal({
 
                     {/* Sharing */}
                     <ModalSection
-                        icon={Users}
+                        icon="users"
                         title="Sharing"
                         badge={view.isShared ? `${localSharedUsers.length} people` : 'Private'}
                     >
@@ -349,7 +349,7 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Canvas Size */}
-                    <ModalSection icon={Maximize2} title="Canvas Size">
+                    <ModalSection icon="maximize2" title="Canvas Size">
                         <div className="view-settings-modal__size-grid">
                             {[1, 2, 3].map(row =>
                                 [1, 2, 3].map(col => (
@@ -370,7 +370,7 @@ export function ViewSettingsModal({
 
                     {/* Link Properties */}
                     <ModalSection
-                        icon={Link2}
+                        icon="link2"
                         title="Link Properties"
                         badge={view.linkedCount > 0 ? `${view.linkedCount} linked` : null}
                     >
@@ -405,7 +405,7 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Annotation Display */}
-                    <ModalSection icon={Target} title="Annotation Display" badge="Dataset Level">
+                    <ModalSection icon="target" title="Annotation Display" badge="Dataset Level">
                         <div className="view-settings-modal__note view-settings-modal__note--info">
                             Annotations belong to the <strong>Dataset</strong>. This view can filter which annotations to display.
                         </div>
@@ -439,7 +439,7 @@ export function ViewSettingsModal({
                                     }
                                 </select>
                                 <button className="view-settings-modal__annotation-copy-btn">
-                                    <Copy size={10} />
+                                    <Icon name="copy" size={10} />
                                     Copy
                                 </button>
                             </div>
@@ -447,9 +447,9 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Display Options (Handler-specific) */}
-                    <ModalSection icon={Palette} title="Display Options" badge={view.instanceType || 'VTK'}>
+                    <ModalSection icon="palette" title="Display Options" badge={view.instanceType || 'VTK'}>
                         <div className="view-settings-modal__note view-settings-modal__note--warning">
-                            <Zap size={10} />
+                            <Icon name="bolt" size={10} />
                             <span>Options from <strong>{view.instanceType || 'VTK'}InstanceHandler</strong> — varies by type</span>
                         </div>
                         <div className="view-settings-modal__display-options">
@@ -477,10 +477,10 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Advanced (Stub) */}
-                    <ModalSection icon={Zap} title="Advanced" badge="Stub">
+                    <ModalSection icon="bolt" title="Advanced" badge="Stub">
                         <div className="view-settings-modal__advanced">
                             <div className="view-settings-modal__advanced-row">
-                                <MousePointer2 size={12} />
+                                <Icon name="mousePointer2" size={12} />
                                 <span>Cursor Style</span>
                                 <select disabled>
                                     <option>Crosshair</option>
@@ -489,7 +489,7 @@ export function ViewSettingsModal({
                                 </select>
                             </div>
                             <div className="view-settings-modal__advanced-row">
-                                <Move size={12} />
+                                <Icon name="move" size={12} />
                                 <span>Interaction Mode</span>
                                 <select disabled>
                                     <option>Trackball</option>
@@ -504,9 +504,9 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Danger Zone */}
-                    <ModalSection icon={Trash2} title="Danger Zone">
+                    <ModalSection icon="trash2" title="Danger Zone">
                         <button className="view-settings-modal__delete-btn" onClick={onTrash}>
-                            <Trash2 size={14} />
+                            <Icon name="trash2" size={14} />
                             Delete View Permanently
                         </button>
                         <p className="view-settings-modal__delete-hint">

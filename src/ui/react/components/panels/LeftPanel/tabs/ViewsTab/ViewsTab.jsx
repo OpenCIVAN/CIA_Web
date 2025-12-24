@@ -222,7 +222,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Canvas Navigator */}
             <ResizableSection
                 id="navigator"
-                icon={Grid3X3}
+                icon="grid3X3"
                 iconColorClass="icon-purple"
                 label="Canvas Navigator"
                 collapsible
@@ -237,14 +237,14 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* On Canvas Section */}
             <ResizableSection
                 id="onCanvas"
-                icon={Eye}
+                icon="eye"
                 iconColorClass="icon-green"
                 label="On Canvas"
                 count={onCanvasViews.length}
             >
                 {onCanvasViews.length === 0 ? (
                     <EmptyState
-                        icon={Eye}
+                        icon="eye"
                         title="No views on canvas"
                         description="Drag views here or click to place"
                         size="sm"
@@ -265,14 +265,14 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Not Placed Section */}
             <ResizableSection
                 id="notPlaced"
-                icon={EyeOff}
+                icon="eyeOff"
                 iconColorClass="icon-gray"
                 label="Not Placed"
                 count={notPlacedViews.length}
             >
                 {notPlacedViews.length === 0 ? (
                     <EmptyState
-                        icon={Layers}
+                        icon="layers"
                         title="All views are placed"
                         description="Create new views from Datasets tab"
                         size="sm"
@@ -294,7 +294,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Recently Deleted Section */}
             <ResizableSection
                 id="deleted"
-                icon={Trash2}
+                icon="trash2"
                 iconColorClass="icon-red"
                 label="Recently Deleted"
                 count={recentlyDeletedViews.length}
@@ -302,7 +302,7 @@ export function ViewsPanelContent({ workspaceId }) {
             >
                 {recentlyDeletedViews.length === 0 ? (
                     <EmptyState
-                        icon={Clock}
+                        icon="clock"
                         title="No deleted views"
                         description="Deleted views appear here for 30 days"
                         size="sm"
@@ -334,7 +334,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__dataset-list">
                 {viewsByDataset.length === 0 ? (
                     <EmptyState
-                        icon={Database}
+                        icon="database"
                         title="No views"
                         description="Load a dataset to create views"
                         size="sm"
@@ -386,7 +386,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__list views-tab__list--scrollable">
                 {views.length === 0 ? (
                     <EmptyState
-                        icon={Layers}
+                        icon="layers"
                         title="No views"
                         description="Load a dataset to create views"
                         size="sm"

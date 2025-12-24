@@ -50,7 +50,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Layout Mode */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <Grid3X3 size={10} />
+                    <Icon name='grid3X3' size={10} />
                     <span>Layout Mode</span>
                 </div>
 
@@ -60,7 +60,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             className={`etched-toggle__btn etched-toggle__btn--grid ${layoutMode === LAYOUT_MODES.GRID ? 'etched-toggle__btn--active' : ''}`}
                             onClick={() => setLayoutMode?.(LAYOUT_MODES.GRID)}
                         >
-                            <Grid3X3 size={12} />
+                            <Icon name='grid3X3' size={12} />
                             <span>Grid</span>
                         </button>
                         <button
@@ -101,7 +101,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* New View Size */}
             <div className="canvas-subtab__card" data-color="green">
                 <div className="canvas-subtab__card-header">
-                    <PlusCircle size={10} />
+                    <Icon name="plusCircle" size={10} />
                     <span>New View Size</span>
                 </div>
                 <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
@@ -126,7 +126,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Tools */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <MousePointer2 size={10} />
+                    <Icon name="mousePointer2" size={10} />
                     <span>Tools</span>
                 </div>
 
@@ -137,7 +137,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             onClick={() => setTool?.(TOOLS.SELECT)}
                             title="Select"
                         >
-                            <MousePointer2 size={14} />
+                            <Icon name="mousePointer2" size={14} />
                         </button>
                         <button
                             className={`layout-tool-btn layout-tool-btn--teal ${tool === TOOLS.PAN ? 'layout-tool-btn--active' : ''}`}
@@ -160,7 +160,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                             className={`canvas-subtab__edit-btn ${editMode ? 'canvas-subtab__edit-btn--active' : ''}`}
                             onClick={toggleEditMode}
                         >
-                            <Pencil size={12} />
+                            <Icon name='pencil' size={12} />
                             {editMode ? 'Done' : 'Edit'}
                         </button>
 
@@ -182,13 +182,13 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                                     className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${dropMode === DROP_MODES.ADD ? 'etched-toggle__btn--active' : ''}`}
                                     onClick={() => setDropMode?.(DROP_MODES.ADD)}
                                 >
-                                    <PlusCircle size={10} /> Add
+                                    <Icon name='plusCircle' size={10} /> Add
                                 </button>
                                 <button
                                     className={`etched-toggle__btn etched-toggle__btn--amber etched-toggle__btn--compact ${dropMode === DROP_MODES.REPLACE ? 'etched-toggle__btn--active' : ''}`}
                                     onClick={() => setDropMode?.(DROP_MODES.REPLACE)}
                                 >
-                                    <Replace size={10} /> Replace
+                                    <Icon name="replace" size={10} /> Replace
                                 </button>
                             </div>
                         </div>

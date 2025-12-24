@@ -93,7 +93,7 @@ function HelpSection({
                     <span>{title}</span>
                 </span>
                 <span className="help-section__chevron">
-                    <ChevronDown size={18} />
+                    <Icon name="chevronDown" size={18} />
                 </span>
             </button>
 

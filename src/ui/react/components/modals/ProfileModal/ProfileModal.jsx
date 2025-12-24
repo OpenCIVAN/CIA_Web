@@ -239,7 +239,7 @@ function ProfileModal({
                             aria-label={copied ? 'Copied to clipboard' : 'Copy email to clipboard'}
                             title={copied ? 'Copied!' : 'Copy email'}
                         >
-                            {copied ? <Icon name="check" size={14} /> : <Copy size={14} />}
+                            {copied ? <Icon name="check" size={14} /> : <Icon name="copy" size={14} />}
                         </button>
                     </div>
                 )}

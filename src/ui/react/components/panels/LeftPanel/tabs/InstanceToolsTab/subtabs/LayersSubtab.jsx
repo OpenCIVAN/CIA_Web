@@ -102,7 +102,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
             </div>
             <div className="layers-subtab__list">
                 <LayerToggle
-                    icon={Users}
+                    icon="users"
                     label="Remote Cursors"
                     enabled={cursors.enabled}
                     count={cursors.count}
@@ -110,7 +110,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
                     onToggle={() => handleToggleLayer('cursors')}
                 />
                 <LayerToggle
-                    icon={MapPin}
+                    icon="mapPin"
                     label="Annotations"
                     enabled={annotations.enabled}
                     count={annotations.count}
@@ -118,7 +118,7 @@ export function LayersSubtab({ activeInstance, layers: externalLayers, onToggleL
                     onToggle={() => handleToggleLayer('annotations')}
                 />
                 <LayerToggle
-                    icon={Box}
+                    icon="box"
                     label="Widgets"
                     enabled={widgets.enabled}
                     count={widgets.count}

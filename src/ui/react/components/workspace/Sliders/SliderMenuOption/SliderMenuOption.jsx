@@ -188,7 +188,7 @@ export function SliderMenuOption({
  *       type: 'custom',
  *       component: (
  *         <SliderMenuOption
- *           icon={<Circle size={14} />}
+ *           icon={<Icon name="circle" size={14} />}
  *           label="Opacity"
  *           value={currentOpacity}
  *           min={0}

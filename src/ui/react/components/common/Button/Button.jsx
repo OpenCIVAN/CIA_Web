@@ -16,7 +16,7 @@
  *
  * @example
  * // Primary button with icon
- * <Button variant="primary" icon={IconSave} onClick={handleSave}>
+ * <Button variant="primary" icon={Save} onClick={handleSave}>
  *   Save Changes
  * </Button>
  *
@@ -28,7 +28,7 @@
  *
  * @example
  * // Danger button
- * <Button variant="danger" icon={IconDelete}>
+ * <Button variant="danger" icon={Trash2}>
  *   Delete
  * </Button>
  */

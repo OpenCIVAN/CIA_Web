@@ -139,7 +139,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item"
                     onClick={() => handleAction(onEdit)}
                 >
-                    <Edit3 size={14} />
+                    <Icon name="edit3" size={14} />
                     <span>Edit</span>
                 </button>
 
@@ -147,7 +147,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item"
                     onClick={() => handleAction(onMove)}
                 >
-                    <Move size={14} />
+                    <Icon name="move" size={14} />
                     <span>Move</span>
                 </button>
 
@@ -165,7 +165,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item annotation-context-menu__item--danger"
                     onClick={() => handleAction(onDelete)}
                 >
-                    <Trash2 size={14} />
+                    <Icon name="trash2" size={14} />
                     <span>Delete</span>
                 </button>
             </div>

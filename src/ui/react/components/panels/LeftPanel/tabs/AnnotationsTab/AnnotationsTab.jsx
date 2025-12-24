@@ -295,14 +295,14 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     {/* Dataset Annotations */}
                     <ResizableSection
                         id="dataset"
-                        icon={Database}
+                        icon="database"
                         iconColorClass="icon-blue"
                         label="Dataset Annotations"
                         count={datasetAnnotationCount}
                     >
                         <div className="annotations-tab__section-content">
                             {Object.keys(filteredByDataset).length === 0 ? (
-                                <EmptyState icon={MapPin} title="No dataset annotations" size="sm" />
+                                <EmptyState icon="mapPin" title="No dataset annotations" size="sm" />
                             ) : (
                                 Object.entries(filteredByDataset).map(([dsId, anns]) => (
                                     <DatasetGroup
@@ -319,13 +319,13 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     {/* Workspace Annotations - placeholder for workspace-level annotations */}
                     <ResizableSection
                         id="workspace"
-                        icon={LayoutGrid}
+                        icon="layoutGrid"
                         iconColorClass="icon-amber"
                         label="Workspace Annotations"
                         count={0}
                     >
                         <div className="annotations-tab__section-content">
-                            <EmptyState icon={MapPin} title="No workspace annotations" size="sm" />
+                            <EmptyState icon="mapPin" title="No workspace annotations" size="sm" />
                         </div>
                     </ResizableSection>
                 </ResizableSectionsContainer>

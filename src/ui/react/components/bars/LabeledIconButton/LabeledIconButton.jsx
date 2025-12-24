@@ -5,7 +5,7 @@
  * 
  * @example
  * <LabeledIconButton
- *   icon={Map}
+ *   icon="map"
  *   label="Navigator"
  *   active={navigatorOpen}
  *   accent={tokens.accentTeal}

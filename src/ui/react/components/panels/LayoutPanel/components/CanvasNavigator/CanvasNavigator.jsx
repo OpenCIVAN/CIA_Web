@@ -237,7 +237,7 @@ const NumberSpinner = memo(({ value, onChange, min = 1, max = 10, label, color, 
                 disabled={safeValue <= min}
                 title={`Decrease (min: ${min})`}
             >
-                <Minus size={compact ? 8 : 10} />
+                <Icon name="minus" size={compact ? 8 : 10} />
             </HoldButton>
             <span style={{
                 minWidth: compact ? 22 : 26,
@@ -259,7 +259,7 @@ const NumberSpinner = memo(({ value, onChange, min = 1, max = 10, label, color, 
                 disabled={safeValue >= max}
                 title={`Increase (max: ${max})`}
             >
-                <Plus size={compact ? 8 : 10} />
+                <Icon name="plus" size={compact ? 8 : 10} />
             </HoldButton>
         </div>
     );
@@ -632,7 +632,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     cursor: 'grab',
                 }}
             >
-                <Grid3X3 size={12} style={{ color: tokens.accentAmber }} />
+                <Icon name='grid3X3' size={12} style={{ color: tokens.accentAmber }} />
                 <span style={{ fontSize: 10, fontWeight: 600, color: tokens.textSecondary, flex: 1 }}>
                     Canvas Navigator
                 </span>
@@ -646,7 +646,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => { setMode(NAV_MODES.NAVIGATE); setSelectedCells([]); }}
                         title="Navigate Mode"
                     >
-                        <Navigation size={9} />
+                        <Icon name="navigation" size={9} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -655,7 +655,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setMode(NAV_MODES.EDIT)}
                         title="Edit Mode (select cells)"
                     >
-                        <Edit3 size={9} />
+                        <Icon name="edit3" size={9} />
                     </NavBtn>
                 </div>
 
@@ -667,7 +667,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDisplayMode(DISPLAY_MODES.NAMES)}
                         title="Show Names"
                     >
-                        <Type size={8} />
+                        <Icon name="type" size={8} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -675,7 +675,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDisplayMode(DISPLAY_MODES.NUMBERS)}
                         title="Show Numbers"
                     >
-                        <Hash size={8} />
+                        <Icon name="hash" size={8} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -890,7 +890,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     }}
                                 >
                                     {isHome && !cell && (
-                                        <Home size={Math.max(10, 12 * minimapZoom)} style={{ color: tokens.accentPink }} />
+                                        <Icon name="home" size={Math.max(10, 12 * minimapZoom)} style={{ color: tokens.accentPink }} />
                                     )}
                                     {cell && getCellDisplay(cell, cellIndex)}
                                     {isHome && cell && (
@@ -954,7 +954,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 disabled={viewport.row <= 0}
                                 title="Move Up"
                             >
-                                <ChevronUp size={12} />
+                                <Icon name="chevronUp" size={12} />
                             </NavBtn>
                             <div style={{ display: 'flex', gap: 0 }}>
                                 <NavBtn
@@ -963,7 +963,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={viewport.col <= 0}
                                     title="Move Left"
                                 >
-                                    <ChevronLeft size={12} />
+                                    <Icon name="chevronLeft" size={12} />
                                 </NavBtn>
                                 <NavBtn
                                     size="sm"
@@ -973,7 +973,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={!homepoint}
                                     title="Go to Homepoint"
                                 >
-                                    <Home size={10} />
+                                    <Icon name="home" size={10} />
                                 </NavBtn>
                                 <NavBtn
                                     size="sm"
@@ -1044,7 +1044,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))}
                                 disabled={minimapZoom <= 0.5}
                             >
-                                <ZoomOut size={10} />
+                                <Icon name="zoomOut" size={10} />
                             </NavBtn>
                             <span style={{
                                 fontSize: 9,
@@ -1060,7 +1060,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))}
                                 disabled={minimapZoom >= 2}
                             >
-                                <ZoomIn size={10} />
+                                <Icon name="zoomIn" size={10} />
                             </NavBtn>
                         </div>
                     </div>
