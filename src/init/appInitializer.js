@@ -20,7 +20,6 @@ import { textChat } from "@Collaboration/communication/textChat.js";
 import {
   initializeAllObservers,
   markSystemReady,
-  clearAllYjsDatasets,
 } from "@Collaboration/yjs/yjsObservers.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { config } from "@Core/config/clientConfig.js";
@@ -32,7 +31,7 @@ import {
   clearSyncState,
   DivergenceLevel,
 } from "@Services/syncService.js";
-import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
+import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
@@ -309,12 +308,6 @@ export async function initializePhase1() {
 
   // Initialize global debugging namespace
   window.CIA = window.CIA || {};
-
-  // Legacy Y.js cleanup utility (kept for migration)
-  window.CIA.clearYjsDatasets = clearAllYjsDatasets;
-  log.debug(
-    "Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data"
-  );
 }
 
 /**
@@ -444,7 +437,7 @@ export async function initializePhase2() {
     }
 
     viewLifecycleService.initialize();
-    log.info('ViewLifecycleService initialized');
+    log.info("ViewLifecycleService initialized");
 
     log.info("Phase 2 complete - User services ready");
     logSuccess("Application ready");

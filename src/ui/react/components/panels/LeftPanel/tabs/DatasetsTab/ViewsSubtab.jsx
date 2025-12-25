@@ -10,7 +10,7 @@
 
 import { memo, useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
-import { ViewItem } from './ViewItem';
+import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { DatasetContextHeader } from './DatasetContextHeader';
 import './ViewsSubtab.scss';
 

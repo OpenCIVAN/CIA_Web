@@ -15,7 +15,6 @@
 // ============================================================================
 
 import {
-  yDatasets,
   yCursors,
   yCameras,
   yAvatars,
@@ -38,24 +37,6 @@ let isSystemReady = false;
 export function markSystemReady() {
   log.debug("System marked as ready (no-op in v2.0 - state comes from server)");
   isSystemReady = true;
-}
-
-/**
- * Clear all datasets from Y.js (manual cleanup utility)
- * Access via: window.CIA.clearYjsDatasets()
- * Useful for cleaning up legacy Y.js data during migration
- */
-export function clearAllYjsDatasets() {
-  log.debug("Clearing all Y.js datasets...");
-  const keys = Array.from(yDatasets.keys());
-  log.debug(`Found ${keys.length} dataset(s) to clear`);
-
-  keys.forEach((key) => {
-    yDatasets.delete(key);
-  });
-
-  log.debug("All Y.js datasets cleared");
-  return keys.length;
 }
 
 // ============================================================================

@@ -2,7 +2,6 @@
 // Utility to clean up orphaned datasets and stale data
 
 import { files as log } from "@Utils/logger.js";
-import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 
@@ -55,39 +54,6 @@ class DataCleanup {
   }
 
   /**
-   * Find datasets in Y.js but not in Zustand
-   */
-  findDanglingYjsDatasets() {
-    const dangling = [];
-    const zustandDatasets = useDatasetStore.getState().getAllDatasets();
-    const zustandIds = new Set(zustandDatasets.map((d) => d.id));
-
-    yDatasets.forEach((metadata, id) => {
-      if (!zustandIds.has(id)) {
-        dangling.push({ id, name: metadata.name || "Unknown" });
-      }
-    });
-
-    return dangling;
-  }
-
-  /**
-   * Remove datasets from Y.js that aren't in Zustand
-   */
-  removeDanglingYjsDatasets() {
-    const dangling = this.findDanglingYjsDatasets();
-
-    log.info(`Removing ${dangling.length} dangling Y.js datasets...`);
-
-    for (const dataset of dangling) {
-      log.debug(`  - ${dataset.name}`);
-      yDatasets.delete(dataset.id);
-    }
-
-    return dangling.length;
-  }
-
-  /**
    * Full cleanup routine
    */
   async performFullCleanup() {
@@ -108,7 +74,6 @@ class DataCleanup {
     const orphaned = await this.findOrphanedDatasets();
     const dangling = this.findDanglingYjsDatasets();
     const zustandCount = useDatasetStore.getState().getAllDatasets().length;
-    const yjsCount = yDatasets.size;
     const cacheStats = await dataCache.getStats();
 
     return {
@@ -117,7 +82,6 @@ class DataCleanup {
       dangling: dangling.length,
       danglingList: dangling,
       zustandCount,
-      yjsCount,
       cacheCount: cacheStats.count,
       cacheSize: cacheStats.totalSize,
     };
@@ -131,7 +95,6 @@ class DataCleanup {
 
     log.info("Data Cleanup Report:");
     log.info(`Zustand Store: ${stats.zustandCount} datasets`);
-    log.info(`Y.js Shared: ${stats.yjsCount} datasets`);
     log.info(
       `IndexedDB Cache: ${stats.cacheCount} files (${(
         stats.cacheSize /

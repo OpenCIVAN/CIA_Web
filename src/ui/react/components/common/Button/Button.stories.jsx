@@ -2,7 +2,6 @@
 import React from "react";
 import { Icon } from '@UI/react/components/common/Icon';
 import { Button, IconButton, ButtonGroup } from "./index";
-import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
     title: "Atoms/Button",
@@ -183,9 +182,9 @@ export const IconButtonActive = {
 export const IconButtonSizes = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <IconButton size="sm"><Icon name="settings"  size={14} /></IconButton>
-            <IconButton size="md"><Icon name="settings"  size={18} /></IconButton>
-            <IconButton size="lg"><Icon name="settings"  size={22} /></IconButton>
+            <IconButton size="sm"><Icon name="settings" size={14} /></IconButton>
+            <IconButton size="md"><Icon name="settings" size={18} /></IconButton>
+            <IconButton size="lg"><Icon name="settings" size={22} /></IconButton>
         </div>
     ),
 };

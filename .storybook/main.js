@@ -45,6 +45,7 @@ const config = {
       "@": path.resolve(__dirname, "../src"),
       "@Algorithms": path.resolve(__dirname, "../src/algorithms"),
       "@Collaboration": path.resolve(__dirname, "../src/collaboration"),
+      "@Config": path.resolve(__dirname, "../src/config"),
       "@Core": path.resolve(__dirname, "../src/core"),
       "@Debug": path.resolve(__dirname, "../src/debug"),
       "@Init": path.resolve(__dirname, "../src/init"),

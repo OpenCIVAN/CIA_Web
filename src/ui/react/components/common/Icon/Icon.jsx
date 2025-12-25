@@ -498,167 +498,6 @@ const ICON_MAP = {
 };
 
 // =============================================================================
-// LEGACY ALIASES
-// =============================================================================
-// Maps old Lucide names to new semantic names for backwards compatibility
-// This allows: <Icon name="X" /> → resolves to "close"
-
-const LEGACY_ALIASES = {
-    // Lucide name → semantic name
-    X: 'close',
-    Plus: 'add',
-    Minus: 'remove',
-    Trash2: 'delete',
-    Edit3: 'edit',
-    Check: 'check',
-    Save: 'save',
-    Copy: 'copy',
-    Undo2: 'undo',
-    Redo2: 'redo',
-    RefreshCw: 'refresh',
-    Search: 'search',
-    Settings: 'settings',
-    MoreHorizontal: 'moreHorizontal',
-    MoreVertical: 'moreVertical',
-    ChevronDown: 'chevronDown',
-    ChevronUp: 'chevronUp',
-    ChevronLeft: 'chevronLeft',
-    ChevronRight: 'chevronRight',
-    Eye: 'eye',
-    EyeOff: 'eyeOff',
-    Maximize: 'maximize',
-    Maximize2: 'maximize2',
-    Minimize: 'minimize',
-    Minimize2: 'minimize2',
-    Fullscreen: 'fullscreen',
-    ZoomIn: 'zoomIn',
-    ZoomOut: 'zoomOut',
-    Glasses: 'vr',
-    Box: 'box',
-    Layers: 'layers',
-    Move: 'move',
-    Hand: 'hand',
-    Scissors: 'scissors',
-    Ruler: 'ruler',
-    Palette: 'palette',
-    Filter: 'filter',
-    Sliders: 'sliders',
-    Wrench: 'wrench',
-    Target: 'target',
-    Crosshair: 'crosshair',
-    MousePointer: 'mousePointer',
-    MousePointer2: 'mousePointer',
-    Pencil: 'pencil',
-    Folder: 'folder',
-    FolderPlus: 'folderPlus',
-    FolderOpen: 'folderOpen',
-    FolderTree: 'folderTree',
-    FileText: 'file',
-    FileType: 'fileType',
-    Image: 'image',
-    ImageOff: 'imageOff',
-    Database: 'database',
-    Download: 'download',
-    Upload: 'upload',
-    Paperclip: 'paperclip',
-    MessageSquare: 'messageSquare',
-    Send: 'send',
-    Bell: 'bell',
-    User: 'user',
-    Users: 'users',
-    UserCircle: 'userCircle',
-    UserPlus: 'userPlus',
-    UserX: 'userX',
-    UserCog: 'userCog',
-    UserCheck: 'userCheck',
-    Play: 'play',
-    Pause: 'pause',
-    Stop: 'stop',
-    Video: 'video',
-    VideoOff: 'videoOff',
-    Mic: 'mic',
-    MicOff: 'micOff',
-    Volume2: 'volume',
-    Camera: 'camera',
-    Radio: 'radio',
-    Info: 'info',
-    HelpCircle: 'help',
-    AlertTriangle: 'warning',
-    AlertCircle: 'error',
-    XCircle: 'xCircle',
-    CheckCircle: 'checkCircle',
-    CheckCircle2: 'checkCircle',
-    LayoutGrid: 'layoutGrid',
-    Grid3X3: 'grid3x3',
-    Grid3x3: 'grid3x3',
-    Layout: 'layout',
-    Map: 'map',
-    MapPin: 'mapPin',
-    Home: 'home',
-    Star: 'star',
-    Bookmark: 'bookmark',
-    Pin: 'pin',
-    PinOff: 'pinOff',
-    Lock: 'lock',
-    Unlock: 'unlock',
-    Shield: 'shield',
-    Link: 'link',
-    Link2: 'link2',
-    ExternalLink: 'externalLink',
-    Share: 'share',
-    Share2: 'share',
-    Clock: 'clock',
-    Calendar: 'calendar',
-    Circle: 'circle',
-    CircleDot: 'radioDot',
-    Hexagon: 'hexagon',
-    Globe: 'globe',
-    Wifi: 'wifi',
-    WifiOff: 'wifiOff',
-    Sun: 'sun',
-    Moon: 'moon',
-    Monitor: 'monitor',
-    Headphones: 'headphones',
-    Keyboard: 'keyboard',
-    Smile: 'smile',
-    StickyNote: 'stickyNote',
-    Note: 'note',
-    Archive: 'archive',
-    LogOut: 'logout',
-    DoorOpen: 'doorOpen',
-    Merge: 'merge',
-    Building2: 'building2',
-    Cpu: 'cpu',
-    Crown: 'crown',
-    RotateCcw: 'rotateCcw',
-    Loader2: 'loader',
-    Loader: 'loader',
-    GripHorizontal: 'gripHorizontal',
-    GripVertical: 'gripVertical',
-    PanelLeftClose: 'panelLeftClose',
-    PanelRightClose: 'panelRightClose',
-    ArrowRight: 'arrowRight',
-    ArrowDown: 'arrowDown',
-    ArrowUp: 'arrowUp',
-    ArrowLeft: 'arrowLeft',
-    ArrowLeftRight: 'arrowLeftRight',
-    ArrowUpDown: 'arrowUpDown',
-    AtSign: 'atSign',
-    HardDrive: 'hardDrive',
-    Combine: 'merge',
-    GitBranch: 'gitBranch',
-    Compass: 'compass',
-    Navigation: 'navigation',
-    Phone: 'phone',
-    Coffee: 'coffee',
-    Slash: 'slash',
-    Triangle: 'triangle',
-    Zap: 'zap',
-    Rocket: 'rocket',
-    Science: 'science',
-};
-
-// =============================================================================
 // SIZE PRESETS
 // =============================================================================
 
@@ -698,11 +537,9 @@ export function Icon({
     sx,
     ...props
 }) {
-    // Resolve legacy aliases
-    const resolvedName = LEGACY_ALIASES[name] || name;
 
     // Handle loader special case
-    if (resolvedName === 'loader') {
+    if (name === 'loader') {
         const fontSize = typeof size === 'number' ? size : ICON_SIZES[size] || ICON_SIZES.sm;
         return (
             <CircularProgress
@@ -715,10 +552,10 @@ export function Icon({
     }
 
     // Get icon component
-    const IconComponent = ICON_MAP[resolvedName];
+    const IconComponent = ICON_MAP[name];
 
     if (!IconComponent) {
-        console.warn(`[Icon] Unknown icon name: "${name}"${resolvedName !== name ? ` (resolved from "${name}")` : ''}. Available icons:`, Object.keys(ICON_MAP).sort());
+        console.warn(`[Icon] Unknown icon name: "${name}". Available icons:`, Object.keys(ICON_MAP).sort());
         return null;
     }
 
@@ -756,17 +593,15 @@ export function getAvailableIcons() {
  * Check if an icon exists
  */
 export function hasIcon(name) {
-    const resolvedName = LEGACY_ALIASES[name] || name;
-    return resolvedName in ICON_MAP || resolvedName === 'loader';
+    return name in ICON_MAP || name === 'loader';
 }
 
 /**
  * Get icon component by name (for advanced usage)
  */
 export function getIconComponent(name) {
-    const resolvedName = LEGACY_ALIASES[name] || name;
-    if (resolvedName === 'loader') return CircularProgress;
-    return ICON_MAP[resolvedName] || null;
+    if (name === 'loader') return CircularProgress;
+    return ICON_MAP[name] || null;
 }
 
 // =============================================================================
@@ -830,6 +665,7 @@ export {
     WarningAmberOutlined as IconWarning,
     ErrorOutlineOutlined as IconError,
     CircularProgress as IconLoader,
+    DragHandleOutlined as IconGripHorizontal,
 };
 
 export default Icon;

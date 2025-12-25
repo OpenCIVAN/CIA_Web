@@ -80,4 +80,5 @@ export {
   IconWarning,
   IconError,
   IconLoader,
+  IconGripHorizontal,
 } from "./Icon.jsx";
