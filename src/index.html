@@ -6,14 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CIA Web - Collaborative Immersive Analysis</title>
   <style>
-    /* Minimal loading screen styles - inline to avoid external CSS issues */
-    body {
+    /* Loading screen styles - blue-tinted dark theme */
+    * {
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: #1a1a1a;
-      color: #e0e0e0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      background: #020406;
+      color: rgba(255, 255, 255, 0.95);
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     #loading-screen {
@@ -26,49 +32,116 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #1a1a1a;
+      background: radial-gradient(ellipse at center, #0c1220 0%, #020406 70%);
       z-index: 9999;
     }
 
     #loading-screen.hidden {
-      display: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-out;
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px;
+      background: rgba(8, 14, 24, 0.6);
+      border: 1px solid rgba(96, 165, 250, 0.12);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      box-shadow:
+        0 0 60px rgba(96, 165, 250, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
     .loading-logo {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 20px;
-      animation: pulse 2s ease-in-out infinite;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 24px;
+      position: relative;
     }
 
     .loading-logo svg {
       width: 100%;
       height: 100%;
+      filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.4));
     }
 
-    .loading-text {
-      font-size: 18px;
-      color: #4CAF50;
-      margin-bottom: 30px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
+    .loading-logo::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%);
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    .loading-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .loading-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .loading-subtitle {
+      font-size: 11px;
+      color: rgba(180, 200, 240, 0.6);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .loading-spinner-container {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 24px;
     }
 
     .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(76, 175, 80, 0.2);
-      border-top: 3px solid #4CAF50;
+      width: 100%;
+      height: 100%;
+      border: 2px solid rgba(96, 165, 250, 0.1);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .loading-spinner::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border: 2px solid transparent;
+      border-top-color: #60a5fa;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
 
+    .loading-spinner::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border: 2px solid transparent;
+      border-top-color: rgba(96, 165, 250, 0.4);
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite reverse;
+    }
+
     .loading-status {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #808080;
+      font-size: 12px;
+      color: rgba(180, 200, 240, 0.5);
       text-align: center;
-      max-width: 400px;
+      letter-spacing: 0.5px;
+      min-height: 18px;
     }
 
     @keyframes spin {
@@ -81,17 +154,17 @@
       }
     }
 
-    @keyframes pulse {
+    @keyframes glow {
 
       0%,
       100% {
-        opacity: 1;
+        opacity: 0.6;
         transform: scale(1);
       }
 
       50% {
-        opacity: 0.7;
-        transform: scale(1.05);
+        opacity: 1;
+        transform: scale(1.1);
       }
     }
   </style>
@@ -100,20 +173,27 @@
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <div class="loading-logo">
-      <!-- Lucide Layers3 icon - represents layered data visualization -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.5" stroke-linecap="round"
-        stroke-linejoin="round">
-        <path
-          d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
-        <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
-        <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
-      </svg>
-    </div>
-    <div class="loading-text">CIA Web</div>
-    <div class="loading-spinner"></div>
-    <div class="loading-status" id="loading-status">
-      Initializing...
+    <div class="loading-container">
+      <div class="loading-logo">
+        <!-- Lucide Layers3 icon - represents layered data visualization -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path
+            d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+          <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+        </svg>
+      </div>
+      <div class="loading-brand">
+        <div class="loading-title">CIA Web</div>
+        <div class="loading-subtitle">Collaborative Immersive Analysis</div>
+      </div>
+      <div class="loading-spinner-container">
+        <div class="loading-spinner"></div>
+      </div>
+      <div class="loading-status" id="loading-status">
+        Initializing...
+      </div>
     </div>
   </div>
 
