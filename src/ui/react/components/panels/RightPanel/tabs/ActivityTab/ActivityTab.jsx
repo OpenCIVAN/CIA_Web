@@ -6,7 +6,7 @@
  * Features:
  * - Activity feed with user actions and system events
  * - Filter by activity type (views, datasets, annotations, system)
- * - Session summary stats
+ * - Catch-up card for unread activity
  * - Collaboration history tracking
  *
  * @see Right_Panel_Design_Specification.md - Activity Tab section
@@ -15,13 +15,17 @@
  * <ActivityTab workspaceId="ws-1" activities={activities} />
  */
 
-import React from 'react';
-import { ResizableSections } from '@UI/react/components/common/ResizableSections';
+import React, { useState, useMemo } from 'react';
+import {
+    DismissibleCard,
+    SectionHeader,
+    AdaptiveButton,
+    Icon,
+} from '@UI/react/components/adaptive';
 
 import { useActivityTab } from './hooks/useActivityTab';
 import { ActivityFilter } from './components/ActivityFilter';
 import { ActivityCard } from './components/ActivityCard';
-import { ActivityStats } from './components/ActivityStats';
 
 import './ActivityTab.scss';
 
@@ -59,31 +63,101 @@ export function ActivityTab({
         filters: propFilters,
     });
 
-    // Section definitions
-    const sections = [
-        {
-            id: 'stats',
-            title: 'Session Summary',
-            defaultHeight: 80,
-            minHeight: 70,
-            content: <ActivityStats activities={activities} />,
-        },
-        {
-            id: 'feed',
-            title: 'Activity Feed',
-            defaultHeight: 400,
-            minHeight: 200,
-            headerActions: (
-                <ActivityFilter
-                    filters={filters}
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                />
-            ),
-            content: (
+    // Catch-up state
+    const [catchUpDismissed, setCatchUpDismissed] = useState(false);
+
+    // Generate catch-up items from activities (simulated - would come from real data)
+    const catchUpItems = useMemo(() => {
+        // Group activities by type for catch-up summary
+        const unreadActivities = activities.filter(a => !a.isRead);
+        if (unreadActivities.length === 0) return [];
+
+        const byType = unreadActivities.reduce((acc, activity) => {
+            const type = activity.type || 'other';
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(activity);
+            return acc;
+        }, {});
+
+        return Object.entries(byType).map(([type, items]) => ({
+            type: type === 'annotation' ? 'annotations' : type + 's',
+            count: items.length,
+            description: type === 'annotation' ? 'were added' : 'occurred',
+        }));
+    }, [activities]);
+
+    const hasCatchUp = catchUpItems.length > 0;
+
+    const handleDismissCatchUp = () => {
+        setCatchUpDismissed(true);
+        // Would also call markAllRead() here
+    };
+
+    return (
+        <div className="activity-panel">
+            {/* Catch-Up Card - Dismissible */}
+            <div className="activity-panel__header">
+                {!catchUpDismissed && hasCatchUp ? (
+                    <DismissibleCard
+                        icon="sparkles"
+                        title="Catch Up"
+                        color="amber"
+                        onDismiss={handleDismissCatchUp}
+                    >
+                        <div className="catch-up__content">
+                            While you were away:
+                            <ul className="catch-up__list">
+                                {catchUpItems.map((item, i) => (
+                                    <li key={i}>
+                                        <strong>{item.count} {item.type}</strong> {item.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="catch-up__actions">
+                            <AdaptiveButton
+                                icon="eye"
+                                variant="primary"
+                                onClick={() => { /* navigate to first unread */ }}
+                            >
+                                Review All
+                            </AdaptiveButton>
+                            <button
+                                className="catch-up__mark-read"
+                                onClick={handleDismissCatchUp}
+                            >
+                                Mark as Read
+                            </button>
+                        </div>
+                    </DismissibleCard>
+                ) : (
+                    <div className="activity-panel__caught-up">
+                        <Icon name="check" size={14} />
+                        All caught up!
+                    </div>
+                )}
+            </div>
+
+            {/* Activity List Section */}
+            <div className="activity-panel__list">
+                <SectionHeader
+                    icon="activity"
+                    color="var(--color-accent-amber)"
+                    count={filteredActivities.length}
+                    actions={
+                        <ActivityFilter
+                            filters={filters}
+                            activeFilter={activeFilter}
+                            onFilterChange={setActiveFilter}
+                        />
+                    }
+                >
+                    Recent Activity
+                </SectionHeader>
                 <div className="activity-feed">
                     {filteredActivities.length === 0 ? (
                         <div className="activity-feed__empty">
+                            <Icon name="activity" size={24} />
                             <span>No activity yet</span>
                         </div>
                     ) : (
@@ -92,13 +166,7 @@ export function ActivityTab({
                         ))
                     )}
                 </div>
-            ),
-        },
-    ];
-
-    return (
-        <div className="activity-panel">
-            <ResizableSections sections={sections} />
+            </div>
         </div>
     );
 }

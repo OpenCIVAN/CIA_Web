@@ -74,6 +74,11 @@ export function useRecordingsTab(options = {}) {
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [exportingId, setExportingId] = useState(null);
 
+  // Sort and filter state
+  const [sortBy, setSortBy] = useState("date"); // "date", "name", "duration"
+  const [sortOrder, setSortOrder] = useState("desc"); // "asc", "desc"
+  const [filterBy, setFilterBy] = useState("all"); // "all", "today", "week", "month"
+
   // Section states
   const { states: sectionStates, toggleSection } = useSectionStates({
     controls: { expanded: true, flexGrow: 0 },
@@ -85,19 +90,82 @@ export function useRecordingsTab(options = {}) {
     setRecordingOptions((prev) => ({ ...prev, includeAudio }));
   }, [includeAudio, setRecordingOptions]);
 
-  // Filter recordings by search
+  // Filter and sort recordings
   const filteredRecordings = useMemo(() => {
-    if (!searchQuery.trim()) return recordings;
-    const query = searchQuery.toLowerCase();
-    return recordings.filter((r) => {
-      const name = r.metadata?.name || "";
-      const recordedBy = r.recorded_by_name || "";
-      return (
-        name.toLowerCase().includes(query) ||
-        recordedBy.toLowerCase().includes(query)
+    let result = [...recordings];
+
+    // Filter by date range
+    if (filterBy !== "all") {
+      const now = new Date();
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
       );
+      let filterDate;
+
+      switch (filterBy) {
+        case "today":
+          filterDate = startOfDay;
+          break;
+        case "week":
+          filterDate = new Date(startOfDay.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "month":
+          filterDate = new Date(
+            startOfDay.getTime() - 30 * 24 * 60 * 60 * 1000
+          );
+          break;
+        default:
+          filterDate = null;
+      }
+
+      if (filterDate) {
+        result = result.filter((r) => {
+          const recordedAt = r.recorded_at ? new Date(r.recorded_at) : null;
+          return recordedAt && recordedAt >= filterDate;
+        });
+      }
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((r) => {
+        const name = r.metadata?.name || "";
+        const recordedBy = r.recorded_by_name || "";
+        const roomName = r.room_name || "";
+        return (
+          name.toLowerCase().includes(query) ||
+          recordedBy.toLowerCase().includes(query) ||
+          roomName.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "name":
+          comparison = (a.metadata?.name || "").localeCompare(
+            b.metadata?.name || ""
+          );
+          break;
+        case "duration":
+          comparison = (a.duration || 0) - (b.duration || 0);
+          break;
+        case "date":
+        default:
+          comparison =
+            new Date(a.recorded_at || 0) - new Date(b.recorded_at || 0);
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [searchQuery, recordings]);
+
+    return result;
+  }, [searchQuery, recordings, sortBy, sortOrder, filterBy]);
 
   // Calculate storage
   const totalSize = useMemo(() => {
@@ -153,6 +221,11 @@ export function useRecordingsTab(options = {}) {
     [deleteRecording, selectedRecording]
   );
 
+  // Toggle sort order helper
+  const toggleSortOrder = useCallback(() => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  }, []);
+
   return {
     // Data
     recordings,
@@ -174,6 +247,15 @@ export function useRecordingsTab(options = {}) {
     // Search state
     searchQuery,
     setSearchQuery,
+
+    // Sort and filter state
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    toggleSortOrder,
+    filterBy,
+    setFilterBy,
 
     // Selection state
     selectedRecording,

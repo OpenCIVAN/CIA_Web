@@ -109,7 +109,7 @@ export const ColorVariants = {
                 <CollapsibleHeaderSection icon="alertTriangle" title="Amber" color="amber">
                     <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Amber variant</div>
                 </CollapsibleHeaderSection>
-                <CollapsibleHeaderSection icon="x" title="Red" color="red">
+                <CollapsibleHeaderSection icon="close" title="Red" color="red">
                     <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Red variant</div>
                 </CollapsibleHeaderSection>
                 <CollapsibleHeaderSection icon="info" title="Blue" color="blue">
@@ -208,7 +208,7 @@ export const DismissibleColorVariants = {
                 <DismissibleCard icon="alertTriangle" title="Warning" color="amber" onDismiss={() => { }}>
                     <div>Please review the changes.</div>
                 </DismissibleCard>
-                <DismissibleCard icon="x" title="Error" color="red" onDismiss={() => { }}>
+                <DismissibleCard icon="error" title="Error" color="red" onDismiss={() => { }}>
                     <div>Something went wrong.</div>
                 </DismissibleCard>
                 <DismissibleCard icon="info" title="Info" color="blue" onDismiss={() => { }}>

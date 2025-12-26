@@ -54,7 +54,7 @@ export const DismissibleCard = ({
                     onClick={onDismiss}
                     aria-label="Dismiss"
                 >
-                    <Icon name="x" size={isVR ? 16 : 12} weight={iconWeight} />
+                    <Icon name="close" size={isVR ? 16 : 12} weight={iconWeight} />
                 </button>
             </div>
             <div className="dismissible-card__content">

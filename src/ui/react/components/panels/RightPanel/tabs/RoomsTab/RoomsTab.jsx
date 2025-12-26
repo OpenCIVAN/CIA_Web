@@ -17,11 +17,14 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { ResizableSections } from '@UI/react/components/common/ResizableSections';
+import {
+    CollapsibleHeaderSection,
+    StatBadge,
+    SectionHeader,
+    Icon,
+} from '@UI/react/components/adaptive';
 
 import { useRoomsTab } from './hooks/useRoomsTab';
-import { CurrentRoomIndicator } from './components/CurrentRoomIndicator';
 import { RoomCard } from './components/RoomCard';
 import { CreateRoomForm } from './components/CreateRoomForm';
 
@@ -68,35 +71,88 @@ export function RoomsTab({ workspaceId }) {
         handleDeleteRoom,
     } = useRoomsTab();
 
-    // Section definitions
-    const sections = [
-        {
-            id: 'current',
-            title: 'Current Location',
-            defaultHeight: 80,
-            minHeight: 60,
-            content: (
-                <CurrentRoomIndicator
-                    room={currentRoom}
-                    onLeave={() => handleLeaveRoom(currentRoom?.id)}
-                />
-            ),
-        },
-        {
-            id: 'rooms',
-            title: `Rooms (${rooms.length})`,
-            defaultHeight: 400,
-            minHeight: 200,
-            headerActions: (
-                <button
-                    className="rooms-section__create-btn"
-                    onClick={() => setShowCreateForm(true)}
-                    title="Create breakout room"
+    // Calculate stats for the header
+    const onlineCount = rooms.reduce((sum, r) => sum + r.members.length, 0);
+    const voiceCount = rooms.filter(r => r.hasVoice && r.members.length > 0)
+        .reduce((sum, r) => sum + r.members.length, 0);
+    const vrCount = 0; // Placeholder - would come from real data
+
+    // Get current project/workspace info (placeholder)
+    const currentProject = { name: 'Research Project' };
+    const currentWorkspace = { name: 'Default Workspace' };
+
+    return (
+        <div className="rooms-panel">
+            {/* Header Section - Current Location */}
+            <div className="rooms-panel__header">
+                <CollapsibleHeaderSection
+                    icon="mapPin"
+                    title="Current Location"
+                    color="purple"
+                    defaultExpanded={true}
                 >
-                    <Icon name="add" size={14} />
-                </button>
-            ),
-            content: (
+                    {/* Project name - centered subheader */}
+                    <div className="location-status__project">
+                        <Icon name="layers" size={14} />
+                        <span className="location-status__project-name">
+                            {currentProject?.name || 'No Project'}
+                        </span>
+                    </div>
+
+                    {/* Room and Workspace details */}
+                    <div className="location-status__details">
+                        <div className="location-status__detail">
+                            <Icon name="doorOpen" size={12} />
+                            <span className="location-status__label">Room</span>
+                            <span className="location-status__value">
+                                {currentRoom?.name || 'Main Room'}
+                            </span>
+                        </div>
+                        <div className="location-status__detail location-status__detail--subtle">
+                            <Icon name="grid3x3" size={12} />
+                            <span className="location-status__label">Workspace</span>
+                            <span className="location-status__value">
+                                {currentWorkspace?.name || 'Default'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Stats row with divider */}
+                    <div className="location-status__stats">
+                        <StatBadge icon="users">{onlineCount} online</StatBadge>
+                        <div className="location-status__stats-right">
+                            <StatBadge icon="mic" color="var(--color-accent-green)">
+                                {voiceCount} in voice
+                            </StatBadge>
+                            {vrCount > 0 && (
+                                <StatBadge icon="eye" color="var(--color-accent-purple)">
+                                    {vrCount} in VR
+                                </StatBadge>
+                            )}
+                        </div>
+                    </div>
+                </CollapsibleHeaderSection>
+            </div>
+
+            {/* Rooms List Section */}
+            <div className="rooms-panel__list">
+                <SectionHeader
+                    icon="doorOpen"
+                    color="var(--color-accent-purple)"
+                    count={rooms.length}
+                    actions={
+                        <button
+                            className="rooms-section__create-btn"
+                            onClick={() => setShowCreateForm(true)}
+                            title="Create breakout room"
+                        >
+                            <Icon name="add" size={12} />
+                        </button>
+                    }
+                >
+                    All Rooms
+                </SectionHeader>
+
                 <div className="rooms-list">
                     {/* Search */}
                     <div className="rooms-list__search">
@@ -166,13 +222,7 @@ export function RoomsTab({ workspaceId }) {
                         </div>
                     )}
                 </div>
-            ),
-        },
-    ];
-
-    return (
-        <div className="rooms-panel">
-            <ResizableSections sections={sections} />
+            </div>
         </div>
     );
 }

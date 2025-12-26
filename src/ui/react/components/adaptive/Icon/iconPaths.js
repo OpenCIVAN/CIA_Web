@@ -12,6 +12,8 @@ export const iconPaths = {
   chevronRight: "M9 6l6 6-6 6",
   arrowLeft: "M19 12H5m0 0l7-7m-7 7l7 7",
   arrowRight: "M5 12h14m0 0l-7-7m7 7l-7 7",
+  arrowUp: "M12 19V5m0 0l-7 7m7-7l7 7",
+  arrowDown: "M12 5v14m0 0l7-7m-7 7l-7-7",
 
   // Actions
   plus: "M12 5v14m-7-7h14",

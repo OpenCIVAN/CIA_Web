@@ -8,12 +8,12 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
 import {
-    ResizableSectionsContainer,
     ResizableSection,
-    useSectionStates,
-} from '@UI/react/components/common/ResizableSections';
+    AdaptiveSectionsContainer,
+    useAdaptiveSectionStates,
+    Icon,
+} from '@UI/react/components/adaptive';
 import { useSettingsTab } from './hooks/useSettingsTab';
 import { YourPreferences } from './sections/YourPreferences';
 import { ProjectInfo } from './sections/ProjectInfo';
@@ -70,8 +70,8 @@ export function SettingsTab({
     updatePreferences,
     loading,
 }) {
-    // Section states for resizable sections
-    const { states: sectionStates, toggleSection } = useSectionStates({
+    // Section states for adaptive resizable sections
+    const { states: sectionStates, toggleSection, resizeSection } = useAdaptiveSectionStates({
         preferences: { expanded: true, flexGrow: 2 },
         project: { expanded: true, flexGrow: 1 },
         admin: { expanded: true, flexGrow: 1 },
@@ -88,16 +88,17 @@ export function SettingsTab({
 
     return (
         <div className="settings-tab">
-            <ResizableSectionsContainer
+            <AdaptiveSectionsContainer
                 className="settings-tab__sections"
                 sectionStates={sectionStates}
                 onSectionToggle={toggleSection}
+                onSectionResize={resizeSection}
             >
                 <ResizableSection
                     id="preferences"
                     icon="user"
-                    iconColorClass="icon-blue"
                     label="Your Preferences"
+                    color="blue"
                 >
                     <YourPreferences
                         preferences={preferences}
@@ -108,8 +109,8 @@ export function SettingsTab({
                 <ResizableSection
                     id="project"
                     icon="building"
-                    iconColorClass="icon-purple"
                     label="Project Info"
+                    color="purple"
                 >
                     <ProjectInfo project={project} />
                 </ResizableSection>
@@ -118,8 +119,8 @@ export function SettingsTab({
                     <ResizableSection
                         id="admin"
                         icon="settings"
-                        iconColorClass="icon-amber"
                         label="Admin Settings"
+                        color="amber"
                     >
                         <AdminSettings
                             project={project}
@@ -132,13 +133,13 @@ export function SettingsTab({
                     <ResizableSection
                         id="danger"
                         icon="alertTriangle"
-                        iconColorClass="icon-red"
                         label="Danger Zone"
+                        color="red"
                     >
                         <DangerZone project={project} />
                     </ResizableSection>
                 )}
-            </ResizableSectionsContainer>
+            </AdaptiveSectionsContainer>
         </div>
     );
 }

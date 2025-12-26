@@ -35,5 +35,13 @@ export { default as AdaptiveCameraGrid } from "./AdaptiveCameraGrid/AdaptiveCame
 
 // HeaderSection components
 export { CollapsibleHeaderSection } from "./HeaderSection/components/CollapsibleHeaderSection/CollapsibleHeaderSection";
-export { DismissibleCard } from "./HeaderSection/components/DismissableCard/DismissibleCard";
+export { DismissibleCard } from "./HeaderSection/components/DismissibleCard/DismissibleCard";
+export { SectionHeader } from "./HeaderSection/components/SectionHeader/SectionHeader";
 export { StatusDot, InfoRow, StatBadge } from "./HeaderSection/components";
+
+// ResizableSections components
+export {
+  ResizableSection,
+  AdaptiveSectionsContainer,
+  useAdaptiveSectionStates,
+} from "./ResizableSections";

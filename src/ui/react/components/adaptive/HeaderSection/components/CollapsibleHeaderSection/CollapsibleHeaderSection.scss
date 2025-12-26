@@ -148,7 +148,7 @@
   }
 
   &[data-color="default"][data-expanded="true"] {
-    background: rgba($color-glass-medium, 1);
+    background: rgba(0, 0, 0, 0.15);
     border-color: $color-border-subtle;
 
     .collapsible-header-section__header {
