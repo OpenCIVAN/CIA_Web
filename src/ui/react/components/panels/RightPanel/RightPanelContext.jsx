@@ -69,7 +69,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'activity',
-        icon: 'activity',
+        icon: 'browse_activity',
         label: 'Activity',
         color: 'amber',
         group: 'communication',
