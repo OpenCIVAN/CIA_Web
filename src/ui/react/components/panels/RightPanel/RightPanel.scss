@@ -2064,99 +2064,21 @@
 }
 
 // =============================================================================
-// TAB HEADER AND BODY
+// TOOLBAR (pop-out button above content - matches left panel pattern)
 // =============================================================================
 
-// Tab header with title and pop-out button
-.right-panel__tab-header {
+.right-panel__toolbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-sm $spacing-md;
+  justify-content: flex-end;
+  padding: 2px $spacing-xs;
   flex-shrink: 0;
-  border-bottom: 1px solid $color-border-subtle;
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.15) 0%,
     rgba(0, 0, 0, 0.08) 50%,
     rgba(255, 255, 255, 0.02) 100%
   );
-
-  // Color variants
-  &[data-color="pink"] {
-    border-bottom-color: rgba($color-accent-pink, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-pink;
-    }
-  }
-
-  &[data-color="teal"] {
-    border-bottom-color: rgba($color-accent-teal, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-teal;
-    }
-  }
-
-  &[data-color="blue"] {
-    border-bottom-color: rgba($color-accent-blue, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-blue;
-    }
-  }
-
-  &[data-color="green"] {
-    border-bottom-color: rgba($color-accent-green, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-green;
-    }
-  }
-
-  &[data-color="red"] {
-    border-bottom-color: rgba($color-accent-red, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-red;
-    }
-  }
-
-  &[data-color="amber"] {
-    border-bottom-color: rgba($color-accent-amber, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-amber;
-    }
-  }
-
-  &[data-color="purple"] {
-    border-bottom-color: rgba($color-accent-purple, 0.3);
-
-    .right-panel__tab-title svg {
-      color: $color-accent-purple;
-    }
-  }
-}
-
-.right-panel__tab-title {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: $color-text-secondary;
-}
-
-.right-panel__tab-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  border-bottom: 1px solid $color-border-subtle;
 }
 
 // =============================================================================

@@ -81,13 +81,26 @@ export function SettingsTab({
     if (loading) {
         return (
             <div className="settings-tab settings-tab--loading">
-                <Icon name="loader" size={24} className="spin" />
+                <div className="panel-header">
+                    <Icon name="settings" size={14} className="panel-header__icon file-icon--gray" />
+                    <span className="panel-header__title">Settings</span>
+                </div>
+                <div className="settings-tab__loader">
+                    <Icon name="loader" size={24} className="spin" />
+                </div>
             </div>
         );
     }
 
     return (
         <div className="settings-tab">
+            {/* Panel Header */}
+            <div className="panel-header">
+                <Icon name="settings" size={14} className="panel-header__icon file-icon--gray" />
+                <span className="panel-header__title">Settings</span>
+                <span className="panel-header__count">{userRole}</span>
+            </div>
+
             <AdaptiveSectionsContainer
                 className="settings-tab__sections"
                 sectionStates={sectionStates}

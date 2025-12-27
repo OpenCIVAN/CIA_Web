@@ -420,6 +420,15 @@ export function DatasetsPanelContent() {
 
     return (
         <div className="datasets-tab">
+            {/* Header - matches FilesTab pattern */}
+            <div className="panel-header panel-header--teal">
+                <Icon name="database" size={14} className="panel-header__icon" />
+                <span className="panel-header__title">Datasets</span>
+                <span className="panel-header__count">
+                    {filteredDatasets.length} loaded
+                </span>
+            </div>
+
             {/* Search bar */}
             <div className="panel-search">
                 <Icon name="search" size={12} className="panel-search__icon" />

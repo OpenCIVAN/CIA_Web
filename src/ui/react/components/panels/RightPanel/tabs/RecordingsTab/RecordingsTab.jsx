@@ -108,6 +108,15 @@ export function RecordingsTab({ workspaceId }) {
 
     return (
         <div className="recordings-panel">
+            {/* Panel Header */}
+            <div className="panel-header">
+                <Icon name="video" size={14} className="panel-header__icon file-icon--red" />
+                <span className="panel-header__title">Recording</span>
+                <span className="panel-header__count">
+                    {isRecording ? 'Recording...' : `${recordings.length} saved`}
+                </span>
+            </div>
+
             {/* Error display */}
             {error && (
                 <div className="recordings-panel__error">
@@ -116,11 +125,11 @@ export function RecordingsTab({ workspaceId }) {
                 </div>
             )}
 
-            {/* Recording Status/Controls Header */}
+            {/* Recording Status/Controls */}
             <div className="recordings-panel__header">
                 <CollapsibleHeaderSection
                     icon="radio"
-                    title={isRecording ? "Recording Active" : "Recording"}
+                    title={isRecording ? "Live Session" : "Start Session"}
                     color={isRecording ? "red" : "default"}
                     defaultExpanded={true}
                 >

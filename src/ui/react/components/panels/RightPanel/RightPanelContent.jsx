@@ -91,14 +91,11 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
     return (
         <div
             className="right-panel__content"
+            data-active-tab={activeTab}
             data-color={currentTab?.color}
         >
-            {/* Tab Header with title and pop-out button */}
-            <div className="right-panel__tab-header" data-color={currentTab?.color}>
-                <div className="right-panel__tab-title">
-                    {iconName && <Icon name={iconName} size={14} />}
-                    <span>{currentTab?.label}</span>
-                </div>
+            {/* Mini toolbar with pop-out button - matches left panel pattern */}
+            <div className="right-panel__toolbar">
                 <button
                     className="right-panel__pop-out-btn"
                     onClick={handlePopOut}
@@ -110,16 +107,15 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
 
             {/*
              * Tab content - rendered via centralized registry
+             * Each tab component has its own header (panel-header)
              * NO switch statement here - all routing handled by renderRightPanelTabContent
              */}
-            <div className="right-panel__tab-body">
-                {renderRightPanelTabContent(activeTab, {
-                    workspaceId,
-                    roomId,
-                    roomName,
-                    projectId: workspaceId, // For SettingsTab
-                })}
-            </div>
+            {renderRightPanelTabContent(activeTab, {
+                workspaceId,
+                roomId,
+                roomName,
+                projectId: workspaceId, // For SettingsTab
+            })}
         </div>
     );
 }

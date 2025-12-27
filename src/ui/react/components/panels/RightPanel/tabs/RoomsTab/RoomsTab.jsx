@@ -83,11 +83,18 @@ export function RoomsTab({ workspaceId }) {
 
     return (
         <div className="rooms-panel">
-            {/* Header Section - Current Location */}
+            {/* Panel Header */}
+            <div className="panel-header">
+                <Icon name="doorOpen" size={14} className="panel-header__icon file-icon--purple" />
+                <span className="panel-header__title">Rooms</span>
+                <span className="panel-header__count">{rooms.length} rooms</span>
+            </div>
+
+            {/* Location Section - Current Location */}
             <div className="rooms-panel__header">
                 <CollapsibleHeaderSection
                     icon="mapPin"
-                    title="Current Location"
+                    title="Your Location"
                     color="purple"
                     defaultExpanded={true}
                 >
