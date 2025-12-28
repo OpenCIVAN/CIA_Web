@@ -7,6 +7,8 @@
  *
  * @example
  * import {
+ *   DeleteViewDialog,
+ *   CloseAllViewsDialog,
  *   DeleteRecordingDialog,
  *   DeleteNoteDialog,
  *   DeleteProjectDialog,
@@ -16,6 +18,17 @@
  * } from '@UI/react/components/modals/confirmations';
  */
 
+// View-related confirmations
+export {
+  DeleteViewDialog,
+  default as DeleteViewDialogDefault,
+} from "./DeleteViewDialog";
+export {
+  CloseAllViewsDialog,
+  default as CloseAllViewsDialogDefault,
+} from "./CloseAllViewsDialog";
+
+// Recording/Note confirmations
 export {
   DeleteRecordingDialog,
   default as DeleteRecordingDialogDefault,
@@ -24,6 +37,8 @@ export {
   DeleteNoteDialog,
   default as DeleteNoteDialogDefault,
 } from "./DeleteNoteDialog";
+
+// Project confirmations
 export {
   DeleteProjectDialog,
   default as DeleteProjectDialogDefault,

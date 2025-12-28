@@ -43,9 +43,16 @@ export function RoomSubtab({
     selectedMember,
     onSelectMember,
 }) {
-    const { inVoice, notInVoice } = useRoomPresence(roomId);
+    const { inVoice, notInVoice, inVR } = useRoomPresence(roomId);
 
     // Filter by search query
+    const filteredInVR = useMemo(() => {
+        if (!inVR) return [];
+        if (!searchQuery.trim()) return inVR;
+        const q = searchQuery.toLowerCase();
+        return inVR.filter(u => u.userName?.toLowerCase().includes(q));
+    }, [inVR, searchQuery]);
+
     const filteredInVoice = useMemo(() => {
         if (!searchQuery.trim()) return inVoice;
         const q = searchQuery.toLowerCase();
@@ -59,7 +66,9 @@ export function RoomSubtab({
     }, [notInVoice, searchQuery]);
 
     // Section states for resizable sections
+    const hasVRUsers = filteredInVR.length > 0;
     const { states: sectionStates, toggleSection } = useSectionStates({
+        vr: { expanded: true, flexGrow: 1 },
         voice: { expanded: true, flexGrow: 1 },
         room: { expanded: true, flexGrow: 2 },
     });
@@ -70,6 +79,28 @@ export function RoomSubtab({
             sectionStates={sectionStates}
             onSectionToggle={toggleSection}
         >
+            {/* In VR Section - only show if there are VR users */}
+            {hasVRUsers && (
+                <ResizableSection
+                    id="vr"
+                    icon="vr"
+                    iconColorClass="icon-purple"
+                    label="In VR"
+                    count={filteredInVR.length}
+                >
+                    {filteredInVR.map(user => (
+                        <MemberRow
+                            key={user.clientId || user.userId}
+                            user={user}
+                            isSelected={selectedMember === (user.clientId || user.userId)}
+                            onSelect={onSelectMember}
+                            showVRSession
+                            showActions
+                        />
+                    ))}
+                </ResizableSection>
+            )}
+
             <ResizableSection
                 id="voice"
                 icon="mic"

@@ -25,6 +25,14 @@
  *   // View mode
  *   viewMode="normal"
  *   onViewModeChange={handleViewModeChange}
+ *   // Flow direction
+ *   flowDirection="row"
+ *   onFlowDirectionChange={handleFlowChange}
+ *   // Edit mode
+ *   isEditMode={isEditMode}
+ *   activeTool={activeTool}
+ *   onToolChange={handleToolChange}
+ *   onToggleEditMode={handleToggleEditMode}
  *   // Room props
  *   room={currentRoom}
  *   members={roomMembers}
@@ -34,7 +42,7 @@
 import React, { memo } from 'react';
 
 // Shared bar components (from common bars/ folder)
-import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
+import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator, FlowDirectionToggle, EditToolbar } from '@UI/react/components/bars';
 
 // Hook for navigation and view logic - uses LayoutPanelContext internally
 import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
@@ -73,6 +81,20 @@ function SecondaryHeader({
     // View mode (passed from parent)
     viewMode = 'normal',
     onViewModeChange,
+
+    // Flow direction (passed from parent)
+    flowDirection = 'row',
+    onFlowDirectionChange,
+
+    // Edit mode (passed from parent)
+    isEditMode = false,
+    activeTool = 'select',
+    onToolChange,
+    onToggleEditMode,
+    canUndo = false,
+    canRedo = false,
+    onUndo,
+    onRedo,
 
     // Room props (passed from parent)
     room,
@@ -113,7 +135,7 @@ function SecondaryHeader({
             </div>
 
             {/* ================================================================= */}
-            {/* CENTER ZONE: Navigation + View Context */}
+            {/* CENTER ZONE: Navigation + View Context + Edit Tools */}
             {/* ================================================================= */}
             <div className="secondary-header__zone secondary-header__zone--center">
                 <StackedNavBlock
@@ -122,6 +144,26 @@ function SecondaryHeader({
                     onNavigate={onNavigate}
                     onHome={onHome}
                     onBookmark={onBookmark}
+                />
+
+                <div className="secondary-header__divider" />
+
+                <FlowDirectionToggle
+                    direction={flowDirection}
+                    onChange={onFlowDirectionChange}
+                />
+
+                <div className="secondary-header__divider" />
+
+                <EditToolbar
+                    isEditMode={isEditMode}
+                    activeTool={activeTool}
+                    onToolChange={onToolChange}
+                    onToggleEditMode={onToggleEditMode}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={onUndo}
+                    onRedo={onRedo}
                 />
 
                 <div className="secondary-header__divider" />

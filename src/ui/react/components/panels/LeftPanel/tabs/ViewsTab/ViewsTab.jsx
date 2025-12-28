@@ -462,14 +462,14 @@ export function ViewsPanelContent({ workspaceId }) {
 
                 {/* View Mode Toggle */}
                 <div className="views-tab__mode-toggle">
-                    {VIEW_MODE_OPTIONS.map(({ id, icon: Icon, label }) => (
+                    {VIEW_MODE_OPTIONS.map(({ id, icon, label }) => (
                         <button
                             key={id}
                             className={`views-tab__mode-btn ${viewMode === id ? 'views-tab__mode-btn--active' : ''}`}
                             onClick={() => setViewMode(id)}
                             title={label}
                         >
-                            <Icon size={12} />
+                            <Icon name={icon} size={12} />
                         </button>
                     ))}
                 </div>

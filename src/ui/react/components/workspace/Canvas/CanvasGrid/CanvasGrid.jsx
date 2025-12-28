@@ -570,7 +570,7 @@ export function CanvasGrid({
         const isSelectionClick = e.ctrlKey || e.metaKey || e.shiftKey;
 
         // Ctrl/Cmd+Click - toggle cell in selection
-        if (e.ctrlKey || e.metaKey) {
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
             const cellData = { row: placement.row, col: placement.col, placement };
             const isCurrentlySelected = selectedCells.some(
                 sc => sc.row === placement.row && sc.col === placement.col
@@ -588,14 +588,52 @@ export function CanvasGrid({
             return;
         }
 
-        // Shift+Click - add to selection (standard OS behavior)
+        // Shift+Click - Select rectangular range from last selected cell (per spec)
+        // Ctrl+Shift+Click - Add rectangular range to existing selection
         if (e.shiftKey) {
-            const cellData = { row: placement.row, col: placement.col, placement };
-            const isCurrentlySelected = selectedCells.some(
-                sc => sc.row === placement.row && sc.col === placement.col
-            );
-            if (!isCurrentlySelected) {
-                setSelectedCells(prev => [...prev, cellData]);
+            // Get the anchor cell (last selected, or first if none)
+            const anchorCell = selectedCells.length > 0
+                ? selectedCells[selectedCells.length - 1]
+                : null;
+
+            if (!anchorCell) {
+                // No previous selection, just select the clicked cell
+                setSelectedCells([{ row: placement.row, col: placement.col, placement }]);
+                return;
+            }
+
+            // Calculate rectangular bounds between anchor and clicked cell
+            const minRow = Math.min(anchorCell.row, placement.row);
+            const maxRow = Math.max(anchorCell.row, placement.row);
+            const minCol = Math.min(anchorCell.col, placement.col);
+            const maxCol = Math.max(anchorCell.col, placement.col);
+
+            // Build list of all cells in the rectangular range
+            const rangeCells = [];
+            for (let row = minRow; row <= maxRow; row++) {
+                for (let col = minCol; col <= maxCol; col++) {
+                    // Find placement at this position
+                    const cellPlacement = canvas?.placements?.find(
+                        p => p.row === row && p.col === col
+                    );
+                    rangeCells.push({
+                        row,
+                        col,
+                        placement: cellPlacement || null,
+                    });
+                }
+            }
+
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl+Shift+Click: Add range to existing selection (dedup)
+                setSelectedCells(prev => {
+                    const existingKeys = new Set(prev.map(c => `${c.row},${c.col}`));
+                    const newCells = rangeCells.filter(c => !existingKeys.has(`${c.row},${c.col}`));
+                    return [...prev, ...newCells];
+                });
+            } else {
+                // Shift+Click: Replace selection with range
+                setSelectedCells(rangeCells);
             }
             return;
         }
@@ -616,7 +654,7 @@ export function CanvasGrid({
         if (onCellClick) {
             onCellClick(placement, e);
         }
-    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick, selectedCells]);
+    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick, selectedCells, canvas?.placements]);
 
     // ==========================================================================
     // CONTEXT MENU HANDLERS
@@ -638,6 +676,14 @@ export function CanvasGrid({
     const handleCloseContextMenu = useCallback(() => {
         setContextMenu({ isOpen: false, position: null, cells: [] });
     }, []);
+
+    // Click on grid background (not a cell) deselects all - per spec
+    const handleGridClick = useCallback((e) => {
+        // Only if clicking directly on the viewport (not a child cell)
+        if (e.target === e.currentTarget && selectedCells.length > 0) {
+            setSelectedCells([]);
+        }
+    }, [selectedCells.length]);
 
     const handleSwapCells = useCallback(() => {
         if (selectedCells.length !== 2) return;
@@ -1090,6 +1136,7 @@ export function CanvasGrid({
                         ref={gridRef}
                         className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''}`}
                         tabIndex={0}
+                        onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
                     >
                         {renderCells}

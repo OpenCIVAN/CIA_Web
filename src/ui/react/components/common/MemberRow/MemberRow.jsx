@@ -45,6 +45,11 @@ import './MemberRow.scss';
  * @property {boolean} [isRoomOwner] - Whether user is room owner
  * @property {string} [viewingDataset] - Dataset user is viewing
  * @property {string} [viewingView] - View user is looking at
+ * @property {boolean} [inVR] - Whether user is in a VR session
+ * @property {Object} [vrSession] - VR session details
+ * @property {string} [vrSession.type] - Session type: 'open', 'invite', 'closed'
+ * @property {string} [vrSession.dataset] - Dataset being viewed
+ * @property {number} [vrSession.participants] - Number of participants
  */
 
 /**
@@ -60,6 +65,9 @@ import './MemberRow.scss';
  * @property {(userId: string) => void} [onGoToView] - Go to view handler
  * @property {(userId: string, visible: boolean) => void} [onToggleCursor] - Toggle cursor visibility
  * @property {(userId: string, e: React.MouseEvent) => void} [onMoreMenu] - More menu handler
+ * @property {(userId: string) => void} [onJoinVR] - Join VR session handler
+ * @property {(userId: string) => void} [onRequestInvite] - Request VR invite handler
+ * @property {boolean} [showVRSession=false] - Show VR session card
  * @property {string} [className] - Additional CSS classes
  */
 
@@ -76,11 +84,14 @@ export const MemberRow = memo(function MemberRow({
     showVoiceStatus = false,
     showViewing = false,
     showActions = false,
+    showVRSession = false,
     onSelect,
     onMessage,
     onGoToView,
     onToggleCursor,
     onMoreMenu,
+    onJoinVR,
+    onRequestInvite,
     className = '',
 }) {
     const {
@@ -98,6 +109,8 @@ export const MemberRow = memo(function MemberRow({
         viewingDataset,
         viewingView,
         cursorVisible = true,
+        inVR = false,
+        vrSession,
     } = user;
 
     const id = odbc || userId;
@@ -126,8 +139,18 @@ export const MemberRow = memo(function MemberRow({
         onMoreMenu?.(id, e);
     }, [id, onMoreMenu]);
 
+    const handleJoinVR = useCallback((e) => {
+        e.stopPropagation();
+        onJoinVR?.(id);
+    }, [id, onJoinVR]);
+
+    const handleRequestInvite = useCallback((e) => {
+        e.stopPropagation();
+        onRequestInvite?.(id);
+    }, [id, onRequestInvite]);
+
     // Determine presence status for indicator
-    const presenceStatus = inVoice ? 'active' : status;
+    const presenceStatus = inVR ? 'vr' : inVoice ? 'active' : status;
 
     return (
         <div
@@ -174,6 +197,44 @@ export const MemberRow = memo(function MemberRow({
                     <div className="member-row__viewing">
                         <Icon name="eye" size={10} />
                         <span>{viewingView}</span>
+                    </div>
+                )}
+
+                {/* VR Session Card */}
+                {showVRSession && inVR && vrSession && (
+                    <div className="member-row__vr-session">
+                        <div className="member-row__vr-info">
+                            <Icon name="vr" size={12} className="member-row__vr-icon" />
+                            <span className="member-row__vr-dataset">{vrSession.dataset || 'VR Session'}</span>
+                            {vrSession.participants > 1 && (
+                                <span className="member-row__vr-participants">
+                                    +{vrSession.participants - 1}
+                                </span>
+                            )}
+                        </div>
+                        {!isYou && (
+                            <div className="member-row__vr-actions">
+                                {vrSession.type === 'open' && onJoinVR && (
+                                    <button
+                                        className="member-row__vr-btn member-row__vr-btn--join"
+                                        onClick={handleJoinVR}
+                                    >
+                                        Join VR
+                                    </button>
+                                )}
+                                {vrSession.type === 'invite' && onRequestInvite && (
+                                    <button
+                                        className="member-row__vr-btn member-row__vr-btn--request"
+                                        onClick={handleRequestInvite}
+                                    >
+                                        Request Invite
+                                    </button>
+                                )}
+                                {vrSession.type === 'closed' && (
+                                    <span className="member-row__vr-private">Private</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 

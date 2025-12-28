@@ -22,12 +22,23 @@ import {
     AdaptiveButton,
     Icon,
 } from '@UI/react/components/adaptive';
+import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 
 import { useActivityTab } from './hooks/useActivityTab';
 import { ActivityFilter } from './components/ActivityFilter';
 import { ActivityCard } from './components/ActivityCard';
 
 import './ActivityTab.scss';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const ACTIVITY_SUBTABS = [
+    { id: 'all', label: 'All', icon: 'activity' },
+    { id: 'mentions', label: 'Mentions', icon: 'at' },
+    { id: 'following', label: 'Following', icon: 'heart' },
+];
 
 // =============================================================================
 // MAIN COMPONENT
@@ -63,10 +74,27 @@ export function ActivityTab({
         filters: propFilters,
     });
 
+    // Subtab state
+    const [activeSubtab, setActiveSubtab] = useState('all');
+
     // Catch-up state
     const [catchUpDismissed, setCatchUpDismissed] = useState(false);
     // All caught up dismissal state
     const [caughtUpDismissed, setCaughtUpDismissed] = useState(false);
+
+    // Filter activities based on active subtab
+    const subtabFilteredActivities = useMemo(() => {
+        if (activeSubtab === 'all') return filteredActivities;
+        if (activeSubtab === 'mentions') {
+            return filteredActivities.filter(a =>
+                a.type === 'mention' || a.action?.includes('@')
+            );
+        }
+        if (activeSubtab === 'following') {
+            return filteredActivities.filter(a => a.isFollowing);
+        }
+        return filteredActivities;
+    }, [activeSubtab, filteredActivities]);
 
     // Generate catch-up items from activities (simulated - would come from real data)
     const catchUpItems = useMemo(() => {
@@ -103,6 +131,13 @@ export function ActivityTab({
                 <span className="panel-header__title">Activity</span>
                 <span className="panel-header__count">{activities.length} events</span>
             </div>
+
+            {/* Subtab Bar */}
+            <SubtabBar
+                tabs={ACTIVITY_SUBTABS}
+                activeTab={activeSubtab}
+                onTabChange={setActiveSubtab}
+            />
 
             {/* Catch-Up Card - Dismissible */}
             <div className="activity-panel__header">
@@ -158,7 +193,7 @@ export function ActivityTab({
                 <SectionHeader
                     icon="activity"
                     color="var(--color-accent-amber)"
-                    count={filteredActivities.length}
+                    count={subtabFilteredActivities.length}
                     actions={
                         <ActivityFilter
                             filters={filters}
@@ -167,16 +202,22 @@ export function ActivityTab({
                         />
                     }
                 >
-                    Recent Activity
+                    {activeSubtab === 'all' ? 'Recent Activity' :
+                     activeSubtab === 'mentions' ? 'Mentions & Tags' :
+                     'From People You Follow'}
                 </SectionHeader>
                 <div className="activity-feed">
-                    {filteredActivities.length === 0 ? (
+                    {subtabFilteredActivities.length === 0 ? (
                         <div className="activity-feed__empty">
-                            <Icon name="activity" size={24} />
-                            <span>No activity yet</span>
+                            <Icon name={activeSubtab === 'mentions' ? 'at' : activeSubtab === 'following' ? 'heart' : 'activity'} size={24} />
+                            <span>
+                                {activeSubtab === 'mentions' ? 'No mentions yet' :
+                                 activeSubtab === 'following' ? 'No activity from followed people' :
+                                 'No activity yet'}
+                            </span>
                         </div>
                     ) : (
-                        filteredActivities.map(activity => (
+                        subtabFilteredActivities.map(activity => (
                             <ActivityCard key={activity.id} activity={activity} />
                         ))
                     )}

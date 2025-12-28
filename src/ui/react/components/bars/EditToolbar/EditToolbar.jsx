@@ -67,7 +67,7 @@ export function EditToolbar({
                         type="button"
                         aria-pressed={activeTool === tool.id}
                     >
-                        <tool.icon size={16} />
+                        <Icon name={tool.icon} size={16} />
                     </button>
                 </Tooltip>
             ))}
