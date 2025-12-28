@@ -18,6 +18,7 @@
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './ViewsSubtab.scss';
@@ -223,24 +224,11 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     return (
         <div className="views-subtab">
             {/* Search */}
-            <div className="views-subtab__search">
-                <Icon name="search" size={12} className="views-subtab__search-icon" />
-                <input
-                    className="views-subtab__search-input"
-                    type="text"
-                    placeholder="Search views..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                    <button
-                        className="views-subtab__search-clear"
-                        onClick={() => setSearchQuery('')}
-                    >
-                        <Icon name="close" size={10} />
-                    </button>
-                )}
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search views..."
+            />
 
             {/* Filters */}
             <div className="views-subtab__filters">

@@ -14,6 +14,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { getScopeChips } from './constants';
 import { BookmarksSubtab } from './subtabs/BookmarksSubtab';
 import { FiltersSubtab } from './subtabs/FiltersSubtab';
@@ -149,22 +150,11 @@ export function BookmarksFiltersPanelContent({
             </div>
 
             {/* Search */}
-            <div className="bookmarks-filters-tab__search">
-                <div className="search-input">
-                    <Icon name="search" size={12} className="search-input__icon" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={`Search ${activeSubTab}...`}
-                    />
-                    {searchQuery && (
-                        <button className="search-input__clear" onClick={() => setSearchQuery('')}>
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={`Search ${activeSubTab}...`}
+            />
 
             {/* Subtab Content */}
             {activeSubTab === 'bookmarks' ? (

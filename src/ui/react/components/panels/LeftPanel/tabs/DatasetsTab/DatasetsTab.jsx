@@ -9,6 +9,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { getViewConfigurationManager } from '@Init/appInitializer.js';
@@ -430,24 +431,11 @@ export function DatasetsPanelContent() {
             </div>
 
             {/* Search bar */}
-            <div className="panel-search">
-                <Icon name="search" size={12} className="panel-search__icon" />
-                <input
-                    type="text"
-                    className="panel-search__input"
-                    placeholder="Search datasets..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                    <button
-                        className="panel-search__clear"
-                        onClick={() => setSearchQuery('')}
-                    >
-                        <Icon name="close" size={10} />
-                    </button>
-                )}
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search datasets..."
+            />
 
             {/* Filter chips */}
             <div className="panel-filters">

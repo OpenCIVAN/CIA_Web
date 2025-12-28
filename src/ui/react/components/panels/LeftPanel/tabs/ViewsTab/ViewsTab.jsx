@@ -19,6 +19,7 @@
 
 import React, { useMemo, useCallback, useContext } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -449,27 +450,15 @@ export function ViewsPanelContent({ workspaceId }) {
                 <span className="panel-header__title">Views</span>
             </div>
 
-            {/* Search and Filters */}
+            {/* Search */}
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search views..."
+            />
+
+            {/* Filters Toolbar */}
             <div className="views-tab__toolbar">
-                {/* Search */}
-                <div className="views-tab__search">
-                    <Icon name="search" size={12} className="views-tab__search-icon" />
-                    <input
-                        type="text"
-                        className="views-tab__search-input"
-                        placeholder="Search views..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {searchQuery && (
-                        <button
-                            className="views-tab__search-clear"
-                            onClick={() => setSearchQuery('')}
-                        >
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
 
                 {/* View Mode Toggle */}
                 <div className="views-tab__mode-toggle">

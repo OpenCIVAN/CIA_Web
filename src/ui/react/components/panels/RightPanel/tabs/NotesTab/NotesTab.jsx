@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -111,25 +112,11 @@ export function NotesTab({ workspaceId }) {
             </div>
 
             {/* Search */}
-            <div className="panel-search">
-                <div className="panel-search__wrapper">
-                    <Icon name="search" size={12} className="search-icon" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search notes..."
-                    />
-                    {searchQuery && (
-                        <button
-                            className="clear-button"
-                            onClick={() => setSearchQuery('')}
-                        >
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search notes..."
+            />
 
             {/* Resizable Sections */}
             <ResizableSectionsContainer

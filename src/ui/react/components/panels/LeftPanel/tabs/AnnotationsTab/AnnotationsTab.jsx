@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -235,25 +236,11 @@ export function AnnotationsPanelContent({ workspaceId }) {
             </div>
 
             {/* Search */}
-            <div className="annotations-tab__search">
-                <div className="search-input">
-                    <Icon name="search" size={12} className="search-input__icon" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search annotations..."
-                    />
-                    {searchQuery && (
-                        <button
-                            className="search-input__clear"
-                            onClick={() => setSearchQuery('')}
-                        >
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search annotations..."
+            />
 
             {/* Type filters - CENTERED */}
             <div className="type-filter-wrapper">

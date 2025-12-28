@@ -23,6 +23,7 @@ import {
     SectionHeader,
     Icon,
 } from '@UI/react/components/adaptive';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 
 import { useRoomsTab } from './hooks/useRoomsTab';
 import { RoomCard } from './components/RoomCard';
@@ -143,6 +144,13 @@ export function RoomsTab({ workspaceId }) {
 
             {/* Rooms List Section */}
             <div className="rooms-panel__list">
+                {/* Search */}
+                <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search rooms..."
+                />
+
                 <SectionHeader
                     icon="doorOpen"
                     color="var(--color-accent-purple)"
@@ -161,22 +169,6 @@ export function RoomsTab({ workspaceId }) {
                 </SectionHeader>
 
                 <div className="rooms-list">
-                    {/* Search */}
-                    <div className="rooms-list__search">
-                        <Icon name="search" size={12} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search rooms..."
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')}>
-                                <Icon name="close" size={10} />
-                            </button>
-                        )}
-                    </div>
-
                     {/* Create form */}
                     {showCreateForm && (
                         <CreateRoomForm

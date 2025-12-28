@@ -26,6 +26,7 @@ import {
     AdaptiveButton,
     Icon,
 } from '@UI/react/components/adaptive';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 
 import { useRecordingsTab } from './hooks/useRecordingsTab';
 import { RecordingCard } from './components/RecordingCard';
@@ -211,26 +212,15 @@ export function RecordingsTab({ workspaceId }) {
                     Past Recordings
                 </SectionHeader>
 
-                {/* Search and Controls Row */}
+                {/* Search */}
+                <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search recordings..."
+                />
+
+                {/* Controls Row */}
                 <div className="recordings-tab__toolbar">
-                    <div className="recordings-tab__search">
-                        <Icon name="search" size={14} className="recordings-tab__search-icon" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search recordings..."
-                            className="recordings-tab__search-input"
-                        />
-                        {searchQuery && (
-                            <button
-                                className="recordings-tab__search-clear"
-                                onClick={() => setSearchQuery('')}
-                            >
-                                <Icon name="close" size={10} />
-                            </button>
-                        )}
-                    </div>
                     <div className="recordings-tab__controls">
                         {/* Filter dropdown */}
                         <div className="recordings-tab__dropdown">

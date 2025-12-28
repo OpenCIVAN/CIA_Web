@@ -19,6 +19,7 @@
 import React from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
 import { SubtabBar } from '@UI/react/components/common/SubtabBar';
+import { SearchBar } from '@UI/react/components/common/SearchBar';
 
 import { usePeopleTab } from './hooks/usePeopleTab';
 import { RoomSubtab } from './components/RoomSubtab';
@@ -76,22 +77,11 @@ export function PeopleTab({ workspaceId, roomId }) {
             />
 
             {/* Search */}
-            <div className="panel-search">
-                <div className="panel-search__wrapper">
-                    <Icon name="search" size={12} className="search-icon" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchPlaceholder}
-                    />
-                    {searchQuery && (
-                        <button className="clear-button" onClick={clearSearch}>
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
-            </div>
+            <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={searchPlaceholder}
+            />
 
             {/* Connection Status */}
             {!isInitialized && (
