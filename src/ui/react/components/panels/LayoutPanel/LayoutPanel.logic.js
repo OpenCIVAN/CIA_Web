@@ -7,7 +7,7 @@
 //
 // IMPORTANT: This is the bridge between useCanvas and the UI components.
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import {
   getDatasetManager,
@@ -180,13 +180,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     getInitialViewportSize
   );
 
-  // Sync when canvasViewport changes externally
+  // Only sync from canvasViewport on initial mount (when we don't have local values yet)
+  // After that, localViewportSize is the source of truth to prevent rubberbanding
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
-    if (canvasViewport?.rows && canvasViewport?.cols) {
+    if (!hasInitializedRef.current && canvasViewport?.rows && canvasViewport?.cols) {
       setLocalViewportSize({
         rows: canvasViewport.rows,
         cols: canvasViewport.cols,
       });
+      hasInitializedRef.current = true;
     }
   }, [canvasViewport?.rows, canvasViewport?.cols]);
 
@@ -218,8 +221,13 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   }, []);
 
   // Listen for viewport size changes from CanvasGrid (via useViewportSize events)
+  // Ignore events we dispatched ourselves to prevent feedback loops
   useEffect(() => {
     const handleViewportSizeChanged = (e) => {
+      // Ignore events we dispatched ourselves
+      if (e.detail?.source === 'LayoutPanel.logic') {
+        return;
+      }
       const { size } = e.detail;
       if (size?.rows && size?.cols) {
         setLocalViewportSize({
@@ -245,18 +253,14 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [canvasViewport]
   );
 
+  // IMPORTANT: localViewportSize is the source of truth for viewport size
+  // This prevents rubberbanding when user changes size via navigator controls
   const viewportSize = useMemo(
     () => ({
-      rows:
-        canvasViewport?.rows ??
-        localViewportSize.rows ??
-        DEFAULT_VIEWPORT_SIZE.rows,
-      cols:
-        canvasViewport?.cols ??
-        localViewportSize.cols ??
-        DEFAULT_VIEWPORT_SIZE.cols,
+      rows: localViewportSize.rows ?? DEFAULT_VIEWPORT_SIZE.rows,
+      cols: localViewportSize.cols ?? DEFAULT_VIEWPORT_SIZE.cols,
     }),
-    [canvasViewport, localViewportSize]
+    [localViewportSize]
   );
 
   // ===========================================================================
@@ -344,6 +348,8 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   // ===========================================================================
   const setViewportSizeRows = useCallback(
     (rows) => {
+      console.log('[LayoutPanel.logic setViewportSizeRows] ENTERED with rows:', rows);
+      log.info(`[setViewportSizeRows] Called with rows=${rows}`);
       const value = Math.max(1, Math.min(10, rows));
       const previousSize = {
         rows: localViewportSize.rows,
@@ -351,8 +357,17 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       };
       const newSize = { rows: value, cols: localViewportSize.cols };
 
+      log.info(`[setViewportSizeRows] Updating: ${previousSize.rows} → ${value}`);
+
       // Update local state
       setLocalViewportSize((prev) => ({ ...prev, rows: value }));
+
+      // Persist to localStorage
+      try {
+        localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(newSize));
+      } catch (e) {
+        console.warn("[LayoutPanel.logic] Failed to save viewport size:", e);
+      }
 
       // Update useCanvas state
       canvasSetViewportSize?.(value, localViewportSize.cols);
@@ -365,25 +380,19 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
             previousSize: previousSize,
             cellCount: newSize.rows * newSize.cols,
             previousCellCount: previousSize.rows * previousSize.cols,
+            source: 'LayoutPanel.logic',
           },
           bubbles: true,
         })
       );
-
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "[LayoutPanel.logic] Viewport size rows changed:",
-          previousSize.rows,
-          "→",
-          value
-        );
-      }
     },
     [canvasSetViewportSize, localViewportSize]
   );
 
   const setViewportSizeCols = useCallback(
     (cols) => {
+      console.log('[LayoutPanel.logic setViewportSizeCols] ENTERED with cols:', cols);
+      log.info(`[setViewportSizeCols] Called with cols=${cols}`);
       const value = Math.max(1, Math.min(10, cols));
       const previousSize = {
         rows: localViewportSize.rows,
@@ -391,8 +400,17 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       };
       const newSize = { rows: localViewportSize.rows, cols: value };
 
+      log.info(`[setViewportSizeCols] Updating: ${previousSize.cols} → ${value}`);
+
       // Update local state
       setLocalViewportSize((prev) => ({ ...prev, cols: value }));
+
+      // Persist to localStorage
+      try {
+        localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(newSize));
+      } catch (e) {
+        console.warn("[LayoutPanel.logic] Failed to save viewport size:", e);
+      }
 
       // Update useCanvas state
       canvasSetViewportSize?.(localViewportSize.rows, value);
@@ -405,19 +423,11 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
             previousSize: previousSize,
             cellCount: newSize.rows * newSize.cols,
             previousCellCount: previousSize.rows * previousSize.cols,
+            source: 'LayoutPanel.logic',
           },
           bubbles: true,
         })
       );
-
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "[LayoutPanel.logic] Viewport size cols changed:",
-          previousSize.cols,
-          "→",
-          value
-        );
-      }
     },
     [canvasSetViewportSize, localViewportSize]
   );
@@ -428,8 +438,12 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
   const setCanvasRows = useCallback(
     async (rows) => {
-      if (!canvas?.id) return;
-      const value = Math.max(1, Math.min(50, rows));
+      log.info(`[setCanvasRows] Called with rows=${rows}, canvas.id=${canvas?.id}`);
+      if (!canvas?.id) {
+        log.warn("[setCanvasRows] No canvas ID available, cannot update rows");
+        return;
+      }
+      const value = Math.max(1, rows); // No upper limit for canvas
 
       // Check if reduction would orphan views
       const maxOccupiedRow = (canvas.placements || []).reduce(
@@ -444,19 +458,34 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         return;
       }
 
-      await canvasManager.updateCanvas(canvas.id, {
-        dimensions: { ...canvas.dimensions, rows: value },
-      });
+      try {
+        log.info(`[setCanvasRows] Updating canvas ${canvas.id} rows: ${canvas.dimensions?.rows} → ${value}`);
+        await canvasManager.updateCanvas(canvas.id, {
+          dimensions: { rows: value, cols: canvas.dimensions?.cols || canvasSize.cols },
+        });
+        saveCanvasSize({ rows: value, cols: canvas.dimensions?.cols || canvasSize.cols });
 
-      saveCanvasSize({ rows: value, cols: canvasSize.cols });
+        // If canvas shrinks below viewport, shrink viewport too
+        if (value < localViewportSize.rows) {
+          log.info(`[setCanvasRows] Canvas shrunk below viewport, adjusting viewport rows to ${value}`);
+          setViewportSizeRows(value);
+        }
+      } catch (error) {
+        log.error("[setCanvasRows] Failed to update canvas:", error);
+      }
     },
-    [canvas]
+    [canvas, canvasSize.cols, localViewportSize.rows, setViewportSizeRows]
   );
 
   const setCanvasCols = useCallback(
     async (cols) => {
-      if (!canvas?.id) return;
-      const value = Math.max(1, Math.min(50, cols));
+      console.log('[LayoutPanel.logic setCanvasCols] ENTERED with cols:', cols);
+      log.info(`[setCanvasCols] Called with cols=${cols}, canvas.id=${canvas?.id}`);
+      if (!canvas?.id) {
+        log.warn("[setCanvasCols] No canvas ID available, cannot update cols");
+        return;
+      }
+      const value = Math.max(1, cols); // No upper limit for canvas
 
       // Check if reduction would orphan views
       const maxOccupiedCol = (canvas.placements || []).reduce(
@@ -471,12 +500,23 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         return;
       }
 
-      await canvasManager.updateCanvas(canvas.id, {
-        dimensions: { ...canvas.dimensions, cols: value },
-      });
-      saveCanvasSize({ rows: canvasSize.rows, cols: value });
+      try {
+        log.info(`[setCanvasCols] Updating canvas ${canvas.id} cols: ${canvas.dimensions?.cols} → ${value}`);
+        await canvasManager.updateCanvas(canvas.id, {
+          dimensions: { rows: canvas.dimensions?.rows || canvasSize.rows, cols: value },
+        });
+        saveCanvasSize({ rows: canvas.dimensions?.rows || canvasSize.rows, cols: value });
+
+        // If canvas shrinks below viewport, shrink viewport too
+        if (value < localViewportSize.cols) {
+          log.info(`[setCanvasCols] Canvas shrunk below viewport, adjusting viewport cols to ${value}`);
+          setViewportSizeCols(value);
+        }
+      } catch (error) {
+        log.error("[setCanvasCols] Failed to update canvas:", error);
+      }
     },
-    [canvas]
+    [canvas, canvasSize.rows, localViewportSize.cols, setViewportSizeCols]
   );
 
   // Legacy addRow/addColumn

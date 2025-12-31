@@ -36,6 +36,9 @@ import {
 // Common UI components
 import { ButtonGroup, IconButton } from '@UI/react/components/common/Button';
 
+// Navigator hook for toggling the floating canvas navigator
+import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
+
 import './SecondaryFooter.scss';
 
 // =============================================================================
@@ -63,11 +66,11 @@ const EDIT_TOOLS = [
  * Manages its own internal zones for popouts, edit tools, and voice controls.
  */
 function SecondaryFooter({
-    // Popout props
-    navigatorOpen = false,
+    // Popout props (scratchpad and canvasOps still use passed props)
     scratchpadOpen = false,
-    onToggleNavigator,
+    canvasOpsOpen = false,
     onToggleScratchpad,
+    onToggleCanvasOps,
 
     // Flow/Edit props
     flowDirection = 'row',
@@ -105,6 +108,9 @@ function SecondaryFooter({
 
     className = '',
 }) {
+    // Navigator uses its own context-based hook
+    const { isFloating: navigatorOpen, toggleNavigator } = useNavigatorButton();
+
     // Handle tool selection - auto-enable edit mode
     const handleToolChange = useCallback((toolId) => {
         onToolChange?.(toolId);
@@ -124,7 +130,7 @@ function SecondaryFooter({
                     label="Navigator"
                     active={navigatorOpen}
                     accent="var(--color-accent-teal)"
-                    onClick={onToggleNavigator}
+                    onClick={toggleNavigator}
                 />
                 <LabeledIconButton
                     icon="stickyNote"
@@ -132,6 +138,13 @@ function SecondaryFooter({
                     active={scratchpadOpen}
                     accent="var(--color-accent-amber)"
                     onClick={onToggleScratchpad}
+                />
+                <LabeledIconButton
+                    icon="layers"
+                    label="Operations"
+                    active={canvasOpsOpen}
+                    accent="var(--color-accent-purple)"
+                    onClick={onToggleCanvasOps}
                 />
             </div>
 

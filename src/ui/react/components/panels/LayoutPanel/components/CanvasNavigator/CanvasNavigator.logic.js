@@ -24,6 +24,9 @@ import {
   useRef,
 } from "react";
 import { createLogger } from "@Utils/logger.js";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { saveCanvasSize } from "@UI/react/hooks/canvasState.js";
+import { VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/viewportState.js";
 
 const log = createLogger("canvas-navigator");
 
@@ -181,6 +184,9 @@ const historyReducer = (state, action) => {
  * @param {Function} options.onExternalDrop - (viewItem, { row, col }) => void
  */
 export function useCanvasNavigator({
+  // Canvas object for direct manager calls (bypasses stale closure issues)
+  canvas = null,
+
   // Data from parent
   canvasSize = { rows: 3, cols: 3 },
   viewport = { row: 0, col: 0 },
@@ -248,6 +254,45 @@ export function useCanvasNavigator({
   // Hovered cell (for tooltip)
   const [hoveredCell, setHoveredCell] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  // ===========================================================================
+  // LOCAL SIZE STATE (used when context functions unavailable)
+  // ===========================================================================
+
+  const [localViewportSize, setLocalViewportSize] = useState(() => ({
+    rows: viewportSize?.rows || 3,
+    cols: viewportSize?.cols || 3,
+  }));
+
+  const [localCanvasSize, setLocalCanvasSize] = useState(() => ({
+    rows: canvasSize?.rows || 4,
+    cols: canvasSize?.cols || 5,
+  }));
+
+  // Sync local state when props change (from context)
+  useEffect(() => {
+    if (viewportSize?.rows && viewportSize?.cols) {
+      setLocalViewportSize({ rows: viewportSize.rows, cols: viewportSize.cols });
+    }
+  }, [viewportSize?.rows, viewportSize?.cols]);
+
+  useEffect(() => {
+    if (canvasSize?.rows && canvasSize?.cols) {
+      setLocalCanvasSize({ rows: canvasSize.rows, cols: canvasSize.cols });
+    }
+  }, [canvasSize?.rows, canvasSize?.cols]);
+
+  // Effective sizes - prefer canvas.dimensions (most accurate), then props, then local
+  const effectiveViewportSize = {
+    rows: viewportSize?.rows ?? localViewportSize.rows,
+    cols: viewportSize?.cols ?? localViewportSize.cols,
+  };
+
+  // For canvas size, prefer the actual canvas object's dimensions over everything else
+  const effectiveCanvasSize = {
+    rows: canvas?.dimensions?.rows ?? canvasSize?.rows ?? localCanvasSize.rows,
+    cols: canvas?.dimensions?.cols ?? canvasSize?.cols ?? localCanvasSize.cols,
+  };
 
   // ===========================================================================
   // HISTORY STATE (for undo/redo)
@@ -328,12 +373,12 @@ export function useCanvasNavigator({
     (row, col) => {
       return (
         row >= viewport.row &&
-        row < viewport.row + viewportSize.rows &&
+        row < viewport.row + effectiveViewportSize.rows &&
         col >= viewport.col &&
-        col < viewport.col + viewportSize.cols
+        col < viewport.col + effectiveViewportSize.cols
       );
     },
-    [viewport, viewportSize]
+    [viewport, effectiveViewportSize]
   );
 
   /**
@@ -453,22 +498,77 @@ export function useCanvasNavigator({
   // VIEWPORT SIZE
   // ===========================================================================
 
+  // Storage key for viewport size (must match LayoutPanel.logic.js)
+  const VIEWPORT_STORAGE_KEY = "cia-viewport-size";
+
   const handleSetViewportSizeRows = useCallback(
     (rows) => {
-      if (parentSetViewportSizeRows) {
-        parentSetViewportSizeRows(rows);
+      const value = Math.max(1, Math.min(10, rows));
+      // Also constrain to canvas size
+      const constrainedValue = Math.min(value, effectiveCanvasSize.rows);
+
+      log.info(`[handleSetViewportSizeRows] Setting rows to ${constrainedValue}`);
+
+      const newSize = { rows: constrainedValue, cols: effectiveViewportSize.cols };
+
+      // Update local state
+      setLocalViewportSize(prev => ({ ...prev, rows: constrainedValue }));
+
+      // Save to localStorage
+      try {
+        localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(newSize));
+      } catch (e) {
+        log.warn(`Failed to save viewport size: ${e}`);
       }
+
+      // Dispatch event so other components (like CanvasGrid) can react
+      window.dispatchEvent(
+        new CustomEvent(VIEWPORT_SIZE_EVENT, {
+          detail: {
+            size: newSize,
+            previousSize: { rows: effectiveViewportSize.rows, cols: effectiveViewportSize.cols },
+            source: 'CanvasNavigator',
+          },
+          bubbles: true,
+        })
+      );
     },
-    [parentSetViewportSizeRows]
+    [effectiveCanvasSize.rows, effectiveViewportSize]
   );
 
   const handleSetViewportSizeCols = useCallback(
     (cols) => {
-      if (parentSetViewportSizeCols) {
-        parentSetViewportSizeCols(cols);
+      const value = Math.max(1, Math.min(10, cols));
+      // Also constrain to canvas size
+      const constrainedValue = Math.min(value, effectiveCanvasSize.cols);
+
+      log.info(`[handleSetViewportSizeCols] Setting cols to ${constrainedValue}`);
+
+      const newSize = { rows: effectiveViewportSize.rows, cols: constrainedValue };
+
+      // Update local state
+      setLocalViewportSize(prev => ({ ...prev, cols: constrainedValue }));
+
+      // Save to localStorage
+      try {
+        localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(newSize));
+      } catch (e) {
+        log.warn(`Failed to save viewport size: ${e}`);
       }
+
+      // Dispatch event so other components (like CanvasGrid) can react
+      window.dispatchEvent(
+        new CustomEvent(VIEWPORT_SIZE_EVENT, {
+          detail: {
+            size: newSize,
+            previousSize: { rows: effectiveViewportSize.rows, cols: effectiveViewportSize.cols },
+            source: 'CanvasNavigator',
+          },
+          bubbles: true,
+        })
+      );
     },
-    [parentSetViewportSizeCols]
+    [effectiveCanvasSize.cols, effectiveViewportSize]
   );
 
   // ===========================================================================
@@ -476,42 +576,133 @@ export function useCanvasNavigator({
   // ===========================================================================
 
   const handleSetCanvasRows = useCallback(
-    (rows) => {
-      if (parentSetCanvasRows) {
-        parentSetCanvasRows(rows);
+    async (rows, isDelta = false) => {
+      // If isDelta is true, rows is a delta (+1 or -1), otherwise it's an absolute value
+      const currentRows = canvas?.dimensions?.rows ?? effectiveCanvasSize.rows;
+      const targetValue = isDelta ? currentRows + rows : rows;
+      const value = Math.max(1, targetValue);
+
+      // Call canvasManager directly to bypass stale closure issues
+      if (canvas?.id) {
+        // Check if reduction would orphan views
+        const maxOccupiedRow = (canvas.placements || []).reduce(
+          (max, p) => Math.max(max, p.row + (p.rowSpan || 1)),
+          0
+        );
+
+        // Only block if we're trying to DECREASE below the occupied area
+        if (value < currentRows && value < maxOccupiedRow) {
+          log.warn(`Cannot reduce rows to ${value}: views occupy up to row ${maxOccupiedRow}`);
+          return;
+        }
+
+        // If current dimensions are inconsistent (smaller than occupied), fix them
+        const finalValue = Math.max(value, maxOccupiedRow);
+        const newCols = canvas.dimensions?.cols || effectiveCanvasSize.cols;
+
+        try {
+          await canvasManager.updateCanvas(canvas.id, {
+            dimensions: { rows: finalValue, cols: newCols },
+          });
+          saveCanvasSize({ rows: finalValue, cols: newCols });
+          setLocalCanvasSize(prev => ({ ...prev, rows: finalValue }));
+
+          // If canvas shrinks below viewport, shrink viewport too
+          if (finalValue < effectiveViewportSize.rows) {
+            handleSetViewportSizeRows(finalValue);
+          }
+        } catch (error) {
+          log.error(`[handleSetCanvasRows] Failed to update canvas: ${error}`);
+        }
+      } else {
+        // Fallback: update local state only
+        setLocalCanvasSize(prev => ({ ...prev, rows: value }));
+
+        // If canvas shrinks below viewport, shrink viewport too
+        if (value < effectiveViewportSize.rows) {
+          handleSetViewportSizeRows(value);
+        }
       }
     },
-    [parentSetCanvasRows]
+    [canvas, effectiveCanvasSize.rows, effectiveCanvasSize.cols, effectiveViewportSize.rows, handleSetViewportSizeRows]
   );
 
   const handleSetCanvasCols = useCallback(
-    (cols) => {
-      if (parentSetCanvasCols) {
-        parentSetCanvasCols(cols);
+    async (cols, isDelta = false) => {
+      // If isDelta is true, cols is a delta (+1 or -1), otherwise it's an absolute value
+      const currentCols = canvas?.dimensions?.cols ?? effectiveCanvasSize.cols;
+      const targetValue = isDelta ? currentCols + cols : cols;
+      const value = Math.max(1, targetValue);
+
+      // Call canvasManager directly to bypass stale closure issues
+      if (canvas?.id) {
+        // Check if reduction would orphan views
+        const maxOccupiedCol = (canvas.placements || []).reduce(
+          (max, p) => Math.max(max, p.col + (p.colSpan || 1)),
+          0
+        );
+        // Only block if we're trying to DECREASE below the occupied area
+        if (value < currentCols && value < maxOccupiedCol) {
+          log.warn(`Cannot reduce cols to ${value}: views occupy up to col ${maxOccupiedCol}`);
+          return;
+        }
+
+        // If current dimensions are inconsistent (smaller than occupied), fix them
+        const finalValue = Math.max(value, maxOccupiedCol);
+        const newRows = canvas.dimensions?.rows || effectiveCanvasSize.rows;
+
+        try {
+          await canvasManager.updateCanvas(canvas.id, {
+            dimensions: { rows: newRows, cols: finalValue },
+          });
+          saveCanvasSize({ rows: newRows, cols: finalValue });
+          setLocalCanvasSize(prev => ({ ...prev, cols: finalValue }));
+
+          // If canvas shrinks below viewport, shrink viewport too
+          if (finalValue < effectiveViewportSize.cols) {
+            handleSetViewportSizeCols(finalValue);
+          }
+        } catch (error) {
+          log.error(`[handleSetCanvasCols] Failed to update canvas: ${error?.message || error}`);
+        }
+      } else {
+        // Fallback: update local state only
+        setLocalCanvasSize(prev => ({ ...prev, cols: value }));
+
+        // If canvas shrinks below viewport, shrink viewport too
+        if (value < effectiveViewportSize.cols) {
+          handleSetViewportSizeCols(value);
+        }
       }
     },
-    [parentSetCanvasCols]
+    [canvas, effectiveCanvasSize.cols, effectiveCanvasSize.rows, effectiveViewportSize.cols, handleSetViewportSizeCols]
   );
 
   const handleAddRow = useCallback(() => {
-    handleSetCanvasRows(canvasSize.rows + 1);
-  }, [canvasSize.rows, handleSetCanvasRows]);
+    // Read directly from canvas.dimensions to avoid stale closure issues
+    const currentRows = canvas?.dimensions?.rows ?? effectiveCanvasSize.rows;
+    handleSetCanvasRows(currentRows + 1);
+  }, [canvas, effectiveCanvasSize.rows, handleSetCanvasRows]);
 
   const handleRemoveRow = useCallback(() => {
-    if (canvasSize.rows > 1) {
-      handleSetCanvasRows(canvasSize.rows - 1);
+    const currentRows = canvas?.dimensions?.rows ?? effectiveCanvasSize.rows;
+    if (currentRows > 1) {
+      handleSetCanvasRows(currentRows - 1);
     }
-  }, [canvasSize.rows, handleSetCanvasRows]);
+  }, [canvas, effectiveCanvasSize.rows, handleSetCanvasRows]);
 
   const handleAddColumn = useCallback(() => {
-    handleSetCanvasCols(canvasSize.cols + 1);
-  }, [canvasSize.cols, handleSetCanvasCols]);
+    // Read directly from canvas.dimensions to avoid stale closure issues
+    const currentCols = canvas?.dimensions?.cols ?? effectiveCanvasSize.cols;
+    handleSetCanvasCols(currentCols + 1);
+  }, [canvas, effectiveCanvasSize.cols, handleSetCanvasCols]);
 
   const handleRemoveColumn = useCallback(() => {
-    if (canvasSize.cols > 1) {
-      handleSetCanvasCols(canvasSize.cols - 1);
+    const currentCols = canvas?.dimensions?.cols ?? effectiveCanvasSize.cols;
+    if (currentCols > 1) {
+      handleSetCanvasCols(currentCols - 1);
     }
-  }, [canvasSize.cols, handleSetCanvasCols]);
+  }, [canvas, effectiveCanvasSize.cols, handleSetCanvasCols]);
 
   // ===========================================================================
   // CELL SELECTION (Edit Mode)
@@ -887,8 +1078,8 @@ export function useCanvasNavigator({
     const processedCells = new Set();
     let viewIndex = 0;
 
-    for (let row = 0; row < canvasSize.rows; row++) {
-      for (let col = 0; col < canvasSize.cols; col++) {
+    for (let row = 0; row < effectiveCanvasSize.rows; row++) {
+      for (let col = 0; col < effectiveCanvasSize.cols; col++) {
         const cell = getCellAt(row, col);
         const inVP = isInViewport(row, col);
         const isHome =
@@ -928,10 +1119,10 @@ export function useCanvasNavigator({
 
     return result;
   }, [
-    canvasSize,
+    effectiveCanvasSize,
     cells,
     viewport,
-    viewportSize,
+    effectiveViewportSize,
     homepoint,
     selectedCells,
     dragOverCell,
@@ -946,10 +1137,10 @@ export function useCanvasNavigator({
   // ===========================================================================
 
   return {
-    // State
-    canvasSize,
+    // State - use effective sizes that include local fallbacks
+    canvasSize: effectiveCanvasSize,
     viewport,
-    viewportSize,
+    viewportSize: effectiveViewportSize,
     cells,
     homepoint,
     collaborators,

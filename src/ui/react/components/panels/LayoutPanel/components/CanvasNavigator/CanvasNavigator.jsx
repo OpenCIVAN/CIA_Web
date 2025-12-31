@@ -69,12 +69,22 @@ const NumberSpinner = memo(({
 
     const handleDecrement = () => {
         const newVal = Math.max(min, safeValue - 1);
-        onChange(newVal);
+        console.log(`[NumberSpinner] ${label} decrement: ${safeValue} → ${newVal}, onChange=${!!onChange}`);
+        if (onChange) {
+            onChange(newVal);
+        } else {
+            console.warn(`[NumberSpinner] ${label} onChange is undefined!`);
+        }
     };
 
     const handleIncrement = () => {
         const newVal = Math.min(max, safeValue + 1);
-        onChange(newVal);
+        console.log(`[NumberSpinner] ${label} increment: ${safeValue} → ${newVal}, onChange=${!!onChange}`);
+        if (onChange) {
+            onChange(newVal);
+        } else {
+            console.warn(`[NumberSpinner] ${label} onChange is undefined!`);
+        }
     };
 
     if (vertical) {
@@ -173,9 +183,36 @@ const SizeControlsFooter = memo(({
     canvasSize,
     setCanvasCols,
     setCanvasRows,
+    addRow,
+    removeRow,
+    addColumn,
+    removeColumn,
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { isVR } = useMode();
+
+    // Create wrapper onChange handlers that detect increment/decrement
+    // and call the appropriate function (which reads fresh from canvas.dimensions)
+    const handleCanvasColsChange = React.useCallback((newValue) => {
+        // Detect if increment or decrement based on passed value vs displayed
+        if (newValue > canvasSize.cols) {
+            console.log('[SizeControlsFooter] Canvas cols increment detected, calling addColumn');
+            addColumn?.();
+        } else if (newValue < canvasSize.cols) {
+            console.log('[SizeControlsFooter] Canvas cols decrement detected, calling removeColumn');
+            removeColumn?.();
+        }
+    }, [canvasSize.cols, addColumn, removeColumn]);
+
+    const handleCanvasRowsChange = React.useCallback((newValue) => {
+        if (newValue > canvasSize.rows) {
+            console.log('[SizeControlsFooter] Canvas rows increment detected, calling addRow');
+            addRow?.();
+        } else if (newValue < canvasSize.rows) {
+            console.log('[SizeControlsFooter] Canvas rows decrement detected, calling removeRow');
+            removeRow?.();
+        }
+    }, [canvasSize.rows, addRow, removeRow]);
 
     return (
         <div className="canvas-navigator__size-footer">
@@ -201,7 +238,7 @@ const SizeControlsFooter = memo(({
                             value={viewportSize.cols}
                             onChange={setViewportSizeCols}
                             min={1}
-                            max={canvasSize.cols}
+                            max={Math.min(10, canvasSize.cols)}
                             color="green"
                             vertical
                         />
@@ -210,7 +247,7 @@ const SizeControlsFooter = memo(({
                             value={viewportSize.rows}
                             onChange={setViewportSizeRows}
                             min={1}
-                            max={canvasSize.rows}
+                            max={Math.min(10, canvasSize.rows)}
                             color="green"
                             vertical
                         />
@@ -221,18 +258,18 @@ const SizeControlsFooter = memo(({
                         <NumberSpinner
                             label="Cols"
                             value={canvasSize.cols}
-                            onChange={setCanvasCols}
+                            onChange={handleCanvasColsChange}
                             min={1}
-                            max={50}
+                            max={999}
                             color="purple"
                             vertical
                         />
                         <NumberSpinner
                             label="Rows"
                             value={canvasSize.rows}
-                            onChange={setCanvasRows}
+                            onChange={handleCanvasRowsChange}
                             min={1}
-                            max={50}
+                            max={999}
                             color="purple"
                             vertical
                         />
@@ -294,8 +331,21 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     const context = useLayoutPanelContext();
     const contextLogic = context?.logic || {};
 
+    // Debug: Log context data
+    React.useEffect(() => {
+        console.log('[CanvasNavigator] Context available:', {
+            hasContext: !!context,
+            hasLogic: !!context?.logic,
+            setCanvasRows: typeof contextLogic.setCanvasRows,
+            setCanvasCols: typeof contextLogic.setCanvasCols,
+            setViewportSizeRows: typeof contextLogic.setViewportSizeRows,
+            setViewportSizeCols: typeof contextLogic.setViewportSizeCols,
+        });
+    }, [context, contextLogic]);
+
     // Initialize the logic hook with context data
     const logic = useCanvasNavigator({
+        canvas: contextLogic.canvas, // Pass the full canvas object for direct manager calls
         canvasSize: contextLogic.canvasSize,
         viewport: contextLogic.viewport,
         viewportSize: contextLogic.viewportSize,
@@ -350,6 +400,10 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         setViewportSizeCols,
         setCanvasRows,
         setCanvasCols,
+        addRow,
+        removeRow,
+        addColumn,
+        removeColumn,
 
         // Cell helpers
         getCellColor,
@@ -358,6 +412,18 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         // Cell click
         handleCellClick,
     } = logic;
+
+    // Debug: Log functions from logic hook
+    React.useEffect(() => {
+        console.log('[CanvasNavigator] Logic hook functions:', {
+            setViewportSizeRows: typeof setViewportSizeRows,
+            setViewportSizeCols: typeof setViewportSizeCols,
+            setCanvasRows: typeof setCanvasRows,
+            setCanvasCols: typeof setCanvasCols,
+            canvasSize,
+            viewportSize,
+        });
+    }, [setViewportSizeRows, setViewportSizeCols, setCanvasRows, setCanvasCols, canvasSize, viewportSize]);
 
     // Dock position from context
     const dockPosition_ = context?.dockPosition || DOCK_POSITIONS.FLOAT;
@@ -604,6 +670,10 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 canvasSize={canvasSize}
                 setCanvasCols={setCanvasCols}
                 setCanvasRows={setCanvasRows}
+                addRow={addRow}
+                removeRow={removeRow}
+                addColumn={addColumn}
+                removeColumn={removeColumn}
             />
 
             {/* Tooltip */}

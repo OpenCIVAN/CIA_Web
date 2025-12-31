@@ -17,7 +17,7 @@ const FLOAT_POSITION_KEY = 'cia-navigator-float-position';
 const FLOAT_SIZE_KEY = 'cia-navigator-float-size';
 
 const DEFAULT_SIZE = { width: 520, height: 380 };
-const MIN_SIZE = { width: 350, height: 280 };
+const MIN_SIZE = { width: 450, height: 340 };
 const MAX_SIZE = { width: 900, height: 700 };
 
 // Corner positions

@@ -71,6 +71,7 @@ import {
 } from "@UI/react/components/panels/FloatingPanel";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator } from "@UI/react/components/panels/LayoutPanel";
+import { CanvasOperationsPanel } from "@UI/react/components/workspace/FloatingPanels/CanvasOperationsPanel";
 
 // =============================================================================
 // MODALS
@@ -459,11 +460,11 @@ export function CIAWebApp({ username, userId, projectId }) {
               // ─────────────────────────────────────────────────────────────
               secondaryBottomBar={
                 <SecondaryFooter
-                  // Popout state
-                  navigatorOpen={openPopouts.includes("navigator")}
+                  // Popout state (Navigator uses its own hook internally)
                   scratchpadOpen={openPopouts.includes("scratchpad")}
-                  onToggleNavigator={() => handleTogglePopout("navigator")}
+                  canvasOpsOpen={openPopouts.includes("canvasOps")}
                   onToggleScratchpad={() => handleTogglePopout("scratchpad")}
+                  onToggleCanvasOps={() => handleTogglePopout("canvasOps")}
                   // Flow direction (connected to canvas)
                   flowDirection={flowDirection}
                   onFlowDirectionChange={handleFlowDirectionChange}
@@ -510,6 +511,25 @@ export function CIAWebApp({ username, userId, projectId }) {
               {/* Floating panels rendered inside LayoutContext */}
               <AllFloatingPanels workspaceId={workspaceId} />
               <FloatingCanvasNavigator />
+
+              {/* Canvas Operations Panel */}
+              <CanvasOperationsPanel
+                isOpen={openPopouts.includes("canvasOps")}
+                onClose={() => handleTogglePopout("canvasOps")}
+                onMinimize={() => handleTogglePopout("canvasOps")}
+                pendingOperations={[]}
+                transactions={[]}
+                collaborators={roomMembers.map((member, idx) => ({
+                  id: member.odId || `user-${idx}`,
+                  name: member.name || 'Unknown',
+                  online: member.isOnline !== false,
+                  editing: false,
+                  viewport: { row: 1, col: 1 },
+                  cursor: { row: 1, col: 1 },
+                }))}
+                savePoints={[]}
+                currentUserId={userId}
+              />
             </ThreeEdgeLayout>
 
             {/* Create Room Modal */}
