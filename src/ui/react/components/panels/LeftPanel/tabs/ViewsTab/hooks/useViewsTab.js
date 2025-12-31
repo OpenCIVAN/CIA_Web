@@ -562,48 +562,22 @@ export function useViewsTab({ workspaceId }) {
   }, []);
 
   /**
-   * Focus a view - navigates to it and makes it active
+   * Focus a view - makes it active and navigates to it if needed
+   *
+   * ViewLifecycleService.focusView now handles:
+   * 1. Dispatching cia:instance-focused to make the cell active
+   * 2. Smart viewport navigation (minimum movement to show cell)
    */
-  const handleFocusView = useCallback(
-    (viewId) => {
-      log.debug("Focusing view:", viewId);
-      const view = views.find((v) => v.id === viewId);
-      if (view?.position) {
-        // Navigate to the view's position
-        dispatchNavigateTo(view.position.row, view.position.col);
-      }
-      // Make it the active view
-      viewLifecycleService.focusView(viewId);
-    },
-    [views]
-  );
+  const handleFocusView = useCallback((viewId) => {
+    log.debug("Focusing view:", viewId);
+    viewLifecycleService.focusView(viewId);
+  }, []);
 
   /**
    * Toggle view visibility (hide/show on canvas)
    */
-  const handleToggleVisibility = useCallback(async (viewId) => {
-    log.debug("Toggling visibility for view:", viewId);
-    try {
-      const viewManager = getViewConfigurationManager();
-      const view = viewManager?.getView(viewId);
-      if (view) {
-        // Toggle the visible property
-        const newVisible = view.visible === false ? true : false;
-        view.visible = newVisible;
-
-        // Emit update event to trigger UI refresh
-        viewManager._emit?.("viewUpdated", view);
-        viewManager._dispatchViewUpdateEvent?.(view);
-
-        // Sync to server if needed
-        viewManager._syncToServer?.(view);
-
-        log.debug(`View ${viewId} visibility set to ${newVisible}`);
-      }
-    } catch (e) {
-      log.error("Failed to toggle view visibility:", e);
-      setError(e);
-    }
+  const handleToggleVisibility = useCallback((viewId) => {
+    viewLifecycleService.toggleViewVisibility(viewId);
   }, []);
 
   // =========================================================================

@@ -38,10 +38,10 @@ import './FloatingAnnotationCreator.scss';
  * @type {Array<{value: string, label: string, color: string, icon: string}>}
  */
 const ANNOTATION_TYPES = [
-    { value: 'note', label: 'Note', color: 'green', icon: '📝' },
-    { value: 'warning', label: 'Warning', color: 'amber', icon: '⚠️' },
-    { value: 'info', label: 'Info', color: 'blue', icon: 'ℹ️' },
-    { value: 'measurement', label: 'Measure', color: 'purple', icon: '📏' },
+    { value: 'note', label: 'Note', color: 'green', icon: 'note' },
+    { value: 'warning', label: 'Warning', color: 'amber', icon: 'warning' },
+    { value: 'info', label: 'Info', color: 'blue', icon: 'info' },
+    { value: 'measurement', label: 'Measure', color: 'purple', icon: 'ruler' },
 ];
 
 /**
@@ -269,7 +269,7 @@ export function FloatingAnnotationCreator({
                         onClick={() => setType(t.value)}
                         title={t.label}
                     >
-                        <span className="floating-annotation-creator__type-icon">{t.icon}</span>
+                        <span className="floating-annotation-creator__type-icon"><Icon name={t.icon} size={14} /></span>
                         <span className="floating-annotation-creator__type-label">{t.label}</span>
                     </button>
                 ))}

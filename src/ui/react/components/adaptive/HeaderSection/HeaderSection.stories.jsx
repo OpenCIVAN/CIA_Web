@@ -6,8 +6,8 @@
  */
 import React, { useState } from 'react';
 import { ModeProvider, useMode } from '../ModeContext';
-import { CollapsibleHeaderSection } from './components/CollapsibleHeaderSection';
-import { DismissibleCard } from './components/DismissibleCard';
+import { CollapsibleHeaderSection } from '@UI/react/components/adaptive/HeaderSection/components';
+import { DismissibleCard } from '@UI/react/components/adaptive/HeaderSection/components';
 import { StatusDot, InfoRow, StatBadge } from './components';
 
 export default {

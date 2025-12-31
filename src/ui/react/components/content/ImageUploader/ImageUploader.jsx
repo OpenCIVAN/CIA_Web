@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { contentManager } from '@Core/data/managers/ContentManager.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './ImageUploader.scss';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -160,7 +161,7 @@ export function ImageUploader({ canvasId, onUploadComplete, onCancel }) {
                 </div>
             ) : (
                 <div className="image-uploader__content">
-                    <div className="image-uploader__icon">🖼️</div>
+                    <div className="image-uploader__icon"><Icon name="image" size={32} /></div>
                     <p className="image-uploader__text">
                         {isDragging ? (
                             'Drop image here'

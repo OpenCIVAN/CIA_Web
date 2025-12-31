@@ -354,6 +354,133 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [setViewportPosition]
   );
 
+  /**
+   * Check if a cell at (row, col) with given span is fully visible in the current viewport
+   */
+  const isCellVisible = useCallback(
+    (row, col, rowSpan = 1, colSpan = 1) => {
+      const vpRow = canvasViewport?.row ?? 0;
+      const vpCol = canvasViewport?.col ?? 0;
+      const vpRows = viewportSize.rows;
+      const vpCols = viewportSize.cols;
+
+      // Cell's bounding box
+      const cellEndRow = row + rowSpan;
+      const cellEndCol = col + colSpan;
+
+      // Viewport's bounding box
+      const vpEndRow = vpRow + vpRows;
+      const vpEndCol = vpCol + vpCols;
+
+      // Check if cell is fully contained within viewport
+      return (
+        row >= vpRow &&
+        col >= vpCol &&
+        cellEndRow <= vpEndRow &&
+        cellEndCol <= vpEndCol
+      );
+    },
+    [canvasViewport, viewportSize]
+  );
+
+  /**
+   * Focus a cell: make it active and navigate viewport if needed (smart navigation)
+   *
+   * TODO: Revisit this implementation - considering a redesign of the focus/active system.
+   * Current implementation matches Active Instance Indicator behavior but may need refinement.
+   *
+   * This matches the behavior of the Active Instance Indicator (SecondaryHeader):
+   * 1. Set the active instance via workspaceManager (source of truth)
+   * 2. Smart viewport navigation (minimum movement to show cell)
+   * 3. Dispatch events for other components
+   *
+   * @param {string} viewId - View configuration ID
+   * @param {number} row - Cell row
+   * @param {number} col - Cell column
+   * @param {number} rowSpan - Cell row span (default 1)
+   * @param {number} colSpan - Cell col span (default 1)
+   */
+  const focusCell = useCallback(
+    (viewId, row, col, rowSpan = 1, colSpan = 1) => {
+      log.debug(`[focusCell] Focusing viewId=${viewId} at (${row}, ${col}) span=(${rowSpan}x${colSpan})`);
+
+      // 1. Find the instance and set it as active via workspaceManager (source of truth)
+      // This is the KEY step that makes it the "active" instance
+      const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
+      if (instance?.instanceId) {
+        workspaceManager.setActiveInstance(instance.instanceId);
+        log.debug(`[focusCell] Set active instance: ${instance.instanceId}`);
+      } else {
+        log.debug(`[focusCell] No instance found for viewId ${viewId}`);
+      }
+
+      // 2. Smart viewport navigation - only move if cell is not visible
+      if (!isCellVisible(row, col, rowSpan, colSpan)) {
+        // Cell is not fully visible - calculate minimum movement
+        const vpRow = canvasViewport?.row ?? 0;
+        const vpCol = canvasViewport?.col ?? 0;
+        const vpRows = viewportSize.rows;
+        const vpCols = viewportSize.cols;
+
+        // Calculate cell bounds
+        const cellEndRow = row + rowSpan;
+        const cellEndCol = col + colSpan;
+
+        // Viewport bounds
+        const vpEndRow = vpRow + vpRows;
+        const vpEndCol = vpCol + vpCols;
+
+        // Calculate new viewport position with minimum movement
+        let newVpRow = vpRow;
+        let newVpCol = vpCol;
+
+        // Vertical adjustment
+        if (row < vpRow) {
+          // Cell is above viewport - move up
+          newVpRow = row;
+        } else if (cellEndRow > vpEndRow) {
+          // Cell is below viewport - move down just enough
+          newVpRow = cellEndRow - vpRows;
+        }
+
+        // Horizontal adjustment
+        if (col < vpCol) {
+          // Cell is left of viewport - move left
+          newVpCol = col;
+        } else if (cellEndCol > vpEndCol) {
+          // Cell is right of viewport - move right just enough
+          newVpCol = cellEndCol - vpCols;
+        }
+
+        // Clamp to canvas bounds
+        const maxRow = Math.max(0, canvasSize.rows - vpRows);
+        const maxCol = Math.max(0, canvasSize.cols - vpCols);
+        newVpRow = Math.max(0, Math.min(newVpRow, maxRow));
+        newVpCol = Math.max(0, Math.min(newVpCol, maxCol));
+
+        log.debug(`[focusCell] Moving viewport from (${vpRow}, ${vpCol}) to (${newVpRow}, ${newVpCol})`);
+
+        // Set the new viewport position
+        canvasSetViewportPosition?.(newVpRow, newVpCol);
+        dispatchNavigateTo(newVpRow, newVpCol);
+      } else {
+        log.debug(`[focusCell] Cell already visible, not moving viewport`);
+      }
+
+      // 3. Dispatch events for other components (matches SecondaryHeader behavior)
+      if (viewId) {
+        const { eventBus, BUS_EVENTS } = require("@Core/events/EventBus.js");
+        eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId });
+        window.dispatchEvent(
+          new CustomEvent("cia:instance-focused", {
+            detail: { viewId, instanceId: instance?.instanceId, source: "focus-button" },
+          })
+        );
+      }
+    },
+    [canvasViewport, viewportSize, canvasSize, canvasSetViewportPosition, isCellVisible]
+  );
+
   // ===========================================================================
   // VIEWPORT SIZE CONTROLS
   // ===========================================================================
@@ -864,6 +991,8 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     moveViewport,
     navigateToCell,
     setViewportPosition,
+    focusCell,
+    isCellVisible,
 
     // Viewport size controls (FOR CANVAS NAVIGATOR)
     setViewportSizeRows,

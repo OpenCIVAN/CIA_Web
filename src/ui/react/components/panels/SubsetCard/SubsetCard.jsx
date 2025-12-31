@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { subsetManager } from '@Core/data/managers/SubsetManager.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './SubsetCard.scss';
 
 /**
@@ -51,13 +52,13 @@ export function SubsetCard({
     const getVisibilityIcon = () => {
         switch (subset.visibility) {
             case 'private':
-                return '🔒';
+                return <Icon name="lock" size={12} />;
             case 'shared':
-                return '👥';
+                return <Icon name="users" size={12} />;
             case 'public':
-                return '🌐';
+                return <Icon name="globe" size={12} />;
             default:
-                return '🔒';
+                return <Icon name="lock" size={12} />;
         }
     };
 
@@ -94,7 +95,7 @@ export function SubsetCard({
                     </span>
                 </div>
                 <div className="subset-card__toggle">
-                    {isExpanded ? '▼' : '▶'}
+                    <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={12} />
                 </div>
             </div>
 
@@ -111,13 +112,13 @@ export function SubsetCard({
                         <div className="subset-card__attached">
                             {subset.attachedNotes.length > 0 && (
                                 <span className="subset-card__attached-item">
-                                    📝 {subset.attachedNotes.length} note
+                                    <Icon name="fileText" size={12} /> {subset.attachedNotes.length} note
                                     {subset.attachedNotes.length !== 1 ? 's' : ''}
                                 </span>
                             )}
                             {subset.attachedImages.length > 0 && (
                                 <span className="subset-card__attached-item">
-                                    🖼️ {subset.attachedImages.length} image
+                                    <Icon name="image" size={12} /> {subset.attachedImages.length} image
                                     {subset.attachedImages.length !== 1 ? 's' : ''}
                                 </span>
                             )}
@@ -149,7 +150,7 @@ export function SubsetCard({
                                 onClick={() => setIsEditing(true)}
                                 title="Rename"
                             >
-                                ✏️
+                                <Icon name="edit" size={14} />
                             </button>
                             <button
                                 className="subset-card__btn subset-card__btn--icon"
@@ -163,7 +164,7 @@ export function SubsetCard({
                                 onClick={handleDelete}
                                 title="Delete"
                             >
-                                🗑️
+                                <Icon name="trash" size={14} />
                             </button>
                         </div>
                     </div>
@@ -175,19 +176,19 @@ export function SubsetCard({
                                 className={subset.visibility === 'private' ? 'active' : ''}
                                 onClick={() => handleVisibilityChange('private')}
                             >
-                                🔒 Private
+                                <Icon name="lock" size={12} /> Private
                             </button>
                             <button
                                 className={subset.visibility === 'shared' ? 'active' : ''}
                                 onClick={() => handleVisibilityChange('shared')}
                             >
-                                👥 Team
+                                <Icon name="users" size={12} /> Team
                             </button>
                             <button
                                 className={subset.visibility === 'public' ? 'active' : ''}
                                 onClick={() => handleVisibilityChange('public')}
                             >
-                                🌐 Everyone
+                                <Icon name="globe" size={12} /> Everyone
                             </button>
                         </div>
                     )}

@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { contentManager } from '@Core/data/managers/ContentManager.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './ImageBlock.scss';
 
 /**
@@ -100,7 +101,7 @@ export function ImageBlock({
                             }}
                             title="Contain"
                         >
-                            ⊡
+                            <Icon name="fitView" size={12} />
                         </button>
                         <button
                             className={image.fit === 'cover' ? 'active' : ''}
@@ -110,7 +111,7 @@ export function ImageBlock({
                             }}
                             title="Cover"
                         >
-                            ⊟
+                            <Icon name="maximize" size={12} />
                         </button>
                         <button
                             className={image.fit === 'fill' ? 'active' : ''}
@@ -120,7 +121,7 @@ export function ImageBlock({
                             }}
                             title="Fill"
                         >
-                            ▣
+                            <Icon name="aspectRatio" size={12} />
                         </button>
                     </div>
 
@@ -132,7 +133,7 @@ export function ImageBlock({
                         }}
                         title="Delete"
                     >
-                        🗑️
+                        <Icon name="trash" size={12} />
                     </button>
                 </div>
             )}

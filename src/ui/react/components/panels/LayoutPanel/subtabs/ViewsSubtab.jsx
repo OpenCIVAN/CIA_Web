@@ -91,6 +91,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         activeFilters: logicActiveFilters,
         toggleFilter,
         navigateToCell,
+        focusCell,           // Smart focus with minimum viewport movement
         closeView,
         removePlacement,
         resizePlacement,
@@ -202,6 +203,33 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         toggleViewExpanded?.(viewId);
     }, [toggleViewExpanded]);
 
+    const handleFocus = useCallback((viewId) => {
+        // Find the cell to get position and span info
+        const cell = cells?.find(c =>
+            c.viewConfigurationId === viewId || c.id === viewId
+        );
+        if (cell) {
+            // Use smart focusCell which:
+            // 1. Dispatches cia:instance-focused to make it active
+            // 2. Only moves viewport if cell is not visible
+            // 3. Uses minimum movement to bring cell into view
+            focusCell?.(
+                cell.viewConfigurationId || viewId,
+                cell.row,
+                cell.col,
+                cell.rowSpan || 1,
+                cell.colSpan || 1
+            );
+        }
+    }, [cells, focusCell]);
+
+    const handleVisibilityToggle = useCallback((viewId) => {
+        // Use ViewLifecycleService for consistent handling
+        const { getViewLifecycleService } = require('@Init/appInitializer.js');
+        const viewLifecycleService = getViewLifecycleService();
+        viewLifecycleService?.toggleViewVisibility(viewId);
+    }, []);
+
     // =========================================================================
     // RENDER
     // =========================================================================
@@ -311,6 +339,8 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                                             onTrash={handleClose}
                                             onNavigate={handleNavigate}
                                             onSizeChange={handleSizeChange}
+                                            onFocus={handleFocus}
+                                            onVisibilityToggle={handleVisibilityToggle}
                                             // These pass through to ViewItem's internal handling
                                             onDragStart={(e, id) => {
                                                 e.dataTransfer.setData('application/json', JSON.stringify({

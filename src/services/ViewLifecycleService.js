@@ -649,7 +649,7 @@ class ViewLifecycleService {
     log.debug(`Renaming view ${viewId} to "${newName}"`);
 
     const viewManager = getViewConfigurationManager();
-    const view = await viewManager?.renameView?.(viewId, newName);
+    const view = viewManager?.renameView?.(viewId, newName);
 
     if (view) {
       eventBus.emit(BUS_EVENTS.VIEW_RENAMED, { viewId, newName });
@@ -659,20 +659,78 @@ class ViewLifecycleService {
   }
 
   /**
-   * Focus a view (select it, navigate to it)
+   * Focus a view (select it, make it active, navigate to it if needed)
+   *
+   * This matches the behavior of the Active Instance Indicator (SecondaryHeader):
+   * 1. Set the active instance via workspaceManager (source of truth)
+   * 2. Navigate to the cell position
+   * 3. Emit events for other components
    *
    * @param {string} viewId - View to focus
+   * @param {Object} [options] - Focus options
+   * @param {Function} [options.navigateToCell] - Navigation function (if available)
    */
-  focusView(viewId) {
+  focusView(viewId, options = {}) {
     log.debug(`Focusing view ${viewId}`);
 
-    // Find placement for this view
-    const placement = this._findPlacementForView(viewId);
-    if (placement) {
-      this._navigateToPlacement(placement);
+    // Import workspaceManager dynamically to avoid circular deps
+    const { workspaceManager } = require("@Core/instances/workspaceManager.js");
+
+    // 1. Find the instance by viewConfigId and set it as active
+    // This is the KEY step that makes it the "active" instance
+    const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
+    if (instance?.instanceId) {
+      workspaceManager.setActiveInstance(instance.instanceId);
+      log.debug(`Set active instance: ${instance.instanceId}`);
+    } else {
+      log.debug(`No instance found for viewId ${viewId}`);
     }
 
+    // 2. Navigate to the view's position
+    const placement = this._findPlacementForView(viewId);
+    if (placement) {
+      // If a navigateToCell function was provided, use it (has access to context)
+      if (options.navigateToCell) {
+        options.navigateToCell(placement.row, placement.col);
+      } else {
+        // Fallback: dispatch navigation event
+        this._navigateToPlacement(placement);
+      }
+    }
+
+    // 3. Emit events for other components (matches SecondaryHeader behavior)
     eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId });
+    window.dispatchEvent(
+      new CustomEvent("cia:instance-focused", {
+        detail: { viewId, instanceId: instance?.instanceId },
+      })
+    );
+  }
+
+  /**
+   * Toggle view visibility (hide/show on canvas)
+   *
+   * @param {string} viewId - View to toggle visibility
+   */
+  toggleViewVisibility(viewId) {
+    log.debug(`Toggling visibility for view ${viewId}`);
+
+    const viewManager = getViewConfigurationManager();
+    const view = viewManager?.getView(viewId);
+
+    if (view) {
+      // Toggle the visible property
+      const newVisible = view.visible === false ? true : false;
+      view.visible = newVisible;
+
+      // Emit update events
+      viewManager._emit?.("viewUpdated", view);
+      viewManager._dispatchViewUpdateEvent?.(view);
+      viewManager._syncToServer?.(view);
+
+      log.debug(`View ${viewId} visibility set to ${newVisible}`);
+      eventBus.emit(BUS_EVENTS.VIEW_UPDATED, { viewId, visible: newVisible });
+    }
   }
 
   // =========================================================================
@@ -737,7 +795,7 @@ class ViewLifecycleService {
   }
 
   /**
-   * Navigate viewport to show a placement
+   * Navigate viewport to show a placement (legacy - positions at top-left)
    * @private
    */
   _navigateToPlacement(placement) {
@@ -753,6 +811,107 @@ class ViewLifecycleService {
     );
 
     eventBus.emit(BUS_EVENTS.NAVIGATE_TO_CELL, { row, col });
+  }
+
+  /**
+   * Smart viewport navigation - only moves viewport if cell is not visible
+   * Uses minimum movement to bring the cell into view
+   * @private
+   */
+  _smartNavigateToPlacement(placement) {
+    if (!placement) return;
+
+    const { row, col, rowSpan = 1, colSpan = 1 } = placement;
+
+    // Get current viewport state from local storage (synced by LayoutPanel.logic)
+    let vpRow = 0;
+    let vpCol = 0;
+    let vpRows = 2;
+    let vpCols = 3;
+
+    // Try to get viewport state from the DOM event system
+    // This is a bit hacky but works for now
+    try {
+      const savedSize = localStorage.getItem("cia-viewport-size");
+      if (savedSize) {
+        const parsed = JSON.parse(savedSize);
+        vpRows = parsed.rows || 2;
+        vpCols = parsed.cols || 3;
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+
+    // Get canvas for dimensions
+    const canvas = canvasManager.getActiveCanvas();
+    const canvasRows = canvas?.dimensions?.rows || 10;
+    const canvasCols = canvas?.dimensions?.cols || 10;
+
+    // Get current viewport position from canvasManager if available
+    // This is typically set via useCanvas hook
+    const currentViewport = canvas?.viewport;
+    if (currentViewport) {
+      vpRow = currentViewport.row || 0;
+      vpCol = currentViewport.col || 0;
+    }
+
+    // Calculate if cell is already visible
+    const cellEndRow = row + rowSpan;
+    const cellEndCol = col + colSpan;
+    const vpEndRow = vpRow + vpRows;
+    const vpEndCol = vpCol + vpCols;
+
+    const isVisible =
+      row >= vpRow &&
+      col >= vpCol &&
+      cellEndRow <= vpEndRow &&
+      cellEndCol <= vpEndCol;
+
+    if (isVisible) {
+      log.debug(`[smartNavigate] Cell already visible, not moving viewport`);
+      return;
+    }
+
+    // Calculate minimum movement needed
+    let newVpRow = vpRow;
+    let newVpCol = vpCol;
+
+    // Vertical adjustment
+    if (row < vpRow) {
+      // Cell is above viewport - move up
+      newVpRow = row;
+    } else if (cellEndRow > vpEndRow) {
+      // Cell is below viewport - move down just enough
+      newVpRow = cellEndRow - vpRows;
+    }
+
+    // Horizontal adjustment
+    if (col < vpCol) {
+      // Cell is left of viewport - move left
+      newVpCol = col;
+    } else if (cellEndCol > vpEndCol) {
+      // Cell is right of viewport - move right just enough
+      newVpCol = cellEndCol - vpCols;
+    }
+
+    // Clamp to canvas bounds
+    const maxRow = Math.max(0, canvasRows - vpRows);
+    const maxCol = Math.max(0, canvasCols - vpCols);
+    newVpRow = Math.max(0, Math.min(newVpRow, maxRow));
+    newVpCol = Math.max(0, Math.min(newVpCol, maxCol));
+
+    log.debug(
+      `[smartNavigate] Moving viewport from (${vpRow}, ${vpCol}) to (${newVpRow}, ${newVpCol})`
+    );
+
+    // Dispatch navigation event with the calculated position
+    window.dispatchEvent(
+      new CustomEvent("cia:navigate-to-cell", {
+        detail: { row: newVpRow, col: newVpCol },
+      })
+    );
+
+    eventBus.emit(BUS_EVENTS.NAVIGATE_TO_CELL, { row: newVpRow, col: newVpCol });
   }
 
   // =========================================================================

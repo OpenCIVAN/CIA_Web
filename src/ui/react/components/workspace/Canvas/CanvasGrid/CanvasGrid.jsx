@@ -15,6 +15,7 @@
 // - Render Mode: UI complexity based on cell size
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { CanvasCell } from '@UI/react/components/workspace';
 import { ConnectionOverlay } from '../ConnectionOverlay';
 import { IsolationOverlay, useIsolationMode } from '@UI/react/components/workspace/Canvas/IsolationOverlay';
@@ -50,7 +51,7 @@ function LoadingState({ message = 'Preparing workspace...', error = null }) {
         <div className="canvas-grid__loader">
             {error ? (
                 <>
-                    <div className="canvas-grid__error-icon">⚠️</div>
+                    <div className="canvas-grid__error-icon"><Icon name="warning" size={24} /></div>
                     <div className="canvas-grid__error-message">{error.message}</div>
                     <div className="canvas-grid__error-hint">
                         Try resizing the window or refreshing the page.
@@ -1051,7 +1052,11 @@ export function CanvasGrid({
                             renderMode={renderMode}
                             cellSize={cellSize}
                             isHighlighted={placement?.id === highlightedPlacementId}
-                            isSelected={selectedIdsSet.has(placement?.id) || selectedCellsSet.has(key)}
+                            isSelected={
+                                selectedIdsSet.has(placement?.id) ||
+                                selectedCellsSet.has(key) ||
+                                (activeViewId && placement?.content?.viewConfigurationId === activeViewId)
+                            }
                             inEditMode={editMode}
                             activeViewId={activeViewId}
                             recentViewIds={recentViewIds}

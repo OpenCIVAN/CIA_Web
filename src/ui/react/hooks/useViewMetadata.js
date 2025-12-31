@@ -129,7 +129,6 @@ export function useViewMetadata(viewId) {
     // Handle window event (from ViewConfigurationManager._dispatchViewUpdateEvent)
     const handleWindowEvent = (e) => {
       if (e.detail?.viewId === viewId || e.detail?.view?.id === viewId) {
-        // Force a refresh by incrementing the key
         setRefreshKey((k) => k + 1);
       }
     };

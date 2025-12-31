@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './WorkspaceTypeIndicator.scss';
 
 /**
@@ -14,28 +15,28 @@ const getTypeConfig = (type) => {
     switch (type) {
         case WorkspaceType.PERSONAL:
             return {
-                icon: '👤',
+                iconName: 'user',
                 label: 'Personal',
                 color: '#6366f1',
                 description: 'Your private workspace',
             };
         case WorkspaceType.PROJECT:
             return {
-                icon: '📁',
+                iconName: 'folder',
                 label: 'Project',
                 color: '#10b981',
                 description: 'Shared team workspace',
             };
         case WorkspaceType.BREAKOUT:
             return {
-                icon: '💬',
+                iconName: 'messageCircle',
                 label: 'Breakout',
                 color: '#f59e0b',
                 description: 'Temporary collaboration space',
             };
         default:
             return {
-                icon: '📋',
+                iconName: 'fileText',
                 label: 'Workspace',
                 color: '#888',
                 description: 'Workspace',
@@ -60,7 +61,9 @@ export function WorkspaceTypeIndicator({
             className={`workspace-type-indicator workspace-type-indicator--${size} ${className}`}
             style={{ '--type-color': config.color }}
         >
-            <span className="workspace-type-indicator__icon">{config.icon}</span>
+            <span className="workspace-type-indicator__icon">
+                <Icon name={config.iconName} size={size === 'small' ? 12 : size === 'large' ? 18 : 14} />
+            </span>
 
             {showLabel && (
                 <span className="workspace-type-indicator__label">{config.label}</span>
@@ -87,7 +90,9 @@ export function WorkspaceTypeBadge({ type, className = '' }) {
             style={{ '--type-color': config.color }}
             title={config.description}
         >
-            <span className="workspace-type-badge__icon">{config.icon}</span>
+            <span className="workspace-type-badge__icon">
+                <Icon name={config.iconName} size={12} />
+            </span>
             <span className="workspace-type-badge__label">{config.label}</span>
         </span>
     );
@@ -139,7 +144,9 @@ export function BreakoutTimer({ expiresAt, onExpired }) {
 
     return (
         <span className={`breakout-timer ${isUrgent ? 'breakout-timer--urgent' : ''}`}>
-            <span className="breakout-timer__icon">⏱️</span>
+            <span className="breakout-timer__icon">
+                <Icon name="clock" size={12} />
+            </span>
             <span className="breakout-timer__time">{timeLeft}</span>
         </span>
     );

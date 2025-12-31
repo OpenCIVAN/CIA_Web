@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { useSubsets } from '@UI/react/hooks/useCanvas.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './FocusModeOverlay.scss';
 
 /**
@@ -43,7 +44,7 @@ export function FocusModeOverlay({ canvasId }) {
                             className="focus-mode-overlay__btn focus-mode-overlay__btn--icon"
                             title={activeSubset.description}
                         >
-                            ℹ️
+                            <Icon name="info" size={14} />
                         </button>
                     )}
                     <button
@@ -64,7 +65,7 @@ export function FocusModeOverlay({ canvasId }) {
                     <div className="focus-mode-overlay__sidebar-content">
                         {activeSubset.attachedNotes.length > 0 && (
                             <div className="focus-mode-overlay__attached-section">
-                                <h4>📝 Notes</h4>
+                                <h4><Icon name="note" size={14} /> Notes</h4>
                                 {activeSubset.attachedNotes.map((noteId) => (
                                     <div key={noteId} className="focus-mode-overlay__attached-item">
                                         Note: {noteId.slice(0, 8)}...
@@ -74,7 +75,7 @@ export function FocusModeOverlay({ canvasId }) {
                         )}
                         {activeSubset.attachedImages.length > 0 && (
                             <div className="focus-mode-overlay__attached-section">
-                                <h4>🖼️ Images</h4>
+                                <h4><Icon name="image" size={14} /> Images</h4>
                                 {activeSubset.attachedImages.map((imageId) => (
                                     <div key={imageId} className="focus-mode-overlay__attached-item">
                                         Image: {imageId.slice(0, 8)}...

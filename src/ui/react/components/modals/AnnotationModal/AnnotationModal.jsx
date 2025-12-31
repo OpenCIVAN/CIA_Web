@@ -31,10 +31,10 @@ import './AnnotationModal.scss';
  * @type {Array<{value: string, label: string, color: string, icon: string}>}
  */
 const ANNOTATION_TYPES = [
-  { value: 'note', label: 'Note', color: 'note', icon: '📝' },
-  { value: 'warning', label: 'Warning', color: 'warning', icon: '⚠️' },
-  { value: 'info', label: 'Info', color: 'info', icon: 'ℹ️' },
-  { value: 'measurement', label: 'Measure', color: 'measurement', icon: '📏' },
+  { value: 'note', label: 'Note', color: 'note', icon: 'note' },
+  { value: 'warning', label: 'Warning', color: 'warning', icon: 'warning' },
+  { value: 'info', label: 'Info', color: 'info', icon: 'info' },
+  { value: 'measurement', label: 'Measure', color: 'measurement', icon: 'ruler' },
 ];
 
 /**
@@ -175,7 +175,7 @@ export function AnnotationModal({
                 }`}
               onClick={() => setType(t.value)}
             >
-              <span className="annotation-modal__type-icon">{t.icon}</span>
+              <span className="annotation-modal__type-icon"><Icon name={t.icon} size={14} /></span>
               <span className="annotation-modal__type-label">{t.label}</span>
             </button>
           ))}

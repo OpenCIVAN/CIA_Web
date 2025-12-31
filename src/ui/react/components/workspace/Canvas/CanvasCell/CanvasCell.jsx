@@ -15,6 +15,7 @@
 
 import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 // =============================================================================
 // DROP ZONE CONSTANTS
@@ -125,6 +126,15 @@ export const CanvasCell = memo(function CanvasCell({
     const contentType = placement?.content?.type || 'empty';
     const rowSpan = placement?.rowSpan || 1;
     const colSpan = placement?.colSpan || 1;
+
+    // Get instance color for the cell border when selected/active
+    const viewId = placement?.content?.viewConfigurationId;
+    const instanceColor = useMemo(() => {
+        if (!viewId) return null;
+        // Get color from workspaceManager (same source as header)
+        const colorObj = workspaceManager?.getViewColor?.(viewId);
+        return colorObj?.hex || placement?.content?.color?.hex || null;
+    }, [viewId, placement?.content?.color?.hex]);
 
     // Determine which UI elements to show based on render mode
     const uiConfig = useMemo(() => {
@@ -578,6 +588,8 @@ export const CanvasCell = memo(function CanvasCell({
             style={{
                 '--cell-width': `${cellSize.width}px`,
                 '--cell-height': `${cellSize.height}px`,
+                // Apply instance color for selected border styling
+                ...(instanceColor && { '--instance-color': instanceColor }),
             }}
             onMouseDown={handleMouseDown}
             onClick={handleClick}
@@ -963,7 +975,7 @@ function NotesPlaceholder({ notesId, renderMode, onClose }) {
     return (
         <div className="canvas-cell__notes-placeholder">
             <div className="canvas-cell__notes-header">
-                <span className="canvas-cell__notes-icon">📝</span>
+                <span className="canvas-cell__notes-icon"><Icon name="note" size={16} /></span>
                 <span className="canvas-cell__notes-title">Notes</span>
                 <button
                     className="canvas-cell__close-btn"
@@ -1001,7 +1013,7 @@ function ImagePlaceholder({ imageId, renderMode, onClose }) {
     return (
         <div className="canvas-cell__image-placeholder">
             <div className="canvas-cell__image-header">
-                <span className="canvas-cell__image-icon">🖼️</span>
+                <span className="canvas-cell__image-icon"><Icon name="image" size={16} /></span>
                 <span className="canvas-cell__image-title">Image</span>
                 <button
                     className="canvas-cell__close-btn"

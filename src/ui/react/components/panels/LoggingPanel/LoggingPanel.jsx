@@ -5,6 +5,7 @@ import React, { useRef, useEffect } from "react";
 
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
+import { Icon } from "@UI/react/components/common/Icon";
 
 export function LoggingPanel() {
   const { logs, clearLogs } = useLogging();
@@ -21,13 +22,13 @@ export function LoggingPanel() {
   const getLogStyle = (type) => {
     // Uses CSS custom properties from VR Optimized theme
     const styles = {
-      [LogType.INFO]: { color: "var(--color-info)", emoji: "ℹ️" },
-      [LogType.SUCCESS]: { color: "var(--color-success)", emoji: "✅" },
-      [LogType.WARNING]: { color: "var(--color-warning)", emoji: "⚠️" },
-      [LogType.ERROR]: { color: "var(--color-error)", emoji: "❌" },
-      [LogType.PROGRESS]: { color: "var(--color-accent-purple)", emoji: "⏳" }
+      [LogType.INFO]: { color: "var(--color-info)", icon: "info" },
+      [LogType.SUCCESS]: { color: "var(--color-success)", icon: "checkCircle" },
+      [LogType.WARNING]: { color: "var(--color-warning)", icon: "warning" },
+      [LogType.ERROR]: { color: "var(--color-error)", icon: "error" },
+      [LogType.PROGRESS]: { color: "var(--color-accent-purple)", icon: "loader" }
     };
-    return styles[type] || { color: "var(--color-text-muted)", emoji: "📋" };
+    return styles[type] || { color: "var(--color-text-muted)", icon: "file" };
   };
 
   return (
@@ -63,7 +64,9 @@ export function LoggingPanel() {
           alignItems: "center",
           gap: "8px"
         }}>
-          <span>📋 SYSTEM LOGS</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Icon name="scrollText" size={14} /> SYSTEM LOGS
+          </span>
           <span style={{
             fontSize: "10px",
             backgroundColor: "var(--color-bg-tertiary)",
@@ -117,7 +120,10 @@ export function LoggingPanel() {
               color: "var(--color-text-muted)",
               fontSize: "10px",
               cursor: "pointer",
-              transition: "all 0.2s"
+              transition: "all 0.2s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--color-success)";
@@ -128,7 +134,7 @@ export function LoggingPanel() {
               e.currentTarget.style.color = "var(--color-text-muted)";
             }}
           >
-            {isExpanded ? "▼" : "▲"}
+            <Icon name={isExpanded ? "chevronDown" : "chevronUp"} size={12} />
           </button>
         </div>
       </div>
@@ -164,7 +170,9 @@ export function LoggingPanel() {
                     alignItems: "start",
                     gap: "6px"
                   }}>
-                    <span>{style.emoji}</span>
+                    <span style={{ color: style.color, flexShrink: 0 }}>
+                      <Icon name={style.icon} size={14} />
+                    </span>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: style.color, marginBottom: "2px" }}>
                         {log.message}

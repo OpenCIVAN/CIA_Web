@@ -608,7 +608,7 @@ export class ViewConfigurationManager extends BaseManager {
     const view = this._viewConfigs.get(viewId);
     if (!view) {
       log.warn(`Cannot rename view ${viewId}: not found`);
-      return;
+      return null;
     }
 
     view.name = newName;
@@ -621,6 +621,8 @@ export class ViewConfigurationManager extends BaseManager {
 
     // Also dispatch window event for components that listen to global events
     this._dispatchViewUpdateEvent(view);
+
+    return view;
   }
 
   /**

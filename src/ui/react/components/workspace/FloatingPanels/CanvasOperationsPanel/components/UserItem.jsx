@@ -30,7 +30,7 @@ export function UserItem({
   // Build status text
   const getStatusText = () => {
     if (user.editing) {
-      return { text: '✏️ Editing canvas', isEditing: true };
+      return { text: 'Editing canvas', icon: 'edit', isEditing: true };
     }
     if (user.viewport) {
       return {
@@ -64,7 +64,7 @@ export function UserItem({
         <div
           className={`user-item__status ${status.isEditing ? 'user-item__status--editing' : ''}`}
         >
-          {status.text}
+          {status.icon && <Icon name={status.icon} size={10} />} {status.text}
         </div>
       </div>
 

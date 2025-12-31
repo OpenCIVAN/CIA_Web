@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { contentManager } from '@Core/data/managers/ContentManager.js';
+import { Icon } from '@UI/react/components/common/Icon';
 import './NoteBlock.scss';
 
 const NOTE_COLORS = {
@@ -145,21 +146,21 @@ export function NoteBlock({
                             onClick={handleTogglePin}
                             title={note.pinned ? 'Unpin' : 'Pin'}
                         >
-                            📌
+                            <Icon name="pin" size={12} />
                         </button>
                         <button
                             className="note-block__btn"
                             onClick={() => setShowColorPicker(!showColorPicker)}
                             title="Change color"
                         >
-                            🎨
+                            <Icon name="palette" size={12} />
                         </button>
                         <button
                             className="note-block__btn note-block__btn--danger"
                             onClick={handleDelete}
                             title="Delete"
                         >
-                            🗑️
+                            <Icon name="trash" size={12} />
                         </button>
                     </div>
                 )}

@@ -46,6 +46,8 @@ export const ViewsSubtab = memo(function ViewsSubtab({
     onSpawnLink,
     onSizeChange,
     onLinkPropertyChange,
+    onFocus,
+    onVisibilityToggle,
     className = '',
 }) {
     const [sortBy, setSortBy] = useState('row');
@@ -242,6 +244,8 @@ export const ViewsSubtab = memo(function ViewsSubtab({
                                     onSpawnLink={onSpawnLink}
                                     onSizeChange={onSizeChange}
                                     onLinkPropertyChange={onLinkPropertyChange}
+                                    onFocus={onFocus}
+                                    onVisibilityToggle={onVisibilityToggle}
                                 />
                             ))}
                         </div>
