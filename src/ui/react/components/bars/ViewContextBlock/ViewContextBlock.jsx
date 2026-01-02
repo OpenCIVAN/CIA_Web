@@ -387,6 +387,121 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
 });
 
 // =============================================================================
+// SUBSET PICKER DROPDOWN
+// =============================================================================
+
+const SubsetPickerDropdown = memo(function SubsetPickerDropdown({
+    views,
+    selectedIds,
+    onToggle,
+    onClose,
+}) {
+    // Select all views
+    const handleSelectAll = useCallback(() => {
+        views.forEach((view) => {
+            if (!selectedIds.includes(view.id)) {
+                onToggle(view.id);
+            }
+        });
+    }, [views, selectedIds, onToggle]);
+
+    // Clear all except first (keep at least one)
+    const handleClear = useCallback(() => {
+        if (selectedIds.length <= 1) return;
+        const firstId = selectedIds[0];
+        selectedIds.forEach((id) => {
+            if (id !== firstId) {
+                onToggle(id);
+            }
+        });
+    }, [selectedIds, onToggle]);
+
+    return (
+        <div className="subset-picker-dropdown">
+            {/* Header */}
+            <div className="subset-picker-dropdown__header">
+                <div className="subset-picker-dropdown__title">Select Subset Views</div>
+                <span className="subset-picker-dropdown__count">{selectedIds.length} selected</span>
+            </div>
+
+            {/* View list */}
+            <div className="subset-picker-dropdown__list">
+                {views.length === 0 ? (
+                    <div className="subset-picker-dropdown__empty">No views on canvas</div>
+                ) : (
+                    views.map((view) => {
+                        const isSelected = selectedIds.includes(view.id);
+                        return (
+                            <button
+                                key={view.id}
+                                type="button"
+                                className={`subset-picker-dropdown__item ${isSelected ? 'subset-picker-dropdown__item--selected' : ''}`}
+                                onClick={() => onToggle(view.id)}
+                            >
+                                {/* Checkbox */}
+                                <span
+                                    className={`subset-picker-dropdown__checkbox ${isSelected ? 'subset-picker-dropdown__checkbox--checked' : ''}`}
+                                >
+                                    {isSelected && <Icon name="check" size={12} />}
+                                </span>
+
+                                {/* Color dot */}
+                                <span
+                                    className="subset-picker-dropdown__dot"
+                                    style={{ background: view.color }}
+                                />
+
+                                {/* View info */}
+                                <div className="subset-picker-dropdown__info">
+                                    <div className="subset-picker-dropdown__name">{view.name}</div>
+                                    <div className="subset-picker-dropdown__meta">
+                                        <Icon
+                                            name={VIEW_TYPE_ICONS[view.type] || VIEW_TYPE_ICONS.default}
+                                            size={10}
+                                        />
+                                        <span>{view.type}</span>
+                                        {view.position && (
+                                            <span className="subset-picker-dropdown__position">
+                                                {view.position.col},{view.position.row}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Footer */}
+            <div className="subset-picker-dropdown__footer">
+                <span className="subset-picker-dropdown__footer-count">
+                    {selectedIds.length} of {views.length} in subset
+                </span>
+                <div className="subset-picker-dropdown__footer-actions">
+                    <button
+                        type="button"
+                        className="subset-picker-dropdown__footer-btn subset-picker-dropdown__footer-btn--select"
+                        onClick={handleSelectAll}
+                        disabled={selectedIds.length === views.length}
+                    >
+                        Select All
+                    </button>
+                    <button
+                        type="button"
+                        className="subset-picker-dropdown__footer-btn subset-picker-dropdown__footer-btn--clear"
+                        onClick={handleClear}
+                        disabled={selectedIds.length <= 1}
+                    >
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+// =============================================================================
 // LINKS DROPDOWN
 // =============================================================================
 
@@ -573,12 +688,17 @@ function ViewContextBlock({
     onUpdateLink,
     subsetIds = [],
     onSubsetChange,
+    onSnapshot,
+    onDuplicate,
+    onOpenSettings,
     className = '',
 }) {
     const [showHub, setShowHub] = useState(false);
     const [showLinks, setShowLinks] = useState(false);
+    const [showSubset, setShowSubset] = useState(false);
     const hubRef = useRef(null);
     const linksRef = useRef(null);
+    const subsetRef = useRef(null);
 
     // Close on outside click
     useEffect(() => {
@@ -589,10 +709,28 @@ function ViewContextBlock({
             if (linksRef.current && !linksRef.current.contains(e.target)) {
                 setShowLinks(false);
             }
+            if (subsetRef.current && !subsetRef.current.contains(e.target)) {
+                setShowSubset(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // ESC to exit isolation mode
+    useEffect(() => {
+        if (viewMode !== 'isolation') return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onModeChange?.('normal');
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [viewMode, onModeChange]);
 
     const isSubset = viewMode === 'subset';
     const subsetViews = isSubset
@@ -608,11 +746,65 @@ function ViewContextBlock({
         [onSelectView]
     );
 
+    // Toggle a view in the subset
+    const handleSubsetToggle = useCallback(
+        (viewId) => {
+            const newSubsetIds = subsetIds.includes(viewId)
+                ? subsetIds.filter((id) => id !== viewId)
+                : [...subsetIds, viewId];
+            onSubsetChange?.(newSubsetIds);
+        },
+        [subsetIds, onSubsetChange]
+    );
+
     // Count active links for badge
     const activeLinkCount = useMemo(() => {
         if (!activeView?.links) return 0;
         return Object.values(activeView.links).filter((link) => link !== null).length;
     }, [activeView?.links]);
+
+    // Quick action handlers
+    const handleSnapshot = useCallback(() => {
+        if (!activeView) return;
+        if (onSnapshot) {
+            onSnapshot(activeView);
+        } else {
+            // Fallback: dispatch event
+            window.dispatchEvent(
+                new CustomEvent('cia:view-snapshot', {
+                    detail: { viewId: activeView.id, view: activeView },
+                })
+            );
+        }
+    }, [activeView, onSnapshot]);
+
+    const handleDuplicate = useCallback(() => {
+        if (!activeView) return;
+        if (onDuplicate) {
+            onDuplicate(activeView);
+        } else {
+            // Fallback: dispatch event
+            window.dispatchEvent(
+                new CustomEvent('cia:view-duplicate', {
+                    detail: { viewId: activeView.id, view: activeView },
+                })
+            );
+        }
+    }, [activeView, onDuplicate]);
+
+    const handleOpenSettings = useCallback(() => {
+        if (!activeView) return;
+        if (onOpenSettings) {
+            onOpenSettings(activeView);
+        } else {
+            // Fallback: dispatch event
+            window.dispatchEvent(
+                new CustomEvent('cia:view-settings', {
+                    detail: { viewId: activeView.id, view: activeView },
+                })
+            );
+        }
+    }, [activeView, onOpenSettings]);
 
     // Views available for linking (same as subset views for consistency)
     const viewsForLinks = isSubset ? subsetViews : onCanvasViews;
@@ -718,9 +910,27 @@ function ViewContextBlock({
 
                 {/* Quick Actions */}
                 <div className="view-context-block__quick-actions">
-                    <IconButton icon="camera" label="Snapshot" size="sm" />
-                    <IconButton icon="copy" label="Duplicate" size="sm" />
-                    <IconButton icon="settings" label="Settings" size="sm" />
+                    <IconButton
+                        icon="camera"
+                        label="Snapshot"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleSnapshot}
+                    />
+                    <IconButton
+                        icon="copy"
+                        label="Duplicate"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleDuplicate}
+                    />
+                    <IconButton
+                        icon="settings"
+                        label="Settings"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleOpenSettings}
+                    />
                 </div>
             </div>
 
@@ -763,18 +973,38 @@ function ViewContextBlock({
                     )}
 
                     {viewMode === 'subset' && (
-                        <div className="view-context-block__subset-info">
-                            <Icon name="layers" size={10} />
-                            <span>{subsetIds.length} in subset</span>
-                            <div className="view-context-block__subset-dots">
-                                {subsetViews.slice(0, 4).map((v, i) => (
-                                    <span
-                                        key={v.id}
-                                        className="view-context-block__subset-dot"
-                                        style={{ background: v.color, marginLeft: i > 0 ? '-4px' : 0 }}
-                                    />
-                                ))}
-                            </div>
+                        <div ref={subsetRef} className="view-context-block__subset-wrapper">
+                            <button
+                                type="button"
+                                className={`view-context-block__subset-btn ${showSubset ? 'view-context-block__subset-btn--open' : ''}`}
+                                onClick={() => setShowSubset(!showSubset)}
+                            >
+                                <Icon name="layers" size={10} />
+                                <span>{subsetIds.length} in subset</span>
+                                <div className="view-context-block__subset-dots">
+                                    {subsetViews.slice(0, 4).map((v, i) => (
+                                        <span
+                                            key={v.id}
+                                            className="view-context-block__subset-dot"
+                                            style={{ background: v.color, marginLeft: i > 0 ? '-4px' : 0 }}
+                                        />
+                                    ))}
+                                </div>
+                                <Icon
+                                    name={showSubset ? 'chevronUp' : 'chevronDown'}
+                                    size={10}
+                                    className="view-context-block__subset-chevron"
+                                />
+                            </button>
+
+                            {showSubset && (
+                                <SubsetPickerDropdown
+                                    views={onCanvasViews}
+                                    selectedIds={subsetIds}
+                                    onToggle={handleSubsetToggle}
+                                    onClose={() => setShowSubset(false)}
+                                />
+                            )}
                         </div>
                     )}
                 </div>

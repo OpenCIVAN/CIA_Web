@@ -146,6 +146,8 @@ export function useSecondaryHeaderLogic() {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeInstance, setActiveInstance] = useState(null);
+  const [subsetIds, setSubsetIds] = useState([]);
+  const [viewLinks, setViewLinks] = useState({}); // { viewId: { linkType: { target, direction } } }
 
   // Listen for view/placement changes
   useEffect(() => {
@@ -311,8 +313,9 @@ export function useSecondaryHeaderLogic() {
       color: colorHex || canvasView?.color || VIEW_COLORS[0],
       datasetName:
         dataset?.filename || viewConfig?.datasetName || canvasView?.datasetName,
+      links: viewLinks[viewConfigId] || {},
     };
-  }, [activeInstance, onCanvasViews, refreshKey]);
+  }, [activeInstance, onCanvasViews, refreshKey, viewLinks]);
 
   // =========================================================================
   // VIEW HANDLERS
@@ -431,6 +434,65 @@ export function useSecondaryHeaderLogic() {
     [handleRemoveView, handlePlaceView]
   );
 
+  /**
+   * Handle subset change - update which views are in the subset
+   */
+  const handleSubsetChange = useCallback((newSubsetIds) => {
+    log.debug("SecondaryHeader: Subset changed", newSubsetIds);
+    setSubsetIds(newSubsetIds);
+  }, []);
+
+  /**
+   * Handle link update - update link configuration for a view
+   * @param {string} linkType - Type of link (camera, filter, selection, etc.)
+   * @param {string|null} targetViewId - Target view ID or null to remove link
+   * @param {string} direction - Link direction (bidirectional, parent, child)
+   */
+  const handleUpdateLink = useCallback(
+    (linkType, targetViewId, direction) => {
+      const viewId = activeView?.id;
+      if (!viewId) return;
+
+      log.debug("SecondaryHeader: Update link", {
+        viewId,
+        linkType,
+        targetViewId,
+        direction,
+      });
+
+      setViewLinks((prev) => {
+        const viewLinksData = prev[viewId] || {};
+
+        // If targetViewId is null, remove the link
+        if (targetViewId === null) {
+          const { [linkType]: removed, ...rest } = viewLinksData;
+          return {
+            ...prev,
+            [viewId]: rest,
+          };
+        }
+
+        // Set or update the link
+        return {
+          ...prev,
+          [viewId]: {
+            ...viewLinksData,
+            [linkType]: { target: targetViewId, direction: direction || "bidirectional" },
+          },
+        };
+      });
+
+      // Emit event for other components to react
+      eventBus.emit(BUS_EVENTS.VIEW_LINK_CHANGED, {
+        viewId,
+        linkType,
+        targetViewId,
+        direction,
+      });
+    },
+    [activeView?.id]
+  );
+
   // =========================================================================
   // RETURN API
   // =========================================================================
@@ -450,6 +512,13 @@ export function useSecondaryHeaderLogic() {
     onSelectView: handleSelectView,
     onPlaceView: handlePlaceView,
     onViewAction: handleViewAction,
+
+    // Subset props
+    subsetIds,
+    onSubsetChange: handleSubsetChange,
+
+    // Link props
+    onUpdateLink: handleUpdateLink,
   };
 }
 

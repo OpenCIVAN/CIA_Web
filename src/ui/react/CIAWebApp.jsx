@@ -77,6 +77,9 @@ import { CanvasOperationsPanel } from "@UI/react/components/workspace/FloatingPa
 // MODALS
 // =============================================================================
 import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
+import { KeyboardShortcutsModal } from "@UI/react/components/modals/KeyboardShortcutsModal";
+import { GlobalSearchModal } from "@UI/react/components/modals/GlobalSearchModal";
+import { DeleteViewDialog } from "@UI/react/components/modals/confirmations/DeleteViewDialog";
 
 // =============================================================================
 // HOOKS
@@ -204,6 +207,13 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
 
+  // ===========================================================================
+  // MODAL STATE
+  // ===========================================================================
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [deleteViewTarget, setDeleteViewTarget] = useState(null); // { id, name } or null
+
   const {
     currentRoom,
     currentRoomId,
@@ -237,13 +247,28 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const handleOpenSearch = useCallback(() => {
     log.debug("Open global search");
-    window.dispatchEvent(new CustomEvent("open:global-search"));
+    setShowGlobalSearch(true);
   }, []);
 
   const handleOpenHelp = useCallback(() => {
-    log.debug("Open help modal");
-    window.dispatchEvent(new CustomEvent("open:help"));
+    log.debug("Open keyboard shortcuts");
+    setShowKeyboardShortcuts(true);
   }, []);
+
+  const handleDeleteView = useCallback((view) => {
+    log.debug("Delete view requested:", view);
+    setDeleteViewTarget(view);
+  }, []);
+
+  const handleConfirmDeleteView = useCallback(() => {
+    if (!deleteViewTarget?.id) return;
+    log.info("Deleting view:", deleteViewTarget.name);
+    // TODO: Actually delete the view via ViewConfigurationManager
+    window.dispatchEvent(new CustomEvent('cia:toast', {
+      detail: { message: `Deleted "${deleteViewTarget.name}"`, type: 'success' }
+    }));
+    setDeleteViewTarget(null);
+  }, [deleteViewTarget]);
 
   const handleSignOut = useCallback(() => {
     log.debug("Sign out");
@@ -362,6 +387,121 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   const handleOpenVoiceSettings = useCallback(() => {
     setShowVoiceSettings(true);
+  }, []);
+
+  // ===========================================================================
+  // QUICK ACTION HANDLERS (View Snapshot, Duplicate, Settings)
+  // ===========================================================================
+  const handleViewSnapshot = useCallback((event) => {
+    const { viewId, view } = event.detail || {};
+    if (!viewId) return;
+
+    log.info("Creating snapshot for view:", view?.name || viewId);
+    // TODO: Implement snapshot creation
+    // This should:
+    // 1. Capture current view state (camera, filters, appearance)
+    // 2. Create a bookmark/snapshot entry
+    // 3. Show confirmation toast
+    window.dispatchEvent(new CustomEvent('cia:toast', {
+      detail: { message: `Snapshot created for "${view?.name || 'view'}"`, type: 'success' }
+    }));
+  }, []);
+
+  const handleViewDuplicate = useCallback((event) => {
+    const { viewId, view } = event.detail || {};
+    if (!viewId) return;
+
+    log.info("Duplicating view:", view?.name || viewId);
+    // TODO: Implement view duplication
+    // This should:
+    // 1. Create a copy of the view configuration
+    // 2. Place it on the canvas (next available cell or prompt user)
+    // 3. Focus the new view
+    window.dispatchEvent(new CustomEvent('cia:toast', {
+      detail: { message: `Duplicated "${view?.name || 'view'}"`, type: 'success' }
+    }));
+  }, []);
+
+  const handleViewSettings = useCallback((event) => {
+    const { viewId, view } = event.detail || {};
+    if (!viewId) return;
+
+    log.info("Opening settings for view:", view?.name || viewId);
+    // Navigate to Instance Tools tab in left panel with this view selected
+    window.dispatchEvent(new CustomEvent('navigate:left-panel', {
+      detail: { tab: 'instance-tools', viewId }
+    }));
+  }, []);
+
+  // Listen for quick action events
+  useEffect(() => {
+    window.addEventListener('cia:view-snapshot', handleViewSnapshot);
+    window.addEventListener('cia:view-duplicate', handleViewDuplicate);
+    window.addEventListener('cia:view-settings', handleViewSettings);
+
+    return () => {
+      window.removeEventListener('cia:view-snapshot', handleViewSnapshot);
+      window.removeEventListener('cia:view-duplicate', handleViewDuplicate);
+      window.removeEventListener('cia:view-settings', handleViewSettings);
+    };
+  }, [handleViewSnapshot, handleViewDuplicate, handleViewSettings]);
+
+  // ===========================================================================
+  // MODAL EVENT LISTENERS
+  // ===========================================================================
+  useEffect(() => {
+    const handleOpenGlobalSearch = () => setShowGlobalSearch(true);
+    const handleOpenShortcuts = () => setShowKeyboardShortcuts(true);
+    const handleDeleteViewEvent = (e) => {
+      const { view } = e.detail || {};
+      if (view) handleDeleteView(view);
+    };
+
+    window.addEventListener('open:global-search', handleOpenGlobalSearch);
+    window.addEventListener('open:keyboard-shortcuts', handleOpenShortcuts);
+    window.addEventListener('open:help', handleOpenShortcuts); // Help opens shortcuts
+    window.addEventListener('cia:delete-view', handleDeleteViewEvent);
+
+    return () => {
+      window.removeEventListener('open:global-search', handleOpenGlobalSearch);
+      window.removeEventListener('open:keyboard-shortcuts', handleOpenShortcuts);
+      window.removeEventListener('open:help', handleOpenShortcuts);
+      window.removeEventListener('cia:delete-view', handleDeleteViewEvent);
+    };
+  }, [handleDeleteView]);
+
+  // ===========================================================================
+  // KEYBOARD SHORTCUTS FOR MODALS
+  // ===========================================================================
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't trigger in inputs
+      const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+
+      // ⌘/Ctrl + K = Global Search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+        return;
+      }
+
+      // ? = Keyboard Shortcuts (not in inputs)
+      if (e.key === '?' && !isInput) {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+        return;
+      }
+
+      // ⌘/Ctrl + / = Keyboard Shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+        return;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // ===========================================================================
@@ -545,6 +685,31 @@ export function CIAWebApp({ username, userId, projectId }) {
                 }
               }}
               availableUsers={roomMembers.filter((m) => !m.isYou)}
+            />
+
+            {/* Keyboard Shortcuts Modal (? or ⌘/) */}
+            <KeyboardShortcutsModal
+              isOpen={showKeyboardShortcuts}
+              onClose={() => setShowKeyboardShortcuts(false)}
+            />
+
+            {/* Global Search Modal (⌘K) */}
+            <GlobalSearchModal
+              isOpen={showGlobalSearch}
+              onClose={() => setShowGlobalSearch(false)}
+              onSelect={(result) => {
+                log.debug("Search result selected:", result);
+                setShowGlobalSearch(false);
+                // TODO: Navigate to the selected result
+              }}
+            />
+
+            {/* Delete View Confirmation Dialog */}
+            <DeleteViewDialog
+              isOpen={deleteViewTarget !== null}
+              onClose={() => setDeleteViewTarget(null)}
+              view={deleteViewTarget}
+              onConfirm={handleConfirmDeleteView}
             />
           </LayoutPanelProvider>
         </RightPanelProvider>

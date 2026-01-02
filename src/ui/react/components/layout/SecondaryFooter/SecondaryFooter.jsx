@@ -157,6 +157,9 @@ function SecondaryFooter({
         onSelectView,
         onPlaceView,
         onViewAction,
+        subsetIds,
+        onSubsetChange,
+        onUpdateLink,
     } = useSecondaryHeaderLogic();
 
     // Handle tool selection - auto-enable edit mode
@@ -274,6 +277,9 @@ function SecondaryFooter({
                         availableViews={availableViews}
                         onSelectView={onSelectView}
                         onViewAction={onViewAction}
+                        subsetIds={subsetIds}
+                        onSubsetChange={onSubsetChange}
+                        onUpdateLink={onUpdateLink}
                     />
                 </div>
 

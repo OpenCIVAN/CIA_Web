@@ -55,6 +55,7 @@ export const BUS_EVENTS = {
   VIEW_DELETED: "view:deleted", // View permanently deleted
   VIEW_RENAMED: "view:renamed", // View name changed
   VIEW_FOCUSED: "view:focused", // View received focus/selection
+  VIEW_LINK_CHANGED: "view:linkChanged", // View link configuration changed
 
   // -------------------------------------------------------------------------
   // CANVAS EVENTS

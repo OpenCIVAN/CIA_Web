@@ -379,6 +379,289 @@
 }
 
 // =============================================================================
+// LAYOUT TEMPLATES
+// =============================================================================
+
+.layout-tab__card[data-color="pink"] {
+  --card-color: #{$color-accent-pink};
+}
+
+.layout-tab__card-count {
+  margin-left: auto;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+.layout-tab__templates {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.layout-tab__save-template-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: rgba($color-accent-pink, 0.1);
+  border: 1px dashed rgba($color-accent-pink, 0.4);
+  border-radius: $radius-sm;
+  color: $color-accent-pink;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-accent-pink, 0.2);
+    border-style: solid;
+  }
+}
+
+.layout-tab__save-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+}
+
+.layout-tab__template-input {
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-primary;
+  font-size: 12px;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-pink;
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+}
+
+.layout-tab__scope-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.layout-tab__scope-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xs;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-pink, 0.15);
+    border-color: rgba($color-accent-pink, 0.4);
+    color: $color-accent-pink;
+  }
+}
+
+.layout-tab__save-actions {
+  display: flex;
+  gap: $spacing-xs;
+  justify-content: flex-end;
+}
+
+.layout-tab__save-btn {
+  padding: $spacing-xs $spacing-sm;
+  background: $color-accent-pink;
+  border: none;
+  border-radius: $radius-xs;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.layout-tab__cancel-btn {
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-secondary;
+  }
+}
+
+.layout-tab__template-group {
+  margin-top: $spacing-xs;
+}
+
+.layout-tab__template-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 10px;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.layout-tab__template-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid transparent;
+  border-radius: $radius-xs;
+  margin-bottom: 4px;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: $color-border-subtle;
+  }
+}
+
+.layout-tab__template-apply {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: $color-accent-pink;
+  }
+}
+
+.layout-tab__template-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout-tab__template-size {
+  font-size: 10px;
+  color: $color-text-muted;
+  font-family: $font-family-mono;
+}
+
+.layout-tab__template-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  .layout-tab__template-item:hover & {
+    opacity: 1;
+  }
+}
+
+.layout-tab__template-action {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-secondary;
+  }
+
+  &--delete:hover {
+    background: rgba($color-accent-red, 0.15);
+    color: $color-accent-red;
+  }
+}
+
+.layout-tab__import-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+  margin-top: $spacing-xs;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: $color-border-default;
+    color: $color-text-secondary;
+  }
+}
+
+.layout-tab__templates-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  color: $color-text-muted;
+  font-size: 11px;
+  text-align: center;
+
+  svg {
+    opacity: 0.5;
+  }
+}
+
+.layout-tab__templates-hint {
+  font-size: 10px;
+  color: $color-text-tertiary;
+}
+
+// =============================================================================
 // ANIMATIONS
 // =============================================================================
 

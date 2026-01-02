@@ -805,6 +805,219 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   const [expandedViewId, setExpandedViewId] = useState(null);
 
   // ===========================================================================
+  // SELECTION STATE
+  // ===========================================================================
+
+  const [selectedCellIds, setSelectedCellIds] = useState([]);
+  const [selectionAnchorId, setSelectionAnchorId] = useState(null); // For shift+click range
+
+  /**
+   * Select a single cell (clears other selections)
+   */
+  const selectCell = useCallback((cellId) => {
+    setSelectedCellIds([cellId]);
+    setSelectionAnchorId(cellId);
+    log.debug(`[Selection] Selected cell: ${cellId}`);
+  }, []);
+
+  /**
+   * Toggle cell selection (Ctrl/Cmd + click)
+   */
+  const toggleCellSelection = useCallback((cellId) => {
+    setSelectedCellIds((prev) => {
+      if (prev.includes(cellId)) {
+        // Deselect
+        const newSelection = prev.filter((id) => id !== cellId);
+        // Update anchor if we removed it
+        if (selectionAnchorId === cellId && newSelection.length > 0) {
+          setSelectionAnchorId(newSelection[newSelection.length - 1]);
+        }
+        return newSelection;
+      } else {
+        // Add to selection
+        setSelectionAnchorId(cellId);
+        return [...prev, cellId];
+      }
+    });
+    log.debug(`[Selection] Toggled cell: ${cellId}`);
+  }, [selectionAnchorId]);
+
+  /**
+   * Select range of cells (Shift + click)
+   * Selects all cells in the rectangular region from anchor to target
+   */
+  const selectCellRange = useCallback(
+    (targetCellId) => {
+      if (!selectionAnchorId) {
+        // No anchor, just select the target
+        selectCell(targetCellId);
+        return;
+      }
+
+      const anchorCell = cells.find((c) => c.id === selectionAnchorId);
+      const targetCell = cells.find((c) => c.id === targetCellId);
+
+      if (!anchorCell || !targetCell) {
+        selectCell(targetCellId);
+        return;
+      }
+
+      // Calculate rectangular region
+      const minRow = Math.min(anchorCell.row, targetCell.row);
+      const maxRow = Math.max(
+        anchorCell.row + (anchorCell.rowSpan || 1),
+        targetCell.row + (targetCell.rowSpan || 1)
+      );
+      const minCol = Math.min(anchorCell.col, targetCell.col);
+      const maxCol = Math.max(
+        anchorCell.col + (anchorCell.colSpan || 1),
+        targetCell.col + (targetCell.colSpan || 1)
+      );
+
+      // Find all cells that intersect this region
+      const cellsInRange = cells.filter((cell) => {
+        const cellEndRow = cell.row + (cell.rowSpan || 1);
+        const cellEndCol = cell.col + (cell.colSpan || 1);
+
+        // Check if cell overlaps with selection region
+        return (
+          cell.row < maxRow &&
+          cellEndRow > minRow &&
+          cell.col < maxCol &&
+          cellEndCol > minCol
+        );
+      });
+
+      const rangeIds = cellsInRange.map((c) => c.id);
+      setSelectedCellIds(rangeIds);
+      log.debug(
+        `[Selection] Range selected ${rangeIds.length} cells from (${minRow},${minCol}) to (${maxRow - 1},${maxCol - 1})`
+      );
+    },
+    [cells, selectionAnchorId, selectCell]
+  );
+
+  /**
+   * Select all cells
+   */
+  const selectAllCells = useCallback(() => {
+    const allIds = cells.map((c) => c.id);
+    setSelectedCellIds(allIds);
+    if (allIds.length > 0) {
+      setSelectionAnchorId(allIds[0]);
+    }
+    log.debug(`[Selection] Selected all ${allIds.length} cells`);
+  }, [cells]);
+
+  /**
+   * Clear selection
+   */
+  const clearSelection = useCallback(() => {
+    setSelectedCellIds([]);
+    setSelectionAnchorId(null);
+    log.debug("[Selection] Cleared");
+  }, []);
+
+  /**
+   * Check if a cell is selected
+   */
+  const isCellSelected = useCallback(
+    (cellId) => selectedCellIds.includes(cellId),
+    [selectedCellIds]
+  );
+
+  /**
+   * Get selected cells (full cell objects, not just IDs)
+   */
+  const selectedCells = useMemo(
+    () => cells.filter((c) => selectedCellIds.includes(c.id)),
+    [cells, selectedCellIds]
+  );
+
+  /**
+   * Get selection count
+   */
+  const selectionCount = selectedCellIds.length;
+
+  /**
+   * Handle cell click with modifier keys
+   * @param {string} cellId - Cell ID
+   * @param {Object} event - Mouse event with modifier keys
+   */
+  const handleCellClick = useCallback(
+    (cellId, event) => {
+      const isCtrlOrCmd = event?.ctrlKey || event?.metaKey;
+      const isShift = event?.shiftKey;
+
+      if (isShift && selectionAnchorId) {
+        // Shift+click: range select
+        selectCellRange(cellId);
+      } else if (isCtrlOrCmd) {
+        // Ctrl/Cmd+click: toggle selection
+        toggleCellSelection(cellId);
+      } else {
+        // Normal click: single select
+        selectCell(cellId);
+      }
+    },
+    [selectCell, toggleCellSelection, selectCellRange, selectionAnchorId]
+  );
+
+  // Emit selection changed event
+  useEffect(() => {
+    const { eventBus, BUS_EVENTS } = require("@Core/events/EventBus.js");
+    eventBus.emit(BUS_EVENTS.SELECTION_CHANGED, {
+      selectedIds: selectedCellIds,
+      count: selectedCellIds.length,
+    });
+  }, [selectedCellIds]);
+
+  // Keyboard shortcuts for selection (only when edit mode is active)
+  useEffect(() => {
+    if (!editMode) return;
+
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + A: Select all
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        // Only if focus is not in an input
+        if (
+          document.activeElement?.tagName !== "INPUT" &&
+          document.activeElement?.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          selectAllCells();
+        }
+      }
+
+      // Escape: Clear selection
+      if (e.key === "Escape" && selectedCellIds.length > 0) {
+        e.preventDefault();
+        clearSelection();
+      }
+
+      // Delete/Backspace: Delete selected cells
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedCellIds.length > 0
+      ) {
+        // Only if focus is not in an input
+        if (
+          document.activeElement?.tagName !== "INPUT" &&
+          document.activeElement?.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          // Delete all selected cells
+          selectedCellIds.forEach((id) => deleteCells(id));
+          clearSelection();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [editMode, selectedCellIds, selectAllCells, clearSelection, deleteCells]);
+
+  // ===========================================================================
   // FILTERS
   // ===========================================================================
 
@@ -1051,6 +1264,19 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     mergeCells,
     unmergeCells,
     deleteCells,
+
+    // Selection state and handlers
+    selectedCellIds,
+    selectedCells,
+    selectionCount,
+    selectionAnchorId,
+    selectCell,
+    toggleCellSelection,
+    selectCellRange,
+    selectAllCells,
+    clearSelection,
+    isCellSelected,
+    handleCellClick,
   };
 }
 

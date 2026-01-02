@@ -39,6 +39,28 @@ const QUICK_LAYOUTS = [
     { id: '2x2', label: '2×2 Grid', icon: 'grid3X3', rows: 2, cols: 2 },
 ];
 
+// Template scopes
+const TEMPLATE_SCOPES = {
+    PERSONAL: 'personal',
+    WORKSPACE: 'workspace',
+    PROJECT: 'project',
+    GLOBAL: 'global',
+};
+
+const SCOPE_ICONS = {
+    [TEMPLATE_SCOPES.PERSONAL]: 'user',
+    [TEMPLATE_SCOPES.WORKSPACE]: 'box',
+    [TEMPLATE_SCOPES.PROJECT]: 'folder',
+    [TEMPLATE_SCOPES.GLOBAL]: 'globe',
+};
+
+const SCOPE_LABELS = {
+    [TEMPLATE_SCOPES.PERSONAL]: 'Personal',
+    [TEMPLATE_SCOPES.WORKSPACE]: 'Workspace',
+    [TEMPLATE_SCOPES.PROJECT]: 'Project',
+    [TEMPLATE_SCOPES.GLOBAL]: 'Global',
+};
+
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
@@ -149,6 +171,161 @@ function CanvasTools({ tool, setTool }) {
     );
 }
 
+/**
+ * Layout Templates - Save, load, and manage reusable layout structures
+ */
+function LayoutTemplates({ templates, onApply, onSave, onDelete, onExport, onImport }) {
+    const [showSaveDialog, setShowSaveDialog] = useState(false);
+    const [newTemplateName, setNewTemplateName] = useState('');
+    const [newTemplateScope, setNewTemplateScope] = useState(TEMPLATE_SCOPES.PERSONAL);
+
+    const handleSave = useCallback(() => {
+        if (!newTemplateName.trim()) return;
+        onSave?.({
+            name: newTemplateName.trim(),
+            scope: newTemplateScope,
+        });
+        setNewTemplateName('');
+        setShowSaveDialog(false);
+    }, [newTemplateName, newTemplateScope, onSave]);
+
+    const groupedTemplates = useMemo(() => {
+        const groups = {
+            [TEMPLATE_SCOPES.PERSONAL]: [],
+            [TEMPLATE_SCOPES.WORKSPACE]: [],
+            [TEMPLATE_SCOPES.PROJECT]: [],
+            [TEMPLATE_SCOPES.GLOBAL]: [],
+        };
+        (templates || []).forEach(t => {
+            if (groups[t.scope]) {
+                groups[t.scope].push(t);
+            }
+        });
+        return groups;
+    }, [templates]);
+
+    return (
+        <div className="layout-tab__templates">
+            {/* Save Current Layout */}
+            {!showSaveDialog ? (
+                <button
+                    className="layout-tab__save-template-btn"
+                    onClick={() => setShowSaveDialog(true)}
+                >
+                    <Icon name="add" size={12} />
+                    <span>Save Current Layout</span>
+                </button>
+            ) : (
+                <div className="layout-tab__save-dialog">
+                    <input
+                        type="text"
+                        className="layout-tab__template-input"
+                        placeholder="Template name..."
+                        value={newTemplateName}
+                        onChange={(e) => setNewTemplateName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                        autoFocus
+                    />
+                    <div className="layout-tab__scope-picker">
+                        {Object.values(TEMPLATE_SCOPES).map(scope => (
+                            <button
+                                key={scope}
+                                className={`layout-tab__scope-btn ${newTemplateScope === scope ? 'layout-tab__scope-btn--active' : ''}`}
+                                onClick={() => setNewTemplateScope(scope)}
+                                title={SCOPE_LABELS[scope]}
+                            >
+                                <Icon name={SCOPE_ICONS[scope]} size={12} />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="layout-tab__save-actions">
+                        <button
+                            className="layout-tab__save-btn"
+                            onClick={handleSave}
+                            disabled={!newTemplateName.trim()}
+                        >
+                            Save
+                        </button>
+                        <button
+                            className="layout-tab__cancel-btn"
+                            onClick={() => {
+                                setShowSaveDialog(false);
+                                setNewTemplateName('');
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Template List by Scope */}
+            {Object.entries(groupedTemplates).map(([scope, scopeTemplates]) => {
+                if (scopeTemplates.length === 0) return null;
+                return (
+                    <div key={scope} className="layout-tab__template-group">
+                        <div className="layout-tab__template-group-header">
+                            <Icon name={SCOPE_ICONS[scope]} size={10} />
+                            <span>{SCOPE_LABELS[scope]}</span>
+                        </div>
+                        {scopeTemplates.map(template => (
+                            <div key={template.id} className="layout-tab__template-item">
+                                <button
+                                    className="layout-tab__template-apply"
+                                    onClick={() => onApply?.(template)}
+                                    title={`Apply ${template.name}`}
+                                >
+                                    <Icon name="layoutGrid" size={12} />
+                                    <span className="layout-tab__template-name">{template.name}</span>
+                                    <span className="layout-tab__template-size">
+                                        {template.rows}×{template.cols}
+                                    </span>
+                                </button>
+                                <div className="layout-tab__template-actions">
+                                    <button
+                                        className="layout-tab__template-action"
+                                        onClick={() => onExport?.(template)}
+                                        title="Export as .cialayout"
+                                    >
+                                        <Icon name="download" size={10} />
+                                    </button>
+                                    <button
+                                        className="layout-tab__template-action layout-tab__template-action--delete"
+                                        onClick={() => onDelete?.(template.id)}
+                                        title="Delete template"
+                                    >
+                                        <Icon name="trash2" size={10} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+            })}
+
+            {/* Import Template */}
+            <button
+                className="layout-tab__import-btn"
+                onClick={onImport}
+            >
+                <Icon name="upload" size={12} />
+                <span>Import .cialayout</span>
+            </button>
+
+            {/* Empty State */}
+            {(templates || []).length === 0 && (
+                <div className="layout-tab__templates-empty">
+                    <Icon name="layoutGrid" size={20} />
+                    <span>No saved templates</span>
+                    <span className="layout-tab__templates-hint">
+                        Save your current layout to reuse it later
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -186,6 +363,16 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
             return saved || { rows: 3, cols: 3 };
         } catch {
             return { rows: 3, cols: 3 };
+        }
+    });
+
+    // Layout templates state
+    const [layoutTemplates, setLayoutTemplates] = useState(() => {
+        try {
+            const saved = localStorage.getItem('cia:layout-templates');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
         }
     });
 
@@ -246,6 +433,100 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
             detail: newSize
         }));
     }, []);
+
+    // =========================================================================
+    // TEMPLATE HANDLERS
+    // =========================================================================
+
+    const saveTemplates = useCallback((templates) => {
+        setLayoutTemplates(templates);
+        try {
+            localStorage.setItem('cia:layout-templates', JSON.stringify(templates));
+        } catch { /* ignore */ }
+    }, []);
+
+    const handleSaveTemplate = useCallback(({ name, scope }) => {
+        const canvas = canvasManager?.getCanvas?.();
+        const newTemplate = {
+            id: `template-${Date.now()}`,
+            name,
+            scope,
+            rows: canvasSize.rows,
+            cols: canvasSize.cols,
+            mergedCells: canvas?.mergedCells || [],
+            flowDirection,
+            createdAt: new Date().toISOString(),
+        };
+        saveTemplates([...layoutTemplates, newTemplate]);
+        window.dispatchEvent(new CustomEvent('cia:toast', {
+            detail: { message: `Template "${name}" saved`, type: 'success' }
+        }));
+    }, [canvasSize, flowDirection, layoutTemplates, saveTemplates]);
+
+    const handleApplyTemplate = useCallback((template) => {
+        const newSize = { rows: template.rows, cols: template.cols };
+        setCanvasSizeState(newSize);
+        try { saveCanvasSize?.(newSize); } catch { /* ignore */ }
+        if (template.flowDirection) {
+            setFlowDirection(template.flowDirection);
+        }
+        // Dispatch event for canvas to apply template
+        window.dispatchEvent(new CustomEvent('cia:canvas-size-changed', {
+            detail: newSize
+        }));
+        window.dispatchEvent(new CustomEvent('cia:template-applied', {
+            detail: template
+        }));
+        window.dispatchEvent(new CustomEvent('cia:toast', {
+            detail: { message: `Applied "${template.name}"`, type: 'success' }
+        }));
+    }, []);
+
+    const handleDeleteTemplate = useCallback((templateId) => {
+        const updated = layoutTemplates.filter(t => t.id !== templateId);
+        saveTemplates(updated);
+    }, [layoutTemplates, saveTemplates]);
+
+    const handleExportTemplate = useCallback((template) => {
+        const data = JSON.stringify(template, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${template.name.replace(/\s+/g, '-').toLowerCase()}.cialayout`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, []);
+
+    const handleImportTemplate = useCallback(() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.cialayout,.json';
+        input.onchange = async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const template = JSON.parse(text);
+                // Validate template structure
+                if (!template.name || !template.rows || !template.cols) {
+                    throw new Error('Invalid template format');
+                }
+                // Assign new ID to avoid conflicts
+                template.id = `template-${Date.now()}`;
+                template.scope = TEMPLATE_SCOPES.PERSONAL;
+                saveTemplates([...layoutTemplates, template]);
+                window.dispatchEvent(new CustomEvent('cia:toast', {
+                    detail: { message: `Imported "${template.name}"`, type: 'success' }
+                }));
+            } catch (error) {
+                window.dispatchEvent(new CustomEvent('cia:toast', {
+                    detail: { message: 'Failed to import template', type: 'error' }
+                }));
+            }
+        };
+        input.click();
+    }, [layoutTemplates, saveTemplates]);
 
     // =========================================================================
     // RENDER - LOADING
@@ -354,6 +635,23 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Layout Templates Card */}
+                <div className="layout-tab__card" data-color="pink">
+                    <div className="layout-tab__card-header">
+                        <Icon name="bookmark" size={10} />
+                        <span>Saved Templates</span>
+                        <span className="layout-tab__card-count">{layoutTemplates.length}</span>
+                    </div>
+                    <LayoutTemplates
+                        templates={layoutTemplates}
+                        onApply={handleApplyTemplate}
+                        onSave={handleSaveTemplate}
+                        onDelete={handleDeleteTemplate}
+                        onExport={handleExportTemplate}
+                        onImport={handleImportTemplate}
+                    />
                 </div>
 
                 {/* Canvas Tools Card */}
