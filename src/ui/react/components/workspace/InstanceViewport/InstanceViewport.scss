@@ -438,7 +438,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // ============================================================================
-// MORE MENU DROPDOWN - Portal to document.body
+// MORE MENU DROPDOWN - Portal to document.body (or inline in fullscreen)
 // ============================================================================
 
 .instance-viewport__more-menu {
@@ -453,6 +453,14 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  // Inline variant for fullscreen mode (no portal)
+  &--inline {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+  }
 
   // Section headers
   &__section-header {
@@ -1662,13 +1670,14 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   bottom: 40px; // Above footer
   width: 320px;
   max-width: 40vw;
-  z-index: 100; // Above content but below modals
+  z-index: 500; // High z-index to ensure visibility in fullscreen
 
   display: flex;
   flex-direction: column;
 
-  background: rgba($color-bg-secondary, 0.95);
+  background: $color-bg-secondary; // Solid background for visibility
   backdrop-filter: blur(20px);
+  border: 1px solid $color-border-default;
 
   opacity: 0;
   pointer-events: none;
@@ -1677,30 +1686,22 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Right side (default)
   &--right {
     right: 0;
-    border-left: 1px solid $color-border-default;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
     transform: translateX(100%);
-
-    &.instance-viewport__embedded-tools--open {
-      transform: translateX(0);
-    }
   }
 
   // Left side
   &--left {
     left: 0;
-    border-right: 1px solid $color-border-default;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     transform: translateX(-100%);
-
-    &.instance-viewport__embedded-tools--open {
-      transform: translateX(0);
-    }
   }
 
+  // Open state - slide in and become visible
   &--open {
     opacity: 1;
     pointer-events: auto;
+    transform: translateX(0);
   }
 }
 
@@ -1882,4 +1883,56 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+// ============================================================================
+// FULLSCREEN MODE STYLES
+// ============================================================================
+// When in native browser fullscreen, ensure proper styling and z-index
+
+.instance-viewport:fullscreen {
+  // Fill the entire screen
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  border: none;
+
+  // Ensure proper background
+  background: $color-bg-primary;
+
+  // Content should fill available space
+  .instance-viewport__content {
+    border-radius: 0;
+  }
+
+  // Ensure embedded tools panel is visible and properly styled in fullscreen
+  .instance-viewport__embedded-tools {
+    top: 32px; // Below header
+    bottom: 0;
+    border-radius: 0;
+    max-width: 50vw; // Allow more width in fullscreen
+  }
+
+  // Ensure menus stay above content
+  .instance-viewport__more-menu--inline {
+    z-index: 10000;
+  }
+
+  // Make sure header and toolbar are visible
+  .instance-viewport__header {
+    z-index: 200;
+  }
+
+  .instance-viewport__toolbar-overlay {
+    z-index: 150;
+  }
+}
+
+// Webkit fullscreen support
+.instance-viewport:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  border: none;
+  background: $color-bg-primary;
 }

@@ -54,6 +54,7 @@ function TopToolbar({
     onOpenInstanceTools,
     instanceToolsTabActive,
     instanceId,
+    isFullscreen,
     // More menu handlers
     onFullscreen,
     onVRMode,
@@ -130,6 +131,7 @@ function TopToolbar({
                             onDeleteView={onTrash}
                             triggerRef={moreButtonRef}
                             instanceId={instanceId}
+                            isFullscreen={isFullscreen}
                         />
                     </div>
                 </div>
@@ -481,6 +483,7 @@ function MoreMenu({
     headerMode,
     instanceId,
     triggerRef,
+    isFullscreen = false, // When true, render inline instead of portal
 }) {
     const menuRef = useRef(null);
     const [position, setPosition] = useState({ top: 0, right: 0 });
@@ -536,11 +539,12 @@ function MoreMenu({
         onClose();
     };
 
-    return createPortal(
+    // Menu content - shared between portal and inline rendering
+    const menuContent = (
         <div
-            className="instance-viewport__more-menu"
+            className={`instance-viewport__more-menu ${isFullscreen ? 'instance-viewport__more-menu--inline' : ''}`}
             ref={menuRef}
-            style={{ top: position.top, right: position.right }}
+            style={isFullscreen ? {} : { top: position.top, right: position.right }}
         >
             {/* Tools Section */}
             <div className="instance-viewport__more-menu__section-header">Tools</div>
@@ -673,9 +677,16 @@ function MoreMenu({
                 <Icon name="delete" size={14} />
                 <span>Delete View</span>
             </button>
-        </div>,
-        document.body
+        </div>
     );
+
+    // In fullscreen mode, render inline (no portal) so it stays visible
+    // Portals to document.body won't show in native fullscreen mode
+    if (isFullscreen) {
+        return menuContent;
+    }
+
+    return createPortal(menuContent, document.body);
 }
 
 /**
@@ -826,6 +837,7 @@ function HeaderBar({
                         headerMode={headerMode}
                         instanceId={instanceId}
                         triggerRef={moreButtonRef}
+                        isFullscreen={isFullscreen}
                     />
                 </div>
 
@@ -2091,6 +2103,7 @@ export function InstanceViewport({
                     onOpenInstanceTools={handleOpenInstanceTools}
                     instanceToolsTabActive={instanceToolsTabActive}
                     instanceId={actualInstanceId}
+                    isFullscreen={isFullscreen}
                     onFullscreen={handleFullscreen}
                     onVRMode={handleVRMode}
                     onResetCamera={handleResetCamera}
@@ -2133,7 +2146,7 @@ export function InstanceViewport({
                                 onClick={() => setEmbeddedToolsSide(side => side === 'right' ? 'left' : 'right')}
                                 title={`Move to ${embeddedToolsSide === 'right' ? 'left' : 'right'} side`}
                             >
-                                <Icon name={embeddedToolsSide === 'right' ? 'panelLeft' : 'panelRight'} size={14} />
+                                <Icon name={embeddedToolsSide === 'right' ? 'arrowLeft' : 'arrowRight'} size={14} />
                             </button>
                             <button
                                 className="instance-viewport__embedded-tools-close"
