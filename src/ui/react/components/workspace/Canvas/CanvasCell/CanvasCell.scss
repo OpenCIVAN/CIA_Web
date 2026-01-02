@@ -1157,19 +1157,9 @@
 // =============================================================================
 // COLD VIEW THUMBNAIL POSITIONING
 // =============================================================================
-// When in cold mode, thumbnail should be positioned below the header
+// Thumbnail fills the entire cell (no header in thumbnail/snapshot modes)
 
 .canvas-cell__thumbnail-overlay--cold {
-  // Header takes ~32px, so offset thumbnail content
-  top: 32px;
-  border-radius: 0 0 $radius-md $radius-md;
-
-  // Ensure thumbnail fills the remaining space
-  .thumbnail {
-    border-radius: 0 0 $radius-md $radius-md;
-  }
-
-  .thumbnail__image {
-    border-radius: 0 0 $radius-md $radius-md;
-  }
+  // No offset - thumbnail fills entire cell
+  top: 0;
 }

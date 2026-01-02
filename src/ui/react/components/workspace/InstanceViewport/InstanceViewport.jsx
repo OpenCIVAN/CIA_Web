@@ -176,8 +176,8 @@ function BottomNavBar({
 
 
 /**
- * GearOnlyDropdown - Minimal controls for super tiny viewports
- * Single gear button with dropdown
+ * GearOnlyDropdown - Minimal controls for small viewports
+ * Single gear button with portal dropdown menu
  */
 function GearOnlyDropdown({
     open,
@@ -189,47 +189,183 @@ function GearOnlyDropdown({
     onTrash,
     instanceId,
 }) {
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+
+    // Position menu relative to button - smart positioning
+    useEffect(() => {
+        if (!open || !buttonRef.current) return;
+
+        const updatePosition = () => {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const menuWidth = 180;
+            const menuHeight = 260;
+            const padding = 8;
+
+            let left, top;
+
+            // Horizontal: prefer right-aligned with button, but keep in viewport
+            left = rect.right - menuWidth;
+            if (left < padding) {
+                left = rect.left; // Align left edge with button instead
+            }
+            if (left + menuWidth > window.innerWidth - padding) {
+                left = window.innerWidth - menuWidth - padding;
+            }
+
+            // Vertical: prefer below button, but flip to above if not enough space
+            const spaceBelow = window.innerHeight - rect.bottom - padding;
+            const spaceAbove = rect.top - padding;
+
+            if (spaceBelow >= menuHeight) {
+                // Enough space below
+                top = rect.bottom + 4;
+            } else if (spaceAbove >= menuHeight) {
+                // Not enough below, but enough above - flip
+                top = rect.top - menuHeight - 4;
+            } else {
+                // Not enough space either way - position at edge
+                if (spaceBelow > spaceAbove) {
+                    top = window.innerHeight - menuHeight - padding;
+                } else {
+                    top = padding;
+                }
+            }
+
+            setMenuPosition({ top, left });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [open]);
+
+    // Close on click outside
+    useEffect(() => {
+        if (!open) return;
+
+        const handleClickOutside = (e) => {
+            if (
+                buttonRef.current?.contains(e.target) ||
+                menuRef.current?.contains(e.target)
+            ) {
+                return;
+            }
+            onToggle();
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onToggle();
+        };
+
+        // Delay to prevent immediate close
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleEscape);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [open, onToggle]);
+
+    const handleItemClick = (e, action) => {
+        e.stopPropagation();
+        e.preventDefault();
+        console.log('[GearMenu] Item clicked, action:', action?.name || action);
+        if (typeof action === 'function') {
+            action();
+        }
+        onToggle();
+    };
+
+    const handleButtonClick = (e) => {
+        e.stopPropagation(); // Prevent triggering isolation mode
+        onToggle();
+    };
+
     return (
-        <div className="instance-viewport__gear-dropdown">
+        <div
+            className="instance-viewport__gear-dropdown"
+            onClick={(e) => e.stopPropagation()} // Prevent bubbling to cell
+        >
             <button
+                ref={buttonRef}
                 className={`instance-viewport__gear-button ${open ? 'active' : ''}`}
-                onClick={onToggle}
+                onClick={handleButtonClick}
                 title="Options"
             >
                 <Icon name="settings" size={16} />
             </button>
-            {open && (
-                <div className="instance-viewport__gear-menu">
+            {open && createPortal(
+                <div
+                    ref={menuRef}
+                    className="instance-viewport__gear-menu"
+                    style={{
+                        position: 'fixed',
+                        top: menuPosition.top,
+                        left: menuPosition.left,
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <button
                         className="instance-viewport__gear-item instance-viewport__gear-item--primary"
-                        onClick={onOpenInstanceTools}
+                        onClick={(e) => handleItemClick(e, onOpenInstanceTools)}
                     >
                         <Icon name="wrench" size={14} />
                         Instance Tools
                     </button>
-                    <div className="instance-viewport__gear-item">
+                    <button
+                        className="instance-viewport__gear-item"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggle(); // Close menu, VRButton handles its own logic
+                        }}
+                    >
                         <VRButton instanceId={instanceId} size="sm" showLabel />
-                    </div>
-                    <button className="instance-viewport__gear-item" onClick={onMaximize}>
+                    </button>
+                    <button
+                        className="instance-viewport__gear-item"
+                        onClick={(e) => handleItemClick(e, onMaximize)}
+                    >
                         <Icon name="maximize2" size={14} />
                         Maximize
                     </button>
-                    <button className="instance-viewport__gear-item" onClick={onDuplicate}>
+                    <button
+                        className="instance-viewport__gear-item"
+                        onClick={(e) => handleItemClick(e, onDuplicate)}
+                    >
                         <Icon name="copy" size={14} />
                         Duplicate
                     </button>
                     <div className="instance-viewport__gear-separator" />
-                    <button className="instance-viewport__gear-item" onClick={onClose}>
+                    <button
+                        className="instance-viewport__gear-item"
+                        onClick={(e) => handleItemClick(e, onClose)}
+                    >
                         <Icon name="close" size={14} />
                         Close
                     </button>
                     {onTrash && (
-                        <button className="instance-viewport__gear-item instance-viewport__gear-item--danger" onClick={onTrash}>
+                        <button
+                            className="instance-viewport__gear-item instance-viewport__gear-item--danger"
+                            onClick={(e) => handleItemClick(e, onTrash)}
+                        >
                             <Icon name="delete" size={14} />
                             Delete View
                         </button>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -1861,33 +1997,35 @@ export function InstanceViewport({
             onBlur={handleBlur}
             onMouseDown={handleActivateInstance}
         >
-            {/* Header - ALWAYS visible so users can always close the instance */}
-            <HeaderBar
-                displayName={displayName}
-                fileTypeDisplayInfo={fileTypeDisplayInfo}
-                instanceColor={instanceColor}
-                isFullscreen={isFullscreen}
-                isActive={isFocused}
-                isLoading={loading || !hasData}
-                onFullscreen={handleFullscreen}
-                onClose={handleClose}
-                onTrash={handleTrash}
-                onOpenInstanceTools={handleOpenInstanceTools}
-                onVRMode={handleVRMode}
-                onResetCamera={handleResetCamera}
-                onFitView={handleFit}
-                onCenterSelection={handleCenterSelection}
-                onRepresentationChange={handleRepresentationChange}
-                currentRepresentation={currentRepresentation}
-                onCaptureThumbnail={handleCaptureThumbnail}
-                onSaveBookmark={handleSaveBookmark}
-                onDuplicate={handleDuplicate}
-                onLinkSettings={handleLinkSettings}
-                viewportWidth={width}
-                onShowToolbar={showToolbar}
-                onHideToolbar={hideToolbar}
-                instanceId={actualInstanceId}
-            />
+            {/* Header - Hidden in small viewport modes (gear-only/corner-controls) */}
+            {showFullToolbars && (
+                <HeaderBar
+                    displayName={displayName}
+                    fileTypeDisplayInfo={fileTypeDisplayInfo}
+                    instanceColor={instanceColor}
+                    isFullscreen={isFullscreen}
+                    isActive={isFocused}
+                    isLoading={loading || !hasData}
+                    onFullscreen={handleFullscreen}
+                    onClose={handleClose}
+                    onTrash={handleTrash}
+                    onOpenInstanceTools={handleOpenInstanceTools}
+                    onVRMode={handleVRMode}
+                    onResetCamera={handleResetCamera}
+                    onFitView={handleFit}
+                    onCenterSelection={handleCenterSelection}
+                    onRepresentationChange={handleRepresentationChange}
+                    currentRepresentation={currentRepresentation}
+                    onCaptureThumbnail={handleCaptureThumbnail}
+                    onSaveBookmark={handleSaveBookmark}
+                    onDuplicate={handleDuplicate}
+                    onLinkSettings={handleLinkSettings}
+                    viewportWidth={width}
+                    onShowToolbar={showToolbar}
+                    onHideToolbar={hideToolbar}
+                    instanceId={actualInstanceId}
+                />
+            )}
 
             {/* VR Mode Indicator - Shows when in VR */}
             {isInVR && <VRModeIndicator onExit={handleExitVR} />}
@@ -1946,15 +2084,15 @@ export function InstanceViewport({
                 />
             )}
 
-            {/* Gear Only Dropdown - For super tiny viewports */}
-            {uiMode === 'gear-only' && (
+            {/* Gear Only Dropdown - For small viewports (corner-controls and gear-only modes) */}
+            {!showFullToolbars && (
                 <GearOnlyDropdown
                     open={gearDropdownOpen}
                     onToggle={() => setGearDropdownOpen(!gearDropdownOpen)}
                     onOpenInstanceTools={handleOpenInstanceTools}
                     onVRMode={handleVRMode}
                     onMaximize={handleFullscreen}
-                    onDuplicate={() => { }}
+                    onDuplicate={handleDuplicate}
                     onClose={handleClose}
                     onTrash={handleTrash}
                     instanceId={actualInstanceId}

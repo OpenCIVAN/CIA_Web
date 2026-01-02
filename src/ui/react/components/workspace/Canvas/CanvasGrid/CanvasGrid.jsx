@@ -750,7 +750,16 @@ export function CanvasGrid({
             return;
         }
 
-        // Check if this cell should trigger isolation mode (only for regular clicks)
+        // Single click just focuses/activates the view (no isolation)
+        // Isolation is now triggered by double-click for finer-grained control
+        if (onCellClick) {
+            onCellClick(placement, e);
+        }
+    }, [onCellClick, selectedCells, canvas?.placements]);
+
+    // Double-click triggers isolation mode for small cells
+    const handleCellDoubleClick = useCallback((placement, e) => {
+        // Only trigger isolation in thumbnail/snapshot modes
         if (shouldTriggerIsolation(renderMode)) {
             isolateCell({
                 id: placement.id,
@@ -759,14 +768,8 @@ export function CanvasGrid({
                 row: placement.row,
                 col: placement.col,
             });
-            return;
         }
-
-        // Normal click handling
-        if (onCellClick) {
-            onCellClick(placement, e);
-        }
-    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick, selectedCells, canvas?.placements]);
+    }, [renderMode, shouldTriggerIsolation, isolateCell]);
 
     // ==========================================================================
     // CONTEXT MENU HANDLERS
@@ -1173,7 +1176,7 @@ export function CanvasGrid({
                             recentViewIds={recentViewIds}
                             onSelect={toggleSelection}
                             onClick={(e) => placement && handleCellClick(placement, e)}
-                            onDoubleClick={(e) => placement && onCellDoubleClick?.(placement, e)}
+                            onDoubleClick={(e) => placement && handleCellDoubleClick(placement, e)}
                             onAddContent={(type) => onAddContent?.(canvasRow, canvasCol, type)}
                             onRemove={() => placement && onRemovePlacement?.(placement.id)}
                             onDrop={handleCellDrop}
@@ -1198,7 +1201,7 @@ export function CanvasGrid({
         recentViewIds,
         toggleSelection,
         handleCellClick,
-        onCellDoubleClick,
+        handleCellDoubleClick,
         onAddContent,
         onRemovePlacement,
         handleCellDrop,

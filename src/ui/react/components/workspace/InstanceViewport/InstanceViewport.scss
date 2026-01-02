@@ -38,19 +38,30 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
   // Active state - SOLID instance color border + glow
   &--active {
-    border-color: var(--instance-color);
+    border-color: var(--instance-color) !important;
     box-shadow:
       0 0 0 1px var(--instance-color),           // Inner ring for 2px total thickness
       0 0 20px rgba(var(--instance-color-rgb), 0.25),  // Soft outer glow
-      inset 0 0 60px rgba(0, 0, 0, 0.5);         // Keep depth shadow
+      inset 0 0 60px rgba(0, 0, 0, 0.5) !important;         // Keep depth shadow
   }
 
-  // Focus-visible - 2px solid focus ring + glow (keyboard navigation)
+  // Focus state - matches instance color (keyboard or click)
+  &:focus {
+    outline: none;
+    border-color: var(--instance-color);
+    box-shadow:
+      0 0 0 2px var(--instance-color),           // 2px focus ring in instance color
+      0 0 20px rgba(var(--instance-color-rgb), 0.3),   // Glow
+      inset 0 0 60px rgba(0, 0, 0, 0.5);
+  }
+
+  // Focus-visible - same as focus but for keyboard navigation
   &:focus-visible {
+    outline: none;
     border-color: var(--instance-color);
     box-shadow:
       0 0 0 2px var(--instance-color),           // 2px focus ring
-      0 0 15px rgba(var(--instance-color-rgb), 0.3),   // Glow
+      0 0 20px rgba(var(--instance-color-rgb), 0.3),   // Glow
       inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 
@@ -1057,11 +1068,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .instance-viewport__gear-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 160px;
+  // Positioned via inline styles (portal)
+  z-index: 10000;
+  min-width: 180px;
   padding: $spacing-xs;
+  pointer-events: auto; // Ensure menu receives clicks
 
   @include frosted-glass;
   border-radius: $radius-md;

@@ -64,7 +64,6 @@ import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewpor
 import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';
-import { CanvasCellHeader } from './CanvasCellHeader.jsx';
 import './CanvasCell.scss';
 
 // =============================================================================
@@ -528,7 +527,6 @@ export const CanvasCell = memo(function CanvasCell({
                         isActiveView={isActiveView}
                         lifecycle={effectiveLifecycle}
                         onActivate={handleActivateView}
-                        cellWidth={cellSize.width}
                     />
                 );
 
@@ -825,9 +823,8 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
     );
 }
 
-// MiniHeader has been replaced by CanvasCellHeader component
-// CanvasCellHeader uses useViewMetadata hook for consistent colors
-// See: ./CanvasCellHeader.jsx
+// No headers in thumbnail/snapshot modes - small cells show only thumbnails
+// Headers are only rendered in FULL/COMPACT modes via InstanceViewport
 
 // =============================================================================
 // VIEW CONTENT
@@ -847,7 +844,6 @@ function ViewContent({
     isActiveView = false,
     lifecycle = 'live', // 'live' | 'paused' | 'cold'
     onActivate, // Called when user wants to activate a cold view
-    cellWidth = 400, // For determining header mode
 }) {
     const [isReady, setIsReady] = useState(false);
 
@@ -856,9 +852,6 @@ function ViewContent({
     const isThumbnailMode =
         uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
-
-    // Determine header mode based on cell width
-    const headerMode = cellWidth >= 400 ? 'full' : cellWidth >= 300 ? 'medium' : 'small';
 
     // Cold mode = thumbnail mode AND viewport NOT mounted
     const isCold = isThumbnailMode && !shouldMountViewport;
@@ -872,33 +865,8 @@ function ViewContent({
 
     return (
         <div className="canvas-cell__view-content">
-            {/* ================================================================
-                HEADER RENDERING - Always visible regardless of lifecycle
-                ================================================================
-                Uses CanvasCellHeader for all cases in THUMBNAIL/SNAPSHOT mode:
-                - COLD: No viewport mounted, header gives illusion of full view
-                - LOADING: Viewport mounting, header shows while loading
-                - LIVE/PAUSED: Header visible even when viewport is active
-
-                CanvasCellHeader uses useViewMetadata hook for consistent colors.
-                This fixes the bug where headers would default to blue when
-                MiniHeader received undefined color from placement props.
-
-                In FULL/COMPACT mode, header comes from InstanceViewport.
-            */}
-
-            {/* Thumbnail/snapshot mode header - uses hook for consistent metadata */}
-            {isThumbnailMode && (
-                <CanvasCellHeader
-                    viewId={viewId}
-                    onRemove={onClose}
-                    onTrash={onTrash}
-                    onActivate={onActivate}
-                    isCold={isCold}
-                    headerMode={headerMode}
-                    fallbackColor={viewColor}
-                />
-            )}
+            {/* No headers in THUMBNAIL/SNAPSHOT modes - small cells show only thumbnails */}
+            {/* Headers are only rendered in FULL/COMPACT modes via InstanceViewport */}
 
             {/* ================================================================
                 THUMBNAIL/CONTENT AREA
