@@ -34,7 +34,8 @@ import './CanvasGrid.scss';
 // CONSTANTS
 // =============================================================================
 
-const GAP = 12; // Gap between cells in pixels
+// 8px gap per canvas-theme-explorer-v2 prototype specification
+const GAP = 8; // Gap between cells in pixels
 const PADDING = {
     top: 8,
     right: 16,    // Extra for scrollbar

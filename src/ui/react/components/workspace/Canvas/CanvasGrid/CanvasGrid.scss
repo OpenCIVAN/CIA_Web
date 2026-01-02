@@ -91,7 +91,8 @@
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: 8px 16px 16px 8px;
+  // 8px gap per canvas-theme-explorer-v2 prototype, extra on right/bottom for scrollbar
+  padding: $spacing-sm $spacing-lg $spacing-lg $spacing-sm;
 
   // Focus outline for keyboard navigation
   &:focus {
@@ -123,7 +124,8 @@
 .canvas-grid__viewport {
   position: absolute;
   inset: 0;
-  padding: 12px 16px 16px 12px;
+  // 8px gap per canvas-theme-explorer-v2 prototype, extra on right/bottom for scrollbar
+  padding: $spacing-sm $spacing-lg $spacing-lg $spacing-sm;
 
   // Focus outline for keyboard navigation
   &:focus {
