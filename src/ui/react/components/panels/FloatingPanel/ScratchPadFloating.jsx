@@ -90,8 +90,7 @@ export function useScratchPadFloating() {
  * It checks if ScratchPad is supposed to be open and renders the FloatingPanel.
  */
 export const ScratchPadFloating = memo(function ScratchPadFloating() {
-    const { floatingPanels, dockPanel, updatePanelPosition, updatePanelSize, bringToFront } =
-        useFloatingPanels();
+    const { floatingPanels, dockPanel } = useFloatingPanels();
 
     const panelState = floatingPanels[SCRATCHPAD_PANEL_ID];
 
@@ -101,51 +100,21 @@ export const ScratchPadFloating = memo(function ScratchPadFloating() {
         initialExpanded: true,
     });
 
-    // Handle close
+    // Handle close/dock
     const handleClose = useCallback(() => {
         dockPanel(SCRATCHPAD_PANEL_ID);
     }, [dockPanel]);
-
-    // Handle drag
-    const handleDrag = useCallback(
-        (x, y) => {
-            updatePanelPosition(SCRATCHPAD_PANEL_ID, x, y);
-        },
-        [updatePanelPosition]
-    );
-
-    // Handle resize
-    const handleResize = useCallback(
-        (width, height) => {
-            updatePanelSize(SCRATCHPAD_PANEL_ID, width, height);
-        },
-        [updatePanelSize]
-    );
-
-    // Handle focus
-    const handleFocus = useCallback(() => {
-        bringToFront(SCRATCHPAD_PANEL_ID);
-    }, [bringToFront]);
 
     // Don't render if not open
     if (!panelState) return null;
 
     return (
         <FloatingPanel
-            id={SCRATCHPAD_PANEL_ID}
+            panelId={SCRATCHPAD_PANEL_ID}
             title={SCRATCHPAD_CONFIG.title}
             icon={SCRATCHPAD_CONFIG.icon}
             color={SCRATCHPAD_CONFIG.color}
-            x={panelState.x}
-            y={panelState.y}
-            width={panelState.width}
-            height={panelState.height}
-            zIndex={panelState.zIndex}
-            minimized={panelState.minimized}
-            onClose={handleClose}
-            onDrag={handleDrag}
-            onResize={handleResize}
-            onFocus={handleFocus}
+            onDock={handleClose}
         >
             <ScratchPadContent scratchPad={scratchPad} />
         </FloatingPanel>

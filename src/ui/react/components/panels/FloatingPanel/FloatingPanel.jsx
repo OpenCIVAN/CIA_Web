@@ -73,7 +73,7 @@ function calculateSnapPosition(x, y, width, height) {
 export function FloatingPanel({
     panelId,
     title,
-    icon: Icon,
+    icon: iconName,
     color = 'blue',
     children,
     onDock,
@@ -230,9 +230,9 @@ export function FloatingPanel({
                 <div className="floating-panel__drag-handle">
                     <Icon name="gripVertical" size={14} />
                 </div>
-                {Icon && (
+                {iconName && (
                     <div className="floating-panel__icon">
-                        <Icon size={16} />
+                        <Icon name={iconName} size={16} />
                     </div>
                 )}
                 <div className="floating-panel__title">{title}</div>

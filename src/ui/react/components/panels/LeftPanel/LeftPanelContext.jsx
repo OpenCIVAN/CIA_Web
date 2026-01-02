@@ -300,15 +300,17 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
         );
     }, [activeTab]);
 
-    // Listen for instance tools open event (from wrench button in InstanceViewport)
+    // Listen for instance tools open event - DOCKED version only
+    // The floating panel (InstanceToolsFloating) handles 'cia:open-instance-tools'
+    // This listener handles 'cia:open-instance-tools-docked' for explicit docked panel requests
     useEffect(() => {
-        const handleOpenInstanceTools = () => {
+        const handleOpenInstanceToolsDocked = () => {
             setActiveTab('tools');
         };
 
-        window.addEventListener('cia:open-instance-tools', handleOpenInstanceTools);
+        window.addEventListener('cia:open-instance-tools-docked', handleOpenInstanceToolsDocked);
         return () => {
-            window.removeEventListener('cia:open-instance-tools', handleOpenInstanceTools);
+            window.removeEventListener('cia:open-instance-tools-docked', handleOpenInstanceToolsDocked);
         };
     }, []);
 

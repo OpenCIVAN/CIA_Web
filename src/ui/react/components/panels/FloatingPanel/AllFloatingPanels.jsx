@@ -46,13 +46,7 @@ import { InstanceToolsFloating, INSTANCE_TOOLS_PANEL_ID } from "./InstanceToolsF
  * - ScratchPad (independent floating panel, not tied to docked tabs)
  */
 export function AllFloatingPanels() {
-    const {
-        floatingPanels,
-        dockPanel,
-        updatePanelPosition,
-        updatePanelSize,
-        bringToFront,
-    } = useFloatingPanels();
+    const { floatingPanels, dockPanel } = useFloatingPanels();
 
     const { setLeftOpen, setRightOpen } = useLayoutContext();
 
@@ -112,20 +106,11 @@ export function AllFloatingPanels() {
                     return (
                         <FloatingPanel
                             key={panelId}
-                            id={panelId}
+                            panelId={panelId}
                             title={panelState.title || tabConfig?.label || panelId}
                             icon={panelState.icon || tabConfig?.icon}
                             color={panelState.color || tabConfig?.color || "blue"}
-                            x={panelState.x}
-                            y={panelState.y}
-                            width={panelState.width}
-                            height={panelState.height}
-                            zIndex={panelState.zIndex}
-                            minimized={panelState.minimized}
-                            onClose={() => handleDock(panelId)}
-                            onDrag={(x, y) => updatePanelPosition(panelId, x, y)}
-                            onResize={(w, h) => updatePanelSize(panelId, w, h)}
-                            onFocus={() => bringToFront(panelId)}
+                            onDock={() => handleDock(panelId)}
                         >
                             {renderPanelContent(panelId, panelState)}
                         </FloatingPanel>

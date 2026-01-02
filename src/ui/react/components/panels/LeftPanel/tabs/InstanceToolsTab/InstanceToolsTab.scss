@@ -4,6 +4,19 @@
 @use "theme" as *;
 
 // =============================================================================
+// FLOATING PANEL WRAPPER
+// When Instance Tools is rendered in a FloatingPanel, this ensures proper sizing
+// =============================================================================
+
+.instance-tools-floating {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// =============================================================================
 // INSTANCE TOOLS TAB CONTAINER
 // =============================================================================
 

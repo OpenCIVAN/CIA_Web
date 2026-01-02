@@ -102,8 +102,7 @@ export function useInstanceToolsFloating() {
  * It listens for 'cia:open-instance-tools' events and opens near the source viewport.
  */
 export const InstanceToolsFloating = memo(function InstanceToolsFloating() {
-    const { floatingPanels, dockPanel, updatePanelPosition, updatePanelSize, bringToFront, popOutPanel } =
-        useFloatingPanels();
+    const { floatingPanels, dockPanel, bringToFront, popOutPanel } = useFloatingPanels();
 
     const panelState = floatingPanels[INSTANCE_TOOLS_PANEL_ID];
 
@@ -131,8 +130,11 @@ export const InstanceToolsFloating = memo(function InstanceToolsFloating() {
                 y = detail.y;
             }
 
-            // Only pop out if Alt/Option key is held, otherwise let docked panel handle it
-            if (detail.popOut || event.altKey) {
+            // Always open floating panel (per spec, floating is the primary UI)
+            // If already open, just bring to front
+            if (panelState) {
+                bringToFront(INSTANCE_TOOLS_PANEL_ID);
+            } else {
                 popOutPanel(INSTANCE_TOOLS_PANEL_ID, {
                     ...INSTANCE_TOOLS_CONFIG,
                     x,
@@ -160,59 +162,32 @@ export const InstanceToolsFloating = memo(function InstanceToolsFloating() {
             }
         };
 
+        // Listen for BOTH events - floating version and regular open
         window.addEventListener('cia:open-instance-tools-floating', handleOpenInstanceTools);
+        window.addEventListener('cia:open-instance-tools', handleOpenInstanceTools);
         window.addEventListener('cia:toggle-instance-tools-floating', handleToggleInstanceTools);
         return () => {
             window.removeEventListener('cia:open-instance-tools-floating', handleOpenInstanceTools);
+            window.removeEventListener('cia:open-instance-tools', handleOpenInstanceTools);
             window.removeEventListener('cia:toggle-instance-tools-floating', handleToggleInstanceTools);
         };
-    }, [popOutPanel, dockPanel, panelState]);
+    }, [popOutPanel, dockPanel, bringToFront, panelState]);
 
-    // Handle close - dock back to left panel
+    // Handle close/dock - dock back to left panel
     const handleClose = useCallback(() => {
         dockPanel(INSTANCE_TOOLS_PANEL_ID);
     }, [dockPanel]);
-
-    // Handle drag
-    const handleDrag = useCallback(
-        (x, y) => {
-            updatePanelPosition(INSTANCE_TOOLS_PANEL_ID, x, y);
-        },
-        [updatePanelPosition]
-    );
-
-    // Handle resize
-    const handleResize = useCallback(
-        (width, height) => {
-            updatePanelSize(INSTANCE_TOOLS_PANEL_ID, width, height);
-        },
-        [updatePanelSize]
-    );
-
-    // Handle focus
-    const handleFocus = useCallback(() => {
-        bringToFront(INSTANCE_TOOLS_PANEL_ID);
-    }, [bringToFront]);
 
     // Don't render if not open
     if (!panelState) return null;
 
     return (
         <FloatingPanel
-            id={INSTANCE_TOOLS_PANEL_ID}
+            panelId={INSTANCE_TOOLS_PANEL_ID}
             title={INSTANCE_TOOLS_CONFIG.title}
             icon={INSTANCE_TOOLS_CONFIG.icon}
             color={INSTANCE_TOOLS_CONFIG.color}
-            x={panelState.x}
-            y={panelState.y}
-            width={panelState.width}
-            height={panelState.height}
-            zIndex={panelState.zIndex}
-            minimized={panelState.minimized}
-            onClose={handleClose}
-            onDrag={handleDrag}
-            onResize={handleResize}
-            onFocus={handleFocus}
+            onDock={handleClose}
         >
             <InstanceToolsContent />
         </FloatingPanel>
