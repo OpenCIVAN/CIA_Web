@@ -1,42 +1,59 @@
 // src/ui/react/components/panels/RightPanel/RightActivityBar.scss
 // Styling for the right activity bar icons
-// Mirrors LeftActivityBar styling with activity bar on the right
+// Mirrors LeftPanel.scss activity bar styling exactly
 
 @use "theme" as *;
 
 // =============================================================================
-// ACTIVITY BAR CONTAINER
+// ACTIVITY BAR - Fixed width, always visible (mirrors left-panel__activity-bar)
 // =============================================================================
 
 .right-panel__activity-bar {
+  width: $panel-activity-bar-width;
+  min-width: $panel-activity-bar-width; // NEVER shrink - always visible
+  height: 100%;
+  flex-shrink: 0; // Prevent any shrinking
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background: $color-bg-secondary;
-  padding: $spacing-xs 0;
+  align-items: center;
+  padding: $spacing-sm 0;
+  gap: $spacing-xs;
+  background: $color-bg-primary;
+  overflow: hidden; // Prevent content overflow
 
-  // Colored indicator line on the left edge (opposite of left panel)
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: $color-accent-pink;
-    opacity: 0.6;
-    transition: background-color $transition-fast;
+  // Colored indicator line on LEFT edge (mirrors left activity bar which has it on the RIGHT edge)
+  // Both indicators face TOWARD the workspace/content in the center
+  &[data-color="blue"] {
+    border-left: 2px solid rgba($color-accent-blue, 0.4);
   }
 
-  // Color variants for indicator line
-  &[data-color="pink"]::before { background: $color-accent-pink; }
-  &[data-color="purple"]::before { background: $color-accent-purple; }
-  &[data-color="blue"]::before { background: $color-accent-blue; }
-  &[data-color="green"]::before { background: $color-accent-green; }
-  &[data-color="teal"]::before { background: $color-accent-teal; }
-  &[data-color="red"]::before { background: $color-accent-red; }
-  &[data-color="amber"]::before { background: $color-accent-amber; }
+  &[data-color="teal"] {
+    border-left: 2px solid rgba($color-accent-teal, 0.4);
+  }
+
+  &[data-color="green"] {
+    border-left: 2px solid rgba($color-accent-green, 0.4);
+  }
+
+  &[data-color="pink"] {
+    border-left: 2px solid rgba($color-accent-pink, 0.4);
+  }
+
+  &[data-color="amber"] {
+    border-left: 2px solid rgba($color-accent-amber, 0.4);
+  }
+
+  &[data-color="indigo"] {
+    border-left: 2px solid rgba($color-accent-indigo, 0.4);
+  }
+
+  &[data-color="purple"] {
+    border-left: 2px solid rgba($color-accent-purple, 0.4);
+  }
+
+  &[data-color="red"] {
+    border-left: 2px solid rgba($color-accent-red, 0.4);
+  }
 }
 
 // =============================================================================
@@ -48,14 +65,11 @@
   flex-direction: column;
   align-items: center;
   gap: $spacing-xs;
-  padding: 0 $spacing-xs;
 }
 
+// Wrapper for tab button + badge
 .right-panel__activity-btn-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 // "Soon" badge for unimplemented tabs
@@ -72,6 +86,7 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
   pointer-events: none;
+  z-index: 1;
 }
 
 // =============================================================================
@@ -239,5 +254,5 @@
 // =============================================================================
 
 .right-panel__toggle-btn {
-  margin: $spacing-xs auto;
+  margin-top: $spacing-xs;
 }

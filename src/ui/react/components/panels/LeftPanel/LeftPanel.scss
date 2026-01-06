@@ -27,16 +27,17 @@
 // =============================================================================
 
 .left-panel__activity-bar {
-  width: 48px;
-  min-width: 48px;
+  width: $panel-activity-bar-width;
+  min-width: $panel-activity-bar-width; // NEVER shrink - always visible
   height: 100%; // Fill grid cell height
-  flex-shrink: 0;
+  flex-shrink: 0; // Prevent any shrinking
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: $spacing-sm 0;
   gap: $spacing-xs;
   background: $color-bg-primary;
+  overflow: hidden; // Prevent content overflow
 
   // Colored indicator line on right edge (based on active tab color)
   &[data-color="blue"] {

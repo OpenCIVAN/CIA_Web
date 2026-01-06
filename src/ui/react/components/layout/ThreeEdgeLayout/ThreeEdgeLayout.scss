@@ -24,6 +24,10 @@
   overflow: hidden;
   background: $color-bg-primary;
 
+  // Minimum width ensures activity bars are ALWAYS visible
+  // 48px (left activity) + 48px (right activity) + 200px (min workspace) = 296px minimum
+  min-width: 296px;
+
   // CSS Custom Properties with defaults
   --left-activity-width: #{$panel-activity-bar-width}; // typically 48px
   --right-activity-width: #{$panel-activity-bar-width};
@@ -31,13 +35,14 @@
   --right-panel-width: #{$panel-default-width};
 
   // FIXED: Grid template that responds to collapsed state
-  // Key insight: Use `max-content` for activity bars (fixed size)
-  // and `auto` for panel content which collapses to 0 when empty
-  grid-template-columns: max-content // 1: Left activity bar
+  // Activity bars use fixed pixel values to guarantee they're never cut off
+  // Center workspace uses minmax with flexible minimum to allow narrow viewports
+  grid-template-columns:
+    #{$panel-activity-bar-width} // 1: Left activity bar (fixed 48px, never shrinks)
     var(--left-content-width, 0) // 2: Left panel content (0 when collapsed)
-    minmax(300px, 1fr) // 3: Center workspace (EXPANDS!)
+    minmax(200px, 1fr) // 3: Center workspace (reduced min for narrow screens)
     var(--right-content-width, 0) // 4: Right panel content (0 when collapsed)
-    max-content; // 5: Right activity bar
+    #{$panel-activity-bar-width}; // 5: Right activity bar (fixed 48px, never shrinks)
 
   grid-template-rows: auto // Top bar
     auto // Secondary top bar
@@ -114,21 +119,27 @@
   .three-edge-layout__left-activity {
     grid-column: 1;
     grid-row: 2 / 5; // Span secondary top, main content, secondary bottom
-    width: var(--left-activity-width);
+    width: $panel-activity-bar-width;
+    min-width: $panel-activity-bar-width; // NEVER shrink below this
+    flex-shrink: 0; // Prevent flexbox from shrinking this
     background: $color-bg-secondary;
     border-right: 1px solid $color-border-subtle;
     display: flex;
     flex-direction: column;
+    overflow: hidden; // Prevent content from overflowing
   }
 
   .three-edge-layout__right-activity {
     grid-column: 5;
     grid-row: 2 / 5; // Span secondary top, main content, secondary bottom
-    width: var(--right-activity-width);
+    width: $panel-activity-bar-width;
+    min-width: $panel-activity-bar-width; // NEVER shrink below this
+    flex-shrink: 0; // Prevent flexbox from shrinking this
     background: $color-bg-secondary;
-    border-left: 1px solid $color-border-subtle;
+    // NOTE: No border-left here - colored indicator faces toward workspace (on left edge)
     display: flex;
     flex-direction: column;
+    overflow: hidden; // Prevent content from overflowing
   }
 
   // =============================================================================
