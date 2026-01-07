@@ -325,21 +325,33 @@
   // SIZES
   // ============================================================================
 
+  &--xs {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-xs;
+  }
+
   &--sm {
-    width: 28px;
-    height: 28px;
-    border-radius: $radius-md;
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
   }
 
   &--md {
-    width: 36px;
-    height: 36px;
-    border-radius: $radius-lg;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-md;
   }
 
   &--lg {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-lg;
+  }
+
+  &--xl {
+    width: 48px;
+    height: 48px;
     border-radius: $radius-xl;
   }
 
@@ -405,6 +417,24 @@
 
     &:active:not(:disabled):not(.icon-btn--disabled) {
       background: $color-glass-medium;
+    }
+  }
+
+  // Toolbar variant - for use in toolbars/bars with subtle background
+  &--toolbar {
+    background: $color-bg-tertiary;
+    border-color: $color-border-subtle;
+    color: $color-text-secondary;
+
+    &:hover:not(:disabled):not(.icon-btn--disabled) {
+      background: $color-bg-elevated;
+      border-color: $color-border-default;
+      color: $color-text-primary;
+    }
+
+    &:active:not(:disabled):not(.icon-btn--disabled) {
+      background: $color-bg-elevated;
+      border-color: $color-border-medium;
     }
   }
 

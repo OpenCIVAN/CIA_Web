@@ -1,16 +1,18 @@
 // src/ui/react/components/molecules/LabeledButton/LabeledButton.scss
 // LabeledButton molecule styles
 
+@use "theme" as *;
+
 .labeled-button {
-    --labeled-button-accent: var(--color-accent, #4ecdc4);
+    --labeled-button-accent: var(--color-accent-blue, #{$color-accent-blue});
 
     // Active state styling
     &--active {
         color: var(--labeled-button-accent);
-        background: rgba(78, 205, 196, 0.1);
+        background: rgba($color-accent-blue, 0.1);
 
         &:hover:not(:disabled) {
-            background: rgba(78, 205, 196, 0.15);
+            background: rgba($color-accent-blue, 0.15);
         }
 
         .btn__icon {

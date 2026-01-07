@@ -1,4 +1,4 @@
-// src/ui/react/components/bars/ActiveViewSelector/ActiveViewSelector.stories.jsx
+// src/ui/react/components/molecules/ActiveViewSelector/ActiveViewSelector.stories.jsx
 import React from 'react';
 import { ActiveViewSelector } from './ActiveViewSelector';
 

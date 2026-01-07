@@ -1,4 +1,4 @@
-// src/ui/react/components/bars/FlowDirectionToggle/FlowDirectionToggle.stories.jsx
+// src/ui/react/components/molecules/FlowDirectionToggle/FlowDirectionToggle.stories.jsx
 import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 

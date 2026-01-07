@@ -401,14 +401,30 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     onMergeModeChange={() => {}}
                     editMode={editMode}
                     onEditModeChange={setEditMode}
-                    // Flow
+                    // Flow (uses FlowDirectionToggle)
                     flowDirection={flowDirection}
                     onFlowDirectionChange={setFlowDirection}
-                    // Size
+                    // Size (uses CanvasSizeDisplay and ViewportSizeDisplay from bars)
                     canvasSize={canvasSize}
                     viewportSize={gridSize}
-                    onCanvasSizeClick={() => {}}
-                    onViewportSizeClick={() => {}}
+                    canvasPlacements={visiblePlacements}
+                    onCanvasSizeChange={async (newSize) => {
+                        // Update canvas dimensions on server
+                        if (!activeCanvasId) return;
+                        const currentCanvas = canvasManager.getCanvas(activeCanvasId);
+                        if (!currentCanvas) return;
+
+                        const newDimensions = {
+                            ...currentCanvas.dimensions,
+                            rows: newSize.rows,
+                            cols: newSize.cols,
+                        };
+                        await canvasManager.updateCanvas(activeCanvasId, { dimensions: newDimensions });
+                    }}
+                    onViewportSizeChange={(newSize) => {
+                        // Update local viewport size
+                        setGridSize({ rows: newSize.rows, cols: newSize.cols });
+                    }}
                     // Canvas mode
                     canvasMode={canvasMode}
                     onCanvasModeChange={setCanvasMode}
@@ -500,18 +516,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 </FloatingPanel>
             </div>
 
-            {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
-            <CanvasInfoFooter
-                canvasSize={canvasSize}
-                viewportSize={gridSize}
-                cellSize={cellSize}
-                collaboratorCount={3} // TODO: Get from actual collab state
-                syncStatus="synced" // TODO: Get from actual sync state
-                onOpenNavigator={() => {
-                    // TODO: Open canvas navigator
-                }}
-            />
-
             {/* Canvas Toolbar - Navigation + History + ViewContextBlock */}
             {/* Note: ViewContextBlock gets its view data from useViewContextLogic hook */}
             <CanvasToolbar
@@ -519,15 +523,22 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 viewportPosition={viewport}
                 homePosition={{ row: 0, col: 0 }}
                 onNavigate={(direction) => {
+                    log.debug('CanvasToolbar onNavigate:', direction, 'current viewport:', viewport);
                     const delta = {
                         up: { row: -1, col: 0 },
                         down: { row: 1, col: 0 },
                         left: { row: 0, col: -1 },
                         right: { row: 0, col: 1 },
                     }[direction];
-                    if (delta) moveViewport(delta.row, delta.col);
+                    if (delta) {
+                        log.debug('Moving viewport by:', delta);
+                        moveViewport(delta.row, delta.col);
+                    }
                 }}
-                onGoHome={() => navigateTo(0, 0)}
+                onGoHome={() => {
+                    log.debug('CanvasToolbar onGoHome');
+                    navigateTo(0, 0);
+                }}
                 onBookmark={() => {
                     // TODO: Implement bookmark save
                 }}
@@ -554,6 +565,19 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 }}
                 onSettings={() => {
                     log.debug('Settings requested');
+                }}
+            />
+
+            {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
+            {/* Placed below toolbar to separate from app footer */}
+            <CanvasInfoFooter
+                canvasSize={canvasSize}
+                viewportSize={gridSize}
+                cellSize={cellSize}
+                collaboratorCount={3} // TODO: Get from actual collab state
+                syncStatus="synced" // TODO: Get from actual sync state
+                onOpenNavigator={() => {
+                    // TODO: Open canvas navigator
                 }}
             />
 

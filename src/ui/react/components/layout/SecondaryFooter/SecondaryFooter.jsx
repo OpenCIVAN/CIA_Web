@@ -36,10 +36,8 @@
 
 import React, { useCallback, memo } from 'react';
 
-// Shared bar components (from common bars/ folder)
-import {
-    ViewContextBlock
-} from '@UI/react/components/bars';
+// Shared bar components
+import { ViewContextBlock } from '@UI/react/components/organisms';
 
 // Atomic design components
 import { ButtonGroup, IconButton, Icon } from '@UI/react/components/atoms';

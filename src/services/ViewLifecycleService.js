@@ -503,16 +503,32 @@ class ViewLifecycleService {
       return result.placement;
     }
 
-    // Resolve position
+    // Resolve position using flow-aware search
     let { row, col } = options;
+    let needsExpansion = false;
+
     if (row === undefined || col === undefined) {
       const nextCell = this._findNextEmptyCell(canvas);
       row = row ?? nextCell.row;
       col = col ?? nextCell.col;
+      needsExpansion = nextCell.expanded || false;
     }
 
     const rowSpan = options.rowSpan || 1;
     const colSpan = options.colSpan || 1;
+
+    // Auto-expand canvas if needed
+    if (needsExpansion) {
+      const flowDirection = canvas.flowDirection || "row";
+      const isRowFirst = flowDirection === "row";
+      const newDimensions = {
+        rows: isRowFirst ? canvas.dimensions.rows + 1 : canvas.dimensions.rows,
+        cols: isRowFirst ? canvas.dimensions.cols : canvas.dimensions.cols + 1,
+      };
+
+      log.debug(`Auto-expanding canvas to ${newDimensions.rows}x${newDimensions.cols}`);
+      await canvasManager.updateCanvas(canvasId, { dimensions: newDimensions });
+    }
 
     log.debug(
       `Placing view ${viewId} at [${row}, ${col}] on canvas ${canvasId}`
@@ -548,8 +564,8 @@ class ViewLifecycleService {
       viewId,
     });
 
-    // Navigate viewport to show new placement
-    this._navigateToPlacement({ row, col });
+    // Smart viewport navigation - only moves if cell is outside current view
+    this._smartNavigateToPlacement({ row, col, rowSpan, colSpan });
 
     return placement;
   }
@@ -738,42 +754,117 @@ class ViewLifecycleService {
   // =========================================================================
 
   /**
-   * Find next empty cell on a canvas
+   * Find next empty cell on a canvas using flow-aware search.
+   * 1. First searches within the visible viewport area
+   * 2. Then searches the rest of the canvas in flow order
+   * 3. If full, returns expansion position (auto-expands canvas)
+   *
+   * Row-first: search left→right within each row, then next row
+   * Column-first: search top→bottom within each column, then next column
+   *
    * @private
+   * @param {WorkspaceCanvas} canvas - The canvas to search
+   * @returns {{ row: number, col: number, expanded?: boolean }}
    */
   _findNextEmptyCell(canvas) {
     if (!canvas) return { row: 0, col: 0 };
 
-    const position = canvas.findAvailablePosition?.(1, 1);
-    if (position) {
-      return position;
+    const canvasRows = canvas.dimensions?.rows || 3;
+    const canvasCols = canvas.dimensions?.cols || 3;
+    const flowDirection = canvas.flowDirection || "row";
+    const isRowFirst = flowDirection === "row";
+
+    // Get current viewport state
+    let vpRow = 0;
+    let vpCol = 0;
+    let vpRows = 2;
+    let vpCols = 3;
+
+    try {
+      const savedSize = localStorage.getItem("cia-viewport-size");
+      if (savedSize) {
+        const parsed = JSON.parse(savedSize);
+        vpRows = parsed.rows || 2;
+        vpCols = parsed.cols || 3;
+      }
+      const savedPos = localStorage.getItem("cia-viewport-position");
+      if (savedPos) {
+        const parsed = JSON.parse(savedPos);
+        vpRow = parsed.row || 0;
+        vpCol = parsed.col || 0;
+      }
+    } catch (e) {
+      // Ignore parse errors
     }
 
-    // Build occupied set manually if model method not available
-    const occupiedCells = new Set();
-    if (canvas.placements) {
-      canvas.placements.forEach((p) => {
-        for (let r = p.row; r < p.row + (p.rowSpan || 1); r++) {
-          for (let c = p.col; c < p.col + (p.colSpan || 1); c++) {
-            occupiedCells.add(`${r}-${c}`);
+    // Helper to check if position is available
+    const isAvailable = (r, c) => {
+      if (canvas.isPositionAvailable) {
+        return canvas.isPositionAvailable(r, c, 1, 1);
+      }
+      // Fallback: check placements manually
+      if (!canvas.placements) return true;
+      return !canvas.placements.some((p) => {
+        const pEndRow = p.row + (p.rowSpan || 1);
+        const pEndCol = p.col + (p.colSpan || 1);
+        return r >= p.row && r < pEndRow && c >= p.col && c < pEndCol;
+      });
+    };
+
+    // Calculate viewport bounds
+    const vpRowEnd = Math.min(vpRow + vpRows, canvasRows);
+    const vpColEnd = Math.min(vpCol + vpCols, canvasCols);
+
+    // PHASE 1: Search within visible viewport first
+    if (isRowFirst) {
+      for (let row = vpRow; row < vpRowEnd; row++) {
+        for (let col = vpCol; col < vpColEnd; col++) {
+          if (isAvailable(row, col)) {
+            return { row, col };
           }
         }
-      });
-    }
-
-    const maxRows = canvas.dimensions?.rows || 10;
-    const maxCols = canvas.dimensions?.cols || 10;
-
-    for (let r = 0; r < maxRows; r++) {
-      for (let c = 0; c < maxCols; c++) {
-        if (!occupiedCells.has(`${r}-${c}`)) {
-          return { row: r, col: c };
+      }
+    } else {
+      for (let col = vpCol; col < vpColEnd; col++) {
+        for (let row = vpRow; row < vpRowEnd; row++) {
+          if (isAvailable(row, col)) {
+            return { row, col };
+          }
         }
       }
     }
 
-    // All cells occupied - return next row
-    return { row: maxRows, col: 0 };
+    // PHASE 2: Search rest of canvas in flow order
+    if (isRowFirst) {
+      for (let row = 0; row < canvasRows; row++) {
+        for (let col = 0; col < canvasCols; col++) {
+          // Skip viewport area (already checked)
+          if (row >= vpRow && row < vpRowEnd && col >= vpCol && col < vpColEnd) continue;
+          if (isAvailable(row, col)) {
+            return { row, col };
+          }
+        }
+      }
+    } else {
+      for (let col = 0; col < canvasCols; col++) {
+        for (let row = 0; row < canvasRows; row++) {
+          // Skip viewport area (already checked)
+          if (row >= vpRow && row < vpRowEnd && col >= vpCol && col < vpColEnd) continue;
+          if (isAvailable(row, col)) {
+            return { row, col };
+          }
+        }
+      }
+    }
+
+    // PHASE 3: Canvas is full - return position for expansion
+    // Row-first: new row at bottom (canvasRows, 0)
+    // Column-first: new column at right (0, canvasCols)
+    if (isRowFirst) {
+      return { row: canvasRows, col: 0, expanded: true };
+    } else {
+      return { row: 0, col: canvasCols, expanded: true };
+    }
   }
 
   /**

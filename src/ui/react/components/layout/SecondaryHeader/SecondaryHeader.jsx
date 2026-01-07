@@ -51,13 +51,13 @@
 
 import React, { memo } from 'react';
 
-// Shared bar components (from common bars/ folder)
+// Shared bar components
 import {
     WorkspaceSelector,
-    RoomPresenceIndicator,
     CanvasSizeDisplay,
     ViewportSizeDisplay
-} from '@UI/react/components/bars';
+} from '@UI/react/components/molecules';
+import { RoomPresenceIndicator } from '@UI/react/components/organisms';
 
 // Common components
 import { Icon } from '@UI/react/components/atoms/Icon';

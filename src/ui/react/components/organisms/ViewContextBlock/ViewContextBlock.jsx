@@ -312,7 +312,6 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
                                                 className="view-hub-flyout__item-remove"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    console.log('[ViewContextBlock] Remove clicked for:', v);
                                                     onAction?.('remove', v);
                                                 }}
                                                 title="Remove from canvas"

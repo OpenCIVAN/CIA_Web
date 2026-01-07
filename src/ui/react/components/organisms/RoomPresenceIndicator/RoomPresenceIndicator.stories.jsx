@@ -1,4 +1,4 @@
-// src/ui/react/components/bars/RoomPresenceIndicator/RoomPresenceIndicator.stories.jsx
+// src/ui/react/components/organisms/RoomPresenceIndicator/RoomPresenceIndicator.stories.jsx
 import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 

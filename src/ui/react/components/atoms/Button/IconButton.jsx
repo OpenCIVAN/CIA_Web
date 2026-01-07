@@ -71,9 +71,11 @@ import './Button.scss';
  * Icon sizes mapped to button sizes.
  */
 const ICON_BUTTON_SIZES = {
-    sm: 14,
-    md: 18,
-    lg: 20
+    xs: 10,
+    sm: 12,
+    md: 14,
+    lg: 16,
+    xl: 20
 };
 
 /**

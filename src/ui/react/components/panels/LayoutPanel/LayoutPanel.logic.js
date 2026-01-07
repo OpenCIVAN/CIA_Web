@@ -29,6 +29,7 @@ import { saveCanvasSize } from "@UI/react/hooks/canvasState.js";
 
 // Must match the key used in useViewportSize.js
 const VIEWPORT_STORAGE_KEY = "cia-viewport-size";
+const VIEWPORT_POSITION_KEY = "cia-viewport-position";
 
 /**
  * Load saved viewport size from localStorage
@@ -264,6 +265,15 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [canvasViewport]
   );
 
+  // Persist viewport position to localStorage for ViewLifecycleService flow-aware placement
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEWPORT_POSITION_KEY, JSON.stringify({ row: viewport.row, col: viewport.col }));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }, [viewport.row, viewport.col]);
+
   // IMPORTANT: localViewportSize is the source of truth for viewport size
   // This prevents rubberbanding when user changes size via navigator controls
   const viewportSize = useMemo(
@@ -325,6 +335,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   /**
    * Set viewport position directly
    * Also dispatches sync events so CanvasGrid can follow
+   * Persists to localStorage for ViewLifecycleService flow-aware placement
    */
   const setViewportPosition = useCallback(
     (row, col) => {
@@ -339,6 +350,13 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
       canvasSetViewportPosition?.(clampedRow, clampedCol);
       dispatchNavigateTo(clampedRow, clampedCol);
+
+      // Persist to localStorage for ViewLifecycleService
+      try {
+        localStorage.setItem(VIEWPORT_POSITION_KEY, JSON.stringify({ row: clampedRow, col: clampedCol }));
+      } catch (e) {
+        // Ignore localStorage errors
+      }
     },
     [canvasSetViewportPosition, canvasSize, viewportSize]
   );

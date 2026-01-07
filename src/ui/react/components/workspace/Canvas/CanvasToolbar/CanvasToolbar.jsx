@@ -7,7 +7,7 @@
 
 import React, { memo, useState, useCallback, useMemo } from 'react';
 import { IconButton, ButtonGroup, Icon } from '@UI/react/components/atoms';
-import { ViewContextBlock } from '@UI/react/components/bars';
+import { ViewContextBlock } from '@UI/react/components/organisms';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
@@ -20,6 +20,9 @@ import './CanvasToolbar.scss';
 const ZONES = {
     navigation: { width: 160, label: 'Navigation' },
     history: { width: 70, label: 'History' },
+    viewMode: { width: 90, label: 'View Mode' },
+    subset: { width: 120, label: 'Subset' },
+    actions: { width: 120, label: 'Actions' },
     viewContext: { label: 'View Context' }, // flex - handles mode, view, links, actions
 };
 

@@ -113,3 +113,34 @@ export { ColorSwatchGrid, DEFAULT_COLORMAPS } from './ColorSwatchGrid';
 
 // CameraViewGridPicker - 3x3 camera view preset grid
 export { CameraViewGridPicker } from './CameraViewGridPicker';
+
+// =============================================================================
+// TOOLBAR/BAR MOLECULES (moved from bars/)
+// =============================================================================
+
+// FlowDirectionToggle - Row/Column flow toggle
+export { FlowDirectionToggle } from './FlowDirectionToggle';
+
+// CanvasSizeDisplay - Canvas dimensions display/editor
+export { CanvasSizeDisplay } from './CanvasSizeDisplay';
+
+// ViewportSizeDisplay - Viewport dimensions display/editor
+export { ViewportSizeDisplay } from './ViewportSizeDisplay';
+
+// WorkspaceSelector - Workspace dropdown selector
+export { WorkspaceSelector } from './WorkspaceSelector';
+
+// EditToolbar - Edit mode toolbar
+export { EditToolbar } from './EditToolbar';
+
+// CanvasNavigation - Canvas pan navigation controls
+export { CanvasNavigation } from './CanvasNavigation';
+
+// PopoutButtons - Canvas popout/float/dock buttons
+export { PopoutButtons } from './PopoutButtons';
+
+// StackedNavBlock - Stacked navigation with arrows
+export { StackedNavBlock, NAV_DIRECTIONS } from './StackedNavBlock';
+
+// ActiveViewSelector - Active view dropdown selector
+export { ActiveViewSelector } from './ActiveViewSelector';

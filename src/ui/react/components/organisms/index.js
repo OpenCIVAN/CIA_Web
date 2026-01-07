@@ -23,3 +23,16 @@ export { PropertyPanel } from './PropertyPanel';
 
 // FilterBar - Search and filter bar
 export { FilterBar } from './FilterBar';
+
+// =============================================================================
+// TOOLBAR/BAR ORGANISMS (moved from bars/)
+// =============================================================================
+
+// RoomPresenceIndicator - Room indicator with presence avatars
+export { RoomPresenceIndicator } from './RoomPresenceIndicator';
+
+// ViewContextBlock - Unified view context display (mode, view, links, actions)
+export { ViewContextBlock } from './ViewContextBlock';
+
+// VoiceControlsPanel - Voice command controls panel
+export { VoiceControlsPanel } from './VoiceControlsPanel';

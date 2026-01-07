@@ -4,136 +4,28 @@
 // Based on canvas-chrome-v12.jsx SecondaryHeader spec
 // Height: 62px (18px label bar + 44px content bar)
 // Layout: Room | Workspace | Edit Tools | (spacer) | Flow | Size | Canvas Mode
+//
+// Uses ToolbarZone for self-contained zones with integrated labels
 
-import React, { memo, useState, useCallback } from 'react';
-import { Icon, IconButton } from '@UI/react/components/atoms';
-import { WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
+import React, { memo } from 'react';
+import { Icon } from '@UI/react/components/atoms';
+import {
+    WorkspaceSelector,
+    FlowDirectionToggle,
+    CanvasSizeDisplay,
+    ViewportSizeDisplay,
+} from '@UI/react/components/molecules';
+import { RoomPresenceIndicator } from '@UI/react/components/organisms';
+import {
+    ToolbarZone,
+    ToolbarDivider,
+    ToolbarSpacer,
+    ToolbarContainer,
+} from '../ToolbarZone';
 import './CanvasHeaderBar.scss';
 
 // =============================================================================
-// ZONE DEFINITIONS (per canvas-chrome-v12 spec)
-// =============================================================================
-
-const ZONES = {
-    room: { width: 180, label: 'Room' },
-    workspace: { width: 160, label: 'Workspace' },
-    editTools: { width: 'auto', label: 'Edit' },
-    flow: { width: 65, label: 'Flow' },
-    size: { width: 130, label: 'Size' },
-    canvasMode: { width: 'auto', label: 'Canvas' },
-};
-
-// =============================================================================
-// ZONE LABEL BAR
-// =============================================================================
-
-const ZoneLabelBar = memo(function ZoneLabelBar() {
-    return (
-        <div className="canvas-header-bar__label-bar">
-            {/* Left zones - use same class names as content zones for alignment */}
-            <div className="canvas-header-bar__label canvas-header-bar__label--room">
-                {ZONES.room.label}
-            </div>
-            <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--workspace">
-                {ZONES.workspace.label}
-            </div>
-            <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--edit">
-                {ZONES.editTools.label}
-            </div>
-
-            {/* Spacer */}
-            <div className="canvas-header-bar__label-spacer" />
-
-            {/* Right zones */}
-            <div className="canvas-header-bar__label canvas-header-bar__label--flow">
-                {ZONES.flow.label}
-            </div>
-            <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--size">
-                {ZONES.size.label}
-            </div>
-            <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--canvas-mode">
-                {ZONES.canvasMode.label}
-            </div>
-        </div>
-    );
-});
-
-
-// =============================================================================
-// FLOW ZONE (Row/Column direction)
-// =============================================================================
-
-const FlowZone = memo(function FlowZone({
-    flowDirection = 'row',
-    onFlowDirectionChange,
-}) {
-    return (
-        <div className="canvas-header-bar__zone canvas-header-bar__zone--center" style={{ width: ZONES.flow.width }}>
-            <div className="canvas-header-bar__flow-toggle">
-                <button
-                    type="button"
-                    className={`canvas-header-bar__flow-btn ${flowDirection === 'row' ? 'canvas-header-bar__flow-btn--active' : ''}`}
-                    onClick={() => onFlowDirectionChange?.('row')}
-                    title="Flow: Row"
-                >
-                    <Icon name="arrowRight" size={12} />
-                </button>
-                <button
-                    type="button"
-                    className={`canvas-header-bar__flow-btn ${flowDirection === 'column' ? 'canvas-header-bar__flow-btn--active' : ''}`}
-                    onClick={() => onFlowDirectionChange?.('column')}
-                    title="Flow: Column"
-                >
-                    <Icon name="arrowDown" size={12} />
-                </button>
-            </div>
-        </div>
-    );
-});
-
-// =============================================================================
-// SIZE ZONE (Canvas size + Viewport size)
-// =============================================================================
-
-const SizeZone = memo(function SizeZone({
-    canvasSize = { cols: 10, rows: 10 },
-    viewportSize = { cols: 3, rows: 3 },
-    onCanvasSizeClick,
-    onViewportSizeClick,
-}) {
-    return (
-        <div className="canvas-header-bar__zone canvas-header-bar__zone--center" style={{ width: ZONES.size.width }}>
-            <div className="canvas-header-bar__size-buttons">
-                <button
-                    type="button"
-                    className="canvas-header-bar__size-btn canvas-header-bar__size-btn--canvas"
-                    onClick={onCanvasSizeClick}
-                    title="Canvas Grid Size"
-                >
-                    <Icon name="grid" size={12} />
-                    <span>{canvasSize.cols}×{canvasSize.rows}</span>
-                </button>
-
-                <button
-                    type="button"
-                    className="canvas-header-bar__size-btn canvas-header-bar__size-btn--viewport"
-                    onClick={onViewportSizeClick}
-                    title="Viewport Size"
-                >
-                    <Icon name="maximize" size={12} />
-                    <span>{viewportSize.cols}×{viewportSize.rows}</span>
-                </button>
-            </div>
-        </div>
-    );
-});
-
-// =============================================================================
-// EDIT TOOLS ZONE
+// EDIT TOOLS ZONE CONTENT
 // =============================================================================
 
 const EDIT_TOOLS = [
@@ -141,7 +33,7 @@ const EDIT_TOOLS = [
     { id: 'pan', icon: 'hand', label: 'Pan', title: 'Pan Tool' },
 ];
 
-const EditToolsZone = memo(function EditToolsZone({
+const EditToolsContent = memo(function EditToolsContent({
     activeTool = 'select',
     onToolChange,
     mergeMode = false,
@@ -151,7 +43,7 @@ const EditToolsZone = memo(function EditToolsZone({
     compact = false,
 }) {
     return (
-        <div className={`canvas-header-bar__zone canvas-header-bar__edit-zone ${compact ? 'canvas-header-bar__edit-zone--compact' : ''}`}>
+        <div className="canvas-header-bar__edit-zone">
             {/* Tool selection */}
             <div className="canvas-header-bar__tool-group">
                 {EDIT_TOOLS.map(tool => (
@@ -198,7 +90,7 @@ const EditToolsZone = memo(function EditToolsZone({
 });
 
 // =============================================================================
-// CANVAS MODE ZONE (Docked/Float/Fullscreen) - Responsive
+// CANVAS MODE ZONE CONTENT
 // =============================================================================
 
 const CANVAS_MODE_OPTIONS = [
@@ -207,27 +99,52 @@ const CANVAS_MODE_OPTIONS = [
     { id: 'fullscreen', icon: 'maximize', label: 'Full', title: 'Fullscreen Mode' },
 ];
 
-const CanvasModeZone = memo(function CanvasModeZone({
+const CanvasModeContent = memo(function CanvasModeContent({
     canvasMode = 'docked',
     onCanvasModeChange,
     compact = false,
 }) {
     return (
-        <div className={`canvas-header-bar__zone canvas-header-bar__zone--center ${compact ? 'canvas-header-bar__zone--compact' : ''}`}>
-            <div className="canvas-header-bar__canvas-mode">
-                {CANVAS_MODE_OPTIONS.map(mode => (
-                    <button
-                        key={mode.id}
-                        type="button"
-                        className={`canvas-header-bar__mode-btn ${canvasMode === mode.id ? 'canvas-header-bar__mode-btn--active' : ''}`}
-                        onClick={() => onCanvasModeChange?.(mode.id)}
-                        title={mode.title}
-                    >
-                        <Icon name={mode.icon} size={12} />
-                        {!compact && <span className="canvas-header-bar__mode-label">{mode.label}</span>}
-                    </button>
-                ))}
-            </div>
+        <div className="canvas-header-bar__canvas-mode">
+            {CANVAS_MODE_OPTIONS.map(mode => (
+                <button
+                    key={mode.id}
+                    type="button"
+                    className={`canvas-header-bar__mode-btn ${canvasMode === mode.id ? 'canvas-header-bar__mode-btn--active' : ''}`}
+                    onClick={() => onCanvasModeChange?.(mode.id)}
+                    title={mode.title}
+                >
+                    <Icon name={mode.icon} size={12} />
+                    {!compact && <span className="canvas-header-bar__mode-label">{mode.label}</span>}
+                </button>
+            ))}
+        </div>
+    );
+});
+
+// =============================================================================
+// SIZE ZONE CONTENT
+// =============================================================================
+
+const SizeContent = memo(function SizeContent({
+    canvasSize,
+    viewportSize,
+    canvasPlacements,
+    onCanvasSizeChange,
+    onViewportSizeChange,
+}) {
+    return (
+        <div className="canvas-header-bar__size-content">
+            <CanvasSizeDisplay
+                size={canvasSize}
+                placements={canvasPlacements}
+                onChange={onCanvasSizeChange}
+            />
+            <ViewportSizeDisplay
+                size={viewportSize}
+                maxSize={canvasSize}
+                onChange={onViewportSizeChange}
+            />
         </div>
     );
 });
@@ -242,13 +159,7 @@ const CanvasModeZone = memo(function CanvasModeZone({
  * Based on canvas-chrome-v12.jsx SecondaryHeader spec
  * Height: 62px (18px label bar + 44px content bar)
  *
- * Zones:
- * - Room: Room selector with presence avatars (uses RoomPresenceIndicator)
- * - Workspace: Workspace/project selector (uses WorkspaceSelector)
- * - Edit Tools: Select/Pan/Merge/Edit mode controls
- * - Flow: Row/Column flow direction toggle
- * - Size: Canvas and viewport size buttons
- * - Canvas Mode: Docked/Float/Fullscreen toggle (responsive)
+ * Uses ToolbarZone components for self-aligned label+content zones
  */
 export function CanvasHeaderBar({
     // Room (uses RoomPresenceIndicator)
@@ -273,15 +184,16 @@ export function CanvasHeaderBar({
     editMode = false,
     onEditModeChange,
 
-    // Flow
+    // Flow (uses FlowDirectionToggle)
     flowDirection = 'row',
     onFlowDirectionChange,
 
-    // Size
+    // Size (uses CanvasSizeDisplay and ViewportSizeDisplay)
     canvasSize = { cols: 10, rows: 10 },
     viewportSize = { cols: 3, rows: 3 },
-    onCanvasSizeClick,
-    onViewportSizeClick,
+    canvasPlacements = [],
+    onCanvasSizeChange,
+    onViewportSizeChange,
 
     // Canvas mode
     canvasMode = 'docked',
@@ -291,42 +203,38 @@ export function CanvasHeaderBar({
     className = '',
 }) {
     return (
-        <div className={`canvas-header-bar ${className}`}>
-            {/* Zone Label Bar */}
-            <ZoneLabelBar />
+        <ToolbarContainer className={`canvas-header-bar ${className}`}>
+            {/* Room Zone */}
+            <ToolbarZone label="Room" width={180}>
+                <RoomPresenceIndicator
+                    room={room}
+                    members={roomMembers}
+                    availableRooms={availableRooms}
+                    onRoomChange={onRoomChange}
+                    onClick={onOpenRoomsPanel}
+                    onCreateRoom={onCreateRoom}
+                    hideLabel
+                />
+            </ToolbarZone>
 
-            {/* Content Bar */}
-            <div className="canvas-header-bar__content-bar">
-                {/* Room Zone - uses RoomPresenceIndicator */}
-                <div className="canvas-header-bar__zone canvas-header-bar__zone--room">
-                    <RoomPresenceIndicator
-                        room={room}
-                        members={roomMembers}
-                        availableRooms={availableRooms}
-                        onRoomChange={onRoomChange}
-                        onClick={onOpenRoomsPanel}
-                        onCreateRoom={onCreateRoom}
-                        hideLabel
-                    />
-                </div>
+            <ToolbarDivider />
 
-                <div className="canvas-header-bar__divider" />
+            {/* Workspace Zone */}
+            <ToolbarZone label="Workspace" width={160}>
+                <WorkspaceSelector
+                    workspace={workspace}
+                    workspaces={workspaces}
+                    onSelect={onWorkspaceChange}
+                    onCreate={onCreateWorkspace}
+                    hideLabel
+                />
+            </ToolbarZone>
 
-                {/* Workspace Zone - uses WorkspaceSelector */}
-                <div className="canvas-header-bar__zone canvas-header-bar__zone--workspace">
-                    <WorkspaceSelector
-                        workspace={workspace}
-                        workspaces={workspaces}
-                        onSelect={onWorkspaceChange}
-                        onCreate={onCreateWorkspace}
-                        hideLabel
-                    />
-                </div>
+            <ToolbarDivider />
 
-                <div className="canvas-header-bar__divider" />
-
-                {/* Edit Tools Zone */}
-                <EditToolsZone
+            {/* Edit Tools Zone */}
+            <ToolbarZone label="Edit">
+                <EditToolsContent
                     activeTool={activeTool}
                     onToolChange={onToolChange}
                     mergeMode={mergeMode}
@@ -335,36 +243,43 @@ export function CanvasHeaderBar({
                     onEditModeChange={onEditModeChange}
                     compact={compactMode}
                 />
+            </ToolbarZone>
 
-                {/* Spacer */}
-                <div className="canvas-header-bar__spacer" />
+            {/* Spacer */}
+            <ToolbarSpacer />
 
-                {/* Flow Zone */}
-                <FlowZone
-                    flowDirection={flowDirection}
-                    onFlowDirectionChange={onFlowDirectionChange}
+            {/* Flow Zone */}
+            <ToolbarZone label="Flow">
+                <FlowDirectionToggle
+                    direction={flowDirection}
+                    onChange={onFlowDirectionChange}
                 />
+            </ToolbarZone>
 
-                <div className="canvas-header-bar__divider" />
+            <ToolbarDivider />
 
-                {/* Size Zone */}
-                <SizeZone
+            {/* Size Zone */}
+            <ToolbarZone label="Size">
+                <SizeContent
                     canvasSize={canvasSize}
                     viewportSize={viewportSize}
-                    onCanvasSizeClick={onCanvasSizeClick}
-                    onViewportSizeClick={onViewportSizeClick}
+                    canvasPlacements={canvasPlacements}
+                    onCanvasSizeChange={onCanvasSizeChange}
+                    onViewportSizeChange={onViewportSizeChange}
                 />
+            </ToolbarZone>
 
-                <div className="canvas-header-bar__divider" />
+            <ToolbarDivider />
 
-                {/* Canvas Mode Zone */}
-                <CanvasModeZone
+            {/* Canvas Mode Zone */}
+            <ToolbarZone label="Canvas">
+                <CanvasModeContent
                     canvasMode={canvasMode}
                     onCanvasModeChange={onCanvasModeChange}
                     compact={compactMode}
                 />
-            </div>
-        </div>
+            </ToolbarZone>
+        </ToolbarContainer>
     );
 }
 

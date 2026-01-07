@@ -1,4 +1,4 @@
-// src/ui/react/components/bars/ViewContextBlock/ViewContextBlock.stories.jsx
+// src/ui/react/components/organisms/ViewContextBlock/ViewContextBlock.stories.jsx
 import React from 'react';
 import { ViewContextBlock } from './ViewContextBlock';
 

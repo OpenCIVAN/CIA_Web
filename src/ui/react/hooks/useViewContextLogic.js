@@ -25,7 +25,6 @@ import {
   getDatasetManager,
 } from "@Init/appInitializer";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events";
 import { ui as log } from "@Utils/logger.js";
 
@@ -68,12 +67,6 @@ export function useViewContextLogic() {
   // Get cells (enriched placements) from context - this is the source of truth
   const cells = logic.cells || [];
 
-  // Debug: Log context availability
-  if (!layoutContext) {
-    log.warn("ViewContext: LayoutPanelContext not available - hook called outside provider?");
-  } else if (!logic.cells) {
-    log.debug("ViewContext: No cells in context yet");
-  }
 
   // Extract viewport position with safe defaults
   const viewport = useMemo(
@@ -82,6 +75,15 @@ export function useViewContextLogic() {
       col: logic.viewport?.col ?? 0,
     }),
     [logic.viewport]
+  );
+
+  // Extract viewport size (how many cells are visible)
+  const viewportSize = useMemo(
+    () => ({
+      rows: logic.viewportSize?.rows ?? 3,
+      cols: logic.viewportSize?.cols ?? 3,
+    }),
+    [logic.viewportSize]
   );
 
   // Canvas position for display (col, row format)
@@ -98,6 +100,7 @@ export function useViewContextLogic() {
   // Navigation functions from layout context
   const moveViewport = logic.moveViewport || (() => {});
   const navigateToCell = logic.navigateToCell || (() => {});
+  const setViewportPosition = logic.setViewportPosition || (() => {});
   const homepoint = logic.homepoint || { row: 0, col: 0 };
 
   // =========================================================================
@@ -260,10 +263,7 @@ export function useViewContextLogic() {
    */
   const availableViews = useMemo(() => {
     const vcm = getViewConfigurationManager?.();
-    if (!vcm) {
-      console.log("[ViewContext] No ViewConfigurationManager available");
-      return [];
-    }
+    if (!vcm) return [];
 
     // Get all views - access _viewConfigs Map directly (same as useViewsTab)
     let allViews = [];
@@ -282,9 +282,6 @@ export function useViewContextLogic() {
 
     const onCanvasIds = new Set(onCanvasViews.map((v) => v.id));
 
-    console.log("[ViewContext] All view configs:", allViews.length);
-    console.log("[ViewContext] On canvas:", onCanvasIds.size);
-
     const available = allViews
       .filter((v) => !onCanvasIds.has(v.id) && v.status !== "trashed")
       .map((v, index) => ({
@@ -295,7 +292,6 @@ export function useViewContextLogic() {
         datasetName: v.datasetName || v.datasetId,
       }));
 
-    console.log("[ViewContext] Available (not on canvas):", available.length);
     return available;
   }, [onCanvasViews, refreshKey]);
 
@@ -393,33 +389,34 @@ export function useViewContextLogic() {
   );
 
   /**
-   * Place a view on the canvas
+   * Place a view on the canvas.
+   * Delegates to ViewLifecycleService which handles:
+   * - Flow-aware position finding (viewport first, then rest of canvas)
+   * - Auto-expansion when canvas is full
+   * - Smart viewport navigation (minimal shift)
    */
   const handlePlaceView = useCallback(
     async (viewId) => {
       log.debug("ViewContext: Place view", viewId);
 
-      // Find first empty cell or use current viewport position
-      const canvas = canvasManager?.getActiveCanvas?.();
-      if (!canvas) return;
+      try {
+        // Import dynamically to avoid circular dependencies
+        const { viewLifecycleService } = await import("@Services/ViewLifecycleService.js");
+        await viewLifecycleService.placeView(viewId);
 
-      // Try to place at current viewport position
-      await canvas.addPlacement?.({
-        row: viewport.row,
-        col: viewport.col,
-        content: {
-          type: "view",
-          viewConfigurationId: viewId,
-        },
-      });
-
-      // Set the placed view as active
-      const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
-      if (instance?.instanceId) {
-        workspaceManager.setActiveInstance(instance.instanceId);
+        // Set the placed view as active
+        const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
+        if (instance?.instanceId) {
+          workspaceManager.setActiveInstance(instance.instanceId);
+        }
+      } catch (error) {
+        log.error("ViewContext: Failed to place view", error);
+        window.dispatchEvent(new CustomEvent("cia:error", {
+          detail: { message: `Failed to place view: ${error.message}` }
+        }));
       }
     },
-    [viewport]
+    []
   );
 
   /**
@@ -428,26 +425,13 @@ export function useViewContextLogic() {
    */
   const handleRemoveView = useCallback(
     async (viewId) => {
-      console.log("[ViewContext] Remove view:", viewId);
-      console.log("[ViewContext] Available cells:", cells.map(c => ({ id: c.id, viewConfigurationId: c.viewConfigurationId })));
-
       // Find the placement with this view
       const placement = cells.find(
         (cell) => cell.viewConfigurationId === viewId || cell.id === viewId
       );
 
-      console.log("[ViewContext] Found placement:", placement);
-
-      if (placement) {
-        console.log("[ViewContext] Removing placement id:", placement.id);
-        // Use removePlacement from layout context - takes placement ID
-        if (logic.removePlacement) {
-          await logic.removePlacement(placement.id);
-        } else {
-          console.warn("[ViewContext] removePlacement not available in context");
-        }
-      } else {
-        console.warn("[ViewContext] Placement not found for viewId:", viewId);
+      if (placement && logic.removePlacement) {
+        await logic.removePlacement(placement.id);
       }
     },
     [cells, logic]
@@ -458,22 +442,18 @@ export function useViewContextLogic() {
    */
   const handleViewAction = useCallback(
     (action, view) => {
-      console.log("[ViewContext] View action:", action, view);
-
       switch (action) {
         case "remove":
-          console.log("[ViewContext] Calling handleRemoveView with id:", view?.id);
           if (view?.id) handleRemoveView(view.id);
           break;
         case "place":
           if (view?.id) handlePlaceView(view.id);
           break;
         case "create":
-          // Dispatch event to open create view dialog
           window.dispatchEvent(new CustomEvent("open:create-view"));
           break;
         default:
-          console.warn("[ViewContext] Unknown view action:", action);
+          break;
       }
     },
     [handleRemoveView, handlePlaceView]
