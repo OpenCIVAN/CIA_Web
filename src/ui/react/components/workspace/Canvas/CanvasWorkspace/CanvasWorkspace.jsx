@@ -24,7 +24,7 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspace as log } from '@Utils/logger.js';
-import { useViewportEventListener } from '@UI/react/hooks/useViewportSync.js';
+// Viewport sync handled by CanvasGrid - no need to import here
 
 import './CanvasWorkspace.scss';
 
@@ -113,18 +113,8 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         loadWorkspace();
     }, [projectId]);
 
-    // Listen for viewport sync events from CanvasNavigator
-    useViewportEventListener({
-        onNavigateTo: useCallback((row, col) => {
-            log.debug(`Viewport sync: navigate to [${row}, ${col}]`);
-            navigateTo(row, col);
-        }, [navigateTo]),
-        onMoveViewport: useCallback((deltaRow, deltaCol) => {
-            log.debug(`Viewport sync: move by [${deltaRow}, ${deltaCol}]`);
-            moveViewport(deltaRow, deltaCol);
-        }, [moveViewport]),
-        canvasId: activeCanvasId,
-    });
+    // NOTE: Viewport sync events are handled by CanvasGrid directly
+    // Do NOT listen here to avoid double movement
 
     // Add placement (server-authoritative)
     const addPlacement = useCallback(async (placementData) => {
@@ -517,32 +507,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             </div>
 
             {/* Canvas Toolbar - Navigation + History + ViewContextBlock */}
-            {/* Note: ViewContextBlock gets its view data from useViewContextLogic hook */}
+            {/* Note: Navigation and ViewContextBlock use useViewContextLogic hook internally */}
+            {/* which connects to LayoutPanelContext for viewport state */}
             <CanvasToolbar
-                // Navigation
-                viewportPosition={viewport}
-                homePosition={{ row: 0, col: 0 }}
-                onNavigate={(direction) => {
-                    log.debug('CanvasToolbar onNavigate:', direction, 'current viewport:', viewport);
-                    const delta = {
-                        up: { row: -1, col: 0 },
-                        down: { row: 1, col: 0 },
-                        left: { row: 0, col: -1 },
-                        right: { row: 0, col: 1 },
-                    }[direction];
-                    if (delta) {
-                        log.debug('Moving viewport by:', delta);
-                        moveViewport(delta.row, delta.col);
-                    }
-                }}
-                onGoHome={() => {
-                    log.debug('CanvasToolbar onGoHome');
-                    navigateTo(0, 0);
-                }}
-                onBookmark={() => {
-                    // TODO: Implement bookmark save
-                }}
-
                 // History
                 canUndo={false}
                 canRedo={false}

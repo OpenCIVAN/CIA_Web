@@ -321,7 +321,7 @@ const SmartTooltip = memo(({ cell, position, visible, getCellColor }) => {
                 </div>
             )}
             <div className="canvas-navigator__tooltip-position" style={{ color }}>
-                ({cell.col}, {cell.row})
+                ({cell.row}, {cell.col})
                 {((cell.colSpan || 1) > 1 || (cell.rowSpan || 1) > 1) && (
                     <span className="canvas-navigator__tooltip-span">
                         {' '}• {cell.colSpan || 1}×{cell.rowSpan || 1}
@@ -610,7 +610,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         <div className="canvas-navigator__info-row">
                             <Icon name="navigation" size={isVR ? 14 : 12} className="canvas-navigator__info-icon canvas-navigator__info-icon--teal" />
                             <span className="canvas-navigator__position-value">
-                                ({viewport.col}, {viewport.row})
+                                ({viewport.row}, {viewport.col})
                             </span>
                         </div>
 
@@ -618,7 +618,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         <div className="canvas-navigator__info-row">
                             <Icon name="home" size={isVR ? 14 : 12} className="canvas-navigator__info-icon canvas-navigator__info-icon--amber" />
                             <span className={`canvas-navigator__home-value ${isAtHome ? 'canvas-navigator__home-value--at-home' : ''}`}>
-                                ({homepoint?.col ?? 0}, {homepoint?.row ?? 0})
+                                ({homepoint?.row ?? 0}, {homepoint?.col ?? 0})
                             </span>
                         </div>
 

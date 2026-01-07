@@ -98,7 +98,7 @@ function StackedNavBlock({
     className = '',
 }) {
     // Format position for display
-    const positionText = `${position.row}, ${position.col}`;
+    const positionText = `${position.col}, ${position.row}`;
 
     // Handle D-pad navigation
     const handleNavigate = useCallback((direction) => {

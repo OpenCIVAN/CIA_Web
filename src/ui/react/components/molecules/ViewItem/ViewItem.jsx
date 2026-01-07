@@ -453,7 +453,7 @@ export const ViewItem = memo(function ViewItem({
                         {view.position && (
                             <div className="view-item__position-badge">
                                 <Icon name="grid" size={isVR ? 12 : 8} />
-                                <span>{view.position.row},{view.position.col}</span>
+                                <span>{view.position.col},{view.position.row}</span>
                             </div>
                         )}
 

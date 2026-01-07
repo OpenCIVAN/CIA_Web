@@ -105,17 +105,19 @@ const ViewModeZone = memo(function ViewModeZone({
 
 // =============================================================================
 // NAVIGATION ZONE (Home, Bookmark, Arrows, Position)
+// Uses useViewContextLogic for navigation to stay in sync with LayoutPanelContext
 // =============================================================================
 
-const NavigationZone = memo(function NavigationZone({
-    viewportPosition = { row: 0, col: 0 },
-    homePosition = { row: 0, col: 0 },
-    onNavigate,
-    onGoHome,
-    onBookmark,
-}) {
-    const isAtHome = viewportPosition.row === homePosition.row &&
-                     viewportPosition.col === homePosition.col;
+const NavigationZone = memo(function NavigationZone() {
+    // Get navigation from useViewContextLogic - this connects to LayoutPanelContext
+    // which is the source of truth for viewport position
+    const {
+        canvasPosition,
+        isAtOrigin,
+        onNavigate,
+        onHome,
+        onBookmark,
+    } = useViewContextLogic();
 
     return (
         <div className="canvas-toolbar__zone" style={{ width: ZONES.navigation.width }}>
@@ -124,8 +126,8 @@ const NavigationZone = memo(function NavigationZone({
                     icon="home"
                     label="Go to Home Position"
                     size="sm"
-                    active={isAtHome}
-                    onClick={onGoHome}
+                    active={isAtOrigin}
+                    onClick={onHome}
                 />
                 <IconButton
                     icon="bookmark"
@@ -139,32 +141,32 @@ const NavigationZone = memo(function NavigationZone({
                         icon="chevronLeft"
                         label="Pan Left"
                         size="xs"
-                        onClick={() => onNavigate?.('left')}
+                        onClick={() => onNavigate('left')}
                     />
                     <div className="canvas-toolbar__nav-arrows-vertical">
                         <IconButton
                             icon="chevronUp"
                             label="Pan Up"
                             size="xs"
-                            onClick={() => onNavigate?.('up')}
+                            onClick={() => onNavigate('up')}
                         />
                         <IconButton
                             icon="chevronDown"
                             label="Pan Down"
                             size="xs"
-                            onClick={() => onNavigate?.('down')}
+                            onClick={() => onNavigate('down')}
                         />
                     </div>
                     <IconButton
                         icon="chevronRight"
                         label="Pan Right"
                         size="xs"
-                        onClick={() => onNavigate?.('right')}
+                        onClick={() => onNavigate('right')}
                     />
                 </div>
 
                 <span className="canvas-toolbar__position">
-                    {viewportPosition.col},{viewportPosition.row}
+                    {canvasPosition.col},{canvasPosition.row}
                 </span>
             </div>
         </div>
@@ -385,13 +387,6 @@ export function CanvasToolbar({
     viewMode = 'normal',
     onModeChange,
 
-    // Navigation
-    viewportPosition = { row: 0, col: 0 },
-    homePosition = { row: 0, col: 0 },
-    onNavigate,
-    onGoHome,
-    onBookmark,
-
     // History
     canUndo = false,
     canRedo = false,
@@ -426,14 +421,8 @@ export function CanvasToolbar({
 
             {/* Content Bar */}
             <div className="canvas-toolbar__content-bar">
-                {/* Navigation */}
-                <NavigationZone
-                    viewportPosition={viewportPosition}
-                    homePosition={homePosition}
-                    onNavigate={onNavigate}
-                    onGoHome={onGoHome}
-                    onBookmark={onBookmark}
-                />
+                {/* Navigation - uses useViewContextLogic internally */}
+                <NavigationZone />
 
                 <div className="canvas-toolbar__divider" />
 

@@ -294,27 +294,24 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
    */
   const moveViewport = useCallback(
     (deltaRowOrDirection, deltaCol) => {
+      // Only dispatch events - CanvasGrid listens and updates its viewport
+      // Don't call canvasMoveViewport directly to avoid double movement
       if (typeof deltaRowOrDirection === "string") {
         const direction = deltaRowOrDirection;
         switch (direction) {
           case "up":
-            canvasMoveViewport?.(-1, 0);
             dispatchMoveViewport(-1, 0);
             break;
           case "down":
-            canvasMoveViewport?.(1, 0);
             dispatchMoveViewport(1, 0);
             break;
           case "left":
-            canvasMoveViewport?.(0, -1);
             dispatchMoveViewport(0, -1);
             break;
           case "right":
-            canvasMoveViewport?.(0, 1);
             dispatchMoveViewport(0, 1);
             break;
           case "home":
-            canvasSetViewportPosition?.(0, 0);
             dispatchNavigateTo(0, 0);
             break;
           default:
@@ -326,10 +323,9 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const deltaRow =
         typeof deltaRowOrDirection === "number" ? deltaRowOrDirection : 0;
       const dCol = typeof deltaCol === "number" ? deltaCol : 0;
-      canvasMoveViewport?.(deltaRow, dCol);
       dispatchMoveViewport(deltaRow, dCol);
     },
-    [canvasMoveViewport, canvasSetViewportPosition]
+    []
   );
 
   /**

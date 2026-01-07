@@ -27,6 +27,7 @@ import {
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events";
 import { ui as log } from "@Utils/logger.js";
+// Viewport events are dispatched by LayoutPanel.logic.js - no need to import here
 
 // =============================================================================
 // CONSTANTS
@@ -109,41 +110,53 @@ export function useViewContextLogic() {
 
   /**
    * Handle direction-based navigation (up/down/left/right)
+   * Uses both LayoutPanelContext (if available) AND direct event dispatch
+   * to ensure navigation always works
    */
   const handleNavigate = useCallback(
     (direction) => {
       log.debug("ViewContext navigation:", direction);
 
+      let deltaRow = 0;
+      let deltaCol = 0;
+
       switch (direction) {
         case "up":
-          moveViewport(-1, 0);
+          deltaRow = -1;
           break;
         case "down":
-          moveViewport(1, 0);
+          deltaRow = 1;
           break;
         case "left":
-          moveViewport(0, -1);
+          deltaCol = -1;
           break;
         case "right":
-          moveViewport(0, 1);
+          deltaCol = 1;
           break;
         default:
           log.warn("Unknown direction:", direction);
+          return;
       }
+
+      // Call context moveViewport - it dispatches the event internally
+      // Don't dispatch again to avoid double movement
+      moveViewport(deltaRow, deltaCol);
     },
     [moveViewport]
   );
 
   /**
    * Navigate to home/origin position
+   * Uses both LayoutPanelContext (if available) AND direct event dispatch
    */
   const handleHome = useCallback(() => {
     log.debug("ViewContext: Navigate home");
-    if (homepoint) {
-      navigateToCell(homepoint.row, homepoint.col);
-    } else {
-      navigateToCell(0, 0);
-    }
+    const targetRow = homepoint?.row ?? 0;
+    const targetCol = homepoint?.col ?? 0;
+
+    // Call context navigateToCell - it dispatches the event internally
+    // Don't dispatch again to avoid double movement
+    navigateToCell(targetRow, targetCol);
   }, [navigateToCell, homepoint]);
 
   /**
