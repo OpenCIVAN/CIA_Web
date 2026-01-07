@@ -392,7 +392,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   left: $spacing-sm;
   right: $spacing-sm;
   z-index: 5; // Above header but below WebGL threshold of 10
-  // Visibility controlled entirely by inline styles - no CSS opacity/transform
+  // Visibility controlled by inline styles, but transitions handled here
+  transition: opacity $animation-duration $animation-easing,
+    transform $animation-duration $animation-easing,
+    visibility $animation-duration;
 
   // Visible state - visibility controlled by inline styles
   // Transform removed to prevent conflicts

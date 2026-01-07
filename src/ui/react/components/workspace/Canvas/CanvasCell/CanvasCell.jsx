@@ -188,6 +188,7 @@ export const CanvasCell = memo(function CanvasCell({
     inEditMode = false,
     activeViewId = null,
     recentViewIds = [],
+    isInFocusMode = false, // Whether the app is in focus mode (from useViewStack)
     onClick,
     onDoubleClick,
     onSelect,
@@ -196,6 +197,7 @@ export const CanvasCell = memo(function CanvasCell({
     onPush,
     onAddContent,
     onRemove,
+    onFocusView, // Handler to enter focus mode for this view
 }) {
     const [activeDropZone, setActiveDropZone] = useState(DROP_ZONES.NONE);
     const cellRef = useRef(null);
@@ -612,8 +614,10 @@ export const CanvasCell = memo(function CanvasCell({
                         viewColor={placement.content?.color?.hex || placement.content?.colorHex}
                         shouldMountViewport={shouldMountViewport}
                         isActiveView={isActiveView}
+                        isInFocusMode={isInFocusMode}
                         lifecycle={effectiveLifecycle}
                         onActivate={handleActivateView}
+                        onFocusView={onFocusView}
                     />
                 );
 
@@ -932,8 +936,10 @@ function ViewContent({
     viewColor, // Fallback color from placement content (used if hook returns no color)
     shouldMountViewport = true,
     isActiveView = false,
+    isInFocusMode = false, // Whether in focus mode (hides focus button)
     lifecycle = 'live', // 'live' | 'paused' | 'cold'
     onActivate, // Called when user wants to activate a cold view
+    onFocusView, // Called when user clicks Focus button in header
 }) {
     const [isReady, setIsReady] = useState(false);
 
@@ -1014,7 +1020,8 @@ function ViewContent({
                             isRemote={false}
                             currentSpan={`${colSpan}x${rowSpan}`}
                             renderMode={renderMode}
-                            onFocus={onActivate}
+                            onFocus={onFocusView}
+                            isInFocusMode={isInFocusMode}
                             onReady={() => setIsReady(true)}
                             onClose={onClose}
                             onTrash={onTrash}

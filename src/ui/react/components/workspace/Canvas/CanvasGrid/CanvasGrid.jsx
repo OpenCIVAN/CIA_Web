@@ -27,6 +27,7 @@ import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDime
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { useViewportEventListener } from '@UI/react/hooks/useViewportSync';
+import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
 import './CanvasGrid.scss';
@@ -377,6 +378,18 @@ export function CanvasGrid({
     } = useSubsets(canvasId);
 
     // ==========================================================================
+    // VIEW STACK HOOK (for focus mode navigation)
+    // ==========================================================================
+    // Note: CanvasGrid must be used within ViewStackProvider (in CanvasWorkspace)
+
+    const {
+        isFocusView,
+        currentView,
+        focusView,
+        goBack: exitFocusMode,
+    } = useViewStack();
+
+    // ==========================================================================
     // DERIVED STATE
     // ==========================================================================
 
@@ -518,8 +531,16 @@ export function CanvasGrid({
                 }
             }
 
-            // Escape - Deselect all (per spec)
+            // Escape - Exit focus mode first, then deselect all
             if (e.key === 'Escape') {
+                // Priority 1: Exit focus mode if in it
+                if (isFocusView && exitFocusMode) {
+                    e.preventDefault();
+                    exitFocusMode();
+                    return;
+                }
+
+                // Priority 2: Deselect selected cells
                 if (selectedCells.length > 0) {
                     e.preventDefault();
                     setSelectedCells([]);
@@ -643,7 +664,7 @@ export function CanvasGrid({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen, renderMode, shouldTriggerIsolation, isolateCell, onRemovePlacement]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen, renderMode, shouldTriggerIsolation, isolateCell, onRemovePlacement, isFocusView, exitFocusMode]);
 
     // ==========================================================================
     // SELECTION MODIFIER KEY TRACKING (for cursor feedback)
@@ -896,6 +917,42 @@ export function CanvasGrid({
         // Same as close for now - could be permanent delete in future
         handleCloseAllViews();
     }, [handleCloseAllViews]);
+
+    // ==========================================================================
+    // FOCUS MODE HANDLER
+    // ==========================================================================
+
+    /**
+     * Handle focusing a view (entering focus mode via header Focus button)
+     * Creates focus view config and pushes onto view stack
+     */
+    const handleFocusView = useCallback((placement) => {
+        if (!focusView || !placement) return;
+
+        const viewId = placement.content?.viewConfigurationId;
+        let viewName = 'View';
+
+        // Get view name from view config if available
+        if (viewId) {
+            try {
+                const view = getViewConfigurationManager()?.getView(viewId);
+                if (view) {
+                    const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                    viewName = dataset?.filename || view.name || 'View';
+                }
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        focusView({
+            placementId: placement.id,
+            viewConfigurationId: viewId,
+            name: viewName,
+            row: placement.row,
+            col: placement.col,
+        });
+    }, [focusView]);
 
     // ==========================================================================
     // EDGE DROP HANDLING (expand canvas)
@@ -1274,12 +1331,14 @@ export function CanvasGrid({
                             inEditMode={editMode}
                             activeViewId={activeViewId}
                             recentViewIds={recentViewIds}
+                            isInFocusMode={isFocusView}
                             onSelect={toggleSelection}
                             onClick={(e) => placement && handleCellClick(placement, e)}
                             onDoubleClick={(e) => placement && handleCellDoubleClick(placement, e)}
                             onAddContent={(type) => onAddContent?.(canvasRow, canvasCol, type)}
                             onRemove={() => placement && onRemovePlacement?.(placement.id)}
                             onDrop={handleCellDrop}
+                            onFocusView={placement ? () => handleFocusView(placement) : undefined}
                         />
                     </div>
                 );
@@ -1299,13 +1358,52 @@ export function CanvasGrid({
         editMode,
         activeViewId,
         recentViewIds,
+        isFocusView,
         toggleSelection,
         handleCellClick,
         handleCellDoubleClick,
         onAddContent,
         onRemovePlacement,
         handleCellDrop,
+        handleFocusView,
     ]);
+
+    // ==========================================================================
+    // FOCUS MODE RENDERING
+    // ==========================================================================
+
+    // Find the focused placement when in focus mode
+    const focusedPlacement = useMemo(() => {
+        if (!isFocusView || !currentView?.data?.placementId) return null;
+        return canvas?.placements?.find(p => p.id === currentView.data.placementId) || null;
+    }, [isFocusView, currentView?.data?.placementId, canvas?.placements]);
+
+    // Render the focused cell for focus mode
+    const renderFocusedCell = useMemo(() => {
+        if (!isFocusView || !focusedPlacement) return null;
+
+        return (
+            <CanvasCell
+                placement={focusedPlacement}
+                row={focusedPlacement.row}
+                col={focusedPlacement.col}
+                renderMode={RENDER_MODES.FULL}
+                cellSize={containerSize} // Use full container size
+                isHighlighted={false}
+                isSelected={false}
+                inEditMode={false}
+                activeViewId={focusedPlacement.content?.viewConfigurationId}
+                recentViewIds={[]}
+                isInFocusMode={true}
+                onRemove={() => {
+                    exitFocusMode?.();
+                    onRemovePlacement?.(focusedPlacement.id);
+                }}
+                onDrop={handleCellDrop}
+                onFocusView={undefined} // Already in focus mode
+            />
+        );
+    }, [isFocusView, focusedPlacement, containerSize, exitFocusMode, onRemovePlacement, handleCellDrop]);
 
     // ==========================================================================
     // RENDER
@@ -1331,13 +1429,33 @@ export function CanvasGrid({
 
     return (
         <div
-            className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--focus-mode' : ''}`}
+            className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--subset-focus-mode' : ''} ${isFocusView ? 'canvas-grid--view-focus-mode' : ''}`}
             data-render-mode={renderMode}
         >
             {/* Mode banners */}
             {inFocusMode && activeSubset && (
                 <div className="canvas-grid__focus-banner">
                     <span>Focus: {activeSubset.name}</span>
+                </div>
+            )}
+
+            {/* View Focus Mode Header - Shows when viewing single cell fullscreen */}
+            {isFocusView && currentView && (
+                <div className="canvas-grid__view-focus-header">
+                    <button
+                        className="canvas-grid__view-focus-back"
+                        onClick={exitFocusMode}
+                        title="Exit focus mode (Escape)"
+                    >
+                        <Icon name="arrowLeft" size={16} />
+                        <span>Back</span>
+                    </button>
+                    <div className="canvas-grid__view-focus-title">
+                        <span className="canvas-grid__view-focus-name">{currentView.label}</span>
+                    </div>
+                    <div className="canvas-grid__view-focus-hint">
+                        Press <kbd>Escape</kbd> to exit
+                    </div>
                 </div>
             )}
 
@@ -1377,14 +1495,22 @@ export function CanvasGrid({
                     {/* Grid viewport - ALWAYS rendered to preserve VTK instances */}
                     <div
                         ref={gridRef}
-                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''}`}
+                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''} ${isFocusView ? 'canvas-grid__viewport--focus-mode' : ''}`}
                         tabIndex={0}
                         onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
                     >
-                        {renderCells}
+                        {/* Show either focus mode view or normal grid */}
+                        {isFocusView ? (
+                            <div className="canvas-grid__focus-view-container">
+                                {renderFocusedCell}
+                            </div>
+                        ) : (
+                            renderCells
+                        )}
 
-                        {/* Edge Drop Zones - show at canvas edges during drag */}
+                        {/* Edge Drop Zones - show at canvas edges during drag (hidden in focus mode) */}
+                        {!isFocusView && (
                         <CanvasEdgeDropZones
                             isDragActive={isDragActive}
                             canExpandTop={effectiveViewport.row === 0}
@@ -1398,6 +1524,7 @@ export function CanvasGrid({
                             modifiers={dragModifiers}
                             onEdgeDrop={handleEdgeDrop}
                         />
+                        )}
                     </div>
                 </div>
             </div>

@@ -311,3 +311,102 @@
   background: $color-border-default;
   margin: 0 $spacing-xs;
 }
+
+// =============================================================================
+// VIEW FOCUS MODE - Single cell fullscreen
+// =============================================================================
+
+.canvas-grid--view-focus-mode {
+  // Override subset focus mode if both are active
+  .canvas-grid__container {
+    border: none;
+    border-radius: 0;
+  }
+}
+
+// Focus mode header bar
+.canvas-grid__view-focus-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-bg-elevated, 0.95);
+  border-bottom: 1px solid $color-border-default;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.canvas-grid__view-focus-back {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.canvas-grid__view-focus-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-grid__view-focus-name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.canvas-grid__view-focus-hint {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-family: $font-family-mono;
+    font-size: 10px;
+  }
+}
+
+// Focus view container - fills available space
+.canvas-grid__focus-view-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+
+  // Make the canvas cell fill the container
+  > .canvas-cell {
+    width: 100%;
+    height: 100%;
+    border-radius: 0; // No rounded corners in fullscreen
+  }
+}
+
+// Viewport in focus mode
+.canvas-grid__viewport--focus-mode {
+  padding: 0; // Remove padding in focus mode
+}
