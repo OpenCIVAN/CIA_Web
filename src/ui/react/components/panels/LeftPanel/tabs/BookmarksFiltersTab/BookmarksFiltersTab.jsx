@@ -146,6 +146,28 @@ export function BookmarksFiltersPanelContent({
         }
     }, [currentCameraState, activeFilterIds, createBookmark]);
 
+    // Listen for external bookmark creation requests (e.g., from view snapshot)
+    useEffect(() => {
+        const handleCreateBookmarkEvent = (e) => {
+            const bookmarkData = e.detail;
+            if (bookmarkData && createBookmark) {
+                createBookmark({
+                    name: bookmarkData.name,
+                    description: bookmarkData.description,
+                    scope: bookmarkData.scope || 'personal',
+                    view_config_id: bookmarkData.view_config_id,
+                    dataset_id: bookmarkData.dataset_id,
+                    camera_state: bookmarkData.camera_state,
+                    filter_ids: bookmarkData.filter_ids || [],
+                    tags: bookmarkData.tags || [],
+                });
+            }
+        };
+
+        window.addEventListener('cia:create-bookmark', handleCreateBookmarkEvent);
+        return () => window.removeEventListener('cia:create-bookmark', handleCreateBookmarkEvent);
+    }, [createBookmark]);
+
     // Batch operations
     const handleBatchDelete = useCallback(() => {
         // TODO: Implement batch delete

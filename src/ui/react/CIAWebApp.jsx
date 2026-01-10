@@ -269,13 +269,63 @@ export function CIAWebApp({ username, userId, projectId }) {
     setDeleteViewTarget(view);
   }, []);
 
-  const handleConfirmDeleteView = useCallback(() => {
+  const handleConfirmDeleteView = useCallback(async () => {
     if (!deleteViewTarget?.id) return;
-    log.info("Deleting view:", deleteViewTarget.name);
-    // TODO: Actually delete the view via ViewConfigurationManager
-    window.dispatchEvent(new CustomEvent('cia:toast', {
-      detail: { message: `Deleted "${deleteViewTarget.name}"`, type: 'success' }
-    }));
+
+    const viewId = deleteViewTarget.id;
+    const viewName = deleteViewTarget.name;
+    log.info("Deleting view:", viewName);
+
+    try {
+      // Get managers
+      const viewConfigManager = getViewConfigurationManager();
+      const { canvasManager } = await import('@Core/data/managers/CanvasManager.js');
+
+      // Find and store placement info for undo
+      const placement = canvasManager.getPlacementForView(viewId);
+      const placementData = placement ? {
+        canvasId: canvasManager.getActiveCanvas()?.id,
+        row: placement.row,
+        col: placement.col,
+        rowSpan: placement.rowSpan || 1,
+        colSpan: placement.colSpan || 1,
+      } : null;
+
+      // Store view config for potential undo
+      const viewConfig = viewConfigManager.getView(viewId);
+
+      // 1. Remove from canvas if placed
+      if (placement && placementData?.canvasId) {
+        await canvasManager.removePlacement(placementData.canvasId, placement.id);
+      }
+
+      // 2. Delete the view configuration
+      await viewConfigManager.deleteView(viewId);
+
+      // 3. Record in history for undo
+      canvasHistory.record({
+        type: 'DELETE',
+        description: `Delete "${viewName}"`,
+        undo: async () => {
+          // Restore would require recreating the view - complex operation
+          // For now, just show a message that undo isn't fully supported for delete
+          toast.warning('View deletion cannot be fully undone. Check trash to restore.');
+        },
+        redo: async () => {
+          // Re-delete would require the view to exist again
+          toast.info('Redo delete not available');
+        },
+      });
+
+      toast.success(`Deleted "${viewName}"`, {
+        actionLabel: 'Undo',
+        onAction: () => canvasHistory.undo(),
+      });
+    } catch (error) {
+      log.error("Failed to delete view:", error);
+      toast.error(`Failed to delete view: ${error.message}`);
+    }
+
     setDeleteViewTarget(null);
   }, [deleteViewTarget]);
 
@@ -502,19 +552,55 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // QUICK ACTION HANDLERS (View Snapshot, Duplicate, Settings)
   // ===========================================================================
-  const handleViewSnapshot = useCallback((event) => {
-    const { viewId, view } = event.detail || {};
+  const handleViewSnapshot = useCallback(async (event) => {
+    const { viewId, view, cameraState } = event.detail || {};
     if (!viewId) return;
 
     log.info("Creating snapshot for view:", view?.name || viewId);
-    // TODO: Implement snapshot creation
-    // This should:
-    // 1. Capture current view state (camera, filters, appearance)
-    // 2. Create a bookmark/snapshot entry
-    // 3. Show confirmation toast
-    window.dispatchEvent(new CustomEvent('cia:toast', {
-      detail: { message: `Snapshot created for "${view?.name || 'view'}"`, type: 'success' }
-    }));
+
+    try {
+      // Get view configuration for additional details
+      const viewConfigManager = getViewConfigurationManager();
+      const viewConfig = viewConfigManager.getView(viewId);
+
+      if (!viewConfig) {
+        toast.error('View configuration not found');
+        return;
+      }
+
+      // Create bookmark name with timestamp
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const snapshotName = `${view?.name || viewConfig.name} - ${timestamp}`;
+
+      // Get camera state from event or from view config
+      const camera = cameraState || viewConfig.camera;
+
+      // Dispatch event to create bookmark (will be handled by BookmarksFiltersTab or a hook)
+      window.dispatchEvent(new CustomEvent('cia:create-bookmark', {
+        detail: {
+          name: snapshotName,
+          description: `Snapshot of "${view?.name || viewConfig.name}"`,
+          scope: 'personal',
+          view_config_id: viewId,
+          dataset_id: viewConfig.datasetId,
+          camera_state: camera,
+          filter_ids: viewConfig.filters?.map(f => f.id) || [],
+          tags: ['snapshot', 'auto-created'],
+        }
+      }));
+
+      toast.success(`Snapshot saved: "${snapshotName}"`, {
+        actionLabel: 'View',
+        onAction: () => {
+          window.dispatchEvent(new CustomEvent('navigate:left-panel', {
+            detail: { tab: 'bookmarks-filters' }
+          }));
+        },
+      });
+    } catch (error) {
+      log.error("Failed to create snapshot:", error);
+      toast.error(`Failed to create snapshot: ${error.message}`);
+    }
   }, []);
 
   const handleViewDuplicate = useCallback(async (event) => {
@@ -874,10 +960,89 @@ export function CIAWebApp({ username, userId, projectId }) {
             <GlobalSearchModal
               isOpen={showGlobalSearch}
               onClose={() => setShowGlobalSearch(false)}
-              onSelect={(result) => {
+              onSelect={async (result) => {
                 log.debug("Search result selected:", result);
                 setShowGlobalSearch(false);
-                // TODO: Navigate to the selected result
+
+                if (!result?.type || !result?.id) return;
+
+                // Navigate based on result type
+                switch (result.type) {
+                  case 'project':
+                    // Navigate to the project (would change active project)
+                    log.info(`Navigating to project: ${result.name}`);
+                    toast.info(`Opening project "${result.name}"...`);
+                    // Dispatch event to change project
+                    window.dispatchEvent(new CustomEvent('cia:navigate-project', {
+                      detail: { projectId: result.id, projectName: result.name }
+                    }));
+                    break;
+
+                  case 'dataset':
+                    // Open dataset in left panel
+                    log.info(`Navigating to dataset: ${result.name}`);
+                    window.dispatchEvent(new CustomEvent('navigate:left-panel', {
+                      detail: { tab: 'datasets', datasetId: result.id }
+                    }));
+                    toast.info(`Showing dataset "${result.name}"`);
+                    break;
+
+                  case 'view':
+                    // Focus the view on canvas or open it
+                    log.info(`Opening view: ${result.name}`);
+                    try {
+                      const { canvasManager } = await import('@Core/data/managers/CanvasManager.js');
+                      const placement = canvasManager.getPlacementForView(result.id);
+
+                      if (placement) {
+                        // View is on canvas - scroll to it and select
+                        window.dispatchEvent(new CustomEvent('cia:focus-cell', {
+                          detail: { row: placement.row, col: placement.col, viewId: result.id }
+                        }));
+                        toast.info(`Focused "${result.name}"`);
+                      } else {
+                        // View not on canvas - show in views tab
+                        window.dispatchEvent(new CustomEvent('navigate:left-panel', {
+                          detail: { tab: 'views', viewId: result.id }
+                        }));
+                        toast.info(`Showing view "${result.name}" in Views tab`);
+                      }
+                    } catch (error) {
+                      log.error('Error navigating to view:', error);
+                    }
+                    break;
+
+                  case 'person':
+                    // Show person in People tab
+                    log.info(`Opening person: ${result.name}`);
+                    window.dispatchEvent(new CustomEvent('navigate:right-panel', {
+                      detail: { tab: 'people', userId: result.id }
+                    }));
+                    toast.info(`Showing "${result.name}" in People tab`);
+                    break;
+
+                  case 'annotation':
+                    // Open annotation in Annotations tab
+                    log.info(`Opening annotation: ${result.name}`);
+                    window.dispatchEvent(new CustomEvent('navigate:left-panel', {
+                      detail: { tab: 'annotations', annotationId: result.id }
+                    }));
+                    toast.info(`Showing annotation`);
+                    break;
+
+                  case 'room':
+                    // Switch to the room
+                    log.info(`Navigating to room: ${result.name}`);
+                    window.dispatchEvent(new CustomEvent('cia:switch-room', {
+                      detail: { roomId: result.id, roomName: result.name }
+                    }));
+                    toast.info(`Switching to room "${result.name}"`);
+                    break;
+
+                  default:
+                    log.warn(`Unknown result type: ${result.type}`);
+                    toast.warning(`Cannot navigate to "${result.name}"`);
+                }
               }}
             />
 
