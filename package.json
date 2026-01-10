@@ -64,7 +64,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@kitware/vtk.js": "^32.13.0",
+    "@kitware/vtk.js": "^34.16.2",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@tensorflow/tfjs": "^4.22.0",

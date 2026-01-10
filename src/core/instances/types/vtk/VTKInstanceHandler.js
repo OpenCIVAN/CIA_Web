@@ -11,6 +11,27 @@ import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface
 import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
 import { instanceTools } from "@VTK/vtkInstanceTools.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
+import { vtkSceneFeature } from "@VTK/features/VTKSceneFeature";
+import { vtkVolumeFeature } from "@VTK/features/VTKVolumeFeature";
+import { vtkSliceFeature } from "@VTK/features/VTKSliceFeature";
+import { vtkScalarColoringFeature } from "@VTK/features/VTKScalarColoringFeature";
+import { vtkIsosurfaceFeature } from "@VTK/features/VTKIsosurfaceFeature";
+import { vtkGlyphFeature } from "@VTK/features/VTKGlyphFeature";
+import { vtkClippingFeature } from "@VTK/features/VTKClippingFeature";
+import { vtkThresholdFeature } from "@VTK/features/VTKThresholdFeature";
+import { vtkTimeSeriesFeature } from "@VTK/features/VTKTimeSeriesFeature";
+import { vtkPBRFeature } from "@VTK/features/VTKPBRFeature";
+import { vtkTransferFunctionFeature } from "@VTK/features/VTKTransferFunctionFeature";
+import { vtkScalarBarFeature } from "@VTK/features/VTKScalarBarFeature";
+import { vtkNormalsFeature } from "@VTK/features/VTKNormalsFeature";
+import { vtkCutterFeature } from "@VTK/features/VTKCutterFeature";
+import { vtkThresholdPointsFeature } from "@VTK/features/VTKThresholdPointsFeature";
+import { vtkAnnotationWidgetsFeature } from "@VTK/features/VTKAnnotationWidgetsFeature";
+import { vtkResliceCursorFeature } from "@VTK/features/VTKResliceCursorFeature";
+import { vtkMeasurementWidgetsFeature } from "@VTK/features/VTKMeasurementWidgetsFeature";
+import { vtkImplicitPlaneFeature } from "@VTK/features/VTKImplicitPlaneFeature";
+import { vtkImageCroppingFeature } from "@VTK/features/VTKImageCroppingFeature";
+import { vtkCleanPolyDataFeature } from "@VTK/features/VTKCleanPolyDataFeature";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
@@ -297,6 +318,27 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     // CLEAN UP FEATURES FIRST (before sceneObjects are destroyed)
     await this.reductionFeature.cleanup(instanceId);
+    await vtkSceneFeature.cleanup(instanceId);
+    await vtkVolumeFeature.cleanup(instanceId);
+    await vtkSliceFeature.cleanup(instanceId);
+    await vtkScalarColoringFeature.cleanup(instanceId);
+    await vtkIsosurfaceFeature.cleanup(instanceId);
+    await vtkGlyphFeature.cleanup(instanceId);
+    await vtkClippingFeature.cleanup(instanceId);
+    await vtkThresholdFeature.cleanup(instanceId);
+    await vtkTimeSeriesFeature.cleanup(instanceId);
+    await vtkPBRFeature.cleanup(instanceId);
+    await vtkTransferFunctionFeature.cleanup(instanceId);
+    await vtkScalarBarFeature.cleanup(instanceId);
+    await vtkNormalsFeature.cleanup(instanceId);
+    await vtkCutterFeature.cleanup(instanceId);
+    await vtkThresholdPointsFeature.cleanup(instanceId);
+    await vtkAnnotationWidgetsFeature.cleanup(instanceId);
+    await vtkResliceCursorFeature.cleanup(instanceId);
+    await vtkMeasurementWidgetsFeature.cleanup(instanceId);
+    await vtkImplicitPlaneFeature.cleanup(instanceId);
+    await vtkImageCroppingFeature.cleanup(instanceId);
+    await vtkCleanPolyDataFeature.cleanup(instanceId);
     vtkOrientationWidget.cleanup(instanceId);
 
     vtkInstanceCursors.cleanupInstance(instanceId);
@@ -723,6 +765,33 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     log.debug(`Orientation widget initialized`);
 
+    // Initialize scene feature (background, grid, axes)
+    await vtkSceneFeature.initialize(instanceId, instanceData);
+    log.debug(`Scene feature initialized`);
+
+    // Initialize other features (they check data type availability internally)
+    await vtkVolumeFeature.initialize(instanceId, instanceData);
+    await vtkSliceFeature.initialize(instanceId, instanceData);
+    await vtkScalarColoringFeature.initialize(instanceId, instanceData);
+    await vtkIsosurfaceFeature.initialize(instanceId, instanceData);
+    await vtkGlyphFeature.initialize(instanceId, instanceData);
+    await vtkClippingFeature.initialize(instanceId, instanceData);
+    await vtkThresholdFeature.initialize(instanceId, instanceData);
+    await vtkTimeSeriesFeature.initialize(instanceId, instanceData);
+    await vtkPBRFeature.initialize(instanceId, instanceData);
+    await vtkTransferFunctionFeature.initialize(instanceId, instanceData);
+    await vtkScalarBarFeature.initialize(instanceId, instanceData);
+    await vtkNormalsFeature.initialize(instanceId, instanceData);
+    await vtkCutterFeature.initialize(instanceId, instanceData);
+    await vtkThresholdPointsFeature.initialize(instanceId, instanceData);
+    await vtkAnnotationWidgetsFeature.initialize(instanceId, instanceData);
+    await vtkResliceCursorFeature.initialize(instanceId, instanceData);
+    await vtkMeasurementWidgetsFeature.initialize(instanceId, instanceData);
+    await vtkImplicitPlaneFeature.initialize(instanceId, instanceData);
+    await vtkImageCroppingFeature.initialize(instanceId, instanceData);
+    await vtkCleanPolyDataFeature.initialize(instanceId, instanceData);
+    log.debug(`All VTK features initialized`);
+
     // CRITICAL: Add safety check before using sceneObjects
     if (!instanceData.sceneObjects) {
       throw new Error(
@@ -796,6 +865,32 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     instanceData.dataset = dataset;
     instanceData.polydata = polydata;
     instanceData.hasData = true;
+
+    // ==========================================================================
+    // POST-LOAD FEATURE SETUP
+    // Scan for available arrays and enable features based on data type
+    // ==========================================================================
+
+    // Scan for scalar and vector arrays for coloring/glyph/threshold features
+    try {
+      vtkScalarColoringFeature.scanAvailableArrays(instanceId, polydata);
+      vtkGlyphFeature.scanAvailableArrays(instanceId, polydata);
+      vtkThresholdFeature.scanAvailableArrays(instanceId, polydata);
+      vtkThresholdPointsFeature.scanAvailableArrays(instanceId, polydata);
+      log.debug(`Scanned data arrays for features`);
+    } catch (e) {
+      log.warn(`Failed to scan data arrays: ${e.message}`);
+    }
+
+    // Check if this is volumetric data (for volume/slice/isosurface features)
+    const isVolumetric = ['vti', 'nrrd', 'mha', 'mhd'].includes(
+      dataset.fileType?.toLowerCase()
+    );
+    instanceData.isVolumetric = isVolumetric;
+
+    if (isVolumetric) {
+      log.debug(`Volumetric data detected - volume/slice features available`);
+    }
 
     // Mark data as loaded for raycasting/annotation support
     if (instanceData.markDataLoaded) {
@@ -1746,6 +1841,551 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           : []),
       ],
     });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // SCENE SETTINGS MENU (Background, Grid, Axes)
+    // ========================================================================
+    const sceneState = vtkSceneFeature.getState(instanceId) || {};
+    const showGrid = sceneState.showGrid || false;
+    const showAxes = sceneState.showAxes || false;
+    const backgroundPreset = sceneState.backgroundPreset || 'dark';
+
+    tools.push({
+      id: "scene",
+      type: "menu",
+      icon: "palette",
+      label: "Scene",
+      description: "Background, grid, and axes settings",
+      options: [
+        // Background submenu
+        {
+          type: "header",
+          label: "BACKGROUND",
+        },
+        {
+          id: "bg-dark",
+          icon: "moon",
+          label: "Dark",
+          description: "Dark solid background",
+          active: backgroundPreset === 'dark',
+          onClick: () => {
+            vtkSceneFeature.setBackgroundPreset(instanceId, 'dark');
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "bg-dark-gradient",
+          icon: "moon",
+          label: "Dark Gradient",
+          description: "Dark gradient background",
+          active: backgroundPreset === 'darkGradient',
+          onClick: () => {
+            vtkSceneFeature.setBackgroundPreset(instanceId, 'darkGradient');
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "bg-light",
+          icon: "sun",
+          label: "Light",
+          description: "Light solid background",
+          active: backgroundPreset === 'light',
+          onClick: () => {
+            vtkSceneFeature.setBackgroundPreset(instanceId, 'light');
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "bg-scientific",
+          icon: "flask",
+          label: "Scientific",
+          description: "Neutral scientific background",
+          active: backgroundPreset === 'scientific',
+          onClick: () => {
+            vtkSceneFeature.setBackgroundPreset(instanceId, 'scientific');
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "bg-presentation",
+          icon: "presentation",
+          label: "Presentation",
+          description: "Clean white for presentations",
+          active: backgroundPreset === 'presentation',
+          onClick: () => {
+            vtkSceneFeature.setBackgroundPreset(instanceId, 'presentation');
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        { type: "separator" },
+        // Grid toggle
+        {
+          type: "header",
+          label: "GRID & AXES",
+        },
+        {
+          id: "grid-toggle",
+          icon: "grid",
+          label: showGrid ? "Hide Grid" : "Show Grid",
+          description: "Reference grid plane",
+          active: showGrid,
+          onClick: () => {
+            vtkSceneFeature.toggleGrid(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        // Grid plane options (only when grid is visible)
+        ...(showGrid ? [
+          {
+            id: "grid-xz",
+            icon: "square",
+            label: "XZ Plane (Floor)",
+            description: "Horizontal grid",
+            active: sceneState.gridPlane === 'xz',
+            onClick: () => {
+              vtkSceneFeature.setGridPlane(instanceId, 'xz');
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          {
+            id: "grid-xy",
+            icon: "square",
+            label: "XY Plane (Front)",
+            description: "Vertical front grid",
+            active: sceneState.gridPlane === 'xy',
+            onClick: () => {
+              vtkSceneFeature.setGridPlane(instanceId, 'xy');
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          {
+            id: "grid-yz",
+            icon: "square",
+            label: "YZ Plane (Side)",
+            description: "Vertical side grid",
+            active: sceneState.gridPlane === 'yz',
+            onClick: () => {
+              vtkSceneFeature.setGridPlane(instanceId, 'yz');
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+        ] : []),
+        { type: "separator" },
+        // Axes toggle
+        {
+          id: "axes-toggle",
+          icon: "axis3d",
+          label: showAxes ? "Hide Data Axes" : "Show Data Axes",
+          description: "Cube axes with data bounds",
+          active: showAxes,
+          onClick: () => {
+            vtkSceneFeature.toggleAxes(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+      ],
+    });
+
+    // ========================================================================
+    // SCALAR COLORING (HEAT MAP) TOOLS
+    // ========================================================================
+    const scalarColoringState = vtkScalarColoringFeature.getState(instanceId);
+    if (scalarColoringState) {
+      const { availableArrays, enabled, activeArray, colormap } = scalarColoringState;
+      const allArrays = [
+        ...(availableArrays?.point || []).map(a => ({ ...a, type: 'point', prefix: 'P:' })),
+        ...(availableArrays?.cell || []).map(a => ({ ...a, type: 'cell', prefix: 'C:' })),
+      ];
+
+      if (allArrays.length > 0) {
+        tools.push({ type: "separator" });
+
+        tools.push({
+          id: "scalar-coloring",
+          type: "menu",
+          icon: "thermometer",
+          label: enabled ? `Color: ${activeArray}` : "Color By...",
+          description: "Color geometry by data values",
+          disabled: !caps.hasData,
+          options: [
+            {
+              id: "scalar-none",
+              icon: "x",
+              label: "None (Solid Color)",
+              description: "Disable scalar coloring",
+              active: !enabled,
+              onClick: () => {
+                vtkScalarColoringFeature.disableScalarColoring(instanceId);
+                this._emitToolsUpdate(instanceId);
+              },
+            },
+            { type: "separator" },
+            ...allArrays.slice(0, 10).map(array => ({
+              id: `scalar-${array.type}-${array.name}`,
+              label: `${array.prefix} ${array.name}`,
+              description: `Range: ${array.range?.[0]?.toFixed(2) || '?'} - ${array.range?.[1]?.toFixed(2) || '?'}`,
+              active: enabled && activeArray === array.name,
+              onClick: () => {
+                vtkScalarColoringFeature.enableScalarColoring(instanceId, array.name, array.type);
+                this._emitToolsUpdate(instanceId);
+              },
+            })),
+          ],
+        });
+
+        // Colormap selector (only when coloring is enabled)
+        if (enabled) {
+          tools.push({
+            id: "colormap-selector",
+            type: "menu",
+            icon: "palette",
+            label: colormap || "Colormap",
+            description: "Change colormap",
+            options: [
+              { id: "cmap-viridis", label: "Viridis", active: colormap === 'viridis', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'viridis'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-plasma", label: "Plasma", active: colormap === 'plasma', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'plasma'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-inferno", label: "Inferno", active: colormap === 'inferno', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'inferno'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-magma", label: "Magma", active: colormap === 'magma', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'magma'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-coolToWarm", label: "Cool to Warm", active: colormap === 'coolToWarm', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'coolToWarm'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-rainbow", label: "Rainbow", active: colormap === 'rainbow', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'rainbow'); this._emitToolsUpdate(instanceId); } },
+              { id: "cmap-grayscale", label: "Grayscale", active: colormap === 'grayscale', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'grayscale'); this._emitToolsUpdate(instanceId); } },
+            ],
+          });
+        }
+      }
+    }
+
+    // ========================================================================
+    // GLYPH RENDERING TOOLS
+    // ========================================================================
+    const glyphState = vtkGlyphFeature.getState(instanceId);
+    if (glyphState && (glyphState.vectorArrays?.length > 0 || glyphState.scalarArrays?.length > 0)) {
+      tools.push({ type: "separator" });
+
+      const glyphEnabled = glyphState.enabled;
+
+      tools.push({
+        id: "glyph-menu",
+        type: "menu",
+        icon: "arrow-up-right",
+        label: glyphEnabled ? `Glyphs: ${glyphState.glyphType}` : "Glyphs",
+        description: "Vector/tensor glyph visualization",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "glyph-toggle",
+            icon: glyphEnabled ? "eye-off" : "eye",
+            label: glyphEnabled ? "Disable Glyphs" : "Enable Glyphs",
+            active: glyphEnabled,
+            onClick: () => {
+              if (glyphEnabled) {
+                vtkGlyphFeature.disableGlyphs(instanceId);
+              } else if (instanceData.polydata) {
+                vtkGlyphFeature.enableGlyphs(instanceId, instanceData.polydata, {
+                  orientationArray: glyphState.vectorArrays?.[0]?.name,
+                });
+              }
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(glyphEnabled ? [
+            { type: "separator" },
+            { id: "glyph-arrow", label: "Arrow", active: glyphState.glyphType === 'arrow', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'arrow'); this._emitToolsUpdate(instanceId); } },
+            { id: "glyph-cone", label: "Cone", active: glyphState.glyphType === 'cone', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'cone'); this._emitToolsUpdate(instanceId); } },
+            { id: "glyph-sphere", label: "Sphere", active: glyphState.glyphType === 'sphere', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'sphere'); this._emitToolsUpdate(instanceId); } },
+            { id: "glyph-cube", label: "Cube", active: glyphState.glyphType === 'cube', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'cube'); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "scale-small", label: "Small", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 0.5); this._emitToolsUpdate(instanceId); } },
+            { id: "scale-medium", label: "Medium", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 1.0); this._emitToolsUpdate(instanceId); } },
+            { id: "scale-large", label: "Large", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 2.0); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+    }
+
+    // ========================================================================
+    // VOLUMETRIC DATA TOOLS (only for vti/nrrd/etc.)
+    // ========================================================================
+    if (instanceData.isVolumetric && instanceData.polydata) {
+      tools.push({ type: "separator" });
+
+      // Volume rendering
+      const volumeState = vtkVolumeFeature.getState(instanceId);
+      const volumeEnabled = volumeState?.enabled || false;
+
+      tools.push({
+        id: "volume-rendering",
+        type: "menu",
+        icon: "box",
+        label: volumeEnabled ? "Volume On" : "Volume Rendering",
+        description: "3D volume visualization",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "volume-toggle",
+            icon: volumeEnabled ? "eye-off" : "eye",
+            label: volumeEnabled ? "Disable Volume" : "Enable Volume",
+            active: volumeEnabled,
+            onClick: () => {
+              if (volumeEnabled) {
+                vtkVolumeFeature.disableVolumeRendering(instanceId);
+              } else if (instanceData.polydata) {
+                vtkVolumeFeature.enableVolumeRendering(instanceId, instanceData.polydata);
+              }
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(volumeEnabled ? [
+            { type: "separator" },
+            { id: "vol-grayscale", label: "Grayscale", active: volumeState.preset === 'grayscale', onClick: () => { vtkVolumeFeature.setPreset(instanceId, 'grayscale'); this._emitToolsUpdate(instanceId); } },
+            { id: "vol-bone", label: "Bone", active: volumeState.preset === 'bone', onClick: () => { vtkVolumeFeature.setPreset(instanceId, 'bone'); this._emitToolsUpdate(instanceId); } },
+            { id: "vol-viridis", label: "Viridis", active: volumeState.preset === 'viridis', onClick: () => { vtkVolumeFeature.setPreset(instanceId, 'viridis'); this._emitToolsUpdate(instanceId); } },
+            { id: "vol-plasma", label: "Plasma", active: volumeState.preset === 'plasma', onClick: () => { vtkVolumeFeature.setPreset(instanceId, 'plasma'); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+
+      // Slice viewing
+      const sliceState = vtkSliceFeature.getState(instanceId);
+      const sliceEnabled = sliceState?.enabled || false;
+
+      tools.push({
+        id: "slice-viewing",
+        type: "menu",
+        icon: "layers",
+        label: sliceEnabled ? `Slice: ${['Sag', 'Cor', 'Axi'][sliceState.sliceMode]}` : "Slice Viewer",
+        description: "2D slice navigation",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "slice-toggle",
+            icon: sliceEnabled ? "eye-off" : "eye",
+            label: sliceEnabled ? "Disable Slices" : "Enable Slices",
+            active: sliceEnabled,
+            onClick: () => {
+              if (sliceEnabled) {
+                vtkSliceFeature.disableSliceViewing(instanceId);
+              } else if (instanceData.polydata) {
+                vtkSliceFeature.enableSliceViewing(instanceId, instanceData.polydata);
+              }
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(sliceEnabled ? [
+            { type: "separator" },
+            { id: "slice-axial", label: "Axial (Z)", active: sliceState.sliceMode === 2, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 2); this._emitToolsUpdate(instanceId); } },
+            { id: "slice-coronal", label: "Coronal (Y)", active: sliceState.sliceMode === 1, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 1); this._emitToolsUpdate(instanceId); } },
+            { id: "slice-sagittal", label: "Sagittal (X)", active: sliceState.sliceMode === 0, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 0); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+
+      // Isosurface extraction
+      const isoState = vtkIsosurfaceFeature.getState(instanceId);
+      const isoEnabled = isoState?.enabled || false;
+
+      tools.push({
+        id: "isosurface",
+        type: "menu",
+        icon: "hexagon",
+        label: isoEnabled ? `Iso: ${isoState.isovalue?.toFixed(1)}` : "Isosurface",
+        description: "Extract surfaces at scalar values",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "iso-toggle",
+            icon: isoEnabled ? "eye-off" : "eye",
+            label: isoEnabled ? "Disable Isosurface" : "Enable Isosurface",
+            active: isoEnabled,
+            onClick: () => {
+              if (isoEnabled) {
+                vtkIsosurfaceFeature.disableIsosurface(instanceId);
+              } else if (instanceData.polydata) {
+                vtkIsosurfaceFeature.enableIsosurface(instanceId, instanceData.polydata);
+              }
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(isoEnabled ? [
+            { type: "separator" },
+            { id: "iso-25", label: "25%", onClick: () => { const range = isoState.scalarRange; vtkIsosurfaceFeature.setIsovalue(instanceId, range[0] + 0.25 * (range[1] - range[0])); this._emitToolsUpdate(instanceId); } },
+            { id: "iso-50", label: "50%", onClick: () => { const range = isoState.scalarRange; vtkIsosurfaceFeature.setIsovalue(instanceId, range[0] + 0.50 * (range[1] - range[0])); this._emitToolsUpdate(instanceId); } },
+            { id: "iso-75", label: "75%", onClick: () => { const range = isoState.scalarRange; vtkIsosurfaceFeature.setIsovalue(instanceId, range[0] + 0.75 * (range[1] - range[0])); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "iso-bone", label: "Bone Color", active: isoState.surfaceColor === 'bone', onClick: () => { vtkIsosurfaceFeature.setSurfaceColor(instanceId, 'bone'); this._emitToolsUpdate(instanceId); } },
+            { id: "iso-skin", label: "Skin Color", active: isoState.surfaceColor === 'skin', onClick: () => { vtkIsosurfaceFeature.setSurfaceColor(instanceId, 'skin'); this._emitToolsUpdate(instanceId); } },
+            { id: "iso-white", label: "White", active: isoState.surfaceColor === 'white', onClick: () => { vtkIsosurfaceFeature.setSurfaceColor(instanceId, 'white'); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+    }
+
+    // ========================================================================
+    // CLIPPING PLANE TOOLS
+    // ========================================================================
+    const clippingState = vtkClippingFeature.getState(instanceId);
+    if (clippingState) {
+      tools.push({ type: "separator" });
+
+      const clippingEnabled = clippingState.enabled;
+
+      tools.push({
+        id: "clipping-plane",
+        type: "menu",
+        icon: "scissors",
+        label: clippingEnabled ? "Clipping On" : "Clipping",
+        description: "Interactive clipping plane",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "clipping-toggle",
+            icon: clippingEnabled ? "eye-off" : "eye",
+            label: clippingEnabled ? "Disable Clipping" : "Enable Clipping",
+            active: clippingEnabled,
+            onClick: () => {
+              vtkClippingFeature.toggleClipping(instanceId);
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(clippingEnabled ? [
+            { type: "separator" },
+            { id: "clip-x", label: "X-Axis (YZ)", active: clippingState.planePreset === 'x', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'x'); this._emitToolsUpdate(instanceId); } },
+            { id: "clip-y", label: "Y-Axis (XZ)", active: clippingState.planePreset === 'y', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'y'); this._emitToolsUpdate(instanceId); } },
+            { id: "clip-z", label: "Z-Axis (XY)", active: clippingState.planePreset === 'z', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'z'); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "clip-invert", label: clippingState.inverted ? "Normal Direction" : "Invert Direction", onClick: () => { vtkClippingFeature.invertClipping(instanceId); this._emitToolsUpdate(instanceId); } },
+            { id: "clip-reset", label: "Reset Plane", onClick: () => { vtkClippingFeature.resetPlane(instanceId); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+    }
+
+    // ========================================================================
+    // THRESHOLD FILTER TOOLS
+    // ========================================================================
+    const thresholdState = vtkThresholdFeature.getState(instanceId);
+    if (thresholdState && thresholdState.availableArrays?.length > 0) {
+      tools.push({ type: "separator" });
+
+      const thresholdEnabled = thresholdState.enabled;
+
+      tools.push({
+        id: "threshold-filter",
+        type: "menu",
+        icon: "filter",
+        label: thresholdEnabled ? "Threshold On" : "Threshold",
+        description: "Filter by scalar values",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "threshold-toggle",
+            icon: thresholdEnabled ? "eye-off" : "eye",
+            label: thresholdEnabled ? "Disable Threshold" : "Enable Threshold",
+            active: thresholdEnabled,
+            onClick: () => {
+              vtkThresholdFeature.toggleThreshold(instanceId);
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(thresholdEnabled ? [
+            { type: "separator" },
+            { id: "thresh-between", label: "Between", active: thresholdState.mode === 'between', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'between'); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-above", label: "Above", active: thresholdState.mode === 'above', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'above'); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-below", label: "Below", active: thresholdState.mode === 'below', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'below'); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "thresh-full", label: "Full Range", onClick: () => { vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], thresholdState.scalarRange[1]); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-upper", label: "Upper Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, mid, thresholdState.scalarRange[1]); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-lower", label: "Lower Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], mid); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+    }
+
+    // ========================================================================
+    // TIME SERIES TOOLS
+    // ========================================================================
+    const timeSeriesState = vtkTimeSeriesFeature.getState(instanceId);
+    if (timeSeriesState && timeSeriesState.enabled) {
+      tools.push({ type: "separator" });
+
+      tools.push({
+        id: "time-series",
+        type: "menu",
+        icon: "clock",
+        label: `Time: ${timeSeriesState.currentStep + 1}/${timeSeriesState.totalSteps}`,
+        description: "Navigate time steps",
+        options: [
+          {
+            id: "time-play",
+            icon: timeSeriesState.playing ? "pause" : "play",
+            label: timeSeriesState.playing ? "Pause" : "Play",
+            onClick: () => {
+              vtkTimeSeriesFeature.togglePlayback(instanceId);
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          { type: "separator" },
+          { id: "time-first", label: "First", onClick: () => { vtkTimeSeriesFeature.firstStep(instanceId); this._emitToolsUpdate(instanceId); } },
+          { id: "time-prev", label: "Previous", onClick: () => { vtkTimeSeriesFeature.prevStep(instanceId); this._emitToolsUpdate(instanceId); } },
+          { id: "time-next", label: "Next", onClick: () => { vtkTimeSeriesFeature.nextStep(instanceId); this._emitToolsUpdate(instanceId); } },
+          { id: "time-last", label: "Last", onClick: () => { vtkTimeSeriesFeature.lastStep(instanceId); this._emitToolsUpdate(instanceId); } },
+          { type: "separator" },
+          { id: "speed-1", label: "1 FPS", active: timeSeriesState.fps === 1, onClick: () => { vtkTimeSeriesFeature.setFPS(instanceId, 1); this._emitToolsUpdate(instanceId); } },
+          { id: "speed-5", label: "5 FPS", active: timeSeriesState.fps === 5, onClick: () => { vtkTimeSeriesFeature.setFPS(instanceId, 5); this._emitToolsUpdate(instanceId); } },
+          { id: "speed-15", label: "15 FPS", active: timeSeriesState.fps === 15, onClick: () => { vtkTimeSeriesFeature.setFPS(instanceId, 15); this._emitToolsUpdate(instanceId); } },
+          { id: "speed-30", label: "30 FPS", active: timeSeriesState.fps === 30, onClick: () => { vtkTimeSeriesFeature.setFPS(instanceId, 30); this._emitToolsUpdate(instanceId); } },
+        ],
+      });
+    }
+
+    // ========================================================================
+    // PBR MATERIALS TOOLS
+    // ========================================================================
+    const pbrState = vtkPBRFeature.getState(instanceId);
+    if (pbrState) {
+      tools.push({ type: "separator" });
+
+      const pbrEnabled = pbrState.enabled;
+
+      tools.push({
+        id: "pbr-materials",
+        type: "menu",
+        icon: "sun",
+        label: pbrEnabled ? `PBR: ${pbrState.preset}` : "PBR",
+        description: "Physically-based rendering materials",
+        disabled: !caps.hasData,
+        options: [
+          {
+            id: "pbr-toggle",
+            icon: pbrEnabled ? "eye-off" : "eye",
+            label: pbrEnabled ? "Disable PBR" : "Enable PBR",
+            active: pbrEnabled,
+            onClick: () => {
+              vtkPBRFeature.togglePBR(instanceId);
+              this._emitToolsUpdate(instanceId);
+            },
+          },
+          ...(pbrEnabled ? [
+            { type: "separator" },
+            { id: "pbr-default", label: "Default", active: pbrState.preset === 'default', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'default'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-polishedMetal", label: "Polished Metal", active: pbrState.preset === 'polishedMetal', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'polishedMetal'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-brushedMetal", label: "Brushed Metal", active: pbrState.preset === 'brushedMetal', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'brushedMetal'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-gold", label: "Gold", active: pbrState.preset === 'gold', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'gold'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-copper", label: "Copper", active: pbrState.preset === 'copper', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'copper'); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "pbr-plastic", label: "Plastic", active: pbrState.preset === 'plastic', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'plastic'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-glossyPlastic", label: "Glossy Plastic", active: pbrState.preset === 'glossyPlastic', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'glossyPlastic'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-rubber", label: "Rubber", active: pbrState.preset === 'rubber', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'rubber'); this._emitToolsUpdate(instanceId); } },
+            { type: "separator" },
+            { id: "pbr-ceramic", label: "Ceramic", active: pbrState.preset === 'ceramic', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'ceramic'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-marble", label: "Marble", active: pbrState.preset === 'marble', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'marble'); this._emitToolsUpdate(instanceId); } },
+            { id: "pbr-glass", label: "Glass", active: pbrState.preset === 'glass', onClick: () => { vtkPBRFeature.setPreset(instanceId, 'glass'); this._emitToolsUpdate(instanceId); } },
+          ] : []),
+        ],
+      });
+    }
 
     log.debug(`Built ${tools.length} tools for instance ${instanceId}`);
     return tools;
