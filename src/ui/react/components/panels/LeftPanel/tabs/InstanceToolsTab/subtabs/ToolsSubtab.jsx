@@ -262,6 +262,41 @@ function ToolOptionItem({ option, onClose }) {
         );
     }
 
+    if (option.type === 'color-picker') {
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [
+                parseInt(result[1], 16) / 255,
+                parseInt(result[2], 16) / 255,
+                parseInt(result[3], 16) / 255
+            ] : [0, 0, 0];
+        };
+
+        const rgbToHex = (rgb) => {
+            if (!rgb || rgb.length < 3) return '#000000';
+            const r = Math.round(rgb[0] * 255);
+            const g = Math.round(rgb[1] * 255);
+            const b = Math.round(rgb[2] * 255);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        };
+
+        return (
+            <div className="tool-option tool-option--color-picker">
+                <Icon name={option.icon || 'palette'} size={14} />
+                <div className="tool-option__content">
+                    <span className="tool-option__label">{option.label}</span>
+                </div>
+                <input
+                    type="color"
+                    className="tool-option__color-input"
+                    value={rgbToHex(option.value)}
+                    onChange={(e) => option.onChange?.(hexToRgb(e.target.value))}
+                    disabled={option.disabled}
+                />
+            </div>
+        );
+    }
+
     return (
         <button
             className={`tool-option ${isActive ? 'tool-option--active' : ''} ${isDisabled ? 'tool-option--disabled' : ''}`}

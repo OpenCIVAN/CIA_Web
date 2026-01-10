@@ -818,6 +818,21 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Set the data
     mapper.setInputData(polydata);
 
+    // Check if data is point-only (no polygons/cells) and set visible point size
+    const numPolys = polydata.getPolys()?.getNumberOfCells() || 0;
+    const numStrips = polydata.getStrips()?.getNumberOfCells() || 0;
+    const numLines = polydata.getLines()?.getNumberOfCells() || 0;
+    const numVerts = polydata.getVerts()?.getNumberOfCells() || 0;
+    const hasGeometry = numPolys > 0 || numStrips > 0 || numLines > 0;
+
+    if (!hasGeometry && polydata.getPoints()?.getNumberOfPoints() > 0) {
+      // Point cloud data - set visible point size
+      const pointSize = 5; // Default visible size
+      actor.getProperty().setPointSize(pointSize);
+      instanceData.isPointCloud = true;
+      log.debug(`Point cloud detected (${polydata.getPoints().getNumberOfPoints()} points), setting point size to ${pointSize}`);
+    }
+
     // CRITICAL: Prevent Y.js sync during initial camera setup
     // Without this, resetCamera() broadcasts default position to all users
     this._isApplyingRemoteState = true;
@@ -1530,91 +1545,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 disabled: false,
                 onChange: (value) => {
                   instanceTools.setLineWidth?.(instanceId, value);
-                  this._emitToolsUpdate(instanceId);
-                },
-              },
-            ]
-          : []),
-      ],
-    });
-
-    tools.push({ type: "separator" });
-
-    // ========================================================================
-    // CLIPPING MENU with position slider
-    // ========================================================================
-    const clipState = instanceTools.getClipState?.(instanceId) || {
-      active: false,
-      position: 50,
-    };
-    const isClipping = clipState.active;
-    const clipPosition = clipState.position;
-
-    tools.push({
-      id: "clipping",
-      type: "menu",
-      icon: "scissors",
-      label: "Clipping",
-      description: caps.canUseClipping
-        ? "Cut away data"
-        : "Not available for this data",
-      active: isClipping,
-      disabled: !caps.canUseClipping,
-      options: [
-        // Toggle clipping
-        {
-          id: "clip-toggle",
-          icon: isClipping ? "toggle_on" : "toggle_off",
-          label: isClipping ? "Disable Clipping" : "Enable Clipping",
-          description: isClipping
-            ? "Remove clipping plane"
-            : "Add clipping plane",
-          disabled: !caps.canUseClipping,
-          onClick: () => {
-            if (!caps.canUseClipping) return;
-            instanceTools.toggleClippingPlane?.(instanceId);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-
-        // FIX 6: Conditionally show slider only when clipping is active
-        ...(isClipping && caps.canUseClipping
-          ? [
-              { type: "separator" },
-              {
-                type: "slider",
-                id: "clip-position-slider",
-                label: "Clip Position",
-                icon: "move",
-                value: clipPosition,
-                min: 0,
-                max: 100,
-                step: 1,
-                formatValue: (val) => `${Math.round(val)}%`,
-                presets: [0, 25, 50, 75, 100],
-                description: "Position along clipping axis",
-                onChange: (value) => {
-                  // FIX: Just store the value, don't try to call setPosition
-                  instanceTools.setClipPosition?.(instanceId, value);
-                  this._emitToolsUpdate(instanceId);
-                },
-              },
-            ]
-          : []),
-
-        // Reset button (only show when clipping is active)
-        ...(isClipping
-          ? [
-              { type: "separator" },
-              {
-                id: "clip-reset",
-                icon: "undo",
-                label: "Reset Clipping",
-                description: "Remove clipping plane",
-                disabled: !caps.canUseClipping,
-                onClick: () => {
-                  if (!caps.canUseClipping) return;
-                  instanceTools.resetClipping?.(instanceId);
                   this._emitToolsUpdate(instanceId);
                 },
               },

@@ -350,6 +350,19 @@ export class VTKGlyphFeature extends FeatureInterface {
     if (!state) return;
 
     this._disableGlyphs(state);
+
+    // Ensure original actor is visible with reasonable point size for point clouds
+    const { actor } = state.sceneObjects || {};
+    if (actor) {
+      actor.setVisibility(true);
+      // If point data, ensure visible point size
+      const currentPointSize = actor.getProperty().getPointSize();
+      if (currentPointSize < 2) {
+        actor.getProperty().setPointSize(5);
+        log.debug('Restored point size after disabling glyphs');
+      }
+    }
+
     state.sceneObjects.renderWindow?.render();
 
     log.debug(`Glyphs disabled for instance: ${instanceId}`);

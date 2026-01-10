@@ -379,6 +379,49 @@
     letter-spacing: 0.5px;
     padding: $spacing-xs $spacing-sm;
   }
+
+  // Color picker variant
+  &--color-picker {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
+  &__color-input {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    background: transparent;
+    flex-shrink: 0;
+
+    &::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    &::-webkit-color-swatch {
+      border: none;
+      border-radius: calc($radius-sm - 2px);
+    }
+
+    &::-moz-color-swatch {
+      border: none;
+      border-radius: calc($radius-sm - 2px);
+    }
+
+    &:hover {
+      border-color: $color-border-default;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-amber;
+    }
+  }
 }
 
 // =============================================================================

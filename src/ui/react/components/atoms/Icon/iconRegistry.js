@@ -28,6 +28,18 @@ export const ICON_REGISTRY = {
   arrowLeftRight: "swap_horiz",
   skipBack: "skip_previous",
   skipForward: "skip_next",
+  "arrow-up-right": "north_east",
+  arrowUpRight: "north_east",
+  "arrow-up-left": "north_west",
+  arrowUpLeft: "north_west",
+  "arrow-down-right": "south_east",
+  arrowDownRight: "south_east",
+  "arrow-down-left": "south_west",
+  arrowDownLeft: "south_west",
+  "corner-up-left": "north_west",
+  "corner-up-right": "north_east",
+  "corner-down-left": "south_west",
+  "corner-down-right": "south_east",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ACTIONS
@@ -250,6 +262,9 @@ export const ICON_REGISTRY = {
   scatterChart: "scatter_plot",
   "scatter-chart": "scatter_plot",
   activity: "monitoring",
+  trend: "trending_up",
+  trendUp: "trending_up",
+  trendDown: "trending_down",
   network: "hub",
   atom: "science",
   brain: "psychology",
@@ -260,6 +275,13 @@ export const ICON_REGISTRY = {
   gitCompare: "compare",
   compare: "compare",
   gitBranch: "fork_right",
+  flask: "science",
+  thermometer: "thermostat",
+  axis3d: "3d_rotation",
+  "3d": "3d_rotation",
+  presentation: "slideshow",
+  water_drop: "water_drop",
+  waterDrop: "water_drop",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // NAVIGATION & LOCATION
@@ -350,6 +372,10 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   sun: "light_mode",
   moon: "dark_mode",
+  toggle_on: "toggle_on",
+  toggleOn: "toggle_on",
+  toggle_off: "toggle_off",
+  toggleOff: "toggle_off",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENTS & TEXT

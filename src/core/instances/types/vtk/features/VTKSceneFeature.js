@@ -498,7 +498,6 @@ export class VTKSceneFeature extends FeatureInterface {
 
     // Set visibility options
     cubeAxesActor.setGridLines(true);
-    cubeAxesActor.setFlyMode(1); // FlyMode: 1 = closest triad
 
     // Apply color to all axes
     const [r, g, b] = axesColor;
@@ -612,6 +611,18 @@ export class VTKSceneFeature extends FeatureInterface {
             description: 'Clean white for presentations',
             active: state.backgroundPreset === 'presentation',
             onClick: () => this.setBackgroundPreset(instanceId, 'presentation'),
+          },
+          { type: 'separator' },
+          {
+            id: 'bg-custom',
+            type: 'color-picker',
+            icon: 'colorize',
+            label: 'Custom Color',
+            value: state.backgroundColorTop,
+            active: state.backgroundPreset === 'custom',
+            onChange: (rgb) => {
+              this.setBackgroundColor(instanceId, rgb);
+            },
           },
         ],
       },
