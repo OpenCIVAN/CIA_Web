@@ -3,7 +3,7 @@
  * @description Drag-and-drop upload zone for files.
  *
  * @example
- * <UploadDropzone onUpload={handleUpload} accept=".vtp,.vtk,.nii" />
+ * <UploadDropzone onUpload={handleUpload} accept=".vtp,.vti,.vtk,.vtkjs,.stl" />
  */
 
 import React, { useState, useCallback, memo } from 'react';
@@ -27,7 +27,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 export const UploadDropzone = memo(function UploadDropzone({
     onUpload,
     onRefresh,
-    accept = '.vtp,.vtk,.nii,.nii.gz,.dcm',
+    accept = '.vtp,.vti,.vtu,.vtk,.vtkjs,.stl,.obj,.ply,.nii,.nii.gz,.dcm',
     isDragOver: externalIsDragOver,
     setIsDragOver: externalSetIsDragOver,
 }) {

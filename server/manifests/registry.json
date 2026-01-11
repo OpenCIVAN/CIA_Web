@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-01-10T20:42:27.654Z",
+  "generatedAt": "2026-01-11T00:38:46.748Z",
   "contractVersion": "1.0.0",
   "buildInfo": {
     "nodeVersion": "v22.19.0",
@@ -75,6 +75,21 @@
           "color": "#a78bfa",
           "priority": 8,
           "magicBytes": "232076746b2044617461",
+          "capabilities": {
+            "canRender": true,
+            "canExtractMetadata": false,
+            "canExport": false,
+            "canStream": false
+          }
+        },
+        {
+          "extension": "vtkjs",
+          "mimeType": "application/vnd.vtkjs+zip",
+          "displayName": "VTK.js Dataset",
+          "icon": "package",
+          "color": "#38bdf8",
+          "priority": 9,
+          "magicBytes": "504b0304",
           "capabilities": {
             "canRender": true,
             "canExtractMetadata": false,
@@ -539,6 +554,13 @@
       "displayName": "VTK Legacy Format",
       "icon": "box",
       "color": "#a78bfa"
+    },
+    "vtkjs": {
+      "handlerType": "vtk",
+      "priority": 9,
+      "displayName": "VTK.js Dataset",
+      "icon": "package",
+      "color": "#38bdf8"
     },
     "stl": {
       "handlerType": "vtk",

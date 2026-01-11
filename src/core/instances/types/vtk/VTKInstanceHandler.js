@@ -68,6 +68,15 @@ import vtkOpenGLRenderWindow from "@kitware/vtk.js/Rendering/OpenGL/RenderWindow
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkXMLPolyDataReader from "@kitware/vtk.js/IO/XML/XMLPolyDataReader";
+import vtkXMLImageDataReader from "@kitware/vtk.js/IO/XML/XMLImageDataReader";
+import vtkPolyDataReader from "@kitware/vtk.js/IO/Legacy/PolyDataReader";
+import vtkSTLReader from "@kitware/vtk.js/IO/Geometry/STLReader";
+import vtkPLYReader from "@kitware/vtk.js/IO/Geometry/PLYReader";
+import vtkOBJReader from "@kitware/vtk.js/IO/Misc/OBJReader";
+import vtkHttpDataSetReader from "@kitware/vtk.js/IO/Core/HttpDataSetReader";
+import vtkHttpDataSetSeriesReader from "@kitware/vtk.js/IO/Core/HttpDataSetSeriesReader";
+import DataAccessHelper from "@kitware/vtk.js/IO/Core/DataAccessHelper";
+import JSZipDataAccessHelper from "@kitware/vtk.js/IO/Core/DataAccessHelper/JSZipDataAccessHelper";
 import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 import vtkConeSource from "@kitware/vtk.js/Filters/Sources/ConeSource";
 import vtkCubeSource from "@kitware/vtk.js/Filters/Sources/CubeSource";
@@ -75,6 +84,13 @@ import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
 import vtkPlaneSource from "@kitware/vtk.js/Filters/Sources/PlaneSource";
 import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
 import "@kitware/vtk.js/Rendering/Profiles/Geometry";
+
+// Ensure zip access is registered even when tree-shaken builds drop side effects.
+if (!DataAccessHelper.has("zip")) {
+  DataAccessHelper.registerType("zip", (options) =>
+    JSZipDataAccessHelper.create(options)
+  );
+}
 
 /**
  * VTKInstanceHandler
@@ -683,42 +699,31 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     }
 
     // Check if we have cached parsed data
-    let polydata;
+    let vtkData;
     const cached = datasetManager.getCachedParsedData(dataset.id, "vtk");
 
     if (cached) {
-      log.debug(`Using cached VTK polydata`);
-      polydata = cached.data;
+      log.debug(`Using cached VTK dataset`);
+      vtkData = cached.data;
     } else {
       log.debug(`Parsing ${fileType.toUpperCase()} file...`);
 
       // Get the raw file (DatasetManager handles fetching if needed)
-      // Use loadFile() or loadPolydata() depending on what you named it
       const rawFile = await datasetManager.loadFile(dataset.id);
 
-      // Parse the file
-      polydata = await this.parseVTKFile(rawFile);
+      // Parse the file with the appropriate reader
+      vtkData = await this.parseVTKFile(rawFile, fileType);
 
       // Extract metadata for caching
-      const bounds = polydata.getBounds();
-      const metadata = {
-        pointCount: polydata.getPoints().getNumberOfPoints(),
-        cellCount: polydata.getPolys().getNumberOfCells(),
-        bounds: {
-          xMin: bounds[0],
-          xMax: bounds[1],
-          yMin: bounds[2],
-          yMax: bounds[3],
-          zMin: bounds[4],
-          zMax: bounds[5],
-        },
-      };
+      const metadata = this._buildVTKMetadata(vtkData, fileType);
 
       // Cache the parsed data for reuse
-      datasetManager.cacheParsedData(dataset.id, "vtk", polydata, metadata);
+      datasetManager.cacheParsedData(dataset.id, "vtk", vtkData, metadata);
 
+      if (metadata?.pointCount !== undefined) {
+        log.trace(`Points: ${metadata.pointCount.toLocaleString()}`);
+      }
       log.debug(`Parsed and cached`);
-      log.trace(`Points: ${metadata.pointCount.toLocaleString()}`);
     }
 
     // Initialize VTK pipeline if this is the first data load
@@ -815,22 +820,43 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     if (!renderWindow)
       throw new Error("renderWindow is missing from sceneObjects!");
 
-    // Set the data
-    mapper.setInputData(polydata);
+    const dataInfo = this._classifyVTKData(vtkData, fileType);
 
-    // Check if data is point-only (no polygons/cells) and set visible point size
-    const numPolys = polydata.getPolys()?.getNumberOfCells() || 0;
-    const numStrips = polydata.getStrips()?.getNumberOfCells() || 0;
-    const numLines = polydata.getLines()?.getNumberOfCells() || 0;
-    const numVerts = polydata.getVerts()?.getNumberOfCells() || 0;
-    const hasGeometry = numPolys > 0 || numStrips > 0 || numLines > 0;
+    if (dataInfo.isPolyData) {
+      actor.setVisibility(true);
+      mapper.setInputData(vtkData);
 
-    if (!hasGeometry && polydata.getPoints()?.getNumberOfPoints() > 0) {
-      // Point cloud data - set visible point size
-      const pointSize = 5; // Default visible size
-      actor.getProperty().setPointSize(pointSize);
-      instanceData.isPointCloud = true;
-      log.debug(`Point cloud detected (${polydata.getPoints().getNumberOfPoints()} points), setting point size to ${pointSize}`);
+      // Check if data is point-only (no polygons/cells) and set visible point size
+      const numPolys = vtkData.getPolys()?.getNumberOfCells() || 0;
+      const numStrips = vtkData.getStrips()?.getNumberOfCells() || 0;
+      const numLines = vtkData.getLines()?.getNumberOfCells() || 0;
+      const numVerts = vtkData.getVerts()?.getNumberOfCells() || 0;
+      const hasGeometry = numPolys > 0 || numStrips > 0 || numLines > 0;
+
+      instanceData.isPointCloud = false;
+
+      if (!hasGeometry && vtkData.getPoints()?.getNumberOfPoints() > 0) {
+        // Point cloud data - set visible point size
+        const pointSize = 5; // Default visible size
+        actor.getProperty().setPointSize(pointSize);
+        instanceData.isPointCloud = true;
+        log.debug(
+          `Point cloud detected (${vtkData
+            .getPoints()
+            .getNumberOfPoints()} points), setting point size to ${pointSize}`
+        );
+      }
+    } else if (dataInfo.isImageData) {
+      instanceData.isPointCloud = false;
+      actor.setVisibility(false);
+      vtkVolumeFeature.disableVolumeRendering(instanceId);
+      vtkIsosurfaceFeature.disableIsosurface(instanceId);
+      vtkSliceFeature.disableSliceViewing(instanceId);
+      await vtkSliceFeature.enableSliceViewing(instanceId, vtkData);
+    } else {
+      throw new Error(
+        `Unsupported VTK dataset type: ${dataInfo.dataClass || "Unknown"}`
+      );
     }
 
     // CRITICAL: Prevent Y.js sync during initial camera setup
@@ -881,7 +907,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     // Store dataset reference
     instanceData.dataset = dataset;
-    instanceData.polydata = polydata;
+    instanceData.vtkData = vtkData;
+    instanceData.polydata = dataInfo.isPolyData ? vtkData : null;
+    instanceData.imageData = dataInfo.isImageData ? vtkData : null;
+    instanceData.dataClass = dataInfo.dataClass;
     instanceData.hasData = true;
 
     // ==========================================================================
@@ -890,20 +919,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ==========================================================================
 
     // Scan for scalar and vector arrays for coloring/glyph/threshold features
-    try {
-      vtkScalarColoringFeature.scanAvailableArrays(instanceId, polydata);
-      vtkGlyphFeature.scanAvailableArrays(instanceId, polydata);
-      vtkThresholdFeature.scanAvailableArrays(instanceId, polydata);
-      vtkThresholdPointsFeature.scanAvailableArrays(instanceId, polydata);
-      log.debug(`Scanned data arrays for features`);
-    } catch (e) {
-      log.warn(`Failed to scan data arrays: ${e.message}`);
+    if (dataInfo.isPolyData) {
+      try {
+        vtkScalarColoringFeature.scanAvailableArrays(instanceId, vtkData);
+        vtkGlyphFeature.scanAvailableArrays(instanceId, vtkData);
+        vtkThresholdFeature.scanAvailableArrays(instanceId, vtkData);
+        vtkThresholdPointsFeature.scanAvailableArrays(instanceId, vtkData);
+        log.debug(`Scanned data arrays for features`);
+      } catch (e) {
+        log.warn(`Failed to scan data arrays: ${e.message}`);
+      }
     }
 
     // Check if this is volumetric data (for volume/slice/isosurface features)
-    const isVolumetric = ['vti', 'nrrd', 'mha', 'mhd'].includes(
-      dataset.fileType?.toLowerCase()
-    );
+    const isVolumetric =
+      dataInfo.isImageData ||
+      ["vti", "nrrd", "mha", "mhd"].includes(dataset.fileType?.toLowerCase());
     instanceData.isVolumetric = isVolumetric;
 
     if (isVolumetric) {
@@ -922,23 +953,392 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   }
 
   /**
-   * Parse a VTK format file into polydata
+   * Parse a VTK format file into a vtk.js dataset
    * This is VTK-specific logic that belongs in the VTK handler, not DatasetManager
    */
-  async parseVTKFile(file) {
+  async parseVTKFile(file, fileType) {
+    const extension = this._normalizeFileType(file, fileType);
+
+    switch (extension) {
+      case "vtp": {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = vtkXMLPolyDataReader.newInstance();
+        reader.parseAsArrayBuffer(arrayBuffer);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse VTP file - no output data");
+        }
+        return output;
+      }
+      case "vti": {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = vtkXMLImageDataReader.newInstance();
+        reader.parseAsArrayBuffer(arrayBuffer);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse VTI file - no output data");
+        }
+        return output;
+      }
+      case "vtk": {
+        const text = await file.text();
+        const reader = vtkPolyDataReader.newInstance();
+        reader.parseAsText(text);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse VTK legacy file - no output data");
+        }
+        return output;
+      }
+      case "stl": {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = vtkSTLReader.newInstance();
+        reader.parseAsArrayBuffer(arrayBuffer);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse STL file - no output data");
+        }
+        return output;
+      }
+      case "ply": {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = vtkPLYReader.newInstance();
+        reader.parseAsArrayBuffer(arrayBuffer);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse PLY file - no output data");
+        }
+        return output;
+      }
+      case "obj": {
+        const text = await file.text();
+        const reader = vtkOBJReader.newInstance();
+        reader.parseAsText(text);
+        const output = reader.getOutputData(0);
+        if (!output) {
+          throw new Error("Failed to parse OBJ file - no output data");
+        }
+        return output;
+      }
+      case "vtkjs": {
+        return this._parseVTKJSFile(file);
+      }
+      case "vtu": {
+        throw new Error(
+          "VTU parsing is not available in this vtk.js build. Convert to VTKJS or VTP."
+        );
+      }
+      default: {
+        const safeExt = extension ? extension.toUpperCase() : "UNKNOWN";
+        throw new Error(`Unsupported VTK file type: ${safeExt}`);
+      }
+    }
+  }
+
+  async _parseVTKJSFile(file) {
     const arrayBuffer = await file.arrayBuffer();
+    const isZip = this._isZipBuffer(arrayBuffer);
 
-    // Use appropriate reader based on file type
-    const reader = vtkXMLPolyDataReader.newInstance();
-    reader.parseAsArrayBuffer(arrayBuffer);
-
-    const polydata = reader.getOutputData(0);
-
-    if (!polydata) {
-      throw new Error("Failed to parse VTK file - no output data");
+    if (!isZip) {
+      let manifest;
+      try {
+        const text = new TextDecoder("utf-8").decode(arrayBuffer);
+        manifest = JSON.parse(text);
+      } catch (error) {
+        throw new Error(`Invalid VTKJS JSON: ${error.message}`);
+      }
+      return this._parseVTKJSManifest(manifest, null, "");
     }
 
-    return polydata;
+    const { helper, decompressedFiles } =
+      await this._createVTKJSZipHelper(arrayBuffer);
+    const { manifest, baseUrl } =
+      this._extractVTKJSManifestFromZip(decompressedFiles);
+
+    return this._parseVTKJSManifest(manifest, helper, baseUrl);
+  }
+
+  async _parseVTKJSManifest(manifest, zipHelper, baseUrl) {
+    if (!manifest || typeof manifest !== "object") {
+      throw new Error("Invalid VTKJS manifest");
+    }
+
+    if (manifest.vtkClass) {
+      return this._loadVTKJSDataset(manifest, zipHelper, baseUrl);
+    }
+
+    if (manifest.scene) {
+      return this._loadVTKJSSceneDataset(manifest.scene, zipHelper, baseUrl);
+    }
+
+    throw new Error("VTKJS manifest missing vtkClass or scene data");
+  }
+
+  async _loadVTKJSDataset(manifest, zipHelper, baseUrl) {
+    const reader = vtkHttpDataSetReader.newInstance();
+    if (zipHelper) {
+      reader.setDataAccessHelper(zipHelper);
+    }
+
+    const options = {
+      loadData: true,
+      deepCopy: false,
+    };
+    if (zipHelper) {
+      options.baseUrl = baseUrl || ".";
+    } else if (baseUrl) {
+      options.baseUrl = baseUrl;
+    }
+
+    await reader.parseObject(manifest, options);
+    const output = reader.getOutputData(0);
+    if (!output) {
+      throw new Error("Failed to parse VTK.js dataset - no output data");
+    }
+    return output;
+  }
+
+  async _loadVTKJSSceneDataset(scene, zipHelper, baseUrl) {
+    const sceneItem = this._selectVTKJSSceneItem(scene);
+    if (!sceneItem) {
+      throw new Error("VTKJS scene bundle has no dataset URL");
+    }
+
+    const reader = this._createVTKJSSceneReader(sceneItem, zipHelper);
+    const url = this._resolveVTKJSSceneUrl(sceneItem, baseUrl);
+    if (!url) {
+      throw new Error("VTKJS scene bundle has no resolvable dataset URL");
+    }
+
+    await reader.setUrl(url, { loadData: true });
+    const output = reader.getOutputData(0);
+    if (!output) {
+      throw new Error("Failed to parse VTK.js scene dataset - no output data");
+    }
+    return output;
+  }
+
+  _selectVTKJSSceneItem(scene) {
+    if (!Array.isArray(scene)) {
+      return null;
+    }
+
+    const withUrl = scene.filter((item) => this._getVTKJSSceneUrl(item));
+    if (!withUrl.length) {
+      return null;
+    }
+
+    const datasetItem = withUrl.find((item) =>
+      /DataSet.*Reader/i.test(item?.type || "")
+    );
+    return datasetItem || withUrl[0];
+  }
+
+  _createVTKJSSceneReader(sceneItem, zipHelper) {
+    const type = (sceneItem?.type || "").toLowerCase();
+    const reader =
+      type.includes("series") || type.includes("datasetseries")
+        ? vtkHttpDataSetSeriesReader.newInstance({
+            dataAccessHelper: zipHelper || undefined,
+          })
+        : vtkHttpDataSetReader.newInstance({
+            dataAccessHelper: zipHelper || undefined,
+          });
+
+    if (zipHelper) {
+      reader.setDataAccessHelper(zipHelper);
+    }
+
+    return reader;
+  }
+
+  _getVTKJSSceneUrl(sceneItem) {
+    if (!sceneItem || typeof sceneItem !== "object") {
+      return null;
+    }
+
+    const typeKey = sceneItem.type;
+    const typePayload = typeKey ? sceneItem[typeKey] : null;
+    const urlFromType =
+      typePayload?.url ||
+      typePayload?.file ||
+      this._buildVTKJSUrlFromFiles(typePayload);
+    if (urlFromType) {
+      return urlFromType;
+    }
+
+    return (
+      sceneItem.url ||
+      sceneItem.file ||
+      sceneItem.source?.url ||
+      sceneItem.source?.file ||
+      this._buildVTKJSUrlFromFiles(sceneItem.source) ||
+      this._buildVTKJSUrlFromFiles(sceneItem.sourceLODs)
+    );
+  }
+
+  _resolveVTKJSSceneUrl(sceneItem, baseUrl) {
+    const rawUrl = this._getVTKJSSceneUrl(sceneItem) || "";
+    if (!rawUrl) {
+      return null;
+    }
+
+    if (!baseUrl) {
+      return rawUrl;
+    }
+
+    const trimmedBase = baseUrl.replace(/\/$/, "");
+    const trimmedUrl = rawUrl.replace(/^\/+/, "");
+    return `${trimmedBase}/${trimmedUrl}`;
+  }
+
+  _pickVTKJSFileEntry(files) {
+    if (!Array.isArray(files) || files.length === 0) {
+      return null;
+    }
+
+    const entry = files[files.length - 1];
+    if (typeof entry === "string") {
+      return entry;
+    }
+
+    if (entry && typeof entry === "object") {
+      return entry.url || entry.file || null;
+    }
+
+    return null;
+  }
+
+  _buildVTKJSUrlFromFiles(container) {
+    if (!container || typeof container !== "object") {
+      return null;
+    }
+
+    const entry = this._pickVTKJSFileEntry(container.files);
+    if (!entry) {
+      return null;
+    }
+
+    const baseUrl = container.baseUrl;
+    if (!baseUrl) {
+      return entry;
+    }
+
+    const trimmedBase = baseUrl.replace(/\/$/, "");
+    const trimmedEntry = entry.replace(/^\/+/, "");
+    return `${trimmedBase}/${trimmedEntry}`;
+  }
+
+  _createVTKJSZipHelper(arrayBuffer) {
+    return new Promise((resolve, reject) => {
+      let helper;
+      try {
+        helper = JSZipDataAccessHelper.create({
+          zipContent: arrayBuffer,
+          callback: (decompressedFiles) =>
+            resolve({ helper, decompressedFiles }),
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  _extractVTKJSManifestFromZip(decompressedFiles) {
+    const indexPaths = Object.keys(decompressedFiles || {}).filter((path) =>
+      path.endsWith("index.json")
+    );
+
+    if (!indexPaths.length) {
+      throw new Error("VTKJS archive is missing index.json");
+    }
+
+    indexPaths.sort((a, b) => a.length - b.length);
+    const indexPath = indexPaths[0];
+    const jsonText = new TextDecoder("utf-8").decode(
+      decompressedFiles[indexPath]
+    );
+
+    let manifest;
+    try {
+      manifest = JSON.parse(jsonText);
+    } catch (error) {
+      throw new Error(`VTKJS index.json is not valid JSON: ${error.message}`);
+    }
+
+    // JSZipDataAccessHelper already scopes to the shortest index.json path.
+    // Use an empty base so we don't double-prefix the root path.
+    return { manifest, baseUrl: "" };
+  }
+
+  _isZipBuffer(arrayBuffer) {
+    const header = new Uint8Array(arrayBuffer, 0, 4);
+    return header.length >= 2 && header[0] === 0x50 && header[1] === 0x4b;
+  }
+
+  _normalizeFileType(file, fileType) {
+    if (fileType) {
+      return fileType.toLowerCase().replace(".", "");
+    }
+    const name = file?.name || file?.filename || "";
+    const parts = name.split(".");
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
+  }
+
+  _classifyVTKData(vtkData, fileType) {
+    const dataClass =
+      vtkData?.getClassName?.() || vtkData?.vtkClass || null;
+    const isPolyData =
+      vtkData?.isA?.("vtkPolyData") || dataClass === "vtkPolyData";
+    const isImageData =
+      vtkData?.isA?.("vtkImageData") || dataClass === "vtkImageData";
+
+    return {
+      dataClass,
+      fileType: fileType?.toLowerCase() || null,
+      isPolyData,
+      isImageData,
+    };
+  }
+
+  _buildVTKMetadata(vtkData, fileType) {
+    const dataInfo = this._classifyVTKData(vtkData, fileType);
+    const bounds = vtkData?.getBounds?.() || null;
+    const pointCount =
+      vtkData?.getNumberOfPoints?.() ??
+      vtkData?.getPoints?.()?.getNumberOfPoints?.() ??
+      null;
+    const cellCount =
+      vtkData?.getNumberOfCells?.() ??
+      vtkData?.getPolys?.()?.getNumberOfCells?.() ??
+      null;
+
+    const metadata = {
+      dataClass: dataInfo.dataClass,
+      pointCount,
+      cellCount,
+    };
+
+    if (bounds && bounds.length === 6) {
+      metadata.bounds = {
+        xMin: bounds[0],
+        xMax: bounds[1],
+        yMin: bounds[2],
+        yMax: bounds[3],
+        zMin: bounds[4],
+        zMax: bounds[5],
+      };
+    }
+
+    if (dataInfo.isImageData && vtkData?.getDimensions) {
+      metadata.dimensions = vtkData.getDimensions();
+    }
+
+    if (dataInfo.isImageData && vtkData?.getExtent) {
+      metadata.extent = vtkData.getExtent();
+    }
+
+    return metadata;
   }
 
   // ===========================================================================
@@ -2041,7 +2441,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // VOLUMETRIC DATA TOOLS (only for vti/nrrd/etc.)
     // ========================================================================
-    if (instanceData.isVolumetric && instanceData.polydata) {
+    if (instanceData.isVolumetric && instanceData.imageData) {
       tools.push({ type: "separator" });
 
       // Volume rendering
@@ -2064,8 +2464,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             onClick: () => {
               if (volumeEnabled) {
                 vtkVolumeFeature.disableVolumeRendering(instanceId);
-              } else if (instanceData.polydata) {
-                vtkVolumeFeature.enableVolumeRendering(instanceId, instanceData.polydata);
+              } else if (instanceData.imageData) {
+                vtkVolumeFeature.enableVolumeRendering(
+                  instanceId,
+                  instanceData.imageData
+                );
               }
               this._emitToolsUpdate(instanceId);
             },
@@ -2100,8 +2503,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             onClick: () => {
               if (sliceEnabled) {
                 vtkSliceFeature.disableSliceViewing(instanceId);
-              } else if (instanceData.polydata) {
-                vtkSliceFeature.enableSliceViewing(instanceId, instanceData.polydata);
+              } else if (instanceData.imageData) {
+                vtkSliceFeature.enableSliceViewing(
+                  instanceId,
+                  instanceData.imageData
+                );
               }
               this._emitToolsUpdate(instanceId);
             },
@@ -2135,8 +2541,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             onClick: () => {
               if (isoEnabled) {
                 vtkIsosurfaceFeature.disableIsosurface(instanceId);
-              } else if (instanceData.polydata) {
-                vtkIsosurfaceFeature.enableIsosurface(instanceId, instanceData.polydata);
+              } else if (instanceData.imageData) {
+                vtkIsosurfaceFeature.enableIsosurface(
+                  instanceId,
+                  instanceData.imageData
+                );
               }
               this._emitToolsUpdate(instanceId);
             },
@@ -2488,32 +2897,81 @@ console.log('Tools:', tools);
       throw new Error("Failed to parse XML header");
     }
 
-    // Extract metadata from XML structure
-    // VTP files have structure like: <VTKFile><PolyData><Piece NumberOfPoints="142573" ...>
+    const vtkFile = xmlDoc.querySelector("VTKFile");
+    const vtkType =
+      vtkFile?.getAttribute("type")?.toLowerCase() || "unknown";
+
     const piece = xmlDoc.querySelector("Piece");
-
-    if (!piece) {
-      return { format: "vtp", estimated: true };
-    }
-
     const metadata = {
-      format: "vtp",
-      pointCount: parseInt(piece.getAttribute("NumberOfPoints") || "0"),
-      cellCount:
-        parseInt(piece.getAttribute("NumberOfVerts") || "0") +
-        parseInt(piece.getAttribute("NumberOfLines") || "0") +
-        parseInt(piece.getAttribute("NumberOfStrips") || "0") +
-        parseInt(piece.getAttribute("NumberOfPolys") || "0"),
+      format: vtkType,
       estimated: false,
     };
 
-    // Estimate memory usage (rough approximation)
-    // Each point is roughly 3 floats (x,y,z) = 12 bytes
-    // Each cell is roughly 4 ints = 16 bytes
-    const estimatedBytes = metadata.pointCount * 12 + metadata.cellCount * 16;
-    metadata.estimatedMemory = this._formatBytes(estimatedBytes);
+    if (!piece) {
+      return { ...metadata, estimated: true };
+    }
 
-    // Check for data arrays (these appear in PointData and CellData sections)
+    if (vtkType === "polydata") {
+      metadata.pointCount = parseInt(
+        piece.getAttribute("NumberOfPoints") || "0",
+        10
+      );
+      metadata.cellCount =
+        parseInt(piece.getAttribute("NumberOfVerts") || "0", 10) +
+        parseInt(piece.getAttribute("NumberOfLines") || "0", 10) +
+        parseInt(piece.getAttribute("NumberOfStrips") || "0", 10) +
+        parseInt(piece.getAttribute("NumberOfPolys") || "0", 10);
+    } else if (
+      vtkType === "imagedata" ||
+      vtkType === "structuredgrid" ||
+      vtkType === "rectilineargrid"
+    ) {
+      const extentAttr =
+        piece.getAttribute("Extent") ||
+        xmlDoc.querySelector("ImageData")?.getAttribute("WholeExtent") ||
+        xmlDoc.querySelector("StructuredGrid")?.getAttribute("WholeExtent") ||
+        xmlDoc
+          .querySelector("RectilinearGrid")
+          ?.getAttribute("WholeExtent");
+
+      if (extentAttr) {
+        const extent = extentAttr
+          .trim()
+          .split(/\s+/)
+          .map((value) => parseInt(value, 10));
+        if (extent.length === 6) {
+          const dims = [
+            extent[1] - extent[0] + 1,
+            extent[3] - extent[2] + 1,
+            extent[5] - extent[4] + 1,
+          ];
+          metadata.extent = extent;
+          metadata.dimensions = dims;
+          metadata.pointCount = dims[0] * dims[1] * dims[2];
+          metadata.cellCount = Math.max(0, dims[0] - 1) *
+            Math.max(0, dims[1] - 1) *
+            Math.max(0, dims[2] - 1);
+        }
+      }
+    } else if (vtkType === "unstructuredgrid") {
+      metadata.pointCount = parseInt(
+        piece.getAttribute("NumberOfPoints") || "0",
+        10
+      );
+      metadata.cellCount = parseInt(
+        piece.getAttribute("NumberOfCells") || "0",
+        10
+      );
+    } else {
+      metadata.estimated = true;
+    }
+
+    if (metadata.pointCount !== undefined && metadata.cellCount !== undefined) {
+      const estimatedBytes =
+        metadata.pointCount * 12 + metadata.cellCount * 16;
+      metadata.estimatedMemory = this._formatBytes(estimatedBytes);
+    }
+
     const dataArrayNames = [];
     const pointData = xmlDoc.querySelector("PointData");
     if (pointData) {
@@ -2524,13 +2982,24 @@ console.log('Tools:', tools);
       });
     }
 
+    const cellData = xmlDoc.querySelector("CellData");
+    if (cellData) {
+      const arrays = cellData.querySelectorAll("DataArray");
+      arrays.forEach((arr) => {
+        const name = arr.getAttribute("Name");
+        if (name) dataArrayNames.push(name);
+      });
+    }
+
     if (dataArrayNames.length > 0) {
       metadata.dataArrays = dataArrayNames;
     }
 
-    log.trace(
-      `Extracted: ${metadata.pointCount} points, ${metadata.cellCount} cells`
-    );
+    if (metadata.pointCount !== undefined) {
+      log.trace(
+        `Extracted: ${metadata.pointCount} points, ${metadata.cellCount || 0} cells`
+      );
+    }
 
     return metadata;
   }
@@ -4970,6 +5439,15 @@ console.log('Tools:', tools);
     const actor = instanceData?.sceneObjects?.actor;
     if (actor?.getBounds) {
       const bounds = actor.getBounds();
+      const dx = bounds[1] - bounds[0];
+      const dy = bounds[3] - bounds[2];
+      const dz = bounds[5] - bounds[4];
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    // Fallback to image data bounds
+    if (instanceData?.imageData?.getBounds) {
+      const bounds = instanceData.imageData.getBounds();
       const dx = bounds[1] - bounds[0];
       const dy = bounds[3] - bounds[2];
       const dz = bounds[5] - bounds[4];

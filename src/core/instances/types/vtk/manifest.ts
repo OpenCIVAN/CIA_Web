@@ -106,6 +106,26 @@ const vtkCapability: FileTypeCapability = {
 };
 
 /**
+ * VTK.js Dataset - zipped bundle format
+ * Supports multiple VTK dataset types through the vtkjs container
+ */
+const vtkjsCapability: FileTypeCapability = {
+  extension: "vtkjs",
+  mimeType: "application/vnd.vtkjs+zip",
+  displayName: "VTK.js Dataset",
+  icon: "package",
+  color: "#38bdf8", // Sky blue for VTK.js bundles
+  priority: 9,
+  magicBytes: "504b0304", // PK.. (zip)
+  capabilities: {
+    canRender: true,
+    canExtractMetadata: false,
+    canExport: false,
+    canStream: false,
+  },
+};
+
+/**
  * STL Model - Common 3D printing format
  * Medium priority, export support
  */
@@ -188,6 +208,7 @@ export const vtkManifest: HandlerManifest = {
     vtiCapability,
     vtuCapability,
     vtkCapability,
+    vtkjsCapability,
     stlCapability,
     objCapability,
     plyCapability,
