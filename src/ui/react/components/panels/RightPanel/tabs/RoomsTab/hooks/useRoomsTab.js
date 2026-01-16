@@ -16,6 +16,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import { authService } from "@Services/authService.js";
 import { createLogger } from "@Utils/logger.js";
 
 const log = createLogger("rooms");
@@ -132,11 +133,24 @@ export function useRoomsTab(options = {}) {
       setRooms([]); // Clear existing rooms before fetch
 
       try {
+        const authHeader = await authService.getAuthHeader().catch(() => null);
+        const headers = {};
+        if (authHeader) {
+          headers.Authorization = authHeader;
+        } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+          const devUser = authService.getUser?.();
+          headers["x-user-id"] =
+            devUser?.id || "00000000-0000-0000-0000-000000000001";
+          headers["x-user-name"] = devUser?.name || "Development User";
+          headers["x-user-email"] = devUser?.email || "developer@localhost";
+        }
+
         const url = `${config.apiBaseUrl}/projects/${projectId}/rooms`;
         log.debug("Fetching from URL:", url);
 
         const response = await fetch(url, {
           credentials: "include",
+          headers,
         });
 
         if (!response.ok) {
@@ -144,7 +158,7 @@ export function useRoomsTab(options = {}) {
         }
 
         const data = await response.json();
-        const fetchedRooms = data.rooms || [];
+        const fetchedRooms = Array.isArray(data) ? data : data.rooms || [];
 
         // Debug: Log raw API response
         log.debug("Raw rooms from API:", fetchedRooms);
@@ -254,14 +268,26 @@ export function useRoomsTab(options = {}) {
     if (!projectId) return;
 
     try {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(
         `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/join`,
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
         }
       );
 
@@ -286,14 +312,26 @@ export function useRoomsTab(options = {}) {
     if (!projectId) return;
 
     try {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(
         `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/leave`,
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
         }
       );
 
@@ -321,14 +359,26 @@ export function useRoomsTab(options = {}) {
     if (!projectId) return;
 
     try {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(
         `${config.apiBaseUrl}/projects/${projectId}/rooms`,
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             name: roomConfig.name,
             type: "breakout",
@@ -375,11 +425,24 @@ export function useRoomsTab(options = {}) {
     if (!projectId) return;
 
     try {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {};
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(
         `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}`,
         {
           method: "DELETE",
           credentials: "include",
+          headers,
         }
       );
 

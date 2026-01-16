@@ -85,6 +85,15 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     } = useRoomsTab({ projectId });
 
     const { users: roomMembers } = useRoomPresence(currentRoom?.id);
+    const roomMembersForIndicator = useMemo(() => {
+        return (roomMembers || []).map((member, index) => ({
+            id: member.id || member.userId || `member-${index}`,
+            name: member.name || member.userName || member.username || "User",
+            color: member.color || member.userColor,
+            avatar: member.avatar,
+            status: member.status,
+        }));
+    }, [roomMembers]);
     const { setRoom, setWorkspace: setWorkspacePresence } = useRoomActions();
 
     const {
@@ -845,7 +854,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 <CanvasHeaderBar
                     // Room props (uses RoomPresenceIndicator)
                     room={currentRoom || { id: 'main', name: 'Main Room', type: 'main' }}
-                    roomMembers={roomMembers || []}
+                    roomMembers={roomMembersForIndicator}
                     availableRooms={rooms || []}
                     onRoomChange={handleRoomChange}
                     onOpenRoomsPanel={() => setRightDockedOpen(true)}

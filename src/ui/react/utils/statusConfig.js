@@ -19,7 +19,7 @@ import { Icon } from "@UI/react/components/atoms/Icon";
 
 /**
  * Status types available in CIA Web
- * @typedef {'online'|'idle'|'away'|'dnd'|'offline'} StatusType
+ * @typedef {'online'|'active'|'idle'|'away'|'busy'|'dnd'|'offline'} StatusType
  */
 
 /**
@@ -30,6 +30,15 @@ export const STATUS_CONFIG = {
   online: {
     id: "online",
     icon: "circle", // Filled circle for online
+    label: "Online",
+    description: "Available and active",
+    color: "var(--status-online)",
+    colorHex: "#4CAF50",
+    fill: true,
+  },
+  active: {
+    id: "active",
+    icon: "circle",
     label: "Online",
     description: "Available and active",
     color: "var(--status-online)",
@@ -57,6 +66,15 @@ export const STATUS_CONFIG = {
   dnd: {
     id: "dnd",
     icon: "xCircle", // X in circle for do not disturb
+    label: "Do Not Disturb",
+    description: "Mute notifications",
+    color: "var(--status-dnd)",
+    colorHex: "#f44336",
+    fill: false,
+  },
+  busy: {
+    id: "busy",
+    icon: "xCircle",
     label: "Do Not Disturb",
     description: "Mute notifications",
     color: "var(--status-dnd)",

@@ -19,6 +19,8 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { ui as log } from "@Utils/logger.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import { authService } from "@Services/authService.js";
+import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
 // =============================================================================
 // LAYOUT INFRASTRUCTURE
@@ -195,6 +197,7 @@ export function CIAWebApp({ username, userId, projectId }) {
   // LAYOUT MODE STATE (Normal/Isolation/Subset)
   // ===========================================================================
   const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
+  const [userStatus, setUserStatus] = useState("online");
 
   // ===========================================================================
   // EDIT STATE (Secondary Footer)
@@ -216,6 +219,41 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ROOM STATE
   // ===========================================================================
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+
+  // ===========================================================================
+  // USER STATUS (Presence-aware)
+  // ===========================================================================
+  useEffect(() => {
+    const handlePresenceChange = (users) => {
+      const me = users.find((user) => user.isYou);
+      if (me?.status) {
+        setUserStatus(me.status);
+      }
+    };
+
+    const handleStatusChange = (status) => {
+      if (status) {
+        setUserStatus(status);
+      }
+    };
+
+    const handleStatusEvent = (event) => {
+      const nextStatus = event?.detail?.status;
+      if (nextStatus) {
+        presenceSystem.updateStatus(nextStatus);
+      }
+    };
+
+    const cleanupPresence = presenceSystem.onPresenceChange(handlePresenceChange);
+    const cleanupStatus = presenceSystem.onStatusChange(handleStatusChange);
+    window.addEventListener("cia:user-status-change", handleStatusEvent);
+
+    return () => {
+      cleanupPresence?.();
+      cleanupStatus?.();
+      window.removeEventListener("cia:user-status-change", handleStatusEvent);
+    };
+  }, []);
 
   // ===========================================================================
   // MODAL STATE
@@ -331,9 +369,11 @@ export function CIAWebApp({ username, userId, projectId }) {
     setDeleteViewTarget(null);
   }, [deleteViewTarget]);
 
-  const handleSignOut = useCallback(() => {
+  const handleSignOut = useCallback(async () => {
     log.debug("Sign out");
-    sessionManager.logout?.();
+    presenceSystem.destroy();
+    sessionManager.clearSession();
+    await authService.logout();
   }, []);
 
   const handleProjectChange = useCallback((project) => {
@@ -882,7 +922,16 @@ export function CIAWebApp({ username, userId, projectId }) {
                 <Header
                   currentProject={projectId ? { id: projectId, name: projectId } : null}
                   projects={[]}
-                  user={userId ? { id: userId, name: username, avatar: null } : null}
+                  user={
+                    userId
+                      ? {
+                          id: userId,
+                          name: username,
+                          avatar: null,
+                          status: userStatus,
+                        }
+                      : null
+                  }
                   notifications={[]}
                   unreadCount={0}
                   viewMode={viewMode}

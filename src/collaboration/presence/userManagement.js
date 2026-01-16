@@ -1,6 +1,7 @@
 import { generateUserId } from "@Utils/idGenerator.js";
 import { presence as log } from "@Utils/logger.js";
 import { config } from "@Core/config/clientConfig.js";
+import { authService } from "@Services/authService.js";
 import { getStoredMockUserId, getDefaultMockUser, getMockUser } from "@Config/mockUsers.js";
 
 // Initialize or retrieve user ID
@@ -24,6 +25,10 @@ export function getUserId() {
     const mockUserId = getStoredMockUserId();
     return mockUserId || getDefaultMockUser().id;
   }
+  const authUser = authService.getUser?.();
+  if (authUser?.id) {
+    return authUser.id;
+  }
   return userId;
 }
 
@@ -37,6 +42,15 @@ export function getUserName() {
       if (mockUser) return mockUser.name;
     }
     return getDefaultMockUser().name;
+  }
+  const authUser = authService.getUser?.();
+  if (authUser) {
+    return (
+      authUser.name ||
+      authUser.username ||
+      authUser.email?.split("@")[0] ||
+      userName
+    );
   }
   return userName;
 }

@@ -107,12 +107,14 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                                 <div key={member.id} className="room-card__member">
                                     <div
                                         className="room-card__member-avatar"
-                                        style={{ '--member-color': member.color }}
+                                        style={{ '--member-color': member.color || '#60a5fa' }}
                                     >
-                                        {member.name.charAt(0).toUpperCase()}
+                                        {(member.name || member.displayName || member.email || 'U')
+                                            .charAt(0)
+                                            .toUpperCase()}
                                     </div>
                                     <span className="room-card__member-name">
-                                        {member.name}
+                                        {member.name || member.displayName || member.email || 'Unknown'}
                                         {member.isOwner && <Icon name="crown" size={10} />}
                                     </span>
                                 </div>

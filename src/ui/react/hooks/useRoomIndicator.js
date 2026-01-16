@@ -10,6 +10,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { config } from "@Core/config/clientConfig.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
+import { authService } from "@Services/authService.js";
 import {
   useRoomPresence,
   useRoomActions,
@@ -74,12 +75,22 @@ export function useRoomIndicator({
       if (!projectId) return [];
 
       try {
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        const authHeader = await authService.getAuthHeader().catch(() => null);
+        if (authHeader) {
+          headers.Authorization = authHeader;
+        } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+          const devUser = authService.getUser?.();
+          if (devUser?.id) headers["x-user-id"] = devUser.id;
+          if (devUser?.name) headers["x-user-name"] = devUser.name;
+          if (devUser?.email) headers["x-user-email"] = devUser.email;
+        }
+
         const response = await fetch(`${apiBase}/projects/${projectId}/rooms`, {
           signal,
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": userId || "00000000-0000-0000-0000-000000000001",
-          },
+          headers,
         });
 
         if (!response.ok) {
@@ -87,6 +98,9 @@ export function useRoomIndicator({
         }
 
         const data = await response.json();
+        if (Array.isArray(data)) {
+          return data;
+        }
         return data.rooms || [];
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -205,12 +219,23 @@ export function useRoomIndicator({
   // ===========================================================================
   const createRoomFn = useCallback(
     async (roomData) => {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(`${apiBase}/projects/${projectId}/rooms`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": userId || "00000000-0000-0000-0000-000000000001",
-        },
+        headers,
         body: JSON.stringify({
           name: roomData.name,
           room_type: roomData.type || "breakout",
@@ -251,13 +276,23 @@ export function useRoomIndicator({
   // ===========================================================================
   const deleteRoomFn = useCallback(
     async (roomId) => {
+      const authHeader = await authService.getAuthHeader().catch(() => null);
+      const headers = {};
+      if (authHeader) {
+        headers.Authorization = authHeader;
+      } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
+        const devUser = authService.getUser?.();
+        headers["x-user-id"] =
+          devUser?.id || "00000000-0000-0000-0000-000000000001";
+        headers["x-user-name"] = devUser?.name || "Development User";
+        headers["x-user-email"] = devUser?.email || "developer@localhost";
+      }
+
       const response = await fetch(
         `${apiBase}/projects/${projectId}/rooms/${roomId}`,
         {
           method: "DELETE",
-          headers: {
-            "x-user-id": userId || "00000000-0000-0000-0000-000000000001",
-          },
+          headers,
         }
       );
 
