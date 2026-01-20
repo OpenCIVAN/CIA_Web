@@ -422,13 +422,13 @@ export function RecordingsTab({ workspaceId }) {
                 <span className="panel-footer__info">
                     Storage: {totalSize}
                 </span>
-                <LabeledButton
-                    icon="refreshCw"
-                    label="Refresh"
+                <button
+                    className="panel-footer__btn panel-footer__btn--icon"
                     onClick={refresh}
-                    size="sm"
-                    variant="ghost"
-                />
+                    title="Refresh"
+                >
+                    <Icon name="refreshCw" size={11} />
+                </button>
             </div>
         </div>
     );

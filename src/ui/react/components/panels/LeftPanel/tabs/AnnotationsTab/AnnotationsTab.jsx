@@ -759,19 +759,19 @@ export function AnnotationsPanelContent({ workspaceId }) {
 
             {/* Footer - fixed at bottom */}
             <div className="panel-footer">
-                <LabeledButton
-                    icon="plus"
-                    label="New Annotation"
-                    size="sm"
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
                     onClick={() => handleToolChange('point')}
-                />
-                <LabeledButton
-                    icon="externalLink"
-                    label="Open Panel"
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Open full annotations panel"
-                />
+                >
+                    <Icon name="plus" size={11} />
+                    <span>New Annotation</span>
+                </button>
+                <button
+                    className="panel-footer__btn panel-footer__btn--icon"
+                    title="Open full annotations panel"
+                >
+                    <Icon name="externalLink" size={11} />
+                </button>
             </div>
         </div>
     );

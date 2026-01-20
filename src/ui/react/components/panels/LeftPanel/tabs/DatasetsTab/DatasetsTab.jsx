@@ -491,18 +491,19 @@ export function DatasetsPanelContent() {
 
             {/* Footer */}
             <div className="panel-footer">
-                <LabeledButton
-                    icon="folderOpen"
-                    label="Load Dataset"
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleLoadDataset}
-                    size="sm"
-                />
-                <IconButton
-                    icon="refresh"
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Refresh"
-                />
+                >
+                    <Icon name="folderOpen" size={11} />
+                    <span>Load Dataset</span>
+                </button>
+                <button
+                    className="panel-footer__btn panel-footer__btn--icon"
+                    title="Refresh"
+                >
+                    <Icon name="refresh" size={11} />
+                </button>
             </div>
         </div>
     );

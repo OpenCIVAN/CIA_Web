@@ -543,12 +543,13 @@
 
 .chat-input__wrapper {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: $spacing-xs;
   background: $color-glass-light;
   border: 1px solid $color-border-default;
   border-radius: $radius-lg;
-  padding: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
   transition: border-color $transition-fast;
 
   &:focus-within {
@@ -557,16 +558,18 @@
 }
 
 .chat-input__textarea {
-  flex: 1;
+  flex: 1 1 100px; // Grow, shrink, min-width of 100px
+  min-width: 80px;
   background: transparent;
   border: none;
   color: $color-text-primary;
   font-size: $font-size-sm;
   padding: $spacing-xs;
-  resize: none;
+  resize: none; // Disable manual resize - we auto-expand
   outline: none;
-  min-height: 20px;
-  max-height: 100px;
+  min-height: 24px;
+  max-height: 150px; // Cap the auto-expand height
+  overflow-y: auto; // Scroll when max height reached
 
   &::placeholder {
     color: $color-text-muted;
@@ -578,18 +581,27 @@
   }
 }
 
+.chat-input__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .chat-input__btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
   background: transparent;
   border: none;
   color: $color-text-muted;
   cursor: pointer;
   border-radius: $radius-sm;
   transition: all $transition-fast;
+  flex-shrink: 0;
 
   &:hover:not(:disabled) {
     color: $color-text-secondary;
@@ -606,14 +618,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
   background: $color-glass-light;
   border: none;
   color: $color-text-muted;
   cursor: pointer;
   border-radius: $radius-full;
   transition: all $transition-fast;
+  flex-shrink: 0;
 
   &--active {
     background: $color-accent-blue;

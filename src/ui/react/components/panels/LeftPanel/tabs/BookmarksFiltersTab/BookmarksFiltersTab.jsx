@@ -377,12 +377,13 @@ export function BookmarksFiltersPanelContent({
 
             {/* Footer - Add button */}
             <div className="panel-footer">
-                <LabeledButton
-                    icon="add"
-                    label={activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleAdd}
-                    size="sm"
-                />
+                >
+                    <Icon name="add" size={11} />
+                    <span>{activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}</span>
+                </button>
             </div>
         </div>
     );

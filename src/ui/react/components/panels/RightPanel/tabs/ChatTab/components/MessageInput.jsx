@@ -4,8 +4,8 @@
  * Features textarea with send on Enter and action buttons.
  */
 
-import React, { useState, useRef } from 'react';
-import { IconButton } from '@UI/react/components/atoms';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { IconButton, Tooltip } from '@UI/react/components/atoms';
 
 /**
  * @typedef {Object} MessageInputProps
@@ -24,10 +24,28 @@ export function MessageInput({ onSend, disabled }) {
     const [message, setMessage] = useState('');
     const textareaRef = useRef(null);
 
+    // Auto-expand textarea as user types
+    const adjustTextareaHeight = useCallback(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto'; // Reset to auto to get correct scrollHeight
+            textarea.style.height = `${textarea.scrollHeight}px`; // Set to content height
+        }
+    }, []);
+
+    // Adjust height when message changes
+    useEffect(() => {
+        adjustTextareaHeight();
+    }, [message, adjustTextareaHeight]);
+
     const handleSend = () => {
         if (message.trim() && !disabled) {
             onSend(message);
             setMessage('');
+            // Reset textarea height after sending
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto';
+            }
         }
     };
 
@@ -41,15 +59,6 @@ export function MessageInput({ onSend, disabled }) {
     return (
         <div className="chat-input">
             <div className="chat-input__wrapper">
-                <IconButton
-                    icon="paperclip"
-                    disabled={disabled}
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Attach file"
-                    className="chat-input__btn"
-                />
-
                 <textarea
                     ref={textareaRef}
                     className="chat-input__textarea"
@@ -61,33 +70,52 @@ export function MessageInput({ onSend, disabled }) {
                     disabled={disabled}
                 />
 
-                <IconButton
-                    icon="atSign"
-                    disabled={disabled}
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Mention user"
-                    className="chat-input__btn"
-                />
+                <div className="chat-input__actions">
+                    <Tooltip content="Attach file" placement="top">
+                        <IconButton
+                            icon="paperclip"
+                            disabled={disabled}
+                            size="xs"
+                            variant="ghost"
+                            label="Attach file"
+                            className="chat-input__btn"
+                        />
+                    </Tooltip>
 
-                <IconButton
-                    icon="smile"
-                    disabled={disabled}
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Add emoji"
-                    className="chat-input__btn"
-                />
+                    <Tooltip content="Mention user" placement="top">
+                        <IconButton
+                            icon="atSign"
+                            disabled={disabled}
+                            size="xs"
+                            variant="ghost"
+                            label="Mention user"
+                            className="chat-input__btn"
+                        />
+                    </Tooltip>
 
-                <IconButton
-                    icon="send"
-                    onClick={handleSend}
-                    disabled={!message.trim() || disabled}
-                    size="sm"
-                    variant="primary"
-                    tooltip="Send message"
-                    className={`chat-input__send ${message.trim() && !disabled ? 'chat-input__send--active' : ''}`}
-                />
+                    <Tooltip content="Add emoji" placement="top">
+                        <IconButton
+                            icon="smile"
+                            disabled={disabled}
+                            size="xs"
+                            variant="ghost"
+                            label="Add emoji"
+                            className="chat-input__btn"
+                        />
+                    </Tooltip>
+
+                    <Tooltip content="Send message" placement="top">
+                        <IconButton
+                            icon="send"
+                            onClick={handleSend}
+                            disabled={!message.trim() || disabled}
+                            size="xs"
+                            variant="primary"
+                            label="Send message"
+                            className={`chat-input__send ${message.trim() && !disabled ? 'chat-input__send--active' : ''}`}
+                        />
+                    </Tooltip>
+                </div>
             </div>
         </div>
     );

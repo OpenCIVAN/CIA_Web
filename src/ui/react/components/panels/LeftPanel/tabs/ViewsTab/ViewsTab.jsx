@@ -546,12 +546,13 @@ export function ViewsPanelContent({ workspaceId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <LabeledButton
-                    icon="add"
-                    label="New View"
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleCreateView}
-                    size="sm"
-                />
+                >
+                    <Icon name="add" size={11} />
+                    <span>New View</span>
+                </button>
             </div>
         </div>
     );

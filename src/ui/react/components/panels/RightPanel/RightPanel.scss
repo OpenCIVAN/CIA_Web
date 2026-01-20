@@ -1120,6 +1120,56 @@
 }
 
 // =============================================================================
+// PANEL FOOTER - Shared footer styling for right panel tabs
+// =============================================================================
+
+.panel-footer {
+  flex-shrink: 0;
+  flex-grow: 0;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  gap: $spacing-xs;
+  min-height: 42px;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: 7px $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: $color-border-medium;
+      color: $color-text-primary;
+    }
+
+    &--primary {
+      flex: 1;
+    }
+
+    &--icon {
+      padding: 7px $spacing-sm;
+      flex: none;
+    }
+  }
+
+  &__info {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+}
+
+// =============================================================================
 // ICON COLORS
 // =============================================================================
 

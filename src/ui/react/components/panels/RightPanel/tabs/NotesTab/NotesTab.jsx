@@ -172,18 +172,19 @@ export function NotesTab({ workspaceId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <LabeledButton
-                    icon="add"
-                    label="New Note"
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
                     onClick={() => setShowNewNote(true)}
-                    size="sm"
-                />
-                <IconButton
-                    icon="download"
-                    size="sm"
-                    variant="ghost"
-                    tooltip="Export notes"
-                />
+                >
+                    <Icon name="add" size={11} />
+                    <span>New Note</span>
+                </button>
+                <button
+                    className="panel-footer__btn panel-footer__btn--icon"
+                    title="Export notes"
+                >
+                    <Icon name="download" size={11} />
+                </button>
             </div>
         </div>
     );

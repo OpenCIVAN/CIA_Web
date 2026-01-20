@@ -330,6 +330,12 @@
     }
   }
 
+  // Info text in footer
+  &__info {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
   // Dropzone state (for drag-and-drop)
   &__dropzone {
     flex: 1;
