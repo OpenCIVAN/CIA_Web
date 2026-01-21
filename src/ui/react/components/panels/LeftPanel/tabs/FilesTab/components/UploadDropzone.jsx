@@ -1,9 +1,10 @@
 /**
  * @file UploadDropzone.jsx
- * @description Drag-and-drop upload zone for files.
+ * @description Drag-and-drop upload overlay for files.
+ * Shows an overlay when files are dragged over the panel.
  *
  * @example
- * <UploadDropzone onUpload={handleUpload} accept=".vtp,.vti,.vtk,.vtkjs,.stl" />
+ * <UploadDropzone onUpload={handleUpload} isDragOver={isDragOver} setIsDragOver={setIsDragOver} />
  */
 
 import React, { useState, useCallback, memo } from 'react';
@@ -12,22 +13,19 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 /**
  * @typedef {Object} UploadDropzoneProps
  * @property {Function} onUpload - Upload handler
- * @property {Function} [onRefresh] - Refresh handler
- * @property {string} [accept] - Accepted file types
  * @property {boolean} [isDragOver] - External drag over state
  * @property {Function} [setIsDragOver] - External drag over setter
  */
 
 /**
- * Upload dropzone component.
+ * Upload dropzone overlay component.
+ * Only shows when files are being dragged over.
  *
  * @param {UploadDropzoneProps} props - Component props
- * @returns {React.ReactElement} The rendered dropzone
+ * @returns {React.ReactElement|null} The rendered dropzone overlay or null
  */
 export const UploadDropzone = memo(function UploadDropzone({
     onUpload,
-    onRefresh,
-    accept = '.vtp,.vti,.vtu,.vtk,.vtkjs,.stl,.obj,.ply,.nii,.nii.gz,.dcm',
     isDragOver: externalIsDragOver,
     setIsDragOver: externalSetIsDragOver,
 }) {
@@ -40,18 +38,24 @@ export const UploadDropzone = memo(function UploadDropzone({
     const handleDragOver = useCallback(
         (e) => {
             e.preventDefault();
-            setIsDragOver(true);
+            e.stopPropagation();
+        },
+        []
+    );
+
+    const handleDragLeave = useCallback(
+        (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragOver(false);
         },
         [setIsDragOver]
     );
 
-    const handleDragLeave = useCallback(() => {
-        setIsDragOver(false);
-    }, [setIsDragOver]);
-
     const handleDrop = useCallback(
         (e) => {
             e.preventDefault();
+            e.stopPropagation();
             setIsDragOver(false);
 
             const files = Array.from(e.dataTransfer.files);
@@ -62,52 +66,20 @@ export const UploadDropzone = memo(function UploadDropzone({
         [onUpload, setIsDragOver]
     );
 
-    const handleClick = useCallback(() => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = accept;
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                onUpload(file);
-            }
-        };
-        input.click();
-    }, [accept, onUpload]);
+    // Only render when dragging
+    if (!isDragOver) return null;
 
     return (
         <div
-            className="panel-footer"
+            className="upload-dropzone-overlay"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
-            {isDragOver ? (
-                <div className="panel-footer__dropzone">
-                    <Icon name="upload" size={16} />
-                    <span>Drop to upload</span>
-                </div>
-            ) : (
-                <>
-                    <button
-                        className="panel-footer__btn panel-footer__btn--primary"
-                        onClick={handleClick}
-                    >
-                        <Icon name="upload" size={11} />
-                        <span>Upload</span>
-                    </button>
-
-                    {onRefresh && (
-                        <button
-                            className="panel-footer__btn panel-footer__btn--icon"
-                            title="Refresh"
-                            onClick={onRefresh}
-                        >
-                            <Icon name="refresh" size={11} />
-                        </button>
-                    )}
-                </>
-            )}
+            <div className="upload-dropzone-overlay__content">
+                <Icon name="upload" size={24} />
+                <span>Drop files to upload</span>
+            </div>
         </div>
     );
 });

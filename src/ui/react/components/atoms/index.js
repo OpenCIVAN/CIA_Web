@@ -73,3 +73,6 @@ export { Slider } from './Slider';
 
 // NavDot - Navigation dot for section navigation
 export { NavDot } from './NavDot';
+
+// ScopeIndicator - View scope level indicator
+export { ScopeIndicator } from './ScopeIndicator';

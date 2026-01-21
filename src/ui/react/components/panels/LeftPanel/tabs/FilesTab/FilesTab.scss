@@ -15,6 +15,7 @@
   min-height: 0; // KEY: Allow shrinking below content size
   width: 100%;
   overflow: hidden;
+  position: relative; // For absolute positioned overlay
 
   // This is critical - sections container should grow but not push footer
   &__sections,
@@ -26,6 +27,68 @@
     // SectionNavGroup fills the container
     .section-nav-group {
       height: 100%;
+    }
+  }
+
+  // Content area for V2 - grows to fill space, scrolls
+  &__content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  // Panel footer sticks to bottom
+  > .panel-footer {
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
+// FILES TAB V2 SPECIFIC
+// =============================================================================
+
+.files-tab-v2 {
+  // Ensure proper flex layout
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+// =============================================================================
+// UPLOAD DROPZONE OVERLAY
+// =============================================================================
+
+.upload-dropzone-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba($color-accent-blue, 0.15);
+  border: 2px dashed rgba($color-accent-blue, 0.5);
+  border-radius: $radius-md;
+  z-index: $z-popover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-lg;
+    background: rgba($color-bg-primary, 0.95);
+    border-radius: $radius-md;
+    border: 1px solid rgba($color-accent-blue, 0.3);
+
+    svg {
+      color: $color-accent-blue;
+    }
+
+    span {
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+      font-weight: $font-weight-medium;
     }
   }
 }

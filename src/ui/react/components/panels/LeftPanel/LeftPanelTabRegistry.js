@@ -16,7 +16,7 @@
 import { registerLeftPanelTab } from "./LeftPanelContext";
 
 // Import all tab content components
-import { FilesPanelContent } from "./tabs/FilesTab";
+import { FilesTabV2 } from "./tabs/FilesTab";
 import { DatasetsPanelContent } from "./tabs/DatasetsTab";
 import { ViewsPanelContent } from "./tabs/ViewsTab";
 import { InstanceToolsPanelContent } from "./tabs/InstanceToolsTab";
@@ -30,7 +30,7 @@ import { CursorsPanelContent } from "./tabs/CursorsTab";
 // =============================================================================
 
 // DATA SOURCES
-registerLeftPanelTab("files", FilesPanelContent);
+registerLeftPanelTab("files", FilesTabV2);
 registerLeftPanelTab("datasets", DatasetsPanelContent);
 
 // VISUALIZATION
