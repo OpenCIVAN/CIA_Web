@@ -1,0 +1,165 @@
+// GlobalFiltersBar.scss
+// Global filters bar with search, type filters, and sort
+
+.global-filters-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
+
+    // Search row
+    &__search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        margin: 6px 8px 0;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
+        border-radius: 6px;
+        transition: border-color 0.15s ease, background 0.15s ease;
+
+        &:focus-within {
+            border-color: var(--color-accent-blue, #3b82f6);
+            background: rgba(255, 255, 255, 0.04);
+        }
+    }
+
+    &__search-icon {
+        flex-shrink: 0;
+        color: var(--color-text-muted, #6b7280);
+    }
+
+    &__search-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 11px;
+        font-family: inherit;
+        color: var(--color-text-primary, #e5e7eb);
+
+        &::placeholder {
+            color: var(--color-text-muted, #6b7280);
+        }
+    }
+
+    &__search-clear {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px;
+        background: none;
+        border: none;
+        color: var(--color-text-muted, #6b7280);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: color 0.15s ease, background 0.15s ease;
+
+        &:hover {
+            color: var(--color-text-secondary, #9ca3af);
+            background: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    // Filter row
+    &__filters {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 8px 6px;
+        gap: 8px;
+    }
+
+    &__type-filters {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        flex-wrap: wrap;
+        overflow: hidden;
+    }
+
+    &__clear-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: none;
+        border: none;
+        color: var(--color-text-muted, #6b7280);
+        font-size: 10px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: color 0.15s ease, background 0.15s ease;
+        flex-shrink: 0;
+
+        &:hover {
+            color: var(--color-text-secondary, #9ca3af);
+            background: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    // Active filters indicator
+    &__indicator {
+        padding: 0 12px 6px;
+    }
+
+    &__indicator-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--color-accent-amber, #fbbf24);
+        font-size: 9px;
+        font-weight: 500;
+        border-radius: 4px;
+
+        svg {
+            flex-shrink: 0;
+        }
+    }
+
+    // VR mode - larger touch targets
+    &--vr {
+        gap: 8px;
+
+        .global-filters-bar__search {
+            padding: 10px 12px;
+            margin: 8px 12px 0;
+            gap: 12px;
+        }
+
+        .global-filters-bar__search-input {
+            font-size: 14px;
+            min-height: 24px;
+        }
+
+        .global-filters-bar__search-clear {
+            padding: 6px;
+        }
+
+        .global-filters-bar__filters {
+            padding: 8px 12px 10px;
+            gap: 12px;
+        }
+
+        .global-filters-bar__clear-btn {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .global-filters-bar__indicator {
+            padding: 0 16px 10px;
+        }
+
+        .global-filters-bar__indicator-badge {
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+    }
+}

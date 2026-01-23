@@ -30,12 +30,13 @@
     }
   }
 
-  // Content area for V2 - grows to fill space, scrolls
+  // Content area for V2 - grows to fill space, children scroll independently
   &__content {
     flex: 1 1 0;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden; // Don't scroll the container - let children scroll
+    display: flex;
+    flex-direction: column;
   }
 
   // Panel footer sticks to bottom

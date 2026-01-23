@@ -30,9 +30,13 @@ import './StarredSection.scss';
  * @property {() => void} onToggle - Toggle expansion handler
  * @property {number} height - Section height when expanded
  * @property {(e: MouseEvent) => void} onResizeStart - Resize drag start handler
+ * @property {string} [selectedFileId] - Currently selected file ID
+ * @property {(fileId: string) => void} [onSelect] - File selection handler
  * @property {(fileId: string) => void} [onToggleStar] - Toggle star handler
- * @property {(file: Object) => void} [onFileClick] - File click handler
- * @property {(file: Object) => void} [onFileDoubleClick] - File double-click handler
+ * @property {(file: Object) => void} [onDoubleClick] - File double-click handler
+ * @property {(e: DragEvent, file: Object) => void} [onDragStart] - Drag start handler
+ * @property {(e: MouseEvent, file: Object) => void} [onContextMenu] - Context menu handler
+ * @property {(e: MouseEvent, file: Object) => void} [onMenuClick] - Menu button click handler
  * @property {string} [className] - Additional CSS classes
  */
 
@@ -57,9 +61,13 @@ export const StarredSection = memo(function StarredSection({
     onToggle,
     height = 140,
     onResizeStart,
+    selectedFileId,
+    onSelect,
     onToggleStar,
-    onFileClick,
-    onFileDoubleClick,
+    onDoubleClick,
+    onDragStart,
+    onContextMenu,
+    onMenuClick,
     className = '',
 }) {
     const { isVR } = useAdaptive();
@@ -109,12 +117,18 @@ export const StarredSection = memo(function StarredSection({
         setShowAllBypassFilter(true);
     }, []);
 
+    // Restore global filters
+    const handleRestoreFilters = useCallback(() => {
+        setShowAllBypassFilter(false);
+    }, []);
+
     const isEmpty = items.length === 0;
 
     const classList = [
         'starred-section',
         expanded && 'starred-section--expanded',
         isEmpty && 'starred-section--empty',
+        showAllBypassFilter && hasGlobalFilters && 'starred-section--bypass',
         isVR && 'starred-section--vr',
         className,
     ].filter(Boolean).join(' ');
@@ -162,6 +176,12 @@ export const StarredSection = memo(function StarredSection({
                         ? `${displayedItems.length} of ${items.length}`
                         : items.length}
                 </span>
+                {/* Bypass indicator */}
+                {showAllBypassFilter && hasGlobalFilters && (
+                    <span className="starred-section__bypass-badge">
+                        Showing all
+                    </span>
+                )}
             </div>
 
             {/* Empty state hint */}
@@ -192,10 +212,13 @@ export const StarredSection = memo(function StarredSection({
                             <FileItemList
                                 key={file.id}
                                 file={file}
-                                showStar={false}
-                                onSelect={onFileClick}
-                                onDoubleClick={onFileDoubleClick}
+                                isSelected={selectedFileId === file.id}
+                                onSelect={() => onSelect?.(file.id)}
+                                onDoubleClick={onDoubleClick}
                                 onStar={onToggleStar}
+                                onDragStart={onDragStart}
+                                onContextMenu={onContextMenu}
+                                onMenuClick={onMenuClick}
                             />
                         ))}
                     </div>
@@ -212,6 +235,18 @@ export const StarredSection = memo(function StarredSection({
                                 Show all
                                 <Icon name="arrowUpRight" size={10} />
                             </span>
+                        </button>
+                    )}
+
+                    {/* Restore filters link */}
+                    {showAllBypassFilter && hasGlobalFilters && (
+                        <button
+                            type="button"
+                            className="starred-section__restore-filters"
+                            onClick={handleRestoreFilters}
+                        >
+                            <Icon name="rotateCcw" size={10} />
+                            <span>Restore filters</span>
                         </button>
                     )}
 

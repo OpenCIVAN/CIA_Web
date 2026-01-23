@@ -100,7 +100,7 @@ export const FileItemList = memo(function FileItemList({
                             className={`tree-item__action ${file.starred ? 'starred' : ''}`}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onStar?.(file);
+                                onStar?.(file.id);
                             }}
                             title={file.starred ? 'Remove star' : 'Add star'}
                         >

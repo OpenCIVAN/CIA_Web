@@ -129,17 +129,41 @@ export function useGlobalFilters(options = {}) {
         // Type filter
         if (filters.typeFilters.length > 0) {
             result = result.filter(item => {
-                const fileType = item.fileType || item.type;
-                if (!fileType) return false;
+                // Try multiple ways to determine file type
+                let typeConfig = null;
 
-                // Check if the file type matches any of the active filters
-                const typeConfig = getFileTypeByExtension(`.${fileType}`);
+                // Method 1: Use fileType property directly
+                const fileType = item.fileType || item.type;
+                if (fileType) {
+                    typeConfig = getFileTypeByExtension(`.${fileType}`);
+                    // Direct ID match (e.g., if fileType is already 'nifti')
+                    if (!typeConfig && filters.typeFilters.includes(fileType)) {
+                        return true;
+                    }
+                }
+
+                // Method 2: Extract extension from filename
+                if (!typeConfig) {
+                    const name = item.name || item.filename || '';
+                    const match = name.match(/\.([^.]+)$/);
+                    if (match) {
+                        typeConfig = getFileTypeByExtension(`.${match[1]}`);
+                    }
+                    // Handle compound extensions like .nii.gz
+                    if (!typeConfig) {
+                        const compoundMatch = name.match(/\.([^.]+\.[^.]+)$/);
+                        if (compoundMatch) {
+                            typeConfig = getFileTypeByExtension(`.${compoundMatch[1]}`);
+                        }
+                    }
+                }
+
+                // Check if file type matches any active filter
                 if (typeConfig) {
                     return filters.typeFilters.includes(typeConfig.id);
                 }
 
-                // Fallback to direct match
-                return filters.typeFilters.includes(fileType);
+                return false;
             });
         }
 

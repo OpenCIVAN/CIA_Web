@@ -65,6 +65,9 @@ export function useFilesTab({
   // Upload drag state
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Optimistic star updates (for immediate UI feedback)
+  const [optimisticStars, setOptimisticStars] = useState({});
+
   // Section states (VS Code-style)
   const {
     states: sectionStates,
@@ -97,29 +100,37 @@ export function useFilesTab({
   const isLoading = mockIsLoading ?? hookLoading;
   const error = mockError ?? hookError;
 
-  // Transform server files to UI format
+  // Transform server files to UI format (with optimistic star updates)
   const files = useMemo(() => {
     if (!serverFiles || serverFiles.length === 0) return [];
 
-    return serverFiles.map((file) => ({
-      id: file.id,
-      name: file.name || file.filename,
-      fileType: file.fileType,
-      size:
-        file.sizeFormatted ||
-        (typeof file.size === "number"
-          ? formatFileSize(file.size)
-          : file.size) ||
-        "",
-      starred: mockStarredIds
-        ? mockStarredIds.has(file.id)
-        : file.starred ?? false,
-      loaded: file.loaded ?? false,
-      thumbnail: file.thumbnail ?? canVisualize(file.fileType),
-      date: file.uploadedAt,
-      isFolder: false,
-    }));
-  }, [serverFiles, mockStarredIds]);
+    return serverFiles.map((file) => {
+      // Check for optimistic star update
+      const hasOptimisticUpdate = file.id in optimisticStars;
+      const starredState = hasOptimisticUpdate
+        ? optimisticStars[file.id]
+        : mockStarredIds
+          ? mockStarredIds.has(file.id)
+          : file.starred ?? false;
+
+      return {
+        id: file.id,
+        name: file.name || file.filename,
+        fileType: file.fileType,
+        size:
+          file.sizeFormatted ||
+          (typeof file.size === "number"
+            ? formatFileSize(file.size)
+            : file.size) ||
+          "",
+        starred: starredState,
+        loaded: file.loaded ?? false,
+        thumbnail: file.thumbnail ?? canVisualize(file.fileType),
+        date: file.uploadedAt,
+        isFolder: false,
+      };
+    });
+  }, [serverFiles, mockStarredIds, optimisticStars]);
 
   // Starred files
   const starredFiles = useMemo(() => {
@@ -189,14 +200,36 @@ export function useFilesTab({
 
   const handleStar = useCallback(
     async (id) => {
+      // Find current starred state
+      const file = files.find(f => f.id === id);
+      const currentlyStarred = file?.starred || false;
+
+      // Optimistically update UI
+      setOptimisticStars(prev => ({
+        ...prev,
+        [id]: !currentlyStarred,
+      }));
+
       try {
         await toggleStar({ type: "file", targetId: id });
         log.debug("Toggled star for file:", id);
+        // Clear optimistic state after success (refetch will provide real data)
+        setOptimisticStars(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
       } catch (err) {
         log.error("Failed to toggle star:", err);
+        // Revert optimistic update on error
+        setOptimisticStars(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
       }
     },
-    [toggleStar]
+    [toggleStar, files]
   );
 
   const handleDragStart = useCallback((e, file) => {

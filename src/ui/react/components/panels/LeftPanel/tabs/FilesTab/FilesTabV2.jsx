@@ -3,7 +3,7 @@
  * @description Redesigned Files Tab with improved layout and features.
  *
  * Features:
- * - Global search and type filters
+ * - Global search and type filters (applies to all sections)
  * - Resizable Starred section with filter bypass
  * - Tabbed browser (Loaded/All Files)
  * - Folder navigation with breadcrumbs
@@ -14,17 +14,18 @@
  * ┌─────────────────────────────────────┐
  * │ 📁 Files                    8 total │
  * ├─────────────────────────────────────┤
+ * │ 🔍 [Search all files...]            │  ← Global search
+ * │ [NIfTI][DICOM][CSV][Docs] Sort▼     │  ← Global type filters
+ * │ [Filters active]                    │  ← Active indicator
+ * ├─────────────────────────────────────┤
  * │ ▼ ⭐ Starred               2 of 3   │
  * │   [All] [Datasets] [Files]          │
  * │   file list...                      │
- * │   [Show all ↗] (when filtered)      │
+ * │   [Show all ↗] / [Restore filters]  │
  * │ ═══════════════════════════════════ │  ← Resize handle
  * ├─────────────────────────────────────┤
  * │ [📦 Loaded (2)] [📁 All Files (5)] │
- * ├─────────────────────────────────────┤
- * │ 🏠 Root / Raw Scans                 │  ← Breadcrumb
- * │ 🔍 [Search files...]                │
- * │ [NIfTI][DICOM][CSV] Sort▼ [≡][⊞]  │
+ * │ 🏠 Root / Raw Scans        [≡][⊞]  │  ← Breadcrumb + view toggle
  * │   📁 folders + 📄 files             │
  * ├─────────────────────────────────────┤
  * │ [?]  [    ⬆ Upload Files    ]  [⟳] │
@@ -40,6 +41,7 @@ import { PanelFooter } from '@UI/react/components/molecules/PanelFooter';
 import { StarredSection, TabbedFilesBrowser, CompactFilesPanel } from './sections';
 import { FileContextMenu } from './components/FileContextMenu';
 import { UploadDropzone } from './components/UploadDropzone';
+import { GlobalFiltersBar } from './components/GlobalFiltersBar';
 import { useFilesTab } from './hooks/useFilesTab';
 import { useResponsiveMode } from '@UI/react/hooks/useResponsiveMode';
 import { useGlobalFilters } from '@UI/react/hooks/useGlobalFilters';
@@ -75,7 +77,13 @@ export function FilesTabV2({
     const { dimensions, isCompact, showLabels } = useResponsiveMode(containerRef);
 
     // Global filters state
-    const { filters, applyFilters, hasActiveFilters } = useGlobalFilters();
+    const {
+        filters,
+        setFilters,
+        applyFilters,
+        hasActiveFilters,
+        clearFilters,
+    } = useGlobalFilters();
 
     // Core files tab logic
     const {
@@ -118,6 +126,7 @@ export function FilesTabV2({
     const [starredHeight, setStarredHeight] = useState(140);
     const [activeTab, setActiveTab] = useState('all');
     const [isResizing, setIsResizing] = useState(false);
+    const [selectedFileId, setSelectedFileId] = useState(null);
 
     // Starred section resize handler
     const handleResizeStart = useCallback((e) => {
@@ -243,6 +252,16 @@ export function FilesTabV2({
                 </div>
             )}
 
+            {/* Global Filters Bar - applies to all sections */}
+            {!isCompact && (
+                <GlobalFiltersBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    hasActiveFilters={hasActiveFilters}
+                    onClearFilters={clearFilters}
+                />
+            )}
+
             {/* Main content */}
             <div className="files-tab__content">
                 {isCompact ? (
@@ -250,7 +269,7 @@ export function FilesTabV2({
                     <CompactFilesPanel
                         starredFiles={starredFiles}
                         loadedDatasets={loadedDatasetsWithViews}
-                        allFiles={files}
+                        allFiles={allFiles}
                         containerWidth={dimensions.width}
                         onToggleStar={handleStar}
                         onFileClick={handleFileClick}
@@ -268,20 +287,30 @@ export function FilesTabV2({
                             onToggle={() => setStarredExpanded(!starredExpanded)}
                             height={starredHeight}
                             onResizeStart={handleResizeStart}
+                            selectedFileId={selectedFileId}
+                            onSelect={setSelectedFileId}
                             onToggleStar={handleStar}
-                            onFileClick={handleFileClick}
-                            onFileDoubleClick={handleDoubleClick}
+                            onDoubleClick={handleDoubleClick}
+                            onDragStart={handleDragStart}
+                            onContextMenu={handleContextMenu}
+                            onMenuClick={handleMenuClick}
                         />
 
                         <TabbedFilesBrowser
                             loadedDatasets={loadedDatasetsWithViews}
-                            allFiles={files}
+                            allFiles={allFiles}
                             folders={folders}
+                            filters={filters}
+                            applyFilters={applyFilters}
                             activeTab={activeTab}
                             onTabChange={setActiveTab}
+                            selectedFileId={selectedFileId}
+                            onSelect={setSelectedFileId}
                             onToggleStar={handleStar}
-                            onFileClick={handleFileClick}
-                            onFileDoubleClick={handleDoubleClick}
+                            onDoubleClick={handleDoubleClick}
+                            onDragStart={handleDragStart}
+                            onContextMenu={handleContextMenu}
+                            onMenuClick={handleMenuClick}
                             onViewClick={handleViewClick}
                         />
                     </>

@@ -4,8 +4,9 @@
 .tabbed-files-browser {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 0; // Fill remaining space
+    min-height: 0; // Allow shrinking
+    overflow: hidden; // Contain scrolling children
 
     // Tab bar
     &__tabs {

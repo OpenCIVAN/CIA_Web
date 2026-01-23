@@ -95,7 +95,7 @@ export const PanelFooter = memo(function PanelFooter({
                         aria-label="Refresh"
                     >
                         <Icon
-                            name="refreshCw"
+                            name="refresh"
                             size={isVR ? 20 : 16}
                             className={isRefreshing ? 'spin' : ''}
                         />

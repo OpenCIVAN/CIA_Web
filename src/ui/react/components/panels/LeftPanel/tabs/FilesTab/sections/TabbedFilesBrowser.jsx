@@ -1,13 +1,15 @@
 /**
  * @file TabbedFilesBrowser.jsx
  * @description Bottom section with Loaded/All Files tabs.
- * Includes search, filters, sorting, breadcrumb navigation, and folder browsing.
+ * Uses global filters from parent. Includes breadcrumb navigation and folder browsing.
  *
  * @example
  * <TabbedFilesBrowser
  *   loadedDatasets={loadedDatasets}
  *   allFiles={allFiles}
  *   folders={folders}
+ *   filters={filters}
+ *   applyFilters={applyFilters}
  *   activeTab={activeTab}
  *   onTabChange={setActiveTab}
  * />
@@ -16,17 +18,13 @@
 import React, { memo, useState, useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { TabButton } from '@UI/react/components/molecules/TabButton';
-import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { SearchBar } from '@UI/react/components/molecules/SearchBar';
-import { SortDropdown } from '@UI/react/components/molecules/SortDropdown';
 import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { Breadcrumb, buildBreadcrumbPath } from '@UI/react/components/molecules/Breadcrumb';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
-import { FileItemList } from '../components/FileItem';
+import { FileItemList, FileItemGrid } from '../components/FileItem';
 import { DatasetTreeItem } from '../components/DatasetTreeItem';
 import { FolderNode } from '../components/FolderNode';
 import { useAdaptive } from '@UI/react/context';
-import { SORT_OPTIONS, FILE_TYPE_FILTER_OPTIONS } from '@UI/react/constants/filesTabConfig.js';
 import './TabbedFilesBrowser.scss';
 
 /**
@@ -34,12 +32,17 @@ import './TabbedFilesBrowser.scss';
  * @property {Array} loadedDatasets - Loaded datasets with views
  * @property {Array} allFiles - All files in project
  * @property {Array} folders - Folder hierarchy
+ * @property {Object} [filters] - Global filter state from parent
+ * @property {(items: Array) => Array} [applyFilters] - Global filter function from parent
  * @property {'loaded'|'all'} activeTab - Currently active tab
  * @property {(tab: 'loaded'|'all') => void} onTabChange - Tab change handler
- * @property {(fileId: string) => void} [onFileLoad] - File load handler
+ * @property {string} [selectedFileId] - Currently selected file ID
+ * @property {(fileId: string) => void} [onSelect] - File selection handler
  * @property {(fileId: string) => void} [onToggleStar] - Toggle star handler
- * @property {(file: Object) => void} [onFileClick] - File click handler
- * @property {(file: Object) => void} [onFileDoubleClick] - File double-click handler
+ * @property {(file: Object) => void} [onDoubleClick] - File double-click handler
+ * @property {(e: DragEvent, file: Object) => void} [onDragStart] - Drag start handler
+ * @property {(e: MouseEvent, file: Object) => void} [onContextMenu] - Context menu handler
+ * @property {(e: MouseEvent, file: Object) => void} [onMenuClick] - Menu button click handler
  * @property {(viewId: string) => void} [onViewClick] - View click handler
  * @property {string} [className] - Additional CSS classes
  */
@@ -54,12 +57,17 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
     loadedDatasets = [],
     allFiles = [],
     folders = [],
+    filters = null,
+    applyFilters = null,
     activeTab = 'all',
     onTabChange,
-    onFileLoad,
+    selectedFileId,
+    onSelect,
     onToggleStar,
-    onFileClick,
-    onFileDoubleClick,
+    onDoubleClick,
+    onDragStart,
+    onContextMenu,
+    onMenuClick,
     onViewClick,
     className = '',
 }) {
@@ -68,11 +76,8 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
     // Expanded datasets state (for Loaded tab)
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
-    // All Files tab state
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('name');
+    // Local view state (not filtered globally)
     const [viewMode, setViewMode] = useState('list');
-    const [typeFilters, setTypeFilters] = useState([]);
     const [currentFolderId, setCurrentFolderId] = useState(null);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
 
@@ -94,15 +99,6 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
         });
     }, []);
 
-    // Toggle type filter
-    const toggleTypeFilter = useCallback((type) => {
-        setTypeFilters(prev =>
-            prev.includes(type)
-                ? prev.filter(t => t !== type)
-                : [...prev, type]
-        );
-    }, []);
-
     // Build breadcrumb path
     const breadcrumbPath = useMemo(() => {
         return buildBreadcrumbPath(currentFolderId, folders);
@@ -117,52 +113,39 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
         };
     }, [folders, allFiles, currentFolderId]);
 
-    // Filter and sort files
+    // Check if global filters are active
+    const hasGlobalSearch = filters?.searchQuery?.trim();
+    const hasGlobalFilters = hasGlobalSearch || (filters?.typeFilters?.length > 0);
+
+    // Filter and sort files using global filters
     const filteredFiles = useMemo(() => {
-        let result = searchQuery.trim() ? allFiles : rootFiles;
+        // When searching globally, search all files; otherwise show current folder contents
+        const baseFiles = hasGlobalSearch ? allFiles : rootFiles;
 
-        // Search filter
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            result = allFiles.filter(f =>
-                (f.name || f.filename || '').toLowerCase().includes(q)
-            );
+        // Apply global filters if available
+        if (applyFilters) {
+            return applyFilters(baseFiles);
         }
 
-        // Type filter
-        if (typeFilters.length > 0) {
-            result = result.filter(f => typeFilters.includes(f.fileType || f.type));
+        // Fallback: return base files sorted by name
+        return [...baseFiles].sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '')
+        );
+    }, [rootFiles, allFiles, hasGlobalSearch, applyFilters]);
+
+    // Filter loaded datasets using global filters
+    const filteredDatasets = useMemo(() => {
+        if (!applyFilters || !hasGlobalFilters) {
+            return loadedDatasets;
         }
-
-        // Sort
-        result = [...result].sort((a, b) => {
-            switch (sortBy) {
-                case 'date':
-                    return new Date(b.modifiedAt || b.uploadedAt || 0) -
-                           new Date(a.modifiedAt || a.uploadedAt || 0);
-                case 'size':
-                    return parseSize(b.size) - parseSize(a.size);
-                case 'type':
-                    return (a.fileType || a.type || '').localeCompare(b.fileType || b.type || '');
-                default:
-                    return (a.name || '').localeCompare(b.name || '');
-            }
-        });
-
-        return result;
-    }, [rootFiles, allFiles, searchQuery, typeFilters, sortBy]);
+        return applyFilters(loadedDatasets);
+    }, [loadedDatasets, applyFilters, hasGlobalFilters]);
 
     const classList = [
         'tabbed-files-browser',
         isVR && 'tabbed-files-browser--vr',
         className,
     ].filter(Boolean).join(' ');
-
-    // File type filter chips with counts
-    const typeFilterChips = FILE_TYPE_FILTER_OPTIONS.map(opt => ({
-        ...opt,
-        count: allFiles.filter(f => (f.fileType || f.type) === opt.id).length,
-    }));
 
     return (
         <div className={classList}>
@@ -172,7 +155,7 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                     icon="database"
                     label="Loaded"
                     active={activeTab === 'loaded'}
-                    badge={loadedDatasets.length}
+                    badge={hasGlobalFilters ? filteredDatasets.length : loadedDatasets.length}
                     color="teal"
                     onClick={() => onTabChange('loaded')}
                 />
@@ -180,7 +163,7 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                     icon="folder"
                     label="All Files"
                     active={activeTab === 'all'}
-                    badge={allFiles.length}
+                    badge={hasGlobalFilters ? filteredFiles.length : allFiles.length}
                     color="blue"
                     onClick={() => onTabChange('all')}
                 />
@@ -189,35 +172,13 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
             {/* All Files Tab Content */}
             {activeTab === 'all' && (
                 <>
-                    {/* Breadcrumb */}
-                    <Breadcrumb
-                        path={breadcrumbPath}
-                        onNavigate={setCurrentFolderId}
-                    />
-
-                    {/* Search */}
-                    <SearchBar
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        placeholder="Search files..."
-                    />
-
-                    {/* Toolbar */}
+                    {/* Toolbar: Breadcrumb + View Toggle */}
                     <div className="tabbed-files-browser__toolbar">
-                        <div className="tabbed-files-browser__filters">
-                            <ChipGroup
-                                chips={typeFilterChips}
-                                activeChips={typeFilters}
-                                onToggle={toggleTypeFilter}
-                                size="sm"
-                            />
-                        </div>
+                        <Breadcrumb
+                            path={breadcrumbPath}
+                            onNavigate={setCurrentFolderId}
+                        />
                         <div className="tabbed-files-browser__toolbar-right">
-                            <SortDropdown
-                                value={sortBy}
-                                onChange={setSortBy}
-                                options={SORT_OPTIONS}
-                            />
                             <ToggleGroup
                                 options={[
                                     { value: 'list', icon: 'list' },
@@ -230,10 +191,10 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                         </div>
                     </div>
 
-                    {/* File list */}
-                    <div className="tabbed-files-browser__content">
-                        {/* Folders (when not searching) */}
-                        {!searchQuery && rootFolders.map(folder => (
+                    {/* File list/grid */}
+                    <div className={`tabbed-files-browser__content ${viewMode === 'grid' ? 'tabbed-files-browser__content--grid' : ''}`}>
+                        {/* Folders (when not searching globally, list view only) */}
+                        {!hasGlobalSearch && viewMode === 'list' && rootFolders.map(folder => (
                             <FolderNode
                                 key={folder.id}
                                 folder={folder}
@@ -242,29 +203,56 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                                 expanded={expandedFolders.has(folder.id)}
                                 onToggle={() => toggleFolder(folder.id)}
                                 depth={0}
-                                onFileLoad={onFileLoad}
                                 onToggleStar={onToggleStar}
                             />
                         ))}
 
-                        {/* Files */}
-                        {filteredFiles.length > 0 ? (
+                        {/* Files - Grid View */}
+                        {viewMode === 'grid' && filteredFiles.length > 0 && (
+                            <div className="files-grid">
+                                {filteredFiles.filter(f => !f.isFolder).map(file => (
+                                    <FileItemGrid
+                                        key={file.id}
+                                        file={file}
+                                        isSelected={selectedFileId === file.id}
+                                        onSelect={() => onSelect?.(file.id)}
+                                        onDoubleClick={onDoubleClick}
+                                        onStar={onToggleStar}
+                                        onDragStart={onDragStart}
+                                        onContextMenu={onContextMenu}
+                                        onMenuClick={onMenuClick}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Files - List View */}
+                        {viewMode === 'list' && filteredFiles.length > 0 && (
                             filteredFiles.map(file => (
                                 <FileItemList
                                     key={file.id}
                                     file={file}
-                                    onSelect={onFileClick}
-                                    onDoubleClick={onFileDoubleClick}
+                                    isSelected={selectedFileId === file.id}
+                                    onSelect={() => onSelect?.(file.id)}
+                                    onDoubleClick={onDoubleClick}
                                     onStar={onToggleStar}
+                                    onDragStart={onDragStart}
+                                    onContextMenu={onContextMenu}
+                                    onMenuClick={onMenuClick}
+                                    expandedFolders={expandedFolders}
+                                    onToggleFolder={toggleFolder}
                                 />
                             ))
-                        ) : searchQuery ? (
+                        )}
+
+                        {/* Empty state */}
+                        {filteredFiles.length === 0 && hasGlobalSearch && (
                             <EmptyState
                                 icon="search"
                                 title="No files found"
-                                subtitle={`No results for "${searchQuery}"`}
+                                subtitle={`No results for "${filters?.searchQuery}"`}
                             />
-                        ) : null}
+                        )}
                     </div>
                 </>
             )}
@@ -272,8 +260,8 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
             {/* Loaded Datasets Tab Content */}
             {activeTab === 'loaded' && (
                 <div className="tabbed-files-browser__content">
-                    {loadedDatasets.length > 0 ? (
-                        loadedDatasets.map(dataset => (
+                    {filteredDatasets.length > 0 ? (
+                        filteredDatasets.map(dataset => (
                             <DatasetTreeItem
                                 key={dataset.id}
                                 dataset={dataset}
@@ -282,6 +270,12 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                                 onViewClick={onViewClick}
                             />
                         ))
+                    ) : loadedDatasets.length > 0 ? (
+                        <EmptyState
+                            icon="search"
+                            title="No matching datasets"
+                            subtitle={`No results for "${filters?.searchQuery || 'current filters'}"`}
+                        />
                     ) : (
                         <EmptyState
                             icon="database"
@@ -294,22 +288,5 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
         </div>
     );
 });
-
-/**
- * Parse file size string to bytes
- */
-function parseSize(size) {
-    if (typeof size === 'number') return size;
-    if (!size || typeof size !== 'string') return 0;
-
-    const match = size.match(/^([\d.]+)\s*(B|KB|MB|GB)?$/i);
-    if (!match) return 0;
-
-    const value = parseFloat(match[1]);
-    const unit = (match[2] || 'B').toUpperCase();
-    const multipliers = { B: 1, KB: 1024, MB: 1048576, GB: 1073741824 };
-
-    return value * (multipliers[unit] || 1);
-}
 
 export default TabbedFilesBrowser;
