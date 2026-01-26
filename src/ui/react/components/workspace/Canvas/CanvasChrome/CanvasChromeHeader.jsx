@@ -1,7 +1,7 @@
 // src/ui/react/components/workspace/Canvas/CanvasChrome/CanvasChromeHeader.jsx
 // CanvasChromeHeader - header bar for workspace/viewgroup/navigation controls.
 
-import React, { memo, useMemo, useRef, useState } from 'react';
+import React, { memo, useMemo, useRef, useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
 import './CanvasChromeHeader.scss';
@@ -19,6 +19,8 @@ const DropdownList = memo(function DropdownList({
     triggerRef,
     items,
     renderItem,
+    header,
+    footer,
     className = '',
 }) {
     if (!open) return null;
@@ -33,7 +35,9 @@ const DropdownList = memo(function DropdownList({
             className={`canvas-chrome-header__dropdown ${className}`}
         >
             <div className="canvas-chrome-header__dropdown-inner">
+                {header}
                 {items.map(renderItem)}
+                {footer}
             </div>
         </DropdownPortal>
     );
@@ -55,6 +59,8 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     viewGroups = [],
     onViewGroupChange,
     isViewGroupLinked = false,
+    onEditViewGroup,
+    onOpenViewGroupManager,
 
     // Edit mode
     isEditMode = false,
@@ -81,6 +87,14 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const [workspaceOpen, setWorkspaceOpen] = useState(false);
     const [viewGroupOpen, setViewGroupOpen] = useState(false);
     const [displayOpen, setDisplayOpen] = useState(false);
+    const [workspaceQuery, setWorkspaceQuery] = useState('');
+    const [viewGroupQuery, setViewGroupQuery] = useState('');
+    const [viewGroupSort, setViewGroupSort] = useState('name-asc');
+    const [viewGroupFilter, setViewGroupFilter] = useState('all');
+    const [viewGroupTag, setViewGroupTag] = useState(null);
+    const [workspaceSort, setWorkspaceSort] = useState('name-asc');
+    const [workspaceFilter, setWorkspaceFilter] = useState('all');
+    const [workspaceTag, setWorkspaceTag] = useState(null);
     const workspaceTriggerRef = useRef(null);
     const viewGroupTriggerRef = useRef(null);
     const displayTriggerRef = useRef(null);
@@ -93,6 +107,90 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const viewGroupId = viewGroup?.id || (typeof viewGroup === 'string' ? viewGroup : null);
 
     const activeDisplayCount = Number(showCoordinates) + Number(showViewGroupBorders);
+
+    const viewGroupTags = useMemo(() => {
+        const tags = new Set();
+        viewGroupItems.forEach((item) => {
+            if (Array.isArray(item.tags)) {
+                item.tags.forEach((tag) => tags.add(tag));
+            }
+        });
+        return Array.from(tags);
+    }, [viewGroupItems]);
+
+    const workspaceTags = useMemo(() => {
+        const tags = new Set();
+        workspaceItems.forEach((item) => {
+            if (Array.isArray(item.tags)) {
+                item.tags.forEach((tag) => tags.add(tag));
+            }
+        });
+        return Array.from(tags);
+    }, [workspaceItems]);
+
+    const filteredWorkspaces = useMemo(() => {
+        const query = workspaceQuery.trim().toLowerCase();
+        const hasQuery = Boolean(query);
+        const matchesFilter = (item) => {
+            if (workspaceFilter === 'all') return true;
+            return item.type === workspaceFilter;
+        };
+
+        let items = workspaceItems.filter((item) => {
+            if (hasQuery && !(item.name || '').toLowerCase().includes(query)) return false;
+            if (!matchesFilter(item)) return false;
+            if (workspaceTag && (!Array.isArray(item.tags) || !item.tags.includes(workspaceTag))) return false;
+            return true;
+        });
+
+        const sorters = {
+            'name-asc': (a, b) => (a.name || '').localeCompare(b.name || ''),
+            'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
+            'recent': (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0),
+        };
+
+        const sorter = sorters[workspaceSort] || sorters['name-asc'];
+        return items.slice().sort(sorter);
+    }, [workspaceItems, workspaceQuery, workspaceFilter, workspaceSort, workspaceTag]);
+
+    const filteredViewGroups = useMemo(() => {
+        const query = viewGroupQuery.trim().toLowerCase();
+        const hasQuery = Boolean(query);
+        const isLinked = (item) => Boolean(item.linkedTo || item.isLinked);
+        const hasTags = (item) => Array.isArray(item.tags) && item.tags.length > 0;
+
+        let items = viewGroupItems.filter((item) => {
+            if (hasQuery && !(item.name || '').toLowerCase().includes(query)) return false;
+            if (viewGroupFilter === 'linked' && !isLinked(item)) return false;
+            if (viewGroupFilter === 'unlinked' && isLinked(item)) return false;
+            if (viewGroupFilter === 'tagged' && !hasTags(item)) return false;
+            if (viewGroupTag && (!Array.isArray(item.tags) || !item.tags.includes(viewGroupTag))) return false;
+            return true;
+        });
+
+        const sorters = {
+            'name-asc': (a, b) => (a.name || '').localeCompare(b.name || ''),
+            'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
+            'views-desc': (a, b) => (b.views?.length || 0) - (a.views?.length || 0),
+            'views-asc': (a, b) => (a.views?.length || 0) - (b.views?.length || 0),
+            'linked-first': (a, b) => Number(isLinked(b)) - Number(isLinked(a)),
+        };
+
+        const sorter = sorters[viewGroupSort] || sorters['name-asc'];
+        return items.slice().sort(sorter);
+    }, [viewGroupItems, viewGroupQuery, viewGroupFilter, viewGroupSort, viewGroupTag]);
+
+    const handleCloseWorkspace = useCallback(() => {
+        setWorkspaceOpen(false);
+        setWorkspaceQuery('');
+        setWorkspaceTag(null);
+    }, []);
+
+    const handleCloseViewGroups = useCallback(() => {
+        setViewGroupOpen(false);
+        setViewGroupQuery('');
+        setViewGroupTag(null);
+    }, []);
 
     return (
         <header className={`canvas-chrome-header ${className}`}>
@@ -270,16 +368,67 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
             {/* Workspace dropdown */}
             <DropdownList
                 open={workspaceOpen}
-                onClose={() => setWorkspaceOpen(false)}
+                onClose={handleCloseWorkspace}
                 triggerRef={workspaceTriggerRef}
-                items={workspaceItems}
+                items={filteredWorkspaces}
+                header={(
+                    <>
+                        <div className="canvas-chrome-header__dropdown-search">
+                            <Icon name="search" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search workspaces..."
+                                value={workspaceQuery}
+                                onChange={(e) => setWorkspaceQuery(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="canvas-chrome-header__dropdown-controls">
+                            <div className="canvas-chrome-header__filter-row">
+                                {['all', 'project', 'breakout', 'personal'].map((filter) => (
+                                    <button
+                                        key={filter}
+                                        type="button"
+                                        className={`canvas-chrome-header__filter-chip ${workspaceFilter === filter ? 'is-active' : ''}`}
+                                        onClick={() => setWorkspaceFilter(filter)}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                            {workspaceTags.length > 0 && (
+                                <div className="canvas-chrome-header__tag-row">
+                                    {workspaceTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`canvas-chrome-header__tag-chip ${workspaceTag === tag ? 'is-active' : ''}`}
+                                            onClick={() => setWorkspaceTag(workspaceTag === tag ? null : tag)}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <label className="canvas-chrome-header__sort">
+                                <span>Sort</span>
+                                <select value={workspaceSort} onChange={(e) => setWorkspaceSort(e.target.value)}>
+                                    <option value="name-asc">Name A–Z</option>
+                                    <option value="name-desc">Name Z–A</option>
+                                    <option value="recent">Recently updated</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div className="canvas-chrome-header__dropdown-divider" />
+                    </>
+                )}
                 renderItem={(item) => (
                     <button
                         key={item.id}
                         className={`canvas-chrome-header__dropdown-item ${workspaceId === item.id ? 'is-active' : ''}`}
                         onClick={() => {
                             onWorkspaceChange?.(item);
-                            setWorkspaceOpen(false);
+                            handleCloseWorkspace();
                         }}
                     >
                         <Icon name="grid" size={12} />
@@ -291,28 +440,147 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
             {/* ViewGroup dropdown */}
             <DropdownList
                 open={viewGroupOpen}
-                onClose={() => setViewGroupOpen(false)}
+                onClose={handleCloseViewGroups}
                 triggerRef={viewGroupTriggerRef}
-                items={viewGroupItems}
+                items={filteredViewGroups}
+                header={(
+                    <>
+                        <div className="canvas-chrome-header__dropdown-search">
+                            <Icon name="search" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search view groups..."
+                                value={viewGroupQuery}
+                                onChange={(e) => setViewGroupQuery(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="canvas-chrome-header__dropdown-controls">
+                            <div className="canvas-chrome-header__filter-row">
+                                {['all', 'linked', 'unlinked', 'tagged'].map((filter) => (
+                                    <button
+                                        key={filter}
+                                        type="button"
+                                        className={`canvas-chrome-header__filter-chip ${viewGroupFilter === filter ? 'is-active' : ''}`}
+                                        onClick={() => setViewGroupFilter(filter)}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                            {viewGroupTags.length > 0 && (
+                                <div className="canvas-chrome-header__tag-row">
+                                    {viewGroupTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`canvas-chrome-header__tag-chip ${viewGroupTag === tag ? 'is-active' : ''}`}
+                                            onClick={() => setViewGroupTag(viewGroupTag === tag ? null : tag)}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <label className="canvas-chrome-header__sort">
+                                <span>Sort</span>
+                                <select value={viewGroupSort} onChange={(e) => setViewGroupSort(e.target.value)}>
+                                    <option value="name-asc">Name A–Z</option>
+                                    <option value="name-desc">Name Z–A</option>
+                                    <option value="views-desc">Views high→low</option>
+                                    <option value="views-asc">Views low→high</option>
+                                    <option value="linked-first">Linked first</option>
+                                </select>
+                            </label>
+                        </div>
+                        <button
+                            type="button"
+                            className={`canvas-chrome-header__dropdown-item ${!viewGroupId ? 'is-active' : ''}`}
+                            onClick={() => {
+                                onViewGroupChange?.(null);
+                                handleCloseViewGroups();
+                            }}
+                        >
+                            <Icon name="grid3x3" size={12} />
+                            <span className="canvas-chrome-header__dropdown-text">All ViewGroups</span>
+                        </button>
+                        <div className="canvas-chrome-header__dropdown-divider" />
+                    </>
+                )}
                 renderItem={(item) => (
-                    <button
+                    <div
                         key={item.id}
-                        className={`canvas-chrome-header__dropdown-item ${viewGroupId === item.id ? 'is-active' : ''}`}
+                        role="menuitem"
+                        tabIndex={0}
+                        className={`canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--selectable ${viewGroupId === item.id ? 'is-active' : ''}`}
                         onClick={() => {
                             onViewGroupChange?.(item);
-                            setViewGroupOpen(false);
+                            handleCloseViewGroups();
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onViewGroupChange?.(item);
+                                handleCloseViewGroups();
+                            }
                         }}
                     >
                         <span
                             className="canvas-chrome-header__dot"
                             style={{ background: item.color || 'var(--color-accent-purple)' }}
                         />
-                        <span className="canvas-chrome-header__dropdown-text">{item.name}</span>
+                        <div className="canvas-chrome-header__dropdown-main">
+                            <span className="canvas-chrome-header__dropdown-text">{item.name}</span>
+                            <div className="canvas-chrome-header__dropdown-meta">
+                                {typeof item.views?.length === 'number' && (
+                                    <span className="canvas-chrome-header__dropdown-count">
+                                        {item.views.length} views
+                                    </span>
+                                )}
+                                {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                    <div className="canvas-chrome-header__dropdown-tags">
+                                        {item.tags.slice(0, 2).map((tag) => (
+                                            <span key={tag} className="canvas-chrome-header__dropdown-tag">{tag}</span>
+                                        ))}
+                                        {item.tags.length > 2 && (
+                                            <span className="canvas-chrome-header__dropdown-tag">+{item.tags.length - 2}</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         {item.linkedTo && (
                             <Icon name="link" size={12} className="canvas-chrome-header__link" />
                         )}
-                    </button>
+                        {onEditViewGroup && (
+                            <button
+                                type="button"
+                                className="canvas-chrome-header__edit-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditViewGroup?.(item);
+                                    handleCloseViewGroups();
+                                }}
+                                title="Edit ViewGroup"
+                            >
+                                <Icon name="settings" size={12} />
+                            </button>
+                        )}
+                    </div>
                 )}
+                footer={onOpenViewGroupManager ? (
+                    <button
+                        type="button"
+                        className="canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--footer"
+                        onClick={() => {
+                            onOpenViewGroupManager?.();
+                            handleCloseViewGroups();
+                        }}
+                    >
+                        <Icon name="layout" size={12} />
+                        <span className="canvas-chrome-header__dropdown-text">Manage ViewGroups</span>
+                    </button>
+                ) : null}
             />
 
             {/* Display options dropdown */}

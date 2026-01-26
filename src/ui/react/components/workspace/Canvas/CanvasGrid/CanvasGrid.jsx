@@ -97,6 +97,8 @@ export function CanvasGrid({
     onFlowDirectionChange,
     onOpenSubsetSelector,
     showCoordinates = false,
+    showViewGroupBorders = false,
+    viewGroups = [],
 }) {
     const gridRef = useRef(null);
 
@@ -1560,6 +1562,84 @@ export function CanvasGrid({
         handleFocusView,
     ]);
 
+    const viewGroupBorders = useMemo(() => {
+        if (!showViewGroupBorders || !viewGroups?.length || !measurementsReady) return null;
+        if (!isGridMode || isFocusView || isSubsetView) return null;
+
+        const overlays = [];
+        const viewportRow = effectiveViewport.row;
+        const viewportCol = effectiveViewport.col;
+        const viewportEndRow = viewportRow + effectiveViewport.rows;
+        const viewportEndCol = viewportCol + effectiveViewport.cols;
+
+        viewGroups.forEach((group) => {
+            const position = group.canvasPosition || group.position || group.canvasPos;
+            if (!position) return;
+
+            const row = position.row ?? 0;
+            const col = position.col ?? 0;
+            const rowSpan = position.rowSpan ?? 1;
+            const colSpan = position.colSpan ?? 1;
+
+            const groupEndRow = row + rowSpan;
+            const groupEndCol = col + colSpan;
+
+            const isVisible =
+                groupEndRow > viewportRow &&
+                row < viewportEndRow &&
+                groupEndCol > viewportCol &&
+                col < viewportEndCol;
+
+            if (!isVisible) return;
+
+            const visibleRowStart = Math.max(row, viewportRow);
+            const visibleColStart = Math.max(col, viewportCol);
+            const visibleRowEnd = Math.min(groupEndRow, viewportEndRow);
+            const visibleColEnd = Math.min(groupEndCol, viewportEndCol);
+
+            const viewRow = visibleRowStart - viewportRow;
+            const viewCol = visibleColStart - viewportCol;
+            const visibleRows = Math.max(1, visibleRowEnd - visibleRowStart);
+            const visibleCols = Math.max(1, visibleColEnd - visibleColStart);
+
+            const left = VIEWPORT_PADDING.left + viewCol * (cellSize.width + GAP);
+            const top = VIEWPORT_PADDING.top + viewRow * (cellSize.height + GAP);
+            const width = visibleCols * cellSize.width + (visibleCols - 1) * GAP;
+            const height = visibleRows * cellSize.height + (visibleRows - 1) * GAP;
+
+            overlays.push(
+                <div
+                    key={`viewgroup-${group.id || `${row}-${col}`}`}
+                    className="canvas-grid__viewgroup-outline"
+                    style={{
+                        left,
+                        top,
+                        width,
+                        height,
+                        '--viewgroup-color': group.color || 'var(--color-accent-purple)',
+                    }}
+                />
+            );
+        });
+
+        if (!overlays.length) return null;
+
+        return (
+            <div className="canvas-grid__viewgroup-overlay">
+                {overlays}
+            </div>
+        );
+    }, [
+        showViewGroupBorders,
+        viewGroups,
+        measurementsReady,
+        isGridMode,
+        isFocusView,
+        isSubsetView,
+        effectiveViewport,
+        cellSize,
+    ]);
+
     // ==========================================================================
     // FOCUS MODE RENDERING
     // ==========================================================================
@@ -1873,6 +1953,8 @@ export function CanvasGrid({
                         ) : (
                             renderCells
                         )}
+
+                        {viewGroupBorders}
 
                         {showCoordinates && isGridMode && !isFocusView && !isSubsetView && measurementsReady && (
                             <div

@@ -1,20 +1,12 @@
 // src/ui/react/components/workspace/Canvas/CanvasChrome/CanvasChromeHeader.stories.jsx
 import React from 'react';
 import { CanvasChromeHeader } from './CanvasChromeHeader';
-
-const mockWorkspace = { id: 'ws-1', name: 'MRI Analysis' };
-const mockWorkspaces = [
+import {
     mockWorkspace,
-    { id: 'ws-2', name: 'Tumor Review' },
-    { id: 'ws-3', name: 'Remote Session' },
-];
-
-const mockViewGroup = { id: 'vg-1', name: 'Axial Slices', color: '#c084fc', linkedTo: 'vg-2' };
-const mockViewGroups = [
+    mockWorkspaces,
     mockViewGroup,
-    { id: 'vg-2', name: 'Coronal Stack', color: '#34d399' },
-    { id: 'vg-3', name: '3D Volume', color: '#fbbf24' },
-];
+    mockViewGroups,
+} from '../__fixtures__/canvasFixtures';
 
 export default {
     title: 'Canvas/CanvasChromeHeader',
@@ -31,6 +23,8 @@ export default {
         onFlowDirectionChange: { action: 'flow change' },
         onToggleCoordinates: { action: 'toggle coords' },
         onToggleViewGroupBorders: { action: 'toggle vg borders' },
+        onEditViewGroup: { action: 'edit viewgroup' },
+        onOpenViewGroupManager: { action: 'open viewgroup manager' },
         onWindowModeChange: { action: 'window mode change' },
         onToggleFullscreen: { action: 'fullscreen' },
         flowDirection: {

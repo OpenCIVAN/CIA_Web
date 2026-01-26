@@ -14,17 +14,17 @@ import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorM
 
 // New canvas chrome components
 import { CanvasChrome } from '../CanvasChrome/CanvasChrome.jsx';
+import { CanvasChromeFooter2 } from '../CanvasChrome/CanvasChromeFooter2.jsx';
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
-import { Footer2 } from '@UI/react/components/organisms/Footer2';
 import { CreateWorkspacePanel } from '@UI/react/components/panels/FloatingPanel';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { useViewGroupManagerSync } from '@UI/react/hooks/useViewGroupManagerSync.js';
-import { useViewGroups, useViewGroupLinks, useViewLinks } from '@UI/react/hooks';
+import { useViewGroups, useViewGroupLinks } from '@UI/react/hooks';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
 import { useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
@@ -393,6 +393,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         onSelectView: contextSelectView,
         onPlaceView: contextPlaceView,
         onViewAction: contextViewAction,
+        onUpdateLink: contextUpdateLink,
     } = useViewContextLogic();
 
     // Connect WebSocket broadcasts to ViewGroupManager
@@ -411,8 +412,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     } = useViewGroups(currentWorkspaceId || projectId);
 
     const { isLinked: isViewGroupLinked } = useViewGroupLinks(activeViewGroupId);
-    const { links: activeViewLinks } = useViewLinks(contextActiveView?.id);
-
     const formattedViewGroups = useMemo(() => (
         visibleViewGroups.map(vg => ({
             id: vg.id,
@@ -420,6 +419,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             color: vg.color,
             layoutId: vg.layoutId,
             views: vg.getViewIds?.() || [],
+            canvasPosition: vg.getCanvasPosition?.() || vg.canvasPosition,
             linkedTo: vg.link?.targetGroupId || null,
             linkedToName: vg.link?.targetGroupName || null,
         }))
@@ -428,30 +428,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const activeHeaderViewGroup = useMemo(() => (
         formattedViewGroups.find(vg => vg.id === activeViewGroupId) || null
     ), [formattedViewGroups, activeViewGroupId]);
-
-    const linkingServiceAdapter = useMemo(() => {
-        if (!activeViewLinks || activeViewLinks.length === 0) return null;
-
-        const linksByProperty = {};
-        for (const link of activeViewLinks) {
-            if (!linksByProperty[link.property]) {
-                linksByProperty[link.property] = [];
-            }
-            const otherId = link.sourceViewId === contextActiveView?.id
-                ? link.targetViewId
-                : link.sourceViewId;
-            linksByProperty[link.property].push({
-                ...link,
-                targetId: otherId,
-            });
-        }
-
-        return {
-            getLinksForProperty: (viewGroupId, propertyId) => {
-                return linksByProperty[propertyId] || [];
-            },
-        };
-    }, [activeViewLinks, contextActiveView?.id]);
 
     const handleSelectViewGroup = useCallback((viewGroupId) => {
         selectViewGroup(viewGroupId);
@@ -981,6 +957,15 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     viewGroups: formattedViewGroups,
                     onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
                     isViewGroupLinked,
+                    onEditViewGroup: (viewGroup) => {
+                        if (viewGroup?.id) {
+                            handleSelectViewGroup(viewGroup.id);
+                        }
+                        setLeftDockedOpen(true);
+                    },
+                    onOpenViewGroupManager: () => {
+                        setLeftDockedOpen(true);
+                    },
                     isEditMode: editMode,
                     onToggleEditMode: handleEditModeChange,
                     flowDirection: flowDirection === 'row' ? 'right' : 'down',
@@ -1022,21 +1007,18 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 }}
                 footer2={(
                     <div ref={footerRef}>
-                        <Footer2
-                            viewGroups={formattedViewGroups}
-                            activeViewGroupId={activeViewGroupId}
-                            onSelectViewGroup={handleSelectViewGroup}
-                            onCreateViewGroup={handleCreateViewGroup}
-                            onUpdateViewGroup={handleUpdateViewGroup}
-                            onDeleteViewGroup={handleDeleteViewGroup}
-                            onDuplicateViewGroup={handleDuplicateViewGroup}
-                            onGoToViewGroup={handleGoToViewGroup}
-                            activeViewType={contextActiveView?.type || 'vtk-volume'}
-                            activeViewColor={contextActiveView?.color || null}
-                            isFocused={isFocusView}
-                            instanceTools={footerTools}
-                            toolSections={toolSections}
-                            onSelectTool={handleNotchToolSelect}
+                        <CanvasChromeFooter2
+                            canvasSize={canvasSize}
+                            viewportSize={{ rows: viewport?.rows || 1, cols: viewport?.cols || 1 }}
+                            viewportPosition={{ row: viewport?.row || 0, col: viewport?.col || 0 }}
+                            containerWidth={footerWidth}
+                            links={contextActiveView?.links || {}}
+                            onUpdateLink={contextUpdateLink}
+                            onMoveViewport={moveViewport}
+                            onHome={() => navigateTo(0, 0)}
+                            onOpenNavigator={() => {
+                                setLeftDockedOpen(true);
+                            }}
                             onToggleFocus={() => {
                                 if (isFocusView) {
                                     goHome();
@@ -1044,8 +1026,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                                     handleToolbarModeChange('focus');
                                 }
                             }}
-                            activeSubset={focusedSubset}
-                            onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
+                            onOpenViewList={() => {
+                                setLeftDockedOpen(true);
+                            }}
                             onSnapshot={() => {
                                 log.debug('Snapshot requested from Footer2');
                                 if (contextActiveView?.id) {
@@ -1058,21 +1041,13 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                                 log.debug('Reset view requested from Footer2');
                                 handleResetCamera();
                             }}
-                            onDuplicateView={handleDuplicateView}
-                            onViewSettings={handleViewSettings}
-                            onOpenLayoutTab={() => {
-                                setLeftDockedOpen(true);
-                            }}
-                            onOpenLinkManager={() => {
-                                log.debug('Link manager requested');
-                            }}
+                            onCopyView={handleDuplicateView}
+                            onOpenSettings={handleViewSettings}
                             isVRAvailable={true}
                             isInVR={false}
                             onToggleVR={() => {
                                 log.debug('VR toggle requested');
                             }}
-                            linkingService={linkingServiceAdapter}
-                            containerWidth={footerWidth}
                         />
                     </div>
                 )}
@@ -1117,6 +1092,8 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                                 focusedSubset={focusedSubset}
                                 highlightedPlacementId={highlightedPlacementId}
                                 showCoordinates={showCoordinates}
+                                showViewGroupBorders={showViewGroupBorders}
+                                viewGroups={formattedViewGroups}
                                 onPlacementClick={handlePlacementClick}
                                 onPlacementDoubleClick={handlePlacementDoubleClick}
                                 onCellDoubleClick={handleCellDoubleClick}

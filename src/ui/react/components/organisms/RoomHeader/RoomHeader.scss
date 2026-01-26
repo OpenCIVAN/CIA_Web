@@ -212,6 +212,83 @@
     padding: 8px;
 }
 
+.room-header__dropdown-search {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 6px 8px;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border-subtle;
+    background: rgba(255, 255, 255, 0.04);
+    color: $color-text-muted;
+
+    input {
+        background: transparent;
+        border: none;
+        color: $color-text-primary;
+        font-size: $font-size-xs;
+        outline: none;
+        width: 160px;
+
+        &::placeholder {
+            color: $color-text-muted;
+        }
+    }
+}
+
+.room-header__dropdown-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 2px 2px 6px;
+}
+
+.room-header__filter-row,
+.room-header__tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.room-header__filter-chip,
+.room-header__tag-chip {
+    border: 1px solid $color-border-subtle;
+    background: rgba(255, 255, 255, 0.04);
+    color: $color-text-muted;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    &.is-active {
+        color: $color-accent-cyan;
+        border-color: rgba($color-accent-cyan, 0.5);
+        background: rgba($color-accent-cyan, 0.12);
+    }
+}
+
+.room-header__sort {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-xs;
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid $color-border-subtle;
+        border-radius: $radius-sm;
+        color: $color-text-secondary;
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+}
+
 .room-header__dropdown-group-label {
     font-size: 10px;
     font-weight: 600;

@@ -2,35 +2,15 @@
 import React, { useState } from 'react';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter';
-
-const mockWorkspace = { id: 'ws-1', name: 'MRI Analysis' };
-const mockWorkspaces = [
+import {
     mockWorkspace,
-    { id: 'ws-2', name: 'Tumor Review' },
-    { id: 'ws-3', name: 'Remote Session' },
-];
-
-const mockViewGroup = { id: 'vg-1', name: 'Axial Slices', color: '#c084fc', linkedTo: 'vg-2' };
-const mockViewGroups = [
+    mockWorkspaces,
     mockViewGroup,
-    { id: 'vg-2', name: 'Coronal Stack', color: '#34d399' },
-    { id: 'vg-3', name: '3D Volume', color: '#fbbf24' },
-];
-
-const mockActiveView = { id: 'view-1', name: 'Axial Slice', type: 'vtk-slice' };
-
-const mockToolSections = [
-    { id: 'navigation', label: 'Navigation' },
-    { id: 'interaction', label: 'Interaction' },
-];
-
-const mockTools = [
-    { id: 'zoomIn', icon: 'zoomIn', label: 'Zoom In', section: 'navigation', placement: 'notch' },
-    { id: 'zoomOut', icon: 'zoomOut', label: 'Zoom Out', section: 'navigation', placement: 'notch' },
-    { id: 'fit', icon: 'fitView', label: 'Fit', section: 'navigation', placement: 'notch' },
-    { id: 'pan', icon: 'pan', label: 'Pan', section: 'interaction', placement: 'notch' },
-    { id: 'select', icon: 'boxSelect', label: 'Select', section: 'interaction', placement: 'notch' },
-];
+    mockViewGroups,
+    mockActiveView,
+    mockToolSections,
+    mockTools,
+} from '../__fixtures__/canvasFixtures';
 
 export default {
     title: 'Canvas/CanvasChrome',

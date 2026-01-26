@@ -206,6 +206,25 @@
 }
 
 // =============================================================================
+// VIEWGROUP BORDERS
+// =============================================================================
+
+.canvas-grid__viewgroup-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.canvas-grid__viewgroup-outline {
+  position: absolute;
+  border: 2px solid var(--viewgroup-color, $color-accent-purple);
+  border-radius: $radius-md;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, var(--viewgroup-color, #7c3aed) 8%, transparent);
+}
+
+// =============================================================================
 // LOADING OVERLAY - Shows over grid without unmounting it
 // =============================================================================
 

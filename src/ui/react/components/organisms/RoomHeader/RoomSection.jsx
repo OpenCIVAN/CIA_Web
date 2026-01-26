@@ -6,7 +6,7 @@
  * and how many users are online in that room.
  */
 
-import React, { memo, useRef, useEffect } from 'react';
+import React, { memo, useRef, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '@UI/react/components/atoms';
 
@@ -25,6 +25,10 @@ const RoomSection = memo(function RoomSection({
     onCreateRoom,
 }) {
     const dropdownRef = useRef(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [roomSort, setRoomSort] = useState('name-asc');
+    const [roomFilter, setRoomFilter] = useState('all');
+    const [roomTag, setRoomTag] = useState(null);
 
     useEffect(() => {
         if (!showDropdown) return;
@@ -36,6 +40,57 @@ const RoomSection = memo(function RoomSection({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showDropdown, onCloseDropdown]);
+
+    const allRooms = useMemo(() => (
+        [
+            ...mainRooms.map((room) => ({ ...room, _group: 'project' })),
+            ...personalRooms.map((room) => ({ ...room, _group: 'personal' })),
+        ]
+    ), [mainRooms, personalRooms]);
+
+    const roomTags = useMemo(() => {
+        const tags = new Set();
+        allRooms.forEach((room) => {
+            if (Array.isArray(room.tags)) {
+                room.tags.forEach((tag) => tags.add(tag));
+            }
+        });
+        return Array.from(tags);
+    }, [allRooms]);
+
+    const filteredRooms = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        const hasQuery = Boolean(query);
+        const isPinned = (room) => pinnedRoomIds.includes(room.id);
+
+        let rooms = allRooms.filter((room) => {
+            if (hasQuery && !(room.name || '').toLowerCase().includes(query)) return false;
+            if (roomFilter === 'project' && room._group !== 'project') return false;
+            if (roomFilter === 'personal' && room._group !== 'personal') return false;
+            if (roomFilter === 'pinned' && !isPinned(room)) return false;
+            if (roomTag && (!Array.isArray(room.tags) || !room.tags.includes(roomTag))) return false;
+            return true;
+        });
+
+        const sorters = {
+            'name-asc': (a, b) => (a.name || '').localeCompare(b.name || ''),
+            'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
+            'users-desc': (a, b) => (b.usersOnline || 0) - (a.usersOnline || 0),
+            'pinned-first': (a, b) => Number(isPinned(b)) - Number(isPinned(a)),
+        };
+
+        const sorter = sorters[roomSort] || sorters['name-asc'];
+        return rooms.slice().sort(sorter);
+    }, [allRooms, searchQuery, roomFilter, roomSort, roomTag, pinnedRoomIds]);
+
+    const filteredProjectRooms = filteredRooms.filter((room) => room._group === 'project');
+    const filteredPersonalRooms = filteredRooms.filter((room) => room._group === 'personal');
+
+    useEffect(() => {
+        if (!showDropdown) return;
+        setSearchQuery('');
+        setRoomTag(null);
+    }, [showDropdown]);
 
     return (
         <div className="room-header__section room-header__room-section" ref={dropdownRef}>
@@ -66,14 +121,62 @@ const RoomSection = memo(function RoomSection({
             {showDropdown && (
                 <div className="room-header__room-dropdown">
                     <div className="room-header__dropdown-content">
+                        <div className="room-header__dropdown-search">
+                            <Icon name="search" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search rooms..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="room-header__dropdown-controls">
+                            <div className="room-header__filter-row">
+                                {['all', 'project', 'personal', 'pinned'].map((filter) => (
+                                    <button
+                                        key={filter}
+                                        type="button"
+                                        className={`room-header__filter-chip ${roomFilter === filter ? 'is-active' : ''}`}
+                                        onClick={() => setRoomFilter(filter)}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                            {roomTags.length > 0 && (
+                                <div className="room-header__tag-row">
+                                    {roomTags.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`room-header__tag-chip ${roomTag === tag ? 'is-active' : ''}`}
+                                            onClick={() => setRoomTag(roomTag === tag ? null : tag)}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <label className="room-header__sort">
+                                <span>Sort</span>
+                                <select value={roomSort} onChange={(e) => setRoomSort(e.target.value)}>
+                                    <option value="name-asc">Name A–Z</option>
+                                    <option value="name-desc">Name Z–A</option>
+                                    <option value="users-desc">Users high→low</option>
+                                    <option value="pinned-first">Pinned first</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div className="room-header__dropdown-divider" />
                         {/* Project Rooms */}
-                        {mainRooms.length > 0 && (
+                        {filteredProjectRooms.length > 0 && (
                             <>
                                 <div className="room-header__dropdown-group-label room-header__dropdown-group-label--blue">
                                     <Icon name="globe" size={10} />
                                     Project Rooms
                                 </div>
-                                {mainRooms.map(room => {
+                                {filteredProjectRooms.map(room => {
                                     const isViewing = room.id === viewingRoomId;
                                     const isPinned = pinnedRoomIds.includes(room.id);
                                     const isVoice = room.id === voiceRoomId;
@@ -109,13 +212,13 @@ const RoomSection = memo(function RoomSection({
                         )}
 
                         {/* Personal Rooms */}
-                        {personalRooms.length > 0 && (
+                        {filteredPersonalRooms.length > 0 && (
                             <>
                                 <div className="room-header__dropdown-group-label room-header__dropdown-group-label--green">
                                     <Icon name="user" size={10} />
                                     Personal
                                 </div>
-                                {personalRooms.map(room => (
+                                {filteredPersonalRooms.map(room => (
                                     <button
                                         key={room.id}
                                         className={`room-header__dropdown-item room-header__dropdown-item--full ${room.id === viewingRoomId ? 'room-header__dropdown-item--active' : ''}`}

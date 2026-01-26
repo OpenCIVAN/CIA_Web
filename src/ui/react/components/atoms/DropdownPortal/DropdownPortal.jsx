@@ -70,6 +70,7 @@ export function DropdownPortal({
 }) {
     const dropdownRef = useRef(null);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
+    const [hasPosition, setHasPosition] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // ==========================================================================
@@ -77,10 +78,10 @@ export function DropdownPortal({
     // ==========================================================================
 
     const updatePosition = useCallback(() => {
-        if (!triggerRef?.current || !dropdownRef.current) return;
+        if (!triggerRef?.current) return;
 
         const triggerRect = triggerRef.current.getBoundingClientRect();
-        const dropdownRect = dropdownRef.current.getBoundingClientRect();
+        const dropdownRect = dropdownRef.current?.getBoundingClientRect() || { width: 0, height: 0 };
         const viewport = {
             width: window.innerWidth,
             height: window.innerHeight,
@@ -129,6 +130,7 @@ export function DropdownPortal({
         );
 
         setCoords({ top, left });
+        setHasPosition(true);
     }, [triggerRef, align, position, offset]);
 
     // ==========================================================================
@@ -143,8 +145,9 @@ export function DropdownPortal({
     // Update position when open
     useEffect(() => {
         if (open) {
+            setHasPosition(false);
             // Initial position after render
-            requestAnimationFrame(updatePosition);
+            requestAnimationFrame(() => requestAnimationFrame(updatePosition));
 
             // Update on scroll/resize
             window.addEventListener('scroll', updatePosition, true);
@@ -203,6 +206,8 @@ export function DropdownPortal({
                 top: coords.top,
                 left: coords.left,
                 zIndex: PORTAL_Z_INDEX,
+                visibility: hasPosition ? 'visible' : 'hidden',
+                pointerEvents: hasPosition ? 'auto' : 'none',
             }}
             role="menu"
         >
