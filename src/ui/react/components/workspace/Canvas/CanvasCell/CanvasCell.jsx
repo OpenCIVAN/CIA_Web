@@ -1092,7 +1092,7 @@ function NotesPlaceholder({ notesId, renderMode, onClose }) {
     if (renderMode === RENDER_MODES.SNAPSHOT || renderMode === RENDER_MODES.THUMBNAIL) {
         return (
             <div className="canvas-cell__notes-mini">
-                <FileText size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
+                <Icon name="FileText" size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
             </div>
         );
     }

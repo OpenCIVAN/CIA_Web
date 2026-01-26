@@ -3,21 +3,22 @@
  * @description Shared canvas toolbar footer with ViewGroup selector and links.
  *
  * Features:
+ * - Section headers (like ToolbarZone) for visual organization
  * - ViewGroup selector with dropdown, search, settings
  * - Responsive links section (expanded/collapsed/minimal)
  * - Focus/Subset controls
  * - Universal actions (snapshot, reset)
- * - Type-specific tools
  * - VR mode button
  */
 
-import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { Button, Icon, Tooltip } from '@UI/react/components/atoms';
 import { DuplicationDialog } from '@UI/react/components/modals/DuplicationDialog';
 import { ViewGroupSelector } from './components/ViewGroupSelector/ViewGroupSelector';
 import { LinksSection } from './components/LinksSection/LinksSection';
+import { hexToRgbString } from '@Utils/colorUtils.js';
 import {
     useFooterLayout,
     useLinkStats,
@@ -28,23 +29,65 @@ import {
 import './Footer2.scss';
 
 /**
- * Separator component
+ * FooterZone - Section with label header (like ToolbarZone but for footer)
+ * Labels always visible - minimum width ensures everything fits
  */
-const Separator = memo(function Separator() {
-    return <div className="footer2__separator" />;
+const FooterZone = memo(function FooterZone({ label, labelColor, children, className = '' }) {
+    const labelColorClass = labelColor ? `footer2-zone__label--${labelColor}` : '';
+    return (
+        <div className={`footer2-zone ${className}`}>
+            <div className={`footer2-zone__label ${labelColorClass}`}>
+                {label}
+            </div>
+            <div className="footer2-zone__content">
+                {children}
+            </div>
+        </div>
+    );
+});
+
+FooterZone.propTypes = {
+    label: PropTypes.string.isRequired,
+    labelColor: PropTypes.string,
+    children: PropTypes.node,
+    className: PropTypes.string,
+};
+
+/**
+ * FooterDivider - Vertical divider spanning both rows
+ */
+const FooterDivider = memo(function FooterDivider() {
+    return (
+        <div className="footer2-divider">
+            <div className="footer2-divider__label" />
+            <div className="footer2-divider__content" />
+        </div>
+    );
 });
 
 /**
- * Focus/Subset Section
+ * FooterSpacer - Flexible spacer
  */
-const FocusSubsetSection = memo(function FocusSubsetSection({
+const FooterSpacer = memo(function FooterSpacer() {
+    return (
+        <div className="footer2-spacer">
+            <div className="footer2-spacer__label" />
+            <div className="footer2-spacer__content" />
+        </div>
+    );
+});
+
+/**
+ * Focus/Subset Section Content (icons only)
+ */
+const FocusSubsetContent = memo(function FocusSubsetContent({
     isFocused,
     onToggleFocus,
     activeSubset,
     onOpenSubsetDropdown,
 }) {
     return (
-        <div className="footer2__section footer2__section--focus">
+        <div className="footer2__button-group">
             <Tooltip content={isFocused ? 'Exit Focus Mode' : 'Focus View'} shortcut="F">
                 <Button
                     variant={isFocused ? 'primary' : 'ghost'}
@@ -60,15 +103,13 @@ const FocusSubsetSection = memo(function FocusSubsetSection({
                     size="sm"
                     icon="database"
                     onClick={onOpenSubsetDropdown}
-                >
-                    {activeSubset?.name || 'All'}
-                </Button>
+                />
             </Tooltip>
         </div>
     );
 });
 
-FocusSubsetSection.propTypes = {
+FocusSubsetContent.propTypes = {
     isFocused: PropTypes.bool,
     onToggleFocus: PropTypes.func,
     activeSubset: PropTypes.object,
@@ -76,24 +117,23 @@ FocusSubsetSection.propTypes = {
 };
 
 /**
- * Universal Actions Section
+ * Universal Actions Content (icons only)
  */
-const UniversalActionsSection = memo(function UniversalActionsSection({
+const UniversalActionsContent = memo(function UniversalActionsContent({
     onSnapshot,
     onResetView,
-    showLabels,
+    onDuplicateView,
+    onViewSettings,
 }) {
     return (
-        <div className="footer2__section footer2__section--universal">
+        <div className="footer2__button-group">
             <Tooltip content="Take Snapshot" shortcut="Ctrl+S">
                 <Button
                     variant="ghost"
                     size="sm"
                     icon="camera"
                     onClick={onSnapshot}
-                >
-                    {showLabels && 'Snapshot'}
-                </Button>
+                />
             </Tooltip>
             <Tooltip content="Reset View" shortcut="Home">
                 <Button
@@ -101,24 +141,70 @@ const UniversalActionsSection = memo(function UniversalActionsSection({
                     size="sm"
                     icon="rotateCcw"
                     onClick={onResetView}
-                >
-                    {showLabels && 'Reset'}
-                </Button>
+                />
+            </Tooltip>
+            <Tooltip content="Duplicate View">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="copy"
+                    onClick={onDuplicateView}
+                />
+            </Tooltip>
+            <Tooltip content="View Settings">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="settings"
+                    onClick={onViewSettings}
+                />
             </Tooltip>
         </div>
     );
 });
 
-UniversalActionsSection.propTypes = {
+UniversalActionsContent.propTypes = {
     onSnapshot: PropTypes.func,
     onResetView: PropTypes.func,
-    showLabels: PropTypes.bool,
+    onDuplicateView: PropTypes.func,
+    onViewSettings: PropTypes.func,
 };
 
 /**
- * VR Button
+ * FooterToolButton - Renders a single handler-provided tool as a footer button
+ * Supports 'menu' type (opens dropdown via onClick) and simple action tools
  */
-const VRButton = memo(function VRButton({ isVRAvailable, isInVR, onToggleVR }) {
+const FooterToolButton = memo(function FooterToolButton({ tool, onSelectTool }) {
+    const handleClick = () => {
+        if (tool.onClick) {
+            tool.onClick();
+        }
+        onSelectTool?.(tool);
+    };
+
+    return (
+        <Tooltip content={tool.description || tool.label}>
+            <Button
+                variant={tool.active ? 'primary' : 'ghost'}
+                size="sm"
+                icon={tool.icon || 'box'}
+                onClick={handleClick}
+                disabled={tool.disabled}
+                aria-pressed={tool.active || undefined}
+            />
+        </Tooltip>
+    );
+});
+
+FooterToolButton.propTypes = {
+    tool: PropTypes.object.isRequired,
+    onSelectTool: PropTypes.func,
+};
+
+/**
+ * VR Button Content (icon only)
+ */
+const VRContent = memo(function VRContent({ isVRAvailable, isInVR, onToggleVR }) {
     if (!isVRAvailable) return null;
 
     return (
@@ -129,14 +215,13 @@ const VRButton = memo(function VRButton({ isVRAvailable, isInVR, onToggleVR }) {
                 icon="glasses"
                 onClick={onToggleVR}
                 className="footer2__vr-button"
-            >
-                VR
-            </Button>
+                aria-label={isInVR ? 'Exit VR' : 'Enter VR'}
+            />
         </Tooltip>
     );
 });
 
-VRButton.propTypes = {
+VRContent.propTypes = {
     isVRAvailable: PropTypes.bool,
     isInVR: PropTypes.bool,
     onToggleVR: PropTypes.func,
@@ -184,7 +269,7 @@ LinkReminderToast.propTypes = {
 };
 
 /**
- * Footer2 - Main component
+ * Footer2 - Main component with ToolbarZone-style sections
  */
 const Footer2 = memo(function Footer2({
     // ViewGroup data
@@ -206,19 +291,37 @@ const Footer2 = memo(function Footer2({
     // Actions
     onSnapshot,
     onResetView,
+    onDuplicateView,
+    onViewSettings,
     onOpenLayoutTab,
     onOpenLinkManager,
+    // Instance tools from handler (footer-placed)
+    instanceTools = [],
+    toolSections = [],
+    onSelectTool,
     // VR
     isVRAvailable = false,
     isInVR = false,
     onToggleVR,
     // Linking
     linkingService,
+    // Active view accent color (for gradient + accent line)
+    activeViewColor = null,
     // Sizing
     containerWidth = 900,
 }) {
     const containerRef = useRef(null);
     const [width, setWidth] = useState(containerWidth);
+
+    // Compute CSS custom properties for accent color
+    const accentStyle = useMemo(() => {
+        if (!activeViewColor) return {};
+        return {
+            '--footer-color': activeViewColor,
+            '--footer-color-rgb': hexToRgbString(activeViewColor),
+        };
+    }, [activeViewColor]);
+    const isActive = !!activeViewColor;
 
     // Responsive layout
     const {
@@ -309,43 +412,78 @@ const Footer2 = memo(function Footer2({
     // Get active ViewGroup
     const activeViewGroup = viewGroups.find(vg => vg.id === activeViewGroupId) || null;
 
+    // Group footer tools by section for zone rendering
+    const footerToolGroups = useMemo(() => {
+        if (!instanceTools.length) return [];
+        if (!toolSections.length) {
+            return [{ section: { id: 'tools', label: 'Tools', icon: 'box', color: 'green' }, tools: instanceTools }];
+        }
+        const groups = [];
+        for (const section of toolSections) {
+            const sectionTools = instanceTools.filter(t => t.section === section.id);
+            if (sectionTools.length > 0) {
+                groups.push({ section, tools: sectionTools });
+            }
+        }
+        const ungrouped = instanceTools.filter(t => !toolSections.some(s => s.id === t.section));
+        if (ungrouped.length > 0) {
+            groups.push({ section: { id: 'other', label: 'Other', color: 'gray' }, tools: ungrouped });
+        }
+        return groups;
+    }, [instanceTools, toolSections]);
+
     return (
         <div
             ref={containerRef}
-            className={`footer2 footer2--${mode}`}
-            style={{ minWidth: FOOTER_BREAKPOINTS.MIN_WIDTH }}
+            className={`footer2 footer2--${mode} ${isActive ? 'footer2--active' : 'footer2--inactive'}`}
+            style={{ ...accentStyle, minWidth: FOOTER_BREAKPOINTS.MIN_WIDTH }}
         >
-            {/* Left Section */}
-            <div className="footer2__left">
-                {/* Focus/Subset */}
-                {!isMinimal && (
-                    <>
-                        <FocusSubsetSection
-                            isFocused={isFocused}
-                            onToggleFocus={onToggleFocus}
-                            activeSubset={activeSubset}
-                            onOpenSubsetDropdown={onOpenSubsetDropdown}
-                        />
-                        <Separator />
-                    </>
-                )}
+            {/* Focus Zone */}
+            <FooterZone label="Focus" labelColor="blue">
+                <FocusSubsetContent
+                    isFocused={isFocused}
+                    onToggleFocus={onToggleFocus}
+                    activeSubset={activeSubset}
+                    onOpenSubsetDropdown={onOpenSubsetDropdown}
+                />
+            </FooterZone>
+            <FooterDivider />
 
-                {/* Universal Actions */}
-                {showUniversal && (
-                    <>
-                        <UniversalActionsSection
-                            onSnapshot={onSnapshot}
-                            onResetView={onResetView}
-                            showLabels={showLabels}
-                        />
-                        <Separator />
-                    </>
-                )}
-            </div>
+            {/* Actions Zone */}
+            <FooterZone label="Actions" labelColor="amber">
+                <UniversalActionsContent
+                    onSnapshot={onSnapshot}
+                    onResetView={onResetView}
+                    onDuplicateView={onDuplicateView}
+                    onViewSettings={onViewSettings}
+                />
+            </FooterZone>
+            <FooterDivider />
 
-            {/* Center Section */}
-            <div className="footer2__center">
-                {/* ViewGroup Selector */}
+            {/* Instance Tools - grouped by handler sections */}
+            {footerToolGroups.map((group, index) => (
+                <React.Fragment key={group.section.id}>
+                    <FooterZone label={group.section.label} labelColor={group.section.color || 'green'}>
+                        <div className="footer2__button-group">
+                            {group.tools.map(tool => (
+                                <FooterToolButton
+                                    key={tool.id}
+                                    tool={tool}
+                                    onSelectTool={onSelectTool}
+                                />
+                            ))}
+                        </div>
+                    </FooterZone>
+                    <FooterDivider />
+                </React.Fragment>
+            ))}
+            {footerToolGroups.length === 0 && <FooterDivider />}
+
+            {/* Spacer */}
+            <FooterSpacer />
+
+            {/* ViewGroup Zone (center) */}
+            <FooterZone label="ViewGroup" labelColor="purple" className="footer2-zone--center">
                 <ViewGroupSelector
                     viewGroups={viewGroups}
                     activeViewGroup={activeViewGroup}
@@ -358,30 +496,38 @@ const Footer2 = memo(function Footer2({
                     onGoToViewGroup={onGoToViewGroup}
                     onOpenLayoutTab={onOpenLayoutTab}
                 />
-            </div>
+            </FooterZone>
 
-            {/* Right Section */}
-            <div className="footer2__right">
-                <Separator />
+            {/* Spacer */}
+            <FooterSpacer />
 
-                {/* Links Section */}
+            <FooterDivider />
+
+            {/* Links Zone */}
+            <FooterZone label="Links" labelColor="teal">
                 <LinksSection
                     mode={mode}
                     linkStats={linkStats}
                     totalActiveLinks={totalActiveLinks}
                     activeViewType={activeViewType}
                     onOpenLinkManager={onOpenLinkManager}
+                    hideLabel={true}
                 />
+            </FooterZone>
 
-                <Separator />
-
-                {/* VR Button */}
-                <VRButton
-                    isVRAvailable={isVRAvailable}
-                    isInVR={isInVR}
-                    onToggleVR={onToggleVR}
-                />
-            </div>
+            {/* VR Zone - only if VR available */}
+            {isVRAvailable && (
+                <>
+                    <FooterDivider />
+                    <FooterZone label="VR" labelColor="cyan">
+                        <VRContent
+                            isVRAvailable={isVRAvailable}
+                            isInVR={isInVR}
+                            onToggleVR={onToggleVR}
+                        />
+                    </FooterZone>
+                </>
+            )}
 
             {/* Link Reminder Toast */}
             <LinkReminderToast
@@ -430,14 +576,22 @@ Footer2.propTypes = {
     // Actions
     onSnapshot: PropTypes.func,
     onResetView: PropTypes.func,
+    onDuplicateView: PropTypes.func,
+    onViewSettings: PropTypes.func,
     onOpenLayoutTab: PropTypes.func,
     onOpenLinkManager: PropTypes.func,
+    // Instance tools from handler
+    instanceTools: PropTypes.array,
+    toolSections: PropTypes.array,
+    onSelectTool: PropTypes.func,
     // VR
     isVRAvailable: PropTypes.bool,
     isInVR: PropTypes.bool,
     onToggleVR: PropTypes.func,
     // Linking
     linkingService: PropTypes.object,
+    // Active view accent color (hex)
+    activeViewColor: PropTypes.string,
     // Sizing
     containerWidth: PropTypes.number,
 };

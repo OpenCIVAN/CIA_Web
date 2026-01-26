@@ -1593,6 +1593,187 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       ],
     });
 
+    // Camera Transform - position and focal point sliders
+    tools.push({
+      id: "camera-transform",
+      type: "action",
+      icon: "navigation",
+      label: "Camera Transform",
+      description: "Adjust camera position and focal point",
+      disabled: !caps.hasData,
+      popover: {
+        title: "Camera",
+        groups: [
+          {
+            label: "Position",
+            sliders: [
+              { id: 'posX', label: 'X', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'posY', label: 'Y', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'posZ', label: 'Z', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+            ],
+          },
+          {
+            label: "Focal Point",
+            sliders: [
+              { id: 'fpX', label: 'X', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'fpY', label: 'Y', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'fpZ', label: 'Z', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+            ],
+          },
+        ],
+        getValue: () => {
+          const state = instanceTools.getCameraState(instanceId);
+          if (!state) return {};
+          return {
+            posX: state.position[0], posY: state.position[1], posZ: state.position[2],
+            fpX: state.focalPoint[0], fpY: state.focalPoint[1], fpZ: state.focalPoint[2],
+          };
+        },
+        onChange: (sliderId, value) => {
+          const state = instanceTools.getCameraState(instanceId);
+          if (!state) return;
+          const pos = [...state.position];
+          const fp = [...state.focalPoint];
+          const map = { posX: [pos, 0], posY: [pos, 1], posZ: [pos, 2], fpX: [fp, 0], fpY: [fp, 1], fpZ: [fp, 2] };
+          const target = map[sliderId];
+          if (target) {
+            target[0][target[1]] = value;
+            instanceTools.setCameraState(instanceId, { ...state, position: pos, focalPoint: fp });
+          }
+        },
+        onReset: () => {
+          instanceTools.resetCamera(instanceId);
+        },
+      },
+      onClick: () => {
+        // No mode change needed - this just opens the popover
+      },
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // TRANSFORM CONTROLS - Pan, Rotate, Scale (with slider popovers)
+    // ========================================================================
+    const currentTransformMode = instanceData.transformMode || 'rotate';
+
+    tools.push({
+      id: "transform-rotate",
+      type: "action",
+      icon: "rotate3d",
+      label: "Rotate",
+      description: "Rotate / Orbit — click for sliders",
+      active: currentTransformMode === 'rotate',
+      disabled: !caps.hasData,
+      popover: {
+        title: "Rotation",
+        sliders: [
+          { id: 'x', label: 'X', min: -180, max: 180, step: 1, unit: '°', precision: 0, defaultValue: 0 },
+          { id: 'y', label: 'Y', min: -180, max: 180, step: 1, unit: '°', precision: 0, defaultValue: 0 },
+          { id: 'z', label: 'Z', min: -180, max: 180, step: 1, unit: '°', precision: 0, defaultValue: 0 },
+        ],
+        getValue: () => {
+          const r = instanceTools.getRotation(instanceId);
+          return { x: r[0], y: r[1], z: r[2] };
+        },
+        onChange: (axis, value) => {
+          const r = instanceTools.getRotation(instanceId);
+          const map = { x: 0, y: 1, z: 2 };
+          r[map[axis]] = value;
+          instanceTools.setRotation(instanceId, r[0], r[1], r[2]);
+        },
+        onReset: () => {
+          instanceTools.setRotation(instanceId, 0, 0, 0);
+        },
+      },
+      onClick: () => {
+        if (!caps.hasData) return;
+        instanceData.transformMode = 'rotate';
+        this._emitToolsUpdate(instanceId);
+        window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
+          detail: { instanceId, mode: 'rotate' },
+        }));
+      },
+    });
+
+    tools.push({
+      id: "transform-pan",
+      type: "action",
+      icon: "pan",
+      label: "Pan",
+      description: "Pan / Position — click for sliders",
+      active: currentTransformMode === 'pan',
+      disabled: !caps.hasData,
+      popover: {
+        title: "Position",
+        sliders: [
+          { id: 'x', label: 'X', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
+          { id: 'y', label: 'Y', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
+          { id: 'z', label: 'Z', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
+        ],
+        getValue: () => {
+          const p = instanceTools.getPosition(instanceId);
+          return { x: p[0], y: p[1], z: p[2] };
+        },
+        onChange: (axis, value) => {
+          const p = instanceTools.getPosition(instanceId);
+          const map = { x: 0, y: 1, z: 2 };
+          p[map[axis]] = value;
+          instanceTools.setPosition(instanceId, p[0], p[1], p[2]);
+        },
+        onReset: () => {
+          instanceTools.setPosition(instanceId, 0, 0, 0);
+        },
+      },
+      onClick: () => {
+        if (!caps.hasData) return;
+        instanceData.transformMode = 'pan';
+        this._emitToolsUpdate(instanceId);
+        window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
+          detail: { instanceId, mode: 'pan' },
+        }));
+      },
+    });
+
+    tools.push({
+      id: "transform-scale",
+      type: "action",
+      icon: "maximize2",
+      label: "Scale",
+      description: "Scale — click for sliders",
+      active: currentTransformMode === 'scale',
+      disabled: !caps.hasData,
+      popover: {
+        title: "Scale",
+        sliders: [
+          { id: 'x', label: 'X', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
+          { id: 'y', label: 'Y', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
+          { id: 'z', label: 'Z', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
+        ],
+        getValue: () => {
+          const s = instanceTools.getScale(instanceId);
+          return { x: s[0], y: s[1], z: s[2] };
+        },
+        onChange: (axis, value) => {
+          const s = instanceTools.getScale(instanceId);
+          const map = { x: 0, y: 1, z: 2 };
+          s[map[axis]] = value;
+          instanceTools.setScale(instanceId, s[0], s[1], s[2]);
+        },
+        onReset: () => {
+          instanceTools.setScale(instanceId, 1, 1, 1);
+        },
+      },
+      onClick: () => {
+        if (!caps.hasData) return;
+        instanceData.transformMode = 'scale';
+        this._emitToolsUpdate(instanceId);
+        window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
+          detail: { instanceId, mode: 'scale' },
+        }));
+      },
+    });
+
     tools.push({ type: "separator" });
 
     // ========================================================================
@@ -2735,8 +2916,67 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       });
     }
 
-    log.debug(`Built ${tools.length} tools for instance ${instanceId}`);
-    return tools;
+    // ========================================================================
+    // STRUCTURED RETURN - Section and Placement Metadata
+    // ========================================================================
+
+    // Define tool sections for organized display
+    const toolSections = [
+      { id: 'camera',      label: 'Camera',      icon: 'camera',     color: 'cyan' },
+      { id: 'transform',   label: 'Transform',   icon: 'move',       color: 'amber' },
+      { id: 'interaction',  label: 'Interaction',  icon: 'ruler',      color: 'purple' },
+      { id: 'data',         label: 'Data',         icon: 'database',   color: 'blue' },
+      { id: 'display',      label: 'Display',      icon: 'eye',        color: 'green' },
+      { id: 'color',        label: 'Color',         icon: 'palette',    color: 'amber' },
+      { id: 'advanced',     label: 'Advanced',     icon: 'settings',   color: 'pink' },
+    ];
+
+    // Map each tool ID to its section and placement
+    // notch = primary toolbar (most tools), footer = simple display toggles only
+    const toolMetadata = {
+      // Camera - notch
+      'views':              { section: 'camera',      placement: 'notch' },
+      'camera-transform':   { section: 'camera',      placement: 'notch' },
+      // Transform - notch
+      'transform-pan':      { section: 'transform',   placement: 'notch' },
+      'transform-rotate':   { section: 'transform',   placement: 'notch' },
+      'transform-scale':    { section: 'transform',   placement: 'notch' },
+      // Interaction - notch
+      'widgets':            { section: 'interaction',  placement: 'notch' },
+      'clipping-plane':     { section: 'interaction',  placement: 'notch' },
+      // Data - notch
+      'volume-rendering':   { section: 'data',         placement: 'notch' },
+      'slice-viewing':      { section: 'data',         placement: 'notch' },
+      'time-series':        { section: 'data',         placement: 'notch' },
+      'isosurface':         { section: 'data',         placement: 'notch' },
+      'threshold-filter':   { section: 'data',         placement: 'notch' },
+      'reduction':          { section: 'data',         placement: 'notch' },
+      // Color - notch
+      'colormap':           { section: 'color',        placement: 'notch' },
+      'scalar-coloring':    { section: 'color',        placement: 'notch' },
+      'colormap-selector':  { section: 'color',        placement: 'notch' },
+      // Advanced - notch
+      'glyph-menu':         { section: 'advanced',     placement: 'notch' },
+      'pbr-materials':      { section: 'advanced',     placement: 'notch' },
+      // Display toggles - footer (simple on/off switches)
+      'orientation':        { section: 'display',      placement: 'footer' },
+      'scene':              { section: 'display',      placement: 'footer' },
+      'appearance':         { section: 'display',      placement: 'footer' },
+    };
+
+    // Tag each tool with section and placement, filtering out separators
+    const taggedTools = tools
+      .filter(t => t.type !== 'separator')
+      .map(tool => {
+        const meta = toolMetadata[tool.id] || { section: 'other', placement: 'notch' };
+        return { ...tool, section: meta.section, placement: meta.placement };
+      });
+
+    log.debug(`Built ${taggedTools.length} tools (${toolSections.length} sections) for instance ${instanceId}`);
+    return {
+      sections: toolSections,
+      tools: taggedTools,
+    };
   }
 
   /**

@@ -35,7 +35,7 @@ export { FilterBar } from './FilterBar';
 export { RoomPresenceIndicator } from './RoomPresenceIndicator';
 
 // ViewContextBlock - Unified view context display (mode, view, links, actions)
-export { ViewContextBlock } from './ViewContextBlock';
+export { ViewContextBlock, ViewHubFlyout, VIEW_TYPE_ICONS } from './ViewContextBlock';
 
 // VoiceControlsPanel - Voice command controls panel
 export { VoiceControlsPanel } from './VoiceControlsPanel';

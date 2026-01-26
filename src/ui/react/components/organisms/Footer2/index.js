@@ -4,6 +4,7 @@
  */
 
 export { Footer2 } from './Footer2';
+export { Footer2Container } from './Footer2Container';
 export { default } from './Footer2';
 
 // Logic exports

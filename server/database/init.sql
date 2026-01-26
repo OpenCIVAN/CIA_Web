@@ -1,6 +1,7 @@
 -- CIA Web Analytics Platform - Consolidated Database Schema
--- v2.0 Server-Authority Architecture
+-- v2.1 Server-Authority Architecture with ViewGroup Link System
 -- FIXED: Proper dependency ordering (all tables before triggers/FKs that reference them)
+-- ADDED: ViewGroups, ViewLinks, ViewGroupLinks, ViewActivity tables for two-layer link architecture
 
 -- ============================================================================
 -- EXTENSIONS
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS server_instance (
 );
 
 INSERT INTO server_instance (id, instance_id, schema_version, notes)
-VALUES (1, uuid_generate_v4(), '2.0.0', 'Initial database creation')
+VALUES (1, uuid_generate_v4(), '2.1.0', 'Database with ViewGroup link system')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -285,6 +286,30 @@ CREATE INDEX idx_stars_room ON stars(room_id) WHERE room_id IS NOT NULL;
 CREATE INDEX idx_stars_target ON stars(target_type, target_id);
 
 -- ============================================================================
+-- VIEWGROUPS
+-- ============================================================================
+
+CREATE TABLE viewgroups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    name VARCHAR(255),  -- NULL for implicit solo groups
+    color VARCHAR(20) DEFAULT '#a855f7',
+    layout_id VARCHAR(50) DEFAULT 'single',
+    slots JSONB DEFAULT '[]',
+    canvas_position JSONB DEFAULT '{"row": 0, "col": 0, "rowSpan": 1, "colSpan": 1}',
+    owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    visibility VARCHAR(20) DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
+    shared_with JSONB DEFAULT '[]',
+    is_explicit BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_viewgroups_workspace ON viewgroups(workspace_id);
+CREATE INDEX idx_viewgroups_owner ON viewgroups(owner_id);
+CREATE INDEX idx_viewgroups_explicit ON viewgroups(is_explicit) WHERE is_explicit = TRUE;
+
+-- ============================================================================
 -- VIEW CONFIGURATIONS
 -- ============================================================================
 
@@ -323,10 +348,95 @@ CREATE TABLE view_configurations (
     active_instance_count INTEGER DEFAULT 0,
     last_active_timestamp TIMESTAMPTZ DEFAULT NOW(),
     server_version INTEGER DEFAULT 1,
+    view_group_id UUID REFERENCES viewgroups(id) ON DELETE SET NULL,
     created_by VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================================================
+-- VIEWGROUP LINK SYSTEM (Two-Layer Architecture)
+-- ============================================================================
+
+-- View-to-View Links (Foundation Layer)
+-- Individual links between specific views - the building blocks
+CREATE TABLE view_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_view_id UUID NOT NULL REFERENCES view_configurations(id) ON DELETE CASCADE,
+    target_view_id UUID NOT NULL REFERENCES view_configurations(id) ON DELETE CASCADE,
+    property VARCHAR(50) NOT NULL,
+    mode VARCHAR(20) NOT NULL CHECK (mode IN ('follow', 'sync', 'broadcast')),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Pause state (for VG link override)
+    paused_by_vg_link UUID,  -- Reference to view_group_links.id - FK added after that table
+
+    -- Reconciliation tracking (for unidirectional followers)
+    follower_last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    follower_diverged_at TIMESTAMPTZ,
+    leader_state_hash VARCHAR(16),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+
+    -- Prevent duplicate links
+    UNIQUE(source_view_id, target_view_id, property)
+);
+
+CREATE INDEX idx_view_links_source ON view_links(source_view_id);
+CREATE INDEX idx_view_links_target ON view_links(target_view_id);
+CREATE INDEX idx_view_links_paused ON view_links(paused_by_vg_link) WHERE paused_by_vg_link IS NOT NULL;
+CREATE INDEX idx_view_links_property ON view_links(property);
+
+-- ViewGroup-to-ViewGroup Links (Convenience Layer)
+-- Follows Originator Principle: originator's links get paused
+CREATE TABLE view_group_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    originator_group_id UUID NOT NULL REFERENCES viewgroups(id) ON DELETE CASCADE,
+    target_group_id UUID NOT NULL REFERENCES viewgroups(id) ON DELETE CASCADE,
+    mode VARCHAR(20) NOT NULL CHECK (mode IN ('follow', 'sync', 'broadcast')),
+    properties JSONB NOT NULL DEFAULT '["camera", "filters"]',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+
+    -- Prevent duplicate VG links
+    UNIQUE(originator_group_id, target_group_id)
+);
+
+CREATE INDEX idx_vg_links_originator ON view_group_links(originator_group_id);
+CREATE INDEX idx_vg_links_target ON view_group_links(target_group_id);
+
+-- Add foreign key from view_links to view_group_links (deferred to avoid circular dependency)
+ALTER TABLE view_links
+    ADD CONSTRAINT view_links_paused_by_vg_link_fkey
+    FOREIGN KEY (paused_by_vg_link) REFERENCES view_group_links(id) ON DELETE SET NULL;
+
+-- View Activity Table (for reconciliation)
+-- Tracks when users are actively interacting with views
+CREATE TABLE view_activity (
+    view_id UUID NOT NULL REFERENCES view_configurations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    inactive_at TIMESTAMPTZ,
+
+    PRIMARY KEY (view_id, user_id, active_at)
+);
+
+CREATE INDEX idx_view_activity_active ON view_activity(view_id, user_id)
+    WHERE inactive_at IS NULL;
+
+-- Index for view_configurations by view_group_id
+CREATE INDEX idx_view_configs_group ON view_configurations(view_group_id)
+    WHERE view_group_id IS NOT NULL;
+
+-- Comments for documentation
+COMMENT ON TABLE view_links IS 'Foundation layer: View-to-View links for property synchronization';
+COMMENT ON TABLE view_group_links IS 'Convenience layer: ViewGroup-to-ViewGroup links with Originator Principle';
+COMMENT ON TABLE view_activity IS 'Activity tracking for reconciliation of unidirectional followers';
+COMMENT ON COLUMN view_links.paused_by_vg_link IS 'ID of VG link that paused this link (Originator Principle)';
+COMMENT ON COLUMN view_group_links.originator_group_id IS 'Group that initiated link - their incoming follow links get paused';
 
 -- ============================================================================
 -- ANNOTATIONS
@@ -1121,6 +1231,7 @@ CREATE TRIGGER update_bookmarks_updated_at BEFORE UPDATE ON bookmarks FOR EACH R
 CREATE TRIGGER update_folders_updated_at BEFORE UPDATE ON folders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vr_sessions_updated_at BEFORE UPDATE ON vr_exploration_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_viewgroups_updated_at BEFORE UPDATE ON viewgroups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Auto-create main room when project is created
 CREATE OR REPLACE FUNCTION create_main_room_for_project() RETURNS TRIGGER AS $$

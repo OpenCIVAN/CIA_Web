@@ -21,7 +21,7 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  min-width: 320px; // Absolute minimum for mobile
+  min-width: 650px; // Enforced minimum for footer toolbar with all zones
   min-height: 300px;
   background: $color-bg-primary;
   overflow: hidden;

@@ -221,9 +221,9 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid $color-border-medium;
 
-  // Minimum size constraints
-  min-width: 400px;
-  min-height: 350px;
+  // Minimum size constraints (matches footer toolbar requirements)
+  min-width: 650px;
+  min-height: 400px;
 
   // Enable container queries for responsive child behavior
   container-type: inline-size;
@@ -260,14 +260,15 @@
   overflow: hidden;
 }
 
-// Resize handle (SE corner)
+// Resize handle (SE corner) - enlarged for easier targeting
 .floating-canvas__resize-handle {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   cursor: se-resize;
+  z-index: 100; // Ensure it's above content
   background: linear-gradient(
     135deg,
     transparent 50%,
@@ -280,6 +281,19 @@
       transparent 50%,
       $color-accent-blue 50%
     );
+  }
+
+  // Visual indicator lines
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid $color-text-muted;
+    border-bottom: 2px solid $color-text-muted;
+    opacity: 0.5;
   }
 }
 

@@ -42,6 +42,7 @@ const DEFAULT_CATEGORIES = {
   // Data layer
   dataset: true, // DatasetManager operations
   view: true, // ViewConfigurationManager operations
+  viewGroup: true, // ViewGroupManager operations
   annotation: true, // AnnotationManager operations
 
   // Instance layer
@@ -139,6 +140,7 @@ const CATEGORY_COLORS = {
   // Data layer
   dataset: "#0984e3",
   view: "#6c5ce7",
+  viewGroup: "#9b59b6",
   annotation: "#e17055",
   // Instance layer
   workspace: "#00cec9",
@@ -215,6 +217,7 @@ const loggers = {
   // Data layer
   dataset: createLogger("dataset"),
   view: createLogger("view"),
+  viewGroup: createLogger("viewGroup"),
   annotation: createLogger("annotation"),
   // Instance layer
   workspace: createLogger("workspace"),
@@ -472,6 +475,7 @@ export const {
   sync,
   dataset,
   view,
+  viewGroup,
   annotation,
   workspace,
   instance,

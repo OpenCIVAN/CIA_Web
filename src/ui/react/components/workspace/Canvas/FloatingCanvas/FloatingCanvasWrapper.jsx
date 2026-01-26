@@ -35,9 +35,9 @@ export const ASPECT_RATIOS = {
 // =============================================================================
 
 export const CANVAS_SIZE_CONSTRAINTS = {
-    MIN_WIDTH: 400,
-    MIN_HEIGHT: 350,
-    COMFORTABLE_MIN_WIDTH: 600, // Width where all controls fit nicely
+    MIN_WIDTH: 650,       // Minimum for footer toolbar with all zones
+    MIN_HEIGHT: 400,      // Adjusted proportionally
+    COMFORTABLE_MIN_WIDTH: 700, // Width where all controls fit with labels
 };
 
 // =============================================================================

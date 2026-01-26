@@ -339,6 +339,7 @@ const LinksSection = memo(function LinksSection({
     totalActiveLinks,
     activeViewType,
     onOpenLinkManager,
+    hideLabel = false,
 }) {
     const [showPopover, setShowPopover] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState(null);
@@ -363,6 +364,11 @@ const LinksSection = memo(function LinksSection({
 
     return (
         <div className="links-section">
+            {/* Links Label - only show if not hidden by parent zone header */}
+            {mode === 'full' && !hideLabel && (
+                <span className="links-section__label">Links</span>
+            )}
+
             {mode === 'full' ? (
                 <ExpandedLinks
                     linkStats={linkStats}
@@ -408,6 +414,7 @@ LinksSection.propTypes = {
     totalActiveLinks: PropTypes.number.isRequired,
     activeViewType: PropTypes.string,
     onOpenLinkManager: PropTypes.func,
+    hideLabel: PropTypes.bool,
 };
 
 export {

@@ -23,3 +23,6 @@ export { workspaceManager } from "./WorkspaceManager.js";
 
 export { DatasetManager } from "./DatasetManager.js";
 export { ViewConfigurationManager } from "./ViewConfigurationManager.js";
+
+// ViewGroup System
+export { ViewGroupManager, viewGroupManager } from "./ViewGroupManager.js";

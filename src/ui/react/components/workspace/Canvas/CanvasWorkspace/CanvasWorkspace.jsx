@@ -14,12 +14,13 @@ import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorM
 
 // New canvas chrome components
 import { CanvasHeaderBar } from '../CanvasHeaderBar/CanvasHeaderBar.jsx';
-import { CanvasToolbar } from '../CanvasToolbar/CanvasToolbar.jsx';
+// CanvasToolbar removed - functionality moved to InstanceToolsNotch + Footer2
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
 import { InstanceToolsNotch } from '@UI/react/components/workspace/InstanceToolsNotch';
 import { CreateWorkspacePanel } from '@UI/react/components/panels/FloatingPanel';
+import { Footer2Container } from '@UI/react/components/organisms/Footer2';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
@@ -369,7 +370,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     // INSTANCE TOOLS NOTCH STATE
     // ==========================================================================
 
-    const [instanceTools, setInstanceTools] = useState([]);
+    const [instanceToolsData, setInstanceToolsData] = useState({ sections: [], tools: [] });
     const [zoomLevel, setZoomLevel] = useState(100);
 
     // Get active instance from workspaceManager for tools
@@ -385,18 +386,18 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
             if (!instance?.instanceId) {
                 log.debug('InstanceToolsNotch: No active instance, clearing tools');
-                setInstanceTools([]);
+                setInstanceToolsData({ sections: [], tools: [] });
                 return;
             }
 
             try {
-                // Get all tools from the instance handler
-                const tools = workspaceManager.getInstanceTools(instance.instanceId);
-                log.debug('InstanceToolsNotch: Loaded tools:', tools?.length, tools?.map(t => t.id));
-                setInstanceTools(tools || []);
+                // Get structured tools from the instance handler
+                const result = workspaceManager.getInstanceTools(instance.instanceId);
+                log.debug('InstanceToolsNotch: Loaded tools:', result?.tools?.length, result?.tools?.map(t => t.id));
+                setInstanceToolsData(result || { sections: [], tools: [] });
             } catch (err) {
                 log.warn('Failed to load instance tools:', err);
-                setInstanceTools([]);
+                setInstanceToolsData({ sections: [], tools: [] });
             }
         };
 
@@ -417,6 +418,16 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             window.removeEventListener('cia:tools-updated', handleInstanceFocus);
         };
     }, [contextActiveView]);
+
+    // Split tools by placement: notch (quick-access) vs footer (display/config)
+    const { notchTools, footerTools, toolSections } = useMemo(() => {
+        const { sections = [], tools = [] } = instanceToolsData;
+        return {
+            notchTools: tools.filter(t => t.placement === 'notch'),
+            footerTools: tools.filter(t => t.placement === 'footer'),
+            toolSections: sections,
+        };
+    }, [instanceToolsData]);
 
     // Listen for "Add to Subset" requests from ViewHeader menus
     useEffect(() => {
@@ -510,6 +521,28 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             // Zoom level will be updated via onCameraChange subscription
         }
     }, []);
+
+    // ==========================================================================
+    // DUPLICATE VIEW & VIEW SETTINGS HANDLERS
+    // ==========================================================================
+
+    const handleDuplicateView = useCallback(() => {
+        log.debug('Duplicate view requested from Footer2');
+        if (contextActiveView?.id) {
+            window.dispatchEvent(new CustomEvent('cia:duplicate-view', {
+                detail: { viewId: contextActiveView.id }
+            }));
+        }
+    }, [contextActiveView]);
+
+    const handleViewSettings = useCallback(() => {
+        log.debug('View settings requested from Footer2');
+        if (contextActiveView?.id) {
+            window.dispatchEvent(new CustomEvent('cia:open-view-settings', {
+                detail: { viewId: contextActiveView.id }
+            }));
+        }
+    }, [contextActiveView]);
 
     // Compute view mode for toolbar based on view stack state
     const toolbarViewMode = useMemo(() => {
@@ -995,7 +1028,8 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             {/* Includes navigation controls (zoom, fit, reset) + instance-specific tools */}
             <InstanceToolsNotch
                 activeView={contextActiveView}
-                tools={instanceTools}
+                tools={notchTools}
+                toolSections={toolSections}
                 onSelectTool={handleNotchToolSelect}
                 onOpenFullTools={handleOpenFullInstanceTools}
                 // Navigation controls
@@ -1006,34 +1040,60 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 onResetCamera={handleResetCamera}
             />
 
-            {/* Canvas Toolbar - Navigation + History + ViewContextBlock */}
-            {/* Note: Navigation and ViewContextBlock use useViewContextLogic hook internally */}
-            {/* which connects to LayoutPanelContext for viewport state */}
-            <CanvasToolbar
-                // History
-                canUndo={false}
-                canRedo={false}
-                onUndo={() => {}}
-                onRedo={() => {}}
+            {/* CanvasToolbar removed - Active View Selector now in InstanceToolsNotch,
+               Focus/Subset/Links/Actions now in Footer2 */}
 
-                // View mode (for ViewContextBlock)
-                viewMode={toolbarViewMode}
-                onModeChange={handleToolbarModeChange}
-
-                // Quick actions (for ViewContextBlock)
+            {/* ViewGroup Footer - ViewGroup selector, links, actions */}
+            <Footer2Container
+                workspaceId={currentWorkspaceId || projectId}
+                activeViewType={contextActiveView?.type || 'vtk-volume'}
+                activeViewColor={contextActiveView?.color || null}
+                isFocused={isFocusView}
+                instanceTools={footerTools}
+                toolSections={toolSections}
+                onSelectTool={handleNotchToolSelect}
+                onToggleFocus={() => {
+                    if (isFocusView) {
+                        goHome();
+                    } else {
+                        handleToolbarModeChange('focus');
+                    }
+                }}
+                activeSubset={focusedSubset}
+                onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
                 onSnapshot={() => {
-                    log.debug('Snapshot requested');
+                    log.debug('Snapshot requested from Footer2');
+                    // Dispatch snapshot event for active view
+                    if (contextActiveView?.id) {
+                        window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
+                            detail: { viewId: contextActiveView.id }
+                        }));
+                    }
                 }}
-                onDuplicate={() => {
-                    log.debug('Duplicate requested');
+                onResetView={() => {
+                    log.debug('Reset view requested from Footer2');
+                    handleResetCamera();
                 }}
-                onSettings={() => {
-                    log.debug('Settings requested');
+                onDuplicateView={handleDuplicateView}
+                onViewSettings={handleViewSettings}
+                onOpenLayoutTab={() => {
+                    // Open layout panel
+                    setLeftDockedOpen(true);
                 }}
+                onOpenLinkManager={() => {
+                    // Open link manager panel
+                    log.debug('Link manager requested');
+                }}
+                isVRAvailable={true}
+                isInVR={false}
+                onToggleVR={() => {
+                    log.debug('VR toggle requested');
+                    // TODO: Connect to VR manager
+                }}
+                containerWidth={1200}
             />
 
             {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
-            {/* Placed below toolbar to separate from app footer */}
             <CanvasInfoFooter
                 canvasSize={canvasSize}
                 viewportSize={gridSize}

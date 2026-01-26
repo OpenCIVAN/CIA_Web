@@ -10,10 +10,9 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 // =============================================================================
 
 export const FOOTER_BREAKPOINTS = {
-    MIN_WIDTH: 450,      // Enforced minimum, horizontal scroll below
-    MINIMAL: 600,        // 450-599px
-    COMPACT: 900,        // 600-899px
-    FULL: 900,           // 900px+
+    // Minimum width to fit all zones with labels
+    // Focus(70) + Actions(70) + Tools(130) + ViewGroup(100) + Links(180) + VR(40) + dividers + spacers
+    MIN_WIDTH: 650,
 };
 
 export const TOOLBAR_SECTIONS = [
@@ -56,35 +55,21 @@ export const QUICK_CREATE_TEMPLATES = [
 // =============================================================================
 
 /**
- * Hook for responsive footer layout
+ * Hook for footer layout
+ * All zones always visible - minimum width ensures everything fits
  */
 export function useFooterLayout(containerWidth) {
-    const mode = useMemo(() => {
-        if (containerWidth >= FOOTER_BREAKPOINTS.FULL) return 'full';
-        if (containerWidth >= FOOTER_BREAKPOINTS.MINIMAL) return 'compact';
-        return 'minimal';
-    }, [containerWidth]);
-
-    const visibleSections = useMemo(() => {
-        if (mode === 'full') return TOOLBAR_SECTIONS;
-        if (mode === 'compact') return TOOLBAR_SECTIONS.filter(s => s.priority === 1);
-        // Minimal: just viewGroup and links
-        return TOOLBAR_SECTIONS.filter(s => s.id === 'viewGroup' || s.id === 'links' || s.id === 'vr');
-    }, [mode]);
-
-    const showLabels = mode === 'full';
-    const showTypeSpecific = mode === 'full';
-    const showUniversal = mode !== 'minimal';
-
+    // Always return full mode - no responsive hiding
+    // The minimum width constraint ensures everything fits
     return {
-        mode,
-        visibleSections,
-        showLabels,
-        showTypeSpecific,
-        showUniversal,
-        isMinimal: mode === 'minimal',
-        isCompact: mode === 'compact',
-        isFull: mode === 'full',
+        mode: 'full',
+        visibleSections: TOOLBAR_SECTIONS,
+        showLabels: true,
+        showTypeSpecific: true,
+        showUniversal: true,
+        isMinimal: false,
+        isCompact: false,
+        isFull: true,
     };
 }
 

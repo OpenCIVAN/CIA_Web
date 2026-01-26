@@ -521,15 +521,34 @@ class WorkspaceManager {
 
   /**
    * Get available tools for an instance
-   * Returns empty array if instance has no type/handler yet
+   * Returns structured format: { sections: [...], tools: [...] }
+   * Each tool has .section and .placement ('notch' | 'footer') metadata.
+   * Handles both old (flat array) and new (structured) handler formats.
    */
   getInstanceTools(instanceId) {
     const instance = this.getInstance(instanceId);
     if (!instance || !instance.handler || !instance.type) {
-      return []; // No tools for typeless instances
+      return { sections: [], tools: [] };
     }
 
-    return instance.handler.getTools(instance.instanceData);
+    const result = instance.handler.getTools(instance.instanceData);
+
+    // New structured format: { sections, tools }
+    if (result && !Array.isArray(result) && result.tools) {
+      return result;
+    }
+
+    // Legacy flat array format: wrap in structured format
+    if (Array.isArray(result)) {
+      return {
+        sections: [],
+        tools: result
+          .filter(t => t.type !== 'separator')
+          .map(t => ({ ...t, section: 'general', placement: 'notch' })),
+      };
+    }
+
+    return { sections: [], tools: [] };
   }
 
   /**

@@ -187,3 +187,14 @@ export {
 export { useAdaptiveHover } from "./useAdaptiveHover.js";
 export { usePanelState } from "./usePanelState.js";
 export { useFocusMode } from "./useFocusMode.js";
+
+// =============================================================================
+// VIEWGROUP MANAGEMENT
+// =============================================================================
+
+export {
+  useViewGroups,
+  useViewLinks,
+  useViewGroupLinks,
+  useReconciliation,
+} from "./useViewGroups.js";

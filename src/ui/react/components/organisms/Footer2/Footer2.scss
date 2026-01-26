@@ -1,82 +1,186 @@
 /**
  * Footer2 Styles
- * Shared canvas toolbar footer with responsive behavior
+ * Shared canvas toolbar footer with ToolbarZone-style sections
+ * Uses InstanceToolsNotch gradient + accent line aesthetic
  */
 
 @use "theme" as *;
 
 // =============================================================================
-// FOOTER2 MAIN
+// FOOTER2 MAIN CONTAINER
 // =============================================================================
 
 .footer2 {
     display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-xs $spacing-md;
-    min-height: 44px;
-    background: rgba($color-bg-primary, 0.95);
-    border-top: 1px solid $color-border-subtle;
-    backdrop-filter: blur(8px);
+    flex-direction: row;
+    align-items: stretch;
     position: relative;
+    z-index: 1000;
+    flex-shrink: 0;
+    overflow: visible; // Don't clip dropdowns
 
-    &__left,
-    &__center,
-    &__right {
-        display: flex;
-        align-items: center;
-        gap: $spacing-sm;
+    // Gradient background - color fades from left to transparent, over secondary bg
+    // Accent line is on the InstanceToolsNotch above, not duplicated here
+    background: linear-gradient(
+        90deg,
+        rgba(var(--footer-color-rgb, 96, 165, 250), 0.08) 0%,
+        transparent 50%
+    ),
+    $color-bg-secondary;
+
+    transition: background 0.15s ease;
+
+    // Active state - brighter gradient when a view is active
+    &--active {
+        background: linear-gradient(
+            90deg,
+            rgba(var(--footer-color-rgb, 96, 165, 250), 0.15) 0%,
+            transparent 50%
+        ),
+        $color-bg-secondary;
     }
 
-    &__left {
-        flex-shrink: 0;
+    // Inactive state - neutral when no view selected
+    &--inactive {
+        background: $color-bg-secondary;
+    }
+}
+
+// =============================================================================
+// FOOTER ZONE (like ToolbarZone)
+// =============================================================================
+
+.footer2-zone {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 0;
+
+    &--center {
+        // Center zone doesn't need to be centered - it just sits in the middle
+    }
+}
+
+.footer2-zone__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 14px;
+    padding: 0 $spacing-sm;
+    background: $color-bg-secondary; // Opaque so gradient doesn't bleed through labels
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 8px;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-muted;
+    white-space: nowrap;
+
+    // Color variants
+    &--blue {
+        color: $color-accent-blue;
     }
 
-    &__center {
-        flex: 1;
-        justify-content: center;
+    &--purple {
+        color: $color-accent-purple;
     }
 
-    &__right {
-        flex-shrink: 0;
-        justify-content: flex-end;
+    &--amber {
+        color: $color-accent-amber;
     }
 
-    &__separator {
-        width: 1px;
-        height: 20px;
-        background: $color-border-subtle;
-        flex-shrink: 0;
+    &--teal {
+        color: $color-accent-teal;
     }
 
-    &__section {
-        display: flex;
-        align-items: center;
-        gap: $spacing-xs;
-
-        &--focus,
-        &--universal {
-            flex-shrink: 0;
-        }
+    &--green {
+        color: $color-accent-green;
     }
 
-    // Responsive modes
-    &--minimal {
-        .footer2__left,
-        .footer2__section--focus,
-        .footer2__section--universal {
-            display: none;
-        }
+    &--pink {
+        color: $color-accent-pink;
     }
 
-    &--compact {
-        .footer2__section--focus {
-            display: none;
-        }
+    &--cyan {
+        color: $color-accent-cyan;
+    }
+}
+
+.footer2-zone__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 $spacing-xs;
+}
+
+// =============================================================================
+// FOOTER DIVIDER
+// =============================================================================
+
+.footer2-divider {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 1px;
+}
+
+.footer2-divider__label {
+    height: 14px;
+    background: $color-bg-secondary;
+}
+
+.footer2-divider__content {
+    height: 32px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+// =============================================================================
+// FOOTER SPACER
+// =============================================================================
+
+.footer2-spacer {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: $spacing-sm;
+}
+
+.footer2-spacer__label {
+    height: 14px;
+    background: $color-bg-secondary;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.footer2-spacer__content {
+    height: 32px;
+}
+
+// =============================================================================
+// BUTTON GROUP
+// =============================================================================
+
+.footer2__button-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+// =============================================================================
+// VR BUTTON
+// =============================================================================
+
+.footer2__vr-button {
+    background: linear-gradient(135deg, $color-accent-teal, $color-accent-cyan) !important;
+    border: none !important;
+    color: #1a1a2e !important; // Dark text for contrast on light bg
+
+    svg {
+        color: #1a1a2e !important; // Dark icon for contrast
     }
 
-    &__vr-button {
-        background: linear-gradient(135deg, $color-accent-teal, $color-accent-cyan);
+    &:hover {
+        filter: brightness(1.1);
     }
 }
 
@@ -97,7 +201,7 @@
     border: 1px solid $color-border-default;
     border-radius: $radius-lg;
     box-shadow: $shadow-lg;
-    z-index: 100;
+    z-index: 10000;
     animation: slideUp 0.2s ease-out;
 
     &-content {
@@ -131,6 +235,12 @@
         transform: translateX(-50%) translateY(0);
     }
 }
+
+// =============================================================================
+// RESPONSIVE MODES
+// =============================================================================
+// All zones always visible - minimum width (650px) ensures everything fits
+// No responsive hiding - just maintain consistent layout
 
 // =============================================================================
 // VIEWGROUP SELECTOR
@@ -199,7 +309,7 @@
         border: 1px solid $color-border-default;
         border-radius: $radius-lg;
         box-shadow: $shadow-xl;
-        z-index: 100;
+        z-index: 10000;
         overflow: hidden;
     }
 
@@ -350,7 +460,7 @@
 .popover-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: 9999;
 }
 
 .create-viewgroup-popover,
@@ -364,7 +474,7 @@
     border: 1px solid $color-border-default;
     border-radius: $radius-lg;
     box-shadow: $shadow-xl;
-    z-index: 100;
+    z-index: 10000;
     overflow: hidden;
 }
 
@@ -700,6 +810,7 @@
 .links-section {
     display: flex;
     align-items: center;
+    gap: $spacing-xs;
 }
 
 .expanded-links {
@@ -713,8 +824,8 @@
     align-items: center;
     justify-content: center;
     gap: $spacing-xs;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     background: transparent;
     border: none;
     border-radius: $radius-sm;
@@ -795,7 +906,7 @@
     border: 1px solid $color-border-default;
     border-radius: $radius-lg;
     box-shadow: $shadow-xl;
-    z-index: 100;
+    z-index: 10000;
     overflow: hidden;
 
     &__header {
@@ -902,7 +1013,7 @@
     border: 1px solid $color-border-default;
     border-radius: $radius-lg;
     box-shadow: $shadow-xl;
-    z-index: 100;
+    z-index: 10000;
     overflow: hidden;
 
     &__header {

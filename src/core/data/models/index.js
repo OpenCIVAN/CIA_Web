@@ -25,3 +25,19 @@ export { CanvasImage } from "./CanvasImage.js";
 
 // Workspace Hierarchy
 export { Workspace, WorkspaceType, WorkspacePermission } from "./Workspace.js";
+
+// ViewGroup System
+export {
+    ViewGroup,
+    ViewGroupSlot,
+    ViewGroupLinkConfig,
+    ViewLink,
+    Viewport,
+    VIEWGROUP_LINK_MODES,
+    VIEWGROUP_LINK_STATUS,
+    VIEWGROUP_STATES,
+    LINK_PROPERTIES,
+    PROPERTY_APPLICABLE_TYPES,
+    BUILTIN_LAYOUTS,
+    VIEWGROUP_COLORS,
+} from "./ViewGroup.js";
