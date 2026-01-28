@@ -189,3 +189,10 @@ export { PopoutManager } from './PopoutManager';
 
 // BreakoutManager - Manager dropdown for workspace voice breakouts
 export { BreakoutManager } from './BreakoutManager';
+
+// =============================================================================
+// RE-EXPORTS FROM ATOMS (for convenience)
+// =============================================================================
+
+// FlowDirectionToggle - Row/column flow direction toggle
+export { FlowDirectionToggle } from '../atoms/FlowDirectionToggle';
