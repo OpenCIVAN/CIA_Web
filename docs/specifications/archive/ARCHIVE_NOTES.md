@@ -1,12 +1,16 @@
 # Specification Archive Notes
 
-**Last Updated:** January 25, 2026
+**Last Updated:** January 28, 2026
 
 This document tracks which specifications have been archived and what supersedes them.
 
 ---
 
 ## Archive History
+
+### January 28, 2026
+
+Bulk cleanup: archived all implemented specification folders (linking, filestab, layouttab, navigator, instancetools, canvaschrome, toolsandcanvas) and 6 root-level implemented specs. Remaining unimplemented features extracted to `docs/IMPLEMENTATION_TODO.md`. Also deleted `docs/archive/legacy/` and `docs/archive/prototypes/` (git history preserves them), and deleted `docs/prototypes/`.
 
 ### January 25, 2026
 
@@ -60,66 +64,44 @@ The following specifications were archived as part of the toolsandcanvas redesig
 
 ## Current Active Specifications
 
-### Root Level (Oldest)
+Only VR and framework specs remain active (not yet implemented):
+
 | File | Status | Notes |
 |------|--------|-------|
-| `CIAUI_Framework_Specification.md` | ✅ Active | Framework-level spec |
-| `Atomic_Component_Decomposition_Spec.md` | ✅ Active | Component architecture |
-| `Left_Panel_Design_Specification.md` | ✅ Active | Left panel tabs |
-| `Right_Panel_Design_Specification.md` | ✅ Active | Right panel tabs |
-| `FloatingPanel_Component_Specification.md` | ✅ Active | Floating/Priority panel system |
-| `VR_First_Architecture_Migration_Strategy.md` | ✅ Active | VR migration strategy |
-| `VR_Interface_Design_Specification_v2.md` | ✅ Active | VR interface design |
-| `TransformControl_Implementation_Package.md` | ✅ Active | Transform controls |
-| `Canvas_Interaction_Systems_Specification.md` | ✅ Active | **NEW** - Drop zones, thumbnails, selection |
-
-### Folders (Newest → Oldest)
-
-**toolsandcanvas/** (Newest)
-- `Widget_Creation_Part2_Claude_Code_Handoff.md` - Display Section, Annotations Tab, Canvas Toolbar Footer, Camera enhancements
-- `RoomHeader/Room_Header_Canvas_Tabs_Claude_Code_Handoff.md` - Room Header, Canvas Tabs Bar, Tiled/Tabbed views, Popouts, Breakouts
-
-**instancetools/**
-- `Instance_Tools_V2_Claude_Code_Handoff.md` - Instance Tools panel redesign
-
-**navigator/**
-- `Navigator_V5_Claude_Code_Handoff.md` - Canvas Navigator redesign
-
-**layouttab/**
-- `Layout_Tab_V4-6_Claude_Code_Handoff.md` - Layout tab redesign
-
-**filestab/**
-- `Files_Tab_V2_Claude_Code_Handoff.md` - Files tab with tags
-
-**linking/** (Oldest folder)
-- View linking system implementation guides
+| `CIAUI_Framework_Specification.md` | Active | Separate WebGPU/WebXR framework project |
+| `VR_First_Architecture_Migration_Strategy.md` | Active | VR migration strategy |
+| `VR_Interface_Design_Specification_v2.md` | Active | VR interface design |
 
 ---
 
-## Folder Age Order
+## January 28, 2026 — Bulk Archive
 
-From oldest to newest:
-1. `linking/` - View linking system
-2. `filestab/` - Files tab redesign
-3. `layouttab/` - Layout tab redesign
-4. `navigator/` - Navigator redesign
-5. `instancetools/` - Instance tools redesign
-6. `toolsandcanvas/` - **Newest** - Room/Canvas architecture, shared toolbar
+The following were archived after cross-referencing against source code.
+Unimplemented items were extracted to `docs/IMPLEMENTATION_TODO.md`.
+
+### Root-level specs (implemented)
+- `Atomic_Component_Decomposition_Spec.md` — Atomic design system fully implemented
+- `Canvas_Interaction_Systems_Specification.md` — Drop zones, thumbnails, selection implemented
+- `FloatingPanel_Component_Specification.md` — FloatingPanel system implemented
+- `Left_Panel_Design_Specification.md` — Left panel implemented
+- `Right_Panel_Design_Specification.md` — Right panel implemented
+- `TransformControl_Implementation_Package.md` — Transform controls implemented
+
+### Folder specs (substantially implemented)
+- `linking/` — View linking system (50+ source files, ~95%)
+- `filestab/` — Files tab (~35%, tag system gaps in TODO)
+- `layouttab/` — Layout tab (~72%)
+- `navigator/` — Navigator (~76%, bookmarks missing)
+- `instancetools/` — Instance tools (~82%)
+- `canvaschrome/` — Canvas chrome (~78%)
+- `toolsandcanvas/` — Room header, workspace bar, viewgroup selector, widget creation (~85%)
 
 ---
 
-## How to Use This Archive
+## Previously Archived
 
-1. **Before implementing:** Check if the spec you're reading is archived here
-2. **If archived:** Look at the "Superseded By" column to find the current spec
-3. **If active:** The spec is authoritative for its domain
-4. **Folder specs trump root specs:** Newer folder-based specs take precedence
-
----
-
-## Previously Archived (Before This Update)
-
-These were already in the archive folder:
-- `volumetric/` - Volumetric data handling specs
-- `panel_overlay/` - Panel overlay system (replaced by FloatingPanel)
-- `VR_Accessibility_Settings_Panel_Specification.md` - VR accessibility settings
+- `volumetric/` — Volumetric data handling specs
+- `panel_overlay/` — Panel overlay system (replaced by FloatingPanel)
+- `VR_Accessibility_Settings_Panel_Specification.md` — VR accessibility settings
+- `Canvas_Area_Design_Specification.md` — Partially superseded by toolsandcanvas
+- `Adaptive_Components_Implementation_Prompt.md` — Adaptive behavior built into atoms
