@@ -6,7 +6,7 @@
  * This enables both the default UI and custom implementations.
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   MAP_MODES,
   MODE_CONFIG,
@@ -16,7 +16,7 @@ import {
   LAYOUTS,
   MINIMAP_CONSTANTS,
 } from '../utils/constants';
-import { getVGDisplayName, getGridCenter } from '../utils/gridUtils';
+import { getVGDisplayName } from '../utils/gridUtils';
 
 // LocalStorage key prefix
 const STORAGE_PREFIX = 'cia:canvas-map:';
@@ -75,9 +75,10 @@ export function useCanvasMapState({
   // -------------------------------------------------------------------------
   // UI State with localStorage persistence
   // -------------------------------------------------------------------------
-  const [mapMode, setMapModeState] = useState(() =>
-    loadPreference('mapMode', MAP_MODES.NAVIGATE)
-  );
+  const [mapMode, setMapModeState] = useState(() => {
+    const stored = loadPreference('mapMode', MAP_MODES.NAVIGATE);
+    return stored === 'collaborate' ? MAP_MODES.TEAM : stored;
+  });
   const [displayMode, setDisplayModeState] = useState(() =>
     loadPreference('displayMode', DISPLAY_MODES.VG)
   );
@@ -119,6 +120,16 @@ export function useCanvasMapState({
   );
   const [companionTab, setCompanionTabState] = useState(() =>
     loadPreference('companionTab', 'views')
+  );
+
+  // Toolbar handedness preference
+  const [toolbarPosition, setToolbarPositionState] = useState(() =>
+    loadPreference('toolbarPosition', 'left')
+  );
+
+  // Per-collaborator cursor visibility (default true)
+  const [collaboratorCursorVisibility, setCollaboratorCursorVisibility] = useState(() =>
+    loadPreference('collaboratorCursorVisibility', {})
   );
 
   // Sub-tabs
@@ -201,6 +212,30 @@ export function useCanvasMapState({
     savePreference('companionTab', tab);
   }, []);
 
+  const setToolbarPosition = useCallback((position) => {
+    setToolbarPositionState(position);
+    savePreference('toolbarPosition', position);
+  }, []);
+
+  const toggleToolbarPosition = useCallback(() => {
+    setToolbarPositionState(prev => {
+      const next = prev === 'left' ? 'right' : 'left';
+      savePreference('toolbarPosition', next);
+      return next;
+    });
+  }, []);
+
+  const toggleCollaboratorCursor = useCallback((collaboratorId) => {
+    setCollaboratorCursorVisibility(prev => {
+      const next = {
+        ...prev,
+        [collaboratorId]: !(prev[collaboratorId] ?? true),
+      };
+      savePreference('collaboratorCursorVisibility', next);
+      return next;
+    });
+  }, []);
+
   // -------------------------------------------------------------------------
   // Derived State
   // -------------------------------------------------------------------------
@@ -250,16 +285,6 @@ export function useCanvasMapState({
     });
     return views;
   }, [displayMode, viewGroups]);
-
-  /**
-   * Calculate minimap cell size based on zoom and focus state
-   */
-  const minimapCellSize = useMemo(() => {
-    const baseSize = focusedVGId
-      ? MINIMAP_CONSTANTS.FOCUSED_CELL_SIZE
-      : MINIMAP_CONSTANTS.BASE_CELL_SIZE;
-    return Math.floor(baseSize * (minimapZoom / 100));
-  }, [minimapZoom, focusedVGId]);
 
   /**
    * Current grid size
@@ -383,23 +408,6 @@ export function useCanvasMapState({
     setCompanionOpen(prev => !prev);
   }, [setCompanionOpen]);
 
-  /**
-   * Get VG center position for link lines
-   */
-  const getVGCenter = useCallback((vgId) => {
-    const vg = viewGroups.find(v => v.id === vgId);
-    if (!vg?.position) return null;
-
-    return getGridCenter(
-      vg.position.row,
-      vg.position.col,
-      vg.position.rowSpan,
-      vg.position.colSpan,
-      minimapCellSize,
-      MINIMAP_CONSTANTS.GRID_GAP
-    );
-  }, [viewGroups, minimapCellSize]);
-
   // -------------------------------------------------------------------------
   // Return API
   // -------------------------------------------------------------------------
@@ -418,6 +426,8 @@ export function useCanvasMapState({
     myCursorColor,
     companionOpen,
     companionTab,
+    toolbarPosition,
+    collaboratorCursorVisibility,
     linksSubTab,
     collaborateSubTab,
     selectedVGId,
@@ -441,6 +451,7 @@ export function useCanvasMapState({
     setMyCursorColor,
     setCompanionOpen,
     setCompanionTab,
+    setToolbarPosition,
     setLinksSubTab,
     setCollaborateSubTab,
     setSearchQuery,
@@ -453,7 +464,6 @@ export function useCanvasMapState({
     selectedVG,
     focusedVG,
     flattenedViews,
-    minimapCellSize,
     currentGridSize,
     filteredVGs,
     filteredBookmarks,
@@ -478,7 +488,8 @@ export function useCanvasMapState({
     toggleShowCursors,
     toggleMyCursorVisible,
     toggleCompanion,
-    getVGCenter,
+    toggleToolbarPosition,
+    toggleCollaboratorCursor,
   };
 }
 

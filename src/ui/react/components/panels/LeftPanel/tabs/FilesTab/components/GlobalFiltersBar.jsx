@@ -22,6 +22,7 @@ import React, { memo, useState, useCallback, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { TagChip } from '@UI/react/components/atoms/TagChip';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { SortDropdown } from '@UI/react/components/molecules/SortDropdown';
 import { TagsDropdown } from '@UI/react/components/molecules/TagsDropdown';
 import { useAdaptive } from '@UI/react/context';
@@ -55,8 +56,8 @@ export const GlobalFiltersBar = memo(function GlobalFiltersBar({
     const [showTagsDropdown, setShowTagsDropdown] = useState(false);
 
     // Handle search input change
-    const handleSearchChange = useCallback((e) => {
-        onFiltersChange({ searchQuery: e.target.value });
+    const handleSearchChange = useCallback((value) => {
+        onFiltersChange({ searchQuery: value });
     }, [onFiltersChange]);
 
     // Handle search clear
@@ -127,26 +128,14 @@ export const GlobalFiltersBar = memo(function GlobalFiltersBar({
         <div className={classList}>
             {/* Search Row with inline controls */}
             <div className="global-filters-bar__search-row">
-                <div className="global-filters-bar__search">
-                    <Icon name="search" size={12} className="global-filters-bar__search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Search all files..."
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        className="global-filters-bar__search-input"
-                    />
-                    {searchQuery && (
-                        <button
-                            type="button"
-                            onClick={handleSearchClear}
-                            className="global-filters-bar__search-clear"
-                            aria-label="Clear search"
-                        >
-                            <Icon name="x" size={10} />
-                        </button>
-                    )}
-                </div>
+                <SearchInput
+                    className="global-filters-bar__search"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Search all files..."
+                    size="sm"
+                    onClear={handleSearchClear}
+                />
 
                 {/* Filter expand toggle */}
                 <button

@@ -28,8 +28,8 @@ export const ViewportIndicator = memo(function ViewportIndicator({
         ${isSelected ? 'viewport-indicator--selected' : ''}
         ${isPrimary ? 'viewport-indicator--primary' : ''}`}
       style={{
-        gridRow: `${position.row + 1} / span ${size.rows}`,
-        gridColumn: `${position.col + 1} / span ${size.cols}`,
+        left: position.col * (cellSize + gap),
+        top: position.row * (cellSize + gap),
         '--vp-width': `${size.cols * cellSize + (size.cols - 1) * gap}px`,
         '--vp-height': `${size.rows * cellSize + (size.rows - 1) * gap}px`,
       }}

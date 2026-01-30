@@ -18,7 +18,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { voiceCommandService } from '@Services/voice/voiceCommandService.js';
 import './VoiceCommandHelp.scss';
@@ -210,17 +211,14 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
                 </p>
 
                 {/* Search */}
-                <div className="voice-command-help__search">
-                    <Icon name="search" size={14} className="voice-command-help__search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Search commands..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="voice-command-help__search-input"
-                        autoFocus
-                    />
-                </div>
+                <SearchInput
+                    className="voice-command-help__search"
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search commands..."
+                    size="md"
+                    autoFocus
+                />
 
                 {/* Commands */}
                 <div className="voice-command-help__content">

@@ -9,6 +9,7 @@
 
 import React, { memo, useState, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ColorDot } from '@UI/react/components/atoms/ColorDot';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { GroupMembersCompact } from '@UI/react/components/molecules/GroupMembersList';
@@ -244,15 +245,13 @@ export const WorkspaceLinksHub = memo(function WorkspaceLinksHub({
             <StatsSummary linkGroups={linkGroups} />
 
             <div className="workspace-links-hub__toolbar">
-                <div className="workspace-links-hub__search">
-                    <Icon name="search" size={14} />
-                    <input
-                        type="text"
-                        placeholder="Search groups..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+                <SearchInput
+                    className="workspace-links-hub__search"
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search groups..."
+                    size="sm"
+                />
                 {onCreateGroup && (
                     <button
                         className="workspace-links-hub__create"

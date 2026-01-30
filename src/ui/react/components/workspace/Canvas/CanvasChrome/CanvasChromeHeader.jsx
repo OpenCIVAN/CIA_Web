@@ -4,6 +4,7 @@
 import React, { memo, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ModeToggle } from '@UI/react/components/organisms/WorkspaceBar';
 import { CREATE_OPTIONS } from '@UI/react/components/organisms/CanvasTabsBar/CanvasTabsBar.logic';
 import { formatGridPosition } from '@UI/react/utils/gridPosition';
@@ -625,16 +626,14 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                 items={filteredWorkspaces}
                 header={(
                     <>
-                        <div className="canvas-chrome-header__dropdown-search">
-                            <Icon name="search" size={12} />
-                            <input
-                                type="text"
-                                placeholder="Search workspaces..."
-                                value={workspaceQuery}
-                                onChange={(e) => setWorkspaceQuery(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
+                        <SearchInput
+                            className="canvas-chrome-header__dropdown-search"
+                            value={workspaceQuery}
+                            onChange={setWorkspaceQuery}
+                            placeholder="Search workspaces..."
+                            size="sm"
+                            autoFocus
+                        />
                         <div className="canvas-chrome-header__dropdown-controls">
                             <div className="canvas-chrome-header__filter-row">
                                 {['all', 'project', 'breakout', 'personal'].map((filter) => (
@@ -735,16 +734,14 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                 items={filteredViewGroups}
                 header={(
                     <>
-                        <div className="canvas-chrome-header__dropdown-search">
-                            <Icon name="search" size={12} />
-                            <input
-                                type="text"
-                                placeholder="Search view groups..."
-                                value={viewGroupQuery}
-                                onChange={(e) => setViewGroupQuery(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
+                        <SearchInput
+                            className="canvas-chrome-header__dropdown-search"
+                            value={viewGroupQuery}
+                            onChange={setViewGroupQuery}
+                            placeholder="Search view groups..."
+                            size="sm"
+                            autoFocus
+                        />
                         <div className="canvas-chrome-header__dropdown-controls">
                             <div className="canvas-chrome-header__filter-row">
                                 {['all', 'linked', 'unlinked', 'tagged'].map((filter) => (

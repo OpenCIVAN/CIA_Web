@@ -7,30 +7,37 @@
 .companion-panel {
   display: flex;
   flex-direction: column;
-  width: 200px;
-  min-width: 160px;
-  max-width: 280px;
-  background: $color-bg-secondary;
+  width: 160px;
+  min-width: 140px;
+  max-width: 200px;
+  background: $color-bg-tertiary;
   border-left: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+
+  &[data-size-mode="compact"] {
+    width: 140px;
+    min-width: 120px;
+  }
 
   &__header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: $spacing-xs;
+    justify-content: flex-start;
+    padding: 0;
     border-bottom: 1px solid $color-border-subtle;
   }
 
   &__tabs {
     display: flex;
     gap: 2px;
+    width: 100%;
   }
 
   &__tab {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
+    padding: 8px 4px;
     border: none;
     border-radius: $radius-sm;
     background: transparent;
@@ -39,6 +46,8 @@
     font-weight: $font-weight-medium;
     cursor: pointer;
     transition: all $transition-fast;
+    flex: 1;
+    justify-content: center;
 
     &:hover:not(&--active) {
       background: $color-glass-light;
@@ -46,42 +55,31 @@
     }
 
     &--active {
-      background: $color-glass-medium;
+      background: transparent;
       color: $color-text-primary;
     }
-  }
 
-  &__count {
-    font-size: 9px;
-    padding: 1px 4px;
-    background: $color-glass-medium;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-  }
+    &.companion-panel__tab--views.companion-panel__tab--active {
+      border-bottom: 2px solid $color-accent-blue;
+      color: $color-accent-blue;
+    }
 
-  &__close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-glass-medium;
-      color: $color-text-primary;
+    &.companion-panel__tab--datasets.companion-panel__tab--active {
+      border-bottom: 2px solid $color-accent-teal;
+      color: $color-accent-teal;
     }
   }
 
   &__search {
-    padding: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
+    padding: 0 0 $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__hint {
+    font-size: 9px;
+    color: $color-text-muted;
   }
 
   &__content {
@@ -96,16 +94,6 @@
     gap: $spacing-xs;
   }
 
-  &__footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-xs;
-    padding: $spacing-sm;
-    border-top: 1px solid $color-border-subtle;
-    font-size: 9px;
-    color: $color-text-muted;
-  }
 }
 
 // View List Item

@@ -124,36 +124,15 @@
 
 .workspace-links-hub__search {
     flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    background: $color-glass-medium;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-lg;
-    transition: all $transition-fast;
+    --search-input-bg: #{$color-glass-medium};
+    --search-input-border: #{$color-border-subtle};
+    --search-input-focus-border: #{$color-accent-blue};
+    --search-input-color: #{$color-text-primary};
+    --search-input-placeholder: #{$color-text-muted};
+    --search-input-icon: #{$color-text-muted};
 
-    svg {
-        color: $color-text-muted;
-        flex-shrink: 0;
-    }
-
-    input {
-        flex: 1;
-        background: transparent;
-        border: none;
+    .search-input__field {
         font-size: 13px;
-        color: $color-text-primary;
-        outline: none;
-
-        &::placeholder {
-            color: $color-text-muted;
-        }
-    }
-
-    &:focus-within {
-        border-color: $color-accent-blue;
-        box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.1);
     }
 }
 

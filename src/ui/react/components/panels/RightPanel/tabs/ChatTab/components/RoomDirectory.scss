@@ -69,35 +69,16 @@
 
 .room-directory__search-input {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  background: $color-glass-light;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  padding: $spacing-xs $spacing-sm;
-  transition: border-color $transition-fast;
+  --search-input-bg: $color-glass-light;
+  --search-input-border: $color-border-default;
+  --search-input-focus-border: $color-accent-purple;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 
-  &:focus-within {
-    border-color: $color-accent-purple;
-  }
-
-  svg {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: $color-text-primary;
+  .search-input__field {
     font-size: $font-size-sm;
-    outline: none;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
   }
 }
 

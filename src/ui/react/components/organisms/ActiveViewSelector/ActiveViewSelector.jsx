@@ -8,6 +8,7 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
 import { ViewHubFlyout } from '@UI/react/components/organisms/ViewContextBlock';
 import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
@@ -219,11 +220,11 @@ export function ActiveViewSelector({
                         {/* Search input - fixed at top */}
                         {(onCanvasViews.length > 3 || availableViews.length > 0) && (
                             <div className="active-view-selector__search">
-                                <input
-                                    type="text"
-                                    placeholder="Search views..."
+                                <SearchInput
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={setSearchQuery}
+                                    placeholder="Search views..."
+                                    size="sm"
                                     className="active-view-selector__search-input"
                                     autoFocus
                                 />

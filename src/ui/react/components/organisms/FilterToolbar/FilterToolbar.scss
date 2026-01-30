@@ -10,7 +10,16 @@
 .filter-toolbar {
   display: flex;
   flex-direction: column;
-  gap: token('gap.sm');
+  gap: $spacing-sm;
+
+  // Align SearchInput visuals with app tokens
+  --search-input-bg: #{$color-bg-secondary};
+  --search-input-border: #{$color-border-subtle};
+  --search-input-focus-border: #{$color-accent-blue};
+  --search-input-focus-shadow: 0 0 0 2px #{rgba($color-accent-blue, 0.2)};
+  --search-input-color: #{$color-text-primary};
+  --search-input-placeholder: #{$color-text-tertiary};
+  --search-input-icon: #{$color-text-tertiary};
 
   // =========================================================================
   // FULL MODE - Two rows
@@ -27,8 +36,16 @@
   &__dropdowns-row {
     display: flex;
     align-items: center;
-    gap: token('gap.sm');
+    gap: $spacing-sm;
     flex-wrap: nowrap; // CRITICAL: Never wrap
+    overflow: hidden;
+  }
+
+  &__controls-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: nowrap;
     overflow: hidden;
   }
 
@@ -39,7 +56,7 @@
   &__single-row {
     display: flex;
     align-items: center;
-    gap: token('gap.sm');
+    gap: $spacing-sm;
     flex-wrap: nowrap; // CRITICAL: Never wrap
     overflow: hidden;
   }
@@ -57,16 +74,16 @@
   &__dropdown-trigger {
     display: inline-flex;
     align-items: center;
-    gap: token('gap.xs');
-    padding: token('spacing.xs') token('spacing.sm');
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
 
-    background: token('colors.bg.secondary');
-    border: 1px solid token('colors.border.subtle');
-    border-radius: token('radius.md');
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
 
-    font-size: token('text.sm');
+    font-size: $font-size-sm;
     font-family: inherit;
-    color: token('colors.text.secondary');
+    color: $color-text-secondary;
 
     cursor: pointer;
     white-space: nowrap;
@@ -75,23 +92,28 @@
     transition: all 0.15s ease;
 
     &:hover {
-      background: token('colors.bg.hover');
-      border-color: token('colors.border.default');
+      background: $color-hover-bg;
+      border-color: $color-border-default;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 1px;
     }
 
     &--active {
       background: color-mix(
         in srgb,
-        token('colors.accent.blue') 10%,
+        $color-accent-blue 10%,
         transparent
       );
-      border-color: token('colors.accent.blue');
-      color: token('colors.accent.blue');
+      border-color: $color-accent-blue;
+      color: $color-accent-blue;
     }
 
     &--open {
-      background: token('colors.bg.hover');
-      border-color: token('colors.border.default');
+      background: $color-hover-bg;
+      border-color: $color-border-default;
 
       .filter-toolbar__dropdown-chevron {
         transform: rotate(180deg);
@@ -99,8 +121,9 @@
     }
 
     &--icon-only {
-      padding: token('spacing.xs');
-      min-width: 28px;
+      padding: $spacing-xs;
+      min-width: $spacing-xl + $spacing-sm;
+      min-height: $spacing-xl + $spacing-sm;
       justify-content: center;
     }
   }
@@ -113,16 +136,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 14px;
-    padding: 0 4px;
+    min-width: $spacing-lg;
+    height: $spacing-lg;
+    padding: 0 $spacing-xs;
 
-    background: token('colors.accent.blue');
-    border-radius: 8px;
+    background: $color-accent-blue;
+    border-radius: $radius-full;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-weight: 600;
-    color: #fff;
-    line-height: 14px;
+    color: $color-text-primary;
+    line-height: 1;
   }
 
   &__dropdown-chevron {
@@ -158,16 +182,16 @@
   &__clear-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: token('spacing.xs') token('spacing.sm');
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
 
     background: transparent;
     border: 1px solid transparent;
-    border-radius: token('radius.md');
+    border-radius: $radius-md;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-family: inherit;
-    color: token('colors.text.tertiary');
+    color: $color-text-tertiary;
 
     cursor: pointer;
     white-space: nowrap;
@@ -176,13 +200,18 @@
     transition: all 0.15s ease;
 
     &:hover {
-      background: token('colors.bg.hover');
-      border-color: token('colors.border.subtle');
-      color: token('colors.text.secondary');
+      background: $color-hover-bg;
+      border-color: $color-border-subtle;
+      color: $color-text-secondary;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 1px;
     }
 
     &--icon-only {
-      padding: token('spacing.xs');
+      padding: $spacing-xs;
     }
   }
 
@@ -190,15 +219,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 14px;
-    padding: 0 4px;
+    min-width: $spacing-lg;
+    height: $spacing-lg;
+    padding: 0 $spacing-xs;
 
-    background: token('colors.bg.tertiary');
-    border-radius: 8px;
+    background: $color-bg-tertiary;
+    border-radius: $radius-full;
 
-    font-size: 10px;
+    font-size: $font-size-xs;
     font-weight: 600;
-    line-height: 14px;
+    line-height: 1;
   }
 
   // =========================================================================
@@ -208,29 +238,29 @@
   &__summary {
     display: flex;
     align-items: center;
-    gap: token('gap.xs');
-    padding: token('spacing.xs') token('spacing.sm');
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
 
     background: color-mix(
       in srgb,
-      token('colors.accent.blue') 10%,
+      $color-accent-blue 10%,
       transparent
     );
-    border-radius: token('radius.sm');
+    border-radius: $radius-sm;
 
-    font-size: token('text.xs');
-    color: token('colors.accent.blue');
+    font-size: $font-size-xs;
+    color: $color-accent-blue;
   }
 
   &__summary-clear {
     margin-left: auto;
-    padding: 2px 6px;
+    padding: $spacing-xs $spacing-sm;
 
     background: transparent;
     border: none;
-    border-radius: token('radius.sm');
+    border-radius: $radius-sm;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-family: inherit;
     font-weight: 500;
     color: inherit;
@@ -240,9 +270,14 @@
     &:hover {
       background: color-mix(
         in srgb,
-        token('colors.accent.blue') 20%,
+        $color-accent-blue 20%,
         transparent
       );
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 1px;
     }
   }
 
@@ -251,18 +286,22 @@
   // =========================================================================
 
   &--vr {
-    gap: token('gap.md');
+    gap: $spacing-md;
 
     .filter-toolbar__dropdown-trigger {
       min-height: 44px;
-      padding: token('spacing.sm') token('spacing.md');
-      font-size: token('text.md');
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-size-md;
     }
 
     .filter-toolbar__clear-btn {
       min-height: 44px;
-      padding: token('spacing.sm') token('spacing.md');
+      padding: $spacing-sm $spacing-md;
     }
+  }
+
+  &--ultra {
+    gap: $spacing-xs;
   }
 }
 
@@ -273,28 +312,33 @@
 .quick-filters-row {
   display: flex;
   align-items: center;
-  gap: token('gap.sm');
-  padding: token('spacing.xs') 0;
+  gap: $spacing-sm;
+  padding: $spacing-xs 0;
   flex-wrap: nowrap; // CRITICAL: Never wrap
   overflow: hidden;
 
   &--collapsed {
-    padding: token('spacing.xs') token('spacing.sm');
-    background: token('colors.bg.secondary');
-    border: 1px solid token('colors.border.subtle');
-    border-radius: token('radius.md');
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
     cursor: pointer;
 
     &:hover {
-      background: token('colors.bg.hover');
+      background: $color-hover-bg;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
     }
   }
 
   &__label {
     flex-shrink: 0;
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-weight: 500;
-    color: token('colors.text.tertiary');
+    color: $color-text-tertiary;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -303,16 +347,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 14px;
-    padding: 0 4px;
+    min-width: $spacing-lg;
+    height: $spacing-lg;
+    padding: 0 $spacing-xs;
 
-    background: token('colors.accent.blue');
-    border-radius: 8px;
+    background: $color-accent-blue;
+    border-radius: $radius-full;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-weight: 600;
-    color: #fff;
-    line-height: 14px;
+    color: $color-text-primary;
+    line-height: 1;
   }
 
   &__collapse-btn {
@@ -320,21 +365,26 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: $spacing-xl;
+    height: $spacing-xl;
     padding: 0;
     margin-left: auto;
 
     background: transparent;
     border: none;
-    border-radius: token('radius.sm');
+    border-radius: $radius-sm;
 
-    color: token('colors.text.tertiary');
+    color: $color-text-tertiary;
     cursor: pointer;
 
     &:hover {
-      background: token('colors.bg.hover');
-      color: token('colors.text.secondary');
+      background: $color-hover-bg;
+      color: $color-text-secondary;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
     }
   }
 }

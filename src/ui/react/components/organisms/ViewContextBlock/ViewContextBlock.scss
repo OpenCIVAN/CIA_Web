@@ -389,46 +389,14 @@
 // Search
 .view-hub-flyout__search {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: 6px;
-}
-
-.view-hub-flyout__search-icon {
-  color: $color-text-muted;
-  flex-shrink: 0;
-}
-
-.view-hub-flyout__search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: $color-text-primary;
-  font-size: 12px;
-
-  &::placeholder {
-    color: $color-text-muted;
-  }
-}
-
-.view-hub-flyout__search-clear {
-  background: none;
-  border: none;
-  color: $color-text-muted;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    color: $color-text-secondary;
-  }
+  min-width: 0;
+  --search-input-bg: $color-bg-tertiary;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-teal;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 }
 
 // Filter button
@@ -1521,51 +1489,14 @@
 
 // View Picker Search
 .sync-panel__view-picker-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid $color-border-subtle;
-  background: $color-bg-tertiary;
-
-  > svg {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: $color-text-primary;
-    font-size: 12px;
-    min-width: 0;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
-  }
-}
-
-.sync-panel__view-picker-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  background: $color-bg-base;
-  border: none;
-  border-radius: 4px;
-  color: $color-text-muted;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  &:hover {
-    background: $color-hover-bg;
-    color: $color-text-primary;
-  }
+  margin: 8px 12px 6px;
+  --search-input-bg: $color-bg-tertiary;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 }
 
 // View Picker Type Filters
@@ -1952,53 +1883,13 @@
 
 .sync-panel__search {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: $color-bg-base;
-  border: 1px solid $color-border-subtle;
-  border-radius: 6px;
-
-  &:focus-within {
-    border-color: $color-accent-blue;
-  }
-
-  > svg {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: $color-text-primary;
-    font-size: 12px;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
-  }
-}
-
-.sync-panel__search-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  background: $color-bg-tertiary;
-  border: none;
-  border-radius: 4px;
-  color: $color-text-muted;
-  cursor: pointer;
-
-  &:hover {
-    background: $color-hover-bg;
-    color: $color-text-primary;
-  }
+  --search-input-bg: $color-bg-base;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 }
 
 .sync-panel__sort-select {

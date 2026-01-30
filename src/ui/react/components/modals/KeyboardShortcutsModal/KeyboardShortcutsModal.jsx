@@ -38,7 +38,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import Modal from '../Modal/Modal';
 import ShortcutCategory from './ShortcutCategory';
 import ShortcutItem from './ShortcutItem';
@@ -150,8 +150,8 @@ function KeyboardShortcutsModal({
     /**
      * Handle search input change
      */
-    const handleSearchChange = useCallback((event) => {
-        setSearchQuery(event.target.value);
+    const handleSearchChange = useCallback((value) => {
+        setSearchQuery(value);
     }, []);
 
     /**
@@ -265,28 +265,16 @@ function KeyboardShortcutsModal({
                 <div className="shortcuts-modal__content">
                     {/* Search input */}
                     {searchable && (
-                        <div className="shortcuts-modal__search">
-                            <Icon name="search" size={16} className="shortcuts-modal__search-icon" />
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                className="shortcuts-modal__search-input"
-                                placeholder="Search shortcuts..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                                aria-label="Search shortcuts"
-                            />
-                            {searchQuery && (
-                                <button
-                                    type="button"
-                                    className="shortcuts-modal__search-clear"
-                                    onClick={handleClearSearch}
-                                    aria-label="Clear search"
-                                >
-                                    &times;
-                                </button>
-                            )}
-                        </div>
+                        <SearchInput
+                            ref={searchInputRef}
+                            className="shortcuts-modal__search"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            placeholder="Search shortcuts..."
+                            size="md"
+                            onClear={handleClearSearch}
+                            aria-label="Search shortcuts"
+                        />
                     )}
 
                     {/* Shortcuts list */}

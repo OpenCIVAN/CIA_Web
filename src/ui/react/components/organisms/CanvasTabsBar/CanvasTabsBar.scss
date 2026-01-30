@@ -420,30 +420,16 @@
 }
 
 .create-open-popover__search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm 10px;
-    background: $color-bg-secondary;
-    border-radius: $radius-md;
     margin-bottom: $spacing-sm;
+    --search-input-bg: #{$color-bg-secondary};
+    --search-input-border: #{$color-border-subtle};
+    --search-input-focus-border: #{$color-accent-blue};
+    --search-input-color: #{$color-text-primary};
+    --search-input-placeholder: #{$color-text-muted};
+    --search-input-icon: #{$color-text-muted};
 
-    svg {
-        color: $color-text-muted;
-        flex-shrink: 0;
-    }
-
-    input {
-        flex: 1;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: $color-text-primary;
+    .search-input__field {
         font-size: $font-size-xs;
-
-        &::placeholder {
-            color: $color-text-muted;
-        }
     }
 }
 

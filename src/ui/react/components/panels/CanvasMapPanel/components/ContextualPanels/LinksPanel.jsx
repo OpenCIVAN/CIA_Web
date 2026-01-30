@@ -9,9 +9,8 @@
 
 import React, { memo } from 'react';
 import { Badge } from '@UI/react/components/atoms/Badge';
-import { Section } from '@UI/react/components/molecules/Section';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
-import { LinkItem } from '../shared';
+import { LinkItem, PanelSection } from '../shared';
 import { LINKS_SUB_TABS } from '../../utils/constants';
 import { getVGDisplayName } from '../../utils/gridUtils';
 
@@ -32,11 +31,11 @@ export const LinksPanel = memo(function LinksPanel({
   if (linksSubTab === LINKS_SUB_TABS.VG) {
     return (
       <div className="contextual-panel">
-        <Section
+        <PanelSection
           title="ViewGroup Links"
           icon="gitBranch"
           actions={<Badge count={vgLinks.length} size="sm" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <p className="contextual-panel__hint">
             Click a link line on the map to highlight
@@ -67,7 +66,7 @@ export const LinksPanel = memo(function LinksPanel({
               />
             )}
           </div>
-        </Section>
+        </PanelSection>
       </div>
     );
   }
@@ -75,11 +74,11 @@ export const LinksPanel = memo(function LinksPanel({
   // View links sub-tab
   return (
     <div className="contextual-panel">
-      <Section
+      <PanelSection
         title="View Links"
         icon="layers"
         actions={<Badge count={viewLinks.length} size="sm" />}
-        collapsible={false}
+        sizeMode={sizeMode}
       >
         <p className="contextual-panel__hint">
           Links between individual views across VGs
@@ -111,7 +110,7 @@ export const LinksPanel = memo(function LinksPanel({
             />
           )}
         </div>
-      </Section>
+      </PanelSection>
     </div>
   );
 });

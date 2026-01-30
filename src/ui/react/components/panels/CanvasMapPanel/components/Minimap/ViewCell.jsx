@@ -20,18 +20,21 @@ import { formatCellRef } from '../../utils/gridUtils';
 export const ViewCell = memo(function ViewCell({
   view,
   cellSize,
+  gap = 4,
   isSelected,
   onClick,
 }) {
   const viewType = VIEW_TYPES[view.type] || VIEW_TYPES.data;
   const showName = cellSize >= 50;
+  const left = (view.canvasCol || 0) * (cellSize + gap);
+  const top = (view.canvasRow || 0) * (cellSize + gap);
 
   return (
     <div
       className={`view-cell ${isSelected ? 'view-cell--selected' : ''}`}
       style={{
-        gridRow: view.canvasRow + 1,
-        gridColumn: view.canvasCol + 1,
+        left,
+        top,
         '--view-color': view.vgColor || `var(--accent-${viewType.color})`,
       }}
       onClick={onClick}

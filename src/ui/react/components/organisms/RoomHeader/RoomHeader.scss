@@ -213,26 +213,16 @@
 }
 
 .room-header__dropdown-search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: 6px 8px;
-    border-radius: $radius-sm;
-    border: 1px solid $color-border-subtle;
-    background: rgba(255, 255, 255, 0.04);
-    color: $color-text-muted;
+    width: 100%;
+    --search-input-bg: rgba(255, 255, 255, 0.04);
+    --search-input-border: #{$color-border-subtle};
+    --search-input-focus-border: #{$color-accent-primary};
+    --search-input-color: #{$color-text-primary};
+    --search-input-placeholder: #{$color-text-muted};
+    --search-input-icon: #{$color-text-muted};
 
-    input {
-        background: transparent;
-        border: none;
-        color: $color-text-primary;
+    .search-input__field {
         font-size: $font-size-xs;
-        outline: none;
-        width: 160px;
-
-        &::placeholder {
-            color: $color-text-muted;
-        }
     }
 }
 

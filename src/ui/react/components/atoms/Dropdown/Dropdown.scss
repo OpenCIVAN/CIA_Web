@@ -565,34 +565,22 @@
 
 // Search input area
 .dropdown-select__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid $color-border-subtle;
 }
 
-.dropdown-select__search-icon {
-  flex-shrink: 0;
-  color: $color-text-muted;
-}
-
 .dropdown-select__search-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: $color-text-primary;
-  font-size: $font-size-base;
-  font-family: inherit;
+  --search-input-bg: $color-bg-secondary;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 
-  &:focus {
-    outline: none;
-  }
-
-  &::placeholder {
-    color: $color-text-muted;
+  .search-input__field {
+    font-size: $font-size-base;
+    font-family: inherit;
   }
 }
 

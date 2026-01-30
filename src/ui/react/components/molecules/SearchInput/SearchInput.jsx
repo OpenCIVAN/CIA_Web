@@ -31,12 +31,15 @@ const ICON_SIZES = {
  * @param {boolean} disabled - Disable input
  * @param {boolean} autoFocus - Auto focus on mount
  * @param {string} icon - Custom icon (default: 'search')
+ * @param {number} iconSize - Override icon size in pixels
  * @param {boolean} showClear - Show clear button when has value
  * @param {function} onClear - Clear button handler
  * @param {function} onSubmit - Submit handler (Enter key)
+ * @param {function} onKeyDown - Keydown handler
  * @param {function} onFocus - Focus handler
  * @param {function} onBlur - Blur handler
  * @param {string} className - Additional CSS classes
+ * @param {Object} style - Inline styles for the root element
  */
 export const SearchInput = memo(forwardRef(function SearchInput({
     value = '',
@@ -47,19 +50,27 @@ export const SearchInput = memo(forwardRef(function SearchInput({
     disabled = false,
     autoFocus = false,
     icon = 'search',
+    iconSize,
     showClear = true,
     onClear,
     onSubmit,
+    onKeyDown,
     onFocus,
     onBlur,
     className = '',
+    style,
     ...props
 }, ref) {
     const { isVR, mode } = useAdaptive();
     const [isFocused, setIsFocused] = useState(false);
 
-    const iconSize = ICON_SIZES[mode || 'desktop']?.[size] ?? ICON_SIZES.desktop.md;
+    const resolvedIconSize = iconSize ?? (ICON_SIZES[mode || 'desktop']?.[size] ?? ICON_SIZES.desktop.md);
     const hasValue = value && value.length > 0;
+
+    const inlineStyle = {
+        ...(style || {}),
+        ...(resolvedIconSize ? { '--search-input-icon-size': `${resolvedIconSize}px` } : {}),
+    };
 
     const classList = [
         'search-input',
@@ -81,6 +92,10 @@ export const SearchInput = memo(forwardRef(function SearchInput({
     }, [onChange, onClear]);
 
     const handleKeyDown = useCallback((e) => {
+        onKeyDown?.(e);
+        if (e.defaultPrevented) {
+            return;
+        }
         if (e.key === 'Enter' && onSubmit) {
             e.preventDefault();
             onSubmit(value, e);
@@ -89,7 +104,7 @@ export const SearchInput = memo(forwardRef(function SearchInput({
             e.preventDefault();
             handleClear();
         }
-    }, [onSubmit, value, hasValue, handleClear]);
+    }, [onKeyDown, onSubmit, value, hasValue, handleClear]);
 
     const handleFocus = useCallback((e) => {
         setIsFocused(true);
@@ -102,12 +117,12 @@ export const SearchInput = memo(forwardRef(function SearchInput({
     }, [onBlur]);
 
     return (
-        <div className={classList}>
+        <div className={classList} style={inlineStyle}>
             <span className="search-input__icon">
                 {loading ? (
                     <Spinner size="sm" />
                 ) : (
-                    <Icon name={icon} size={iconSize} />
+                    <Icon name={icon} size={resolvedIconSize} />
                 )}
             </span>
 
@@ -136,7 +151,7 @@ export const SearchInput = memo(forwardRef(function SearchInput({
                     aria-label="Clear search"
                     tabIndex={-1}
                 >
-                    <Icon name="close" size={iconSize - 2} />
+                    <Icon name="close" size={resolvedIconSize - 2} />
                 </button>
             )}
         </div>

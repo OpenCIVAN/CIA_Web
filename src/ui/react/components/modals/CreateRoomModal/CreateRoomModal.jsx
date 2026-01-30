@@ -21,6 +21,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";
@@ -345,12 +346,12 @@ export function CreateRoomModal({
                             <Icon name="users" size={14} />
                             Invite Users
                         </label>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search users to invite..."
+                        <SearchInput
                             className="create-room-modal__user-search"
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search users to invite..."
+                            size="sm"
                         />
 
                         {/* Selected users */}

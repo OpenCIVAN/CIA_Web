@@ -44,13 +44,17 @@ export const VGBlock = memo(function VGBlock({
   const { position, color, isExplicit, views = [] } = vg;
 
   // Calculate position and size
-  const style = useMemo(() => ({
-    gridRow: `${position.row + 1} / span ${position.rowSpan}`,
-    gridColumn: `${position.col + 1} / span ${position.colSpan}`,
-    '--vg-color': color,
-    '--vg-width': `${position.colSpan * cellSize + (position.colSpan - 1) * gap}px`,
-    '--vg-height': `${position.rowSpan * cellSize + (position.rowSpan - 1) * gap}px`,
-  }), [position, cellSize, color, gap]);
+  const style = useMemo(() => {
+    const left = position.col * (cellSize + gap);
+    const top = position.row * (cellSize + gap);
+    return {
+      left,
+      top,
+      '--vg-color': color,
+      '--vg-width': `${position.colSpan * cellSize + (position.colSpan - 1) * gap}px`,
+      '--vg-height': `${position.rowSpan * cellSize + (position.rowSpan - 1) * gap}px`,
+    };
+  }, [position, cellSize, color, gap]);
 
   // Calculate internal grid cells
   const internalCells = useMemo(() => {

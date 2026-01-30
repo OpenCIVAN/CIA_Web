@@ -10,10 +10,9 @@
 import React, { memo } from 'react';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
-import { Section } from '@UI/react/components/molecules/Section';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
-import { BookmarkItem } from '../shared';
+import { BookmarkItem, PanelSection } from '../shared';
 import './ContextualPanels.scss';
 
 /**
@@ -38,7 +37,7 @@ export const NavigatePanel = memo(function NavigatePanel({
   return (
     <div className="contextual-panel">
       {/* Quick Navigation */}
-      <Section title="Quick Navigation" icon="navigation" collapsible={false}>
+      <PanelSection title="Quick Navigation" icon="navigation" sizeMode={sizeMode}>
         <div className="contextual-panel__actions">
           <Button variant="ghost" size="sm" icon="home" onClick={onGoHome}>
             {!isCompact && 'Go Home'}
@@ -53,14 +52,14 @@ export const NavigatePanel = memo(function NavigatePanel({
             {!isCompact && 'Add Bookmark'}
           </Button>
         </div>
-      </Section>
+      </PanelSection>
 
       {/* Bookmarks */}
-      <Section
+      <PanelSection
         title="Bookmarks"
         icon="bookmark"
         actions={<Badge count={bookmarks.length} size="sm" />}
-        collapsible={false}
+        sizeMode={sizeMode}
       >
         <SearchInput
           value={searchQuery}
@@ -86,7 +85,7 @@ export const NavigatePanel = memo(function NavigatePanel({
             />
           )}
         </div>
-      </Section>
+      </PanelSection>
     </div>
   );
 });

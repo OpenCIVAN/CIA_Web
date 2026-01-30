@@ -7,6 +7,9 @@
 
 .search-bar {
     flex-shrink: 0;
+    --search-bar-icon-size: 12px;
+    --search-bar-icon-left: 10px;
+    --search-bar-icon-gap: 8px;
 
     // Default variant - full width with padding and border
     &--default {
@@ -26,71 +29,19 @@
         border-bottom: 1px solid $color-border-subtle;
     }
 
-    // Wrapper provides relative positioning for icons
-    &__wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-
-    // Search icon on the left
-    &__icon {
-        position: absolute;
-        left: 10px;
-        color: $color-text-muted;
-        pointer-events: none;
-        z-index: 1;
-    }
-
-    // The actual input field
     &__input {
         width: 100%;
-        padding: 7px 28px 7px 32px;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid $color-border-default;
-        border-radius: $radius-sm;
-        color: $color-text-primary;
-        font-size: $font-size-xs;
-        outline: none;
-        transition: all $transition-fast;
+        --search-input-bg: rgba(0, 0, 0, 0.3);
+        --search-input-border: #{$color-border-default};
+        --search-input-focus-border: #{$color-accent-primary};
+        --search-input-focus-shadow: 0 0 0 2px #{rgba($color-accent-primary, 0.15)};
+        --search-input-color: #{$color-text-primary};
+        --search-input-placeholder: #{$color-text-muted};
+        --search-input-icon: #{$color-text-muted};
+        --search-input-gap: var(--search-bar-icon-gap);
 
-        &::placeholder {
-            color: $color-text-muted;
-        }
-
-        &:focus {
-            border-color: $color-accent-primary;
-            box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.15);
-        }
-
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    }
-
-    // Clear button on the right
-    &__clear {
-        position: absolute;
-        right: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        color: $color-text-muted;
-        cursor: pointer;
-        padding: 2px;
-        border-radius: $radius-xs;
-        transition: all $transition-fast;
-
-        &:hover {
-            color: $color-text-secondary;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        &:active {
-            background: rgba(255, 255, 255, 0.1);
+        .search-input__field {
+            font-size: $font-size-xs;
         }
     }
 }

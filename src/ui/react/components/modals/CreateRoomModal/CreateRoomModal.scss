@@ -177,22 +177,16 @@
 // =============================================================================
 
 .create-room-modal__user-search {
-  padding: $spacing-sm $spacing-md;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  color: $color-text-primary;
-  font-size: $font-size-sm;
-  transition: all $transition-fast;
+  --search-input-bg: $color-bg-secondary;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-tertiary;
+  --search-input-icon: $color-text-tertiary;
+  --search-input-gap: 6px;
 
-  &::placeholder {
-    color: $color-text-tertiary;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent-blue;
-    background: $color-bg-tertiary;
+  .search-input__field {
+    font-size: $font-size-sm;
   }
 }
 

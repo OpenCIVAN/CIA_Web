@@ -22,7 +22,7 @@ import { MINIMAP_CONSTANTS } from '../utils/constants';
  * @param {number} options.cols - Number of grid columns
  * @param {number} options.zoom - Zoom percentage (50-200)
  * @param {boolean} options.showLabels - Whether grid labels are shown
- * @param {boolean} options.isFocused - Whether a VG is focused (larger cells)
+ * @param {Object} [options.focusedVG] - Focused VG (for responsive sizing)
  * @returns {Object} Cell sizing information
  */
 export function useMinimapCellSize({
@@ -32,29 +32,30 @@ export function useMinimapCellSize({
   cols = 4,
   zoom = 100,
   showLabels = true,
-  isFocused = false,
+  focusedVG = null,
 } = {}) {
   return useMemo(() => {
-    const { GRID_GAP, HEADER_SIZE, BASE_CELL_SIZE, FOCUSED_CELL_SIZE } = MINIMAP_CONSTANTS;
+    const { GRID_GAP, HEADER_SIZE } = MINIMAP_CONSTANTS;
 
     // Account for labels if shown
     const labelOffset = showLabels ? HEADER_SIZE : 0;
-    const availableWidth = containerWidth - labelOffset - 32; // 32 for padding
-    const availableHeight = containerHeight - labelOffset - 32;
+    const padding = 32;
+    const availableWidth = Math.max(0, containerWidth - labelOffset - padding);
+    const availableHeight = Math.max(0, containerHeight - labelOffset - padding);
 
-    // Calculate cell size that would fit all cells
-    const maxCellWidth = (availableWidth - (cols - 1) * GRID_GAP) / cols;
-    const maxCellHeight = (availableHeight - (rows - 1) * GRID_GAP) / rows;
+    const effectiveCols = focusedVG?.position?.colSpan || cols || 1;
+    const effectiveRows = focusedVG?.position?.rowSpan || rows || 1;
+
+    // Calculate cell size that would fit focused VG or full grid
+    const maxCellWidth = (availableWidth - (effectiveCols - 1) * GRID_GAP) / effectiveCols;
+    const maxCellHeight = (availableHeight - (effectiveRows - 1) * GRID_GAP) / effectiveRows;
     const fitCellSize = Math.floor(Math.min(maxCellWidth, maxCellHeight));
 
-    // Base cell size depends on focus state
-    const baseSize = isFocused ? FOCUSED_CELL_SIZE : BASE_CELL_SIZE;
+    // Clamp between min and max sizes
+    const baseSize = Math.min(55, Math.max(20, fitCellSize));
 
-    // Apply zoom to base size
-    const zoomedSize = Math.floor(baseSize * (zoom / 100));
-
-    // Use the zoomed size, but ensure minimum of 20px
-    const cellSize = Math.max(20, zoomedSize);
+    // Apply zoom
+    const cellSize = Math.floor(baseSize * (zoom / 100));
 
     // Calculate total content dimensions
     const contentWidth = cols * cellSize + (cols - 1) * GRID_GAP;
@@ -66,7 +67,7 @@ export function useMinimapCellSize({
     const needsPanning = overflowsWidth || overflowsHeight;
 
     // Calculate how much the content is scaled relative to fitting
-    const scaleFactor = cellSize / fitCellSize;
+    const scaleFactor = fitCellSize > 0 ? cellSize / fitCellSize : 1;
 
     return {
       // Cell dimensions
@@ -96,7 +97,7 @@ export function useMinimapCellSize({
       // Whether content fits without scrolling
       fitsInView: !needsPanning,
     };
-  }, [containerWidth, containerHeight, rows, cols, zoom, showLabels, isFocused]);
+  }, [containerWidth, containerHeight, rows, cols, zoom, showLabels, focusedVG]);
 }
 
 export default useMinimapCellSize;

@@ -307,7 +307,7 @@ export function FilesTabV2({
                 case '/':
                     // Focus search input
                     e.preventDefault();
-                    const searchInput = containerRef.current?.querySelector('.global-filters-bar__search-input');
+                    const searchInput = containerRef.current?.querySelector('.global-filters-bar__search .search-input__field');
                     searchInput?.focus();
                     break;
                 case 'Escape':

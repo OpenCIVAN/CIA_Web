@@ -11,7 +11,7 @@
  * - Panning support for large canvases
  */
 
-import React, { memo, useMemo, useRef } from 'react';
+import React, { memo, useMemo, useRef, useCallback } from 'react';
 import { MinimapGrid } from './MinimapGrid';
 import { VGBlock } from './VGBlock';
 import { ViewCell } from './ViewCell';
@@ -19,10 +19,11 @@ import { ViewportIndicator } from './ViewportIndicator';
 import { CollaboratorIndicator } from './CollaboratorIndicator';
 import { CursorIndicator } from './CursorIndicator';
 import { LinkLines } from './LinkLines';
+import { GridPaperBackground } from './GridPaperBackground';
 import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
-import { DISPLAY_MODES, MAP_MODES, MINIMAP_CONSTANTS } from '../../utils/constants';
-import { colToLetter } from '../../utils/gridUtils';
+import { DISPLAY_MODES, MAP_MODES } from '../../utils/constants';
+import { colToLetter, getGridCenter } from '../../utils/gridUtils';
 import './Minimap.scss';
 
 /**
@@ -58,11 +59,13 @@ export const Minimap = memo(function Minimap({
   onVGClick,
   onVGDoubleClick,
   onLinkClick,
-  getVGCenter,
 
   // Container dimensions
   containerWidth,
   containerHeight,
+
+  // Focus state
+  focusedVG,
 }) {
   const { rows, cols, homePosition } = canvas;
   const containerRef = useRef(null);
@@ -75,10 +78,12 @@ export const Minimap = memo(function Minimap({
     cols,
     zoom: minimapZoom,
     showLabels: showGridLabels,
-    isFocused: false,
+    focusedVG,
   });
 
   const { cellSize, gap, contentWidth, contentHeight, headerSize } = sizing;
+  const gridWidth = cols * cellSize + (cols - 1) * gap;
+  const gridHeight = rows * cellSize + (rows - 1) * gap;
 
   // Panning support
   const panning = useMinimapPanning({
@@ -97,9 +102,23 @@ export const Minimap = memo(function Minimap({
     return new Set([link.from, link.to]);
   }, [highlightedLinkId, vgLinks]);
 
+  const getVGCenter = useCallback((vgId) => {
+    const vg = viewGroups.find(v => v.id === vgId);
+    if (!vg?.position) return null;
+
+    return getGridCenter(
+      vg.position.row,
+      vg.position.col,
+      vg.position.rowSpan,
+      vg.position.colSpan,
+      cellSize,
+      gap
+    );
+  }, [viewGroups, cellSize, gap]);
+
   // Collaborators with cursor data for cursor indicators
   const collaboratorsWithCursors = useMemo(() => {
-    return collaborators.filter(c => c.isOnline && c.cursor);
+    return collaborators.filter(c => c.isOnline && c.cursor && (c.showCursor ?? true));
   }, [collaborators]);
 
   return (
@@ -173,6 +192,14 @@ export const Minimap = memo(function Minimap({
                 gridTemplateRows: `repeat(${rows}, ${cellSize}px)`,
               }}
             >
+              <GridPaperBackground
+                width={gridWidth}
+                height={gridHeight}
+                cellSize={cellSize}
+                gap={gap}
+                show={showGridLabels}
+                majorEvery={5}
+              />
               {/* Background cells */}
               {Array.from({ length: rows * cols }).map((_, i) => {
                 const row = Math.floor(i / cols);
@@ -228,6 +255,7 @@ export const Minimap = memo(function Minimap({
                   key={view.id}
                   view={view}
                   cellSize={cellSize}
+                  gap={gap}
                   isSelected={selectedVGId === view.vgId}
                   onClick={() => onVGClick(view.vgId)}
                 />
@@ -237,7 +265,7 @@ export const Minimap = memo(function Minimap({
               {showViewports && (
                 mapMode === MAP_MODES.NAVIGATE ||
                 mapMode === MAP_MODES.LAYOUT ||
-                mapMode === MAP_MODES.COLLABORATE
+                mapMode === MAP_MODES.TEAM
               ) && viewports.map(vp => (
                 <ViewportIndicator
                   key={vp.id}
@@ -251,20 +279,20 @@ export const Minimap = memo(function Minimap({
               {/* Collaborator viewport indicators */}
               {showCollaborators && (
                 mapMode === MAP_MODES.NAVIGATE ||
-                mapMode === MAP_MODES.COLLABORATE
+                mapMode === MAP_MODES.TEAM
               ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => (
                 <CollaboratorIndicator
                   key={collab.id}
                   collaborator={collab}
                   cellSize={cellSize}
                   gap={gap}
-                  showName={mapMode === MAP_MODES.COLLABORATE}
+                  showName={mapMode === MAP_MODES.TEAM}
                 />
               ))}
             </div>
 
             {/* Cursor indicators (overlaid on grid) */}
-            {showCursors && mapMode === MAP_MODES.COLLABORATE && (
+            {showCursors && mapMode === MAP_MODES.TEAM && (
               <div className="minimap__cursors">
                 {collaboratorsWithCursors.map(collab => (
                   <CursorIndicator
@@ -272,7 +300,7 @@ export const Minimap = memo(function Minimap({
                     collaborator={collab}
                     cellSize={cellSize}
                     gap={gap}
-                    showName={true}
+                    showName={false}
                   />
                 ))}
               </div>

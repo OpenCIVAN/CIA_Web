@@ -22,6 +22,7 @@ import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { TagCheckbox } from '@UI/react/components/atoms/TagCheckbox';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { useAdaptive } from '@UI/react/context';
 import './TagsDropdown.scss';
 
@@ -117,27 +118,14 @@ export const TagsDropdown = memo(function TagsDropdown({
             <div className="tags-dropdown__container">
                 {/* Search */}
                 <div className="tags-dropdown__search">
-                    <div className="tags-dropdown__search-input-wrapper">
-                        <Icon name="search" size={12} className="tags-dropdown__search-icon" />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Search tags..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="tags-dropdown__search-input"
-                        />
-                        {searchQuery && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchQuery('')}
-                                className="tags-dropdown__search-clear"
-                                aria-label="Clear search"
-                            >
-                                <Icon name="x" size={10} />
-                            </button>
-                        )}
-                    </div>
+                    <SearchInput
+                        ref={searchInputRef}
+                        className="tags-dropdown__search-input"
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Search tags..."
+                        size="sm"
+                    />
                 </div>
 
                 {/* Tag list by category */}

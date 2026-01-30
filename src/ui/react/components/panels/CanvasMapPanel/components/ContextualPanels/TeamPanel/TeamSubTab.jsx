@@ -7,10 +7,9 @@ import React, { memo, useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
-import { Section } from '@UI/react/components/molecules/Section';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { CollaboratorItem } from '../../shared';
+import { CollaboratorItem, PanelSection } from '../../shared';
 
 /**
  * TeamSubTab - Team collaborators list with cursor visibility controls
@@ -110,11 +109,11 @@ export const TeamSubTab = memo(function TeamSubTab({
 
       {/* Broadcasting */}
       {activeFilter !== 'online' && broadcastingCollaborators.length > 0 && (
-        <Section
+        <PanelSection
           title="Broadcasting"
           icon="radio"
           actions={<Badge count={broadcastingCollaborators.length} size="sm" color="danger" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <div className="contextual-panel__list">
             {broadcastingCollaborators
@@ -125,19 +124,22 @@ export const TeamSubTab = memo(function TeamSubTab({
                   collaborator={collab}
                   onFollow={onFollow}
                   onLocate={onLocate}
+                  showCursorToggle={true}
+                  cursorVisible={collab.showCursor ?? true}
+                  onToggleCursor={onToggleCollaboratorCursor}
                 />
               ))}
           </div>
-        </Section>
+        </PanelSection>
       )}
 
       {/* Online (not broadcasting) */}
       {(activeFilter === 'online' || activeFilter === 'all') && onlineNotBroadcasting.length > 0 && (
-        <Section
+        <PanelSection
           title="Online"
           icon="users"
           actions={<Badge count={onlineNotBroadcasting.length} size="sm" color="success" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <div className="contextual-panel__list">
             {(activeFilter === 'online' ? filteredCollaborators.filter(c => !c.isBroadcasting) : onlineNotBroadcasting)
@@ -148,19 +150,22 @@ export const TeamSubTab = memo(function TeamSubTab({
                   collaborator={collab}
                   onFollow={onFollow}
                   onLocate={onLocate}
+                  showCursorToggle={true}
+                  cursorVisible={collab.showCursor ?? true}
+                  onToggleCursor={onToggleCollaboratorCursor}
                 />
               ))}
           </div>
-        </Section>
+        </PanelSection>
       )}
 
       {/* Live section for filtered view */}
       {activeFilter === 'online' && broadcastingCollaborators.length > 0 && (
-        <Section
+        <PanelSection
           title="Broadcasting"
           icon="radio"
           actions={<Badge count={broadcastingCollaborators.length} size="sm" color="danger" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <div className="contextual-panel__list">
             {broadcastingCollaborators
@@ -171,19 +176,22 @@ export const TeamSubTab = memo(function TeamSubTab({
                   collaborator={collab}
                   onFollow={onFollow}
                   onLocate={onLocate}
+                  showCursorToggle={true}
+                  cursorVisible={collab.showCursor ?? true}
+                  onToggleCursor={onToggleCollaboratorCursor}
                 />
               ))}
           </div>
-        </Section>
+        </PanelSection>
       )}
 
       {/* Offline */}
       {activeFilter === 'all' && offlineCollaborators.length > 0 && (
-        <Section
+        <PanelSection
           title="Offline"
           icon="userMinus"
           actions={<Badge count={offlineCollaborators.length} size="sm" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <div className="contextual-panel__list">
             {offlineCollaborators
@@ -193,10 +201,11 @@ export const TeamSubTab = memo(function TeamSubTab({
                   key={collab.id}
                   collaborator={collab}
                   showLocation={false}
+                  showCursorToggle={false}
                 />
               ))}
           </div>
-        </Section>
+        </PanelSection>
       )}
     </div>
   );

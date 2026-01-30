@@ -247,21 +247,16 @@
 
 .active-view-selector__search-input {
   width: 100%;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  color: $color-text-primary;
-  font-size: 11px;
+  --search-input-bg: $color-bg-tertiary;
+  --search-input-border: $color-border-subtle;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 6px;
 
-  &::placeholder {
-    color: $color-text-muted;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent-blue;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+  .search-input__field {
+    font-size: 11px;
   }
 }
 

@@ -7,14 +7,23 @@
 .quick-nav-toolbar {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  background: $color-bg-secondary;
-  border-right: 1px solid $color-border-subtle;
+  gap: 4px;
+  padding: 4px;
+  margin: $spacing-sm 8px;
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 
   &--right {
-    border-right: none;
-    border-left: 1px solid $color-border-subtle;
+    margin-left: 8px;
+    margin-right: $spacing-sm;
+  }
+
+  &--left {
+    margin-right: 8px;
+    margin-left: $spacing-sm;
   }
 
   &__group {
@@ -28,16 +37,12 @@
     }
   }
 
-  &__spacer {
-    flex: 1;
-  }
-
   &__btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: 1px solid transparent;
     border-radius: $radius-sm;
@@ -60,14 +65,6 @@
       background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
       color: $color-accent-blue;
-    }
-
-    &--companion {
-      &.quick-nav-toolbar__btn--active {
-        background: color-mix(in srgb, $color-accent-purple 15%, transparent);
-        border-color: color-mix(in srgb, $color-accent-purple 40%, transparent);
-        color: $color-accent-purple;
-      }
     }
 
     &[data-vr="true"] {

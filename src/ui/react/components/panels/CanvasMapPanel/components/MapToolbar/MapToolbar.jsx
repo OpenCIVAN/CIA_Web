@@ -70,7 +70,6 @@ export const MapToolbar = memo(function MapToolbar({
   showCollaborators,
   showBookmarks,
   showInternals,
-  showCursors,
   linksSubTab,
   setLinksSubTab,
   collaborateSubTab,
@@ -80,13 +79,11 @@ export const MapToolbar = memo(function MapToolbar({
   // Handlers
   onZoomIn,
   onZoomOut,
-  onZoomReset,
   toggleShowGridLabels,
   toggleShowViewports,
   toggleShowCollaborators,
   toggleShowBookmarks,
   toggleShowInternals,
-  toggleShowCursors,
 
   // Action handlers
   onAddVG,
@@ -94,6 +91,10 @@ export const MapToolbar = memo(function MapToolbar({
   onSplitVG,
   onCreateLink,
   onBreakLink,
+
+  // Companion panel
+  companionOpen,
+  onToggleCompanion,
 
   sizeMode = 'standard',
 }) {
@@ -105,37 +106,38 @@ export const MapToolbar = memo(function MapToolbar({
       <ToolbarBtn icon="zoomOut" onClick={onZoomOut} title="Zoom out" />
       <span className="map-toolbar__zoom-value">{minimapZoom}%</span>
       <ToolbarBtn icon="zoomIn" onClick={onZoomIn} title="Zoom in" />
-      <ToolbarBtn icon="maximize2" onClick={onZoomReset} title="Reset zoom" />
 
       <Separator />
 
-      {/* Grid labels toggle - always visible */}
-      <ToolbarBtn
-        icon="hash"
-        active={showGridLabels}
-        onClick={toggleShowGridLabels}
-        title="Grid labels (A1, B2...)"
-        activeColor="var(--accent-purple)"
-      />
-
-      {/* VG vs View display mode toggle */}
       {!isCompact && (
-        <ToggleGroup
-          options={[
-            { value: DISPLAY_MODES.VG, label: 'VG', icon: 'package' },
-            { value: DISPLAY_MODES.VIEW, label: 'View', icon: 'layers' },
-          ]}
-          value={displayMode}
-          onChange={setDisplayMode}
-          variant="segmented"
-          size="sm"
-        />
+        <>
+          {/* Grid labels toggle */}
+          <ToolbarBtn
+            icon="hash"
+            active={showGridLabels}
+            onClick={toggleShowGridLabels}
+            title="Grid labels (A1, B2...)"
+            activeColor="var(--accent-purple)"
+          />
+
+          {/* VG vs View display mode toggle */}
+          <ToggleGroup
+            options={[
+              { value: DISPLAY_MODES.VG, label: 'VG', icon: 'package' },
+              { value: DISPLAY_MODES.VIEW, label: 'View', icon: 'layers' },
+            ]}
+            value={displayMode}
+            onChange={setDisplayMode}
+            variant="segmented"
+            size="sm"
+          />
+
+          <Separator />
+        </>
       )}
 
-      <Separator />
-
       {/* Mode-specific controls */}
-      {(mapMode === MAP_MODES.NAVIGATE || mapMode === MAP_MODES.LAYOUT) && (
+      {!isCompact && (mapMode === MAP_MODES.NAVIGATE || mapMode === MAP_MODES.LAYOUT) && (
         <ToolbarBtn
           icon="frame"
           active={showViewports}
@@ -145,7 +147,7 @@ export const MapToolbar = memo(function MapToolbar({
         />
       )}
 
-      {mapMode === MAP_MODES.NAVIGATE && (
+      {!isCompact && mapMode === MAP_MODES.NAVIGATE && (
         <>
           <ToolbarBtn
             icon="users"
@@ -164,7 +166,7 @@ export const MapToolbar = memo(function MapToolbar({
         </>
       )}
 
-      {mapMode === MAP_MODES.LAYOUT && (
+      {mapMode === MAP_MODES.LAYOUT && !isCompact && (
         <>
           <ToolbarBtn
             icon="grid3x3"
@@ -173,14 +175,10 @@ export const MapToolbar = memo(function MapToolbar({
             title="Internal layouts"
             activeColor="var(--accent-green)"
           />
-          {!isCompact && (
-            <>
-              <Separator />
-              <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
-              <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
-              <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
-            </>
-          )}
+          <Separator />
+          <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
+          <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
+          <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
         </>
       )}
 
@@ -206,7 +204,7 @@ export const MapToolbar = memo(function MapToolbar({
         </>
       )}
 
-      {mapMode === MAP_MODES.COLLABORATE && (
+      {mapMode === MAP_MODES.TEAM && (
         <>
           <ToggleGroup
             options={[
@@ -218,21 +216,22 @@ export const MapToolbar = memo(function MapToolbar({
             variant="segmented"
             size="sm"
           />
-          <Separator />
-          <ToolbarBtn
-            icon="mousePointer"
-            active={showCursors}
-            onClick={toggleShowCursors}
-            title="Show cursors"
-            activeColor="var(--accent-amber)"
-          />
-          <ToolbarBtn
-            icon="radio"
-            title="Show broadcasts only"
-            activeColor="var(--accent-red)"
-          />
         </>
       )}
+
+      <div className="map-toolbar__spacer" />
+
+      {onToggleCompanion && (
+        <ToolbarBtn
+          icon="panelRightClose"
+          active={companionOpen}
+          onClick={onToggleCompanion}
+          title="Views & Datasets"
+          activeColor="var(--accent-teal)"
+        />
+      )}
+
+      {isCompact && <ToolbarBtn icon="moreHorizontal" title="More options" />}
     </div>
   );
 });

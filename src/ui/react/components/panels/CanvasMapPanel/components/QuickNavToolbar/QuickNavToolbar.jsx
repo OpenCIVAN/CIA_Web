@@ -7,7 +7,6 @@
  * - Set Home (set current position as home)
  * - Fit All (zoom to fit all content)
  * - Bookmark (add current position as bookmark)
- * - Companion toggle (open/close companion panel)
  */
 
 import React, { memo } from 'react';
@@ -24,13 +23,12 @@ const QuickNavBtn = memo(function QuickNavBtn({
   onClick,
   active,
   disabled,
-  variant,
 }) {
   const { isVR } = useAdaptive();
 
   return (
     <button
-      className={`quick-nav-toolbar__btn ${active ? 'quick-nav-toolbar__btn--active' : ''} ${variant ? `quick-nav-toolbar__btn--${variant}` : ''}`}
+      className={`quick-nav-toolbar__btn ${active ? 'quick-nav-toolbar__btn--active' : ''}`}
       onClick={onClick}
       disabled={disabled}
       title={label}
@@ -50,8 +48,6 @@ const QuickNavBtn = memo(function QuickNavBtn({
  * @param {Function} props.onSetHome - Set current position as home
  * @param {Function} props.onFitAll - Fit all content in view
  * @param {Function} props.onAddBookmark - Add bookmark at current position
- * @param {boolean} props.companionOpen - Whether companion panel is open
- * @param {Function} props.onToggleCompanion - Toggle companion panel
  * @param {string} [props.position='left'] - Toolbar position ('left' or 'right')
  */
 export const QuickNavToolbar = memo(function QuickNavToolbar({
@@ -59,8 +55,6 @@ export const QuickNavToolbar = memo(function QuickNavToolbar({
   onSetHome,
   onFitAll,
   onAddBookmark,
-  companionOpen,
-  onToggleCompanion,
   position = 'left',
 }) {
   return (
@@ -93,19 +87,6 @@ export const QuickNavToolbar = memo(function QuickNavToolbar({
         />
       </div>
 
-      {/* Spacer */}
-      <div className="quick-nav-toolbar__spacer" />
-
-      {/* Companion toggle */}
-      <div className="quick-nav-toolbar__group">
-        <QuickNavBtn
-          icon={companionOpen ? 'panelLeftClose' : 'panelLeftOpen'}
-          label={companionOpen ? 'Close Panel' : 'Open Views & Datasets'}
-          onClick={onToggleCompanion}
-          active={companionOpen}
-          variant="companion"
-        />
-      </div>
     </div>
   );
 });

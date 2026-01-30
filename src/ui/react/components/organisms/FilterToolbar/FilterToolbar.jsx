@@ -5,7 +5,8 @@
  * RESPONSIVE LAYOUTS:
  * - Full (≥400px): Two rows - Search on top, dropdowns below
  * - Compact (300-399px): Single row, icon-only dropdowns
- * - Minimal (<300px): Single row, combined filters dropdown
+ * - Minimal (270-299px): Single row, combined filters dropdown
+ * - Ultra (<270px): Two rows - Search on top, icon-only controls below (no quick filters)
  *
  * CRITICAL: Single-line enforcement - no wrapping allowed
  *
@@ -42,6 +43,7 @@ import './FilterToolbar.scss';
 export const LAYOUT_BREAKPOINTS = {
   FULL: 400,
   COMPACT: 300,
+  ULTRA: 270,
 };
 
 // =============================================================================
@@ -195,7 +197,7 @@ const QuickFiltersRow = memo(function QuickFiltersRow({
  * @param {Object} [props.quickFilterCounts] - Quick filter counts: { filterId: number }
  * @param {Array} [props.tags] - Available tags for TagsDropdown
  * @param {Object} [props.tagsByCategory] - Tags grouped by category
- * @param {'full'|'compact'|'minimal'|'auto'} [props.layout='auto'] - Force layout mode
+ * @param {'full'|'compact'|'minimal'|'ultra'|'auto'} [props.layout='auto'] - Force layout mode
  * @param {number} [props.width] - Container width (for auto layout)
  * @param {string} [props.searchPlaceholder] - Search input placeholder
  * @param {boolean} [props.showQuickFilters=true] - Show quick filters row
@@ -240,12 +242,14 @@ export const FilterToolbar = memo(function FilterToolbar({
     if (!width) return 'full';
     if (width >= LAYOUT_BREAKPOINTS.FULL) return 'full';
     if (width >= LAYOUT_BREAKPOINTS.COMPACT) return 'compact';
-    return 'minimal';
+    if (width >= LAYOUT_BREAKPOINTS.ULTRA) return 'minimal';
+    return 'ultra';
   }, [layout, width, isVR]);
 
   const isFull = layoutMode === 'full';
   const isCompact = layoutMode === 'compact';
   const isMinimal = layoutMode === 'minimal';
+  const isUltra = layoutMode === 'ultra';
 
   // Calculate quick filter visibility
   const quickFilterMaxVisible = useMemo(() => {
@@ -378,7 +382,61 @@ export const FilterToolbar = memo(function FilterToolbar({
       {/* ================================================================= */}
       {/* COMPACT/MINIMAL MODE: Single row                                  */}
       {/* ================================================================= */}
-      {!isFull && (
+      {isUltra && (
+        <>
+          <div className="filter-toolbar__search-row">
+            <SearchInput
+              value={filter.searchQuery}
+              onChange={filter.setSearchQuery}
+              placeholder={searchPlaceholder}
+              size="sm"
+            />
+          </div>
+
+          <div className="filter-toolbar__controls-row">
+            <DropdownTrigger
+              ref={filtersButtonRef}
+              label="Filters"
+              icon="filter"
+              badge={filter.selectedTypes.length + filter.selectedTags.length}
+              active={
+                filter.selectedTypes.length > 0 || filter.selectedTags.length > 0
+              }
+              isOpen={filtersDropdownOpen}
+              onClick={() => setFiltersDropdownOpen(!filtersDropdownOpen)}
+              iconOnly
+            />
+
+            {hasSort && (
+              <div className="filter-toolbar__sort-wrapper filter-toolbar__sort-wrapper--compact">
+                <SortDropdown
+                  value={filter.sortBy}
+                  onChange={filter.setSortBy}
+                  options={sortOptionsForDropdown}
+                  showLabel={false}
+                />
+              </div>
+            )}
+
+            <div className="filter-toolbar__spacer" />
+
+            {filter.hasActiveFilters && (
+              <Tooltip content={`Clear ${filter.activeFilterCount} filters`}>
+                <button
+                  type="button"
+                  className="filter-toolbar__clear-btn filter-toolbar__clear-btn--icon-only"
+                  onClick={filter.clearAll}
+                  aria-label="Clear all filters"
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        </>
+      )}
+
+      {!isFull && !isUltra && (
         <div className="filter-toolbar__single-row">
           <div className="filter-toolbar__search-compact">
             <SearchInput
@@ -472,7 +530,7 @@ export const FilterToolbar = memo(function FilterToolbar({
       {/* ================================================================= */}
 
       {/* Minimal mode: Combined Types + Tags dropdown */}
-      {isMinimal && (
+      {(isMinimal || isUltra) && (
         <CombinedFiltersDropdown
           isOpen={filtersDropdownOpen}
           onClose={() => setFiltersDropdownOpen(false)}
@@ -492,7 +550,7 @@ export const FilterToolbar = memo(function FilterToolbar({
       )}
 
       {/* Full/Compact mode: Separate dropdowns */}
-      {!isMinimal && (
+      {!isMinimal && !isUltra && (
         <>
           {hasTypes && (
             <TypeFilterDropdown
@@ -526,7 +584,7 @@ export const FilterToolbar = memo(function FilterToolbar({
       {/* QUICK FILTERS ROW                                                 */}
       {/* ================================================================= */}
 
-      {showQuickFilters && hasQuickFilters && (
+      {showQuickFilters && hasQuickFilters && !isUltra && (
         <QuickFiltersRow
           quickFilterDefs={config.quickFilterDefs}
           activeFilters={filter.quickFilters}

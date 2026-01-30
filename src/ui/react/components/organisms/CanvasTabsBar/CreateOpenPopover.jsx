@@ -6,6 +6,7 @@
 import React, { memo, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '@UI/react/components/atoms';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { CREATE_OPTIONS, WORKSPACE_TYPES, useWorkspaceSearch } from './CanvasTabsBar.logic';
 
 /**
@@ -87,15 +88,13 @@ const CreateOpenPopover = memo(function CreateOpenPopover({
                 </div>
 
                 {/* Search */}
-                <div className="create-open-popover__search">
-                    <Icon name="search" size={14} />
-                    <input
-                        type="text"
-                        placeholder="Search workspaces..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
+                <SearchInput
+                    className="create-open-popover__search"
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search workspaces..."
+                    size="sm"
+                />
 
                 {/* Workspace list */}
                 <div className="create-open-popover__list">

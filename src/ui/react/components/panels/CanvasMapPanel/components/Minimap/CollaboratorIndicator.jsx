@@ -28,8 +28,10 @@ export const CollaboratorIndicator = memo(function CollaboratorIndicator({
     <div
       className={`collaborator-indicator ${isBroadcasting ? 'collaborator-indicator--broadcasting' : ''}`}
       style={{
-        gridRow: `${viewport.row + 1} / span ${viewport.rows}`,
-        gridColumn: `${viewport.col + 1} / span ${viewport.cols}`,
+        left: viewport.col * (cellSize + gap),
+        top: viewport.row * (cellSize + gap),
+        width: `${viewport.cols * cellSize + (viewport.cols - 1) * gap}px`,
+        height: `${viewport.rows * cellSize + (viewport.rows - 1) * gap}px`,
         '--collab-color': color,
       }}
       title={`${name}${isBroadcasting ? ' (Broadcasting)' : ''}`}

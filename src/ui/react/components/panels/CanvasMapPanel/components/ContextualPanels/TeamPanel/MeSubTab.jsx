@@ -8,8 +8,8 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
-import { Section } from '@UI/react/components/molecules/Section';
 import { ViewportItem } from '../../shared';
+import { PanelSection } from '../../shared';
 
 /**
  * Available cursor colors
@@ -51,7 +51,7 @@ export const MeSubTab = memo(function MeSubTab({
   return (
     <div className="team-subtab">
       {/* My Viewports */}
-      <Section
+      <PanelSection
         title="My Viewports"
         icon="frame"
         actions={
@@ -62,7 +62,7 @@ export const MeSubTab = memo(function MeSubTab({
             </button>
           </>
         }
-        collapsible={false}
+        sizeMode={sizeMode}
       >
         <div className="contextual-panel__list">
           {viewports.map(vp => (
@@ -76,10 +76,10 @@ export const MeSubTab = memo(function MeSubTab({
             />
           ))}
         </div>
-      </Section>
+      </PanelSection>
 
       {/* Broadcasting */}
-      <Section title="Broadcast" icon="radio" collapsible={false}>
+      <PanelSection title="Broadcast" icon="radio" sizeMode={sizeMode}>
         <div className="team-subtab__status-row">
           <span className="team-subtab__status-label">
             Broadcasting to team
@@ -95,10 +95,10 @@ export const MeSubTab = memo(function MeSubTab({
             <Icon name="radio" size={12} /> Team members can follow your view
           </p>
         )}
-      </Section>
+      </PanelSection>
 
       {/* My Cursor */}
-      <Section title="My Cursor" icon="mousePointer" collapsible={false}>
+      <PanelSection title="My Cursor" icon="mousePointer" sizeMode={sizeMode}>
         <div className="team-subtab__status-row">
           <span className="team-subtab__status-label">
             Visible to team
@@ -126,10 +126,10 @@ export const MeSubTab = memo(function MeSubTab({
             ))}
           </div>
         </div>
-      </Section>
+      </PanelSection>
 
       {/* Following Status */}
-      <Section title="Following" icon="eye" collapsible={false}>
+      <PanelSection title="Following" icon="eye" sizeMode={sizeMode}>
         <div className="team-subtab__status-row">
           <span className="team-subtab__status-label">
             Currently following
@@ -155,7 +155,7 @@ export const MeSubTab = memo(function MeSubTab({
             <span className="team-subtab__status-value">Nobody</span>
           )}
         </div>
-      </Section>
+      </PanelSection>
     </div>
   );
 });

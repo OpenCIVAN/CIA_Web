@@ -4,21 +4,52 @@
  * Main filter UI component with responsive layouts.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { FilterToolbar, LAYOUT_BREAKPOINTS } from './FilterToolbar';
 import { useListFilter } from '@UI/react/hooks/useListFilter';
 import { FILES_FILTER_CONFIG } from '@UI/react/hooks/useListFilter/filterConfigs';
+
+const APP_SURFACE_STYLE = {
+  minHeight: '100vh',
+  background: 'var(--color-bg-base, #020406)',
+  padding: 24,
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+};
+
+const PANEL_STYLE = {
+  background: 'var(--color-bg-secondary, #12121a)',
+  border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
+  borderRadius: 8,
+  padding: 16,
+  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
+};
+
+const SECTION_HEADING_STYLE = {
+  color: 'var(--color-text-primary, #e5e7eb)',
+  marginBottom: 8,
+  fontSize: 13,
+  fontWeight: 600,
+};
 
 export default {
   title: 'Organisms/FilterToolbar',
   component: FilterToolbar,
   parameters: {
-    layout: 'padded',
+    layout: 'fullscreen',
   },
+  decorators: [
+    (Story) => (
+      <div style={APP_SURFACE_STYLE}>
+        <Story />
+      </div>
+    ),
+  ],
   argTypes: {
     layout: {
       control: 'select',
-      options: ['auto', 'full', 'compact', 'minimal'],
+      options: ['auto', 'full', 'compact', 'minimal', 'ultra'],
     },
     width: {
       control: { type: 'range', min: 200, max: 600 },
@@ -71,11 +102,9 @@ const Template = (args) => {
   return (
     <div
       style={{
+        ...PANEL_STYLE,
         width: args.width || '100%',
         maxWidth: 600,
-        background: '#1a1a2e',
-        padding: 16,
-        borderRadius: 8,
       }}
     >
       <FilterToolbar
@@ -120,6 +149,13 @@ MinimalLayout.args = {
   width: 280,
 };
 
+// Ultra Layout (<270px)
+export const UltraLayout = Template.bind({});
+UltraLayout.args = {
+  layout: 'ultra',
+  width: 240,
+};
+
 // Interactive - Resize to See Layouts
 export const InteractiveResize = () => {
   const [width, setWidth] = useState(450);
@@ -130,7 +166,9 @@ export const InteractiveResize = () => {
       ? 'full'
       : width >= LAYOUT_BREAKPOINTS.COMPACT
         ? 'compact'
-        : 'minimal';
+        : width >= LAYOUT_BREAKPOINTS.ULTRA
+          ? 'minimal'
+          : 'ultra';
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -143,17 +181,15 @@ export const InteractiveResize = () => {
           onChange={(e) => setWidth(Number(e.target.value))}
           style={{ flex: 1 }}
         />
-        <span style={{ color: '#fff', fontFamily: 'monospace' }}>
+        <span style={{ color: 'var(--color-text-secondary, #cbd5f5)', fontFamily: 'monospace' }}>
           {width}px ({layoutMode})
         </span>
       </div>
 
       <div
         style={{
+          ...PANEL_STYLE,
           width: width,
-          background: '#1a1a2e',
-          padding: 16,
-          borderRadius: 8,
           transition: 'width 0.2s ease',
         }}
       >
@@ -185,9 +221,7 @@ export const WithActiveFilters = () => {
     <div
       style={{
         width: 500,
-        background: '#1a1a2e',
-        padding: 16,
-        borderRadius: 8,
+        ...PANEL_STYLE,
       }}
     >
       <FilterToolbar
@@ -217,9 +251,7 @@ export const WithoutTags = () => {
     <div
       style={{
         width: 450,
-        background: '#1a1a2e',
-        padding: 16,
-        borderRadius: 8,
+        ...PANEL_STYLE,
       }}
     >
       <FilterToolbar
@@ -238,17 +270,16 @@ export const AllLayouts = () => {
   const filterFull = useListFilter(FILES_FILTER_CONFIG);
   const filterCompact = useListFilter(FILES_FILTER_CONFIG);
   const filterMinimal = useListFilter(FILES_FILTER_CONFIG);
+  const filterUltra = useListFilter(FILES_FILTER_CONFIG);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
-        <h3 style={{ color: '#fff', marginBottom: 8 }}>Full (≥400px)</h3>
+        <h3 style={SECTION_HEADING_STYLE}>Full (≥400px)</h3>
         <div
           style={{
             width: 500,
-            background: '#1a1a2e',
-            padding: 16,
-            borderRadius: 8,
+            ...PANEL_STYLE,
           }}
         >
           <FilterToolbar
@@ -263,13 +294,11 @@ export const AllLayouts = () => {
       </div>
 
       <div>
-        <h3 style={{ color: '#fff', marginBottom: 8 }}>Compact (300-399px)</h3>
+        <h3 style={SECTION_HEADING_STYLE}>Compact (300-399px)</h3>
         <div
           style={{
             width: 350,
-            background: '#1a1a2e',
-            padding: 16,
-            borderRadius: 8,
+            ...PANEL_STYLE,
           }}
         >
           <FilterToolbar
@@ -284,13 +313,11 @@ export const AllLayouts = () => {
       </div>
 
       <div>
-        <h3 style={{ color: '#fff', marginBottom: 8 }}>Minimal (&lt;300px)</h3>
+        <h3 style={SECTION_HEADING_STYLE}>Minimal (270-299px)</h3>
         <div
           style={{
             width: 260,
-            background: '#1a1a2e',
-            padding: 16,
-            borderRadius: 8,
+            ...PANEL_STYLE,
           }}
         >
           <FilterToolbar
@@ -300,6 +327,25 @@ export const AllLayouts = () => {
             quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
             tags={SAMPLE_TAGS}
             layout="minimal"
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 style={SECTION_HEADING_STYLE}>Ultra (&lt;270px)</h3>
+        <div
+          style={{
+            width: 230,
+            ...PANEL_STYLE,
+          }}
+        >
+          <FilterToolbar
+            filter={filterUltra}
+            config={FILES_FILTER_CONFIG}
+            counts={SAMPLE_TYPE_COUNTS}
+            quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
+            tags={SAMPLE_TAGS}
+            layout="ultra"
           />
         </div>
       </div>

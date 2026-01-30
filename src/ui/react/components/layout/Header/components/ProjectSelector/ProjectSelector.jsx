@@ -6,6 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 
 /**
@@ -66,16 +67,14 @@ export function ProjectSelector({
         >
             <div className="project-selector__dropdown">
                 {/* Search */}
-                <div className="project-selector__search">
-                    <Icon name="search" size={14} />
-                    <input
-                        type="text"
-                        placeholder="Search projects..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        autoFocus
-                    />
-                </div>
+                <SearchInput
+                    className="project-selector__search"
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Search projects..."
+                    size="sm"
+                    autoFocus
+                />
 
                 {/* Recent Projects */}
                 {!searchTerm && recentProjects.length > 0 && (

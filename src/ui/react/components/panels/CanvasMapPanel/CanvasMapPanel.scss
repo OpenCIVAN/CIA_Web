@@ -68,7 +68,7 @@
     --mode-color-rgb: 168, 85, 247;
   }
 
-  &--collaborate {
+  &--team {
     --mode-color: #{$color-accent-amber};
     --mode-color-rgb: 245, 158, 11;
   }
@@ -78,7 +78,9 @@
   // -------------------------------------------------------------------------
   &__body {
     display: flex;
+    flex-direction: column;
     flex: 1;
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -88,6 +90,42 @@
     flex: 1;
     min-width: 0;
     overflow: hidden;
+  }
+
+  &__minimap-row {
+    display: flex;
+    align-items: stretch;
+    flex: 0 0 auto;
+    background: $color-bg-canvas;
+  }
+
+  &__minimap-row .quick-nav-toolbar {
+    margin: 0;
+  }
+
+  &__minimap-row .companion-panel {
+    height: 100%;
+  }
+
+  &__minimap-shell {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-sm;
+    display: flex;
+  }
+
+  &__quicknav {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: $spacing-sm 0;
+    width: 40px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+  }
+
+  &__quicknav--right {
+    padding: $spacing-sm 0;
   }
 
   // -------------------------------------------------------------------------
@@ -141,10 +179,9 @@
   // Minimap Container - Takes 55% of available space
   // -------------------------------------------------------------------------
   &__minimap-container {
-    flex: 55 1 0%;
-    min-height: 150px;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
-    // Canvas area uses neutral colors for data accuracy
     background: $color-bg-canvas;
     position: relative;
   }
@@ -153,9 +190,8 @@
   // Contextual Panel - Takes 45% of available space
   // -------------------------------------------------------------------------
   &__panel {
-    flex: 45 1 0%;
+    flex: 1 1 auto;
     min-height: 120px;
-    max-height: 50%;
     border-top: 1px solid $color-border-subtle;
     overflow: auto;
     background: $color-bg-secondary;
@@ -189,24 +225,53 @@
 
     // Minimap takes more space in compact mode
     .canvas-map-v2__minimap-container {
-      flex: 60 1 0%;
+      min-height: 120px;
     }
 
     .canvas-map-v2__panel {
-      flex: 40 1 0%;
       min-height: 100px;
     }
   }
 
   &[data-size-mode="expanded"] {
-    // Panel can be larger in expanded mode
-    .canvas-map-v2__minimap-container {
-      flex: 50 1 0%;
+    // Panel can breathe in expanded mode
+    .canvas-map-v2__panel {
+      min-height: 140px;
+    }
+  }
+
+  &[data-density="dense"] {
+    .contextual-panel {
+      padding: $spacing-sm;
     }
 
-    .canvas-map-v2__panel {
-      flex: 50 1 0%;
-      max-height: 60%;
+    .contextual-panel__actions {
+      margin-bottom: $spacing-sm;
+      gap: 4px;
+    }
+
+    .contextual-panel__hint {
+      margin-bottom: $spacing-xs;
+    }
+
+    .panel-section {
+      margin-bottom: $spacing-sm;
+    }
+
+    .panel-section__header {
+      padding: 4px $spacing-xs;
+    }
+
+    .panel-section__title {
+      font-size: 10px;
+    }
+
+    .panel-section__content {
+      padding: $spacing-xs;
+    }
+
+    .team-subtab {
+      padding: $spacing-sm;
     }
   }
 }

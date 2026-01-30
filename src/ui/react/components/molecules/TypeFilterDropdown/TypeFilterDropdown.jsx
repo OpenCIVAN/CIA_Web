@@ -14,6 +14,7 @@ import React, { memo, useState, useMemo, useRef, useEffect } from 'react';
 import { useAdaptive } from '@UI/react/context';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import './TypeFilterDropdown.scss';
 
 /**
@@ -98,27 +99,14 @@ export const TypeFilterDropdown = memo(function TypeFilterDropdown({
       <div className="type-filter-dropdown__container">
         {/* Search */}
         <div className="type-filter-dropdown__search">
-          <div className="type-filter-dropdown__search-wrapper">
-            <Icon name="search" size={12} className="type-filter-dropdown__search-icon" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search types..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="type-filter-dropdown__search-input"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="type-filter-dropdown__search-clear"
-                aria-label="Clear search"
-              >
-                <Icon name="x" size={10} />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            ref={searchInputRef}
+            className="type-filter-dropdown__search-input"
+            value={search}
+            onChange={setSearch}
+            placeholder="Search types..."
+            size="sm"
+          />
         </div>
 
         {/* Quick actions */}

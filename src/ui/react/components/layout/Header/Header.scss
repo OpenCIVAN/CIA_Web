@@ -136,25 +136,14 @@
   }
 
   &__search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
-    color: $color-text-muted;
-
-    input {
-      flex: 1;
-      border: none;
-      background: transparent;
-      color: $color-text-primary;
-      font-size: 14px;
-      outline: none;
-
-      &::placeholder {
-        color: $color-text-muted;
-      }
-    }
+    margin: $spacing-sm;
+    --search-input-bg: $color-bg-secondary;
+    --search-input-border: $color-border-subtle;
+    --search-input-focus-border: $color-accent-blue;
+    --search-input-color: $color-text-primary;
+    --search-input-placeholder: $color-text-muted;
+    --search-input-icon: $color-text-muted;
+    --search-input-gap: 6px;
   }
 
   &__section {

@@ -12,8 +12,8 @@
  * />
  */
 
-import React, { memo, useEffect, useRef } from 'react';
-import { Icon } from '@UI/react/components/atoms/Icon';
+import React, { memo, useEffect, useRef, useCallback } from 'react';
+import { SearchInput as BaseSearchInput } from '@UI/react/components/molecules/SearchInput';
 
 /**
  * @typedef {Object} SearchInputProps
@@ -55,54 +55,41 @@ function SearchInput({
     }, [autoFocus]);
 
     /**
-     * Handle input change
-     */
-    const handleChange = (event) => {
-        onChange(event.target.value);
-    };
-
-    /**
      * Handle clear button click
      */
-    const handleClear = () => {
-        onChange('');
+    const handleClear = useCallback(() => {
         inputRef.current?.focus();
-    };
+    }, []);
 
     /**
      * Handle keyboard events
      */
-    const handleKeyDown = (event) => {
+    const handleInputKeyDown = useCallback((event) => {
         // Don't propagate Escape if we're going to clear the input
         if (event.key === 'Escape' && value) {
             event.stopPropagation();
+            event.preventDefault();
             handleClear();
+            onChange('');
             return;
         }
 
         onKeyDown?.(event);
-    };
+    }, [value, handleClear, onChange, onKeyDown]);
 
     return (
         <div className="global-search__input-wrapper">
-            {/* Search icon or loading spinner */}
-            <div className="global-search__input-icon">
-                {isLoading ? (
-                    <Icon name="loader" size={20} className="global-search__spinner" />
-                ) : (
-                    <Icon name="search" size={20} />
-                )}
-            </div>
-
-            {/* Input field */}
-            <input
+            <BaseSearchInput
                 ref={inputRef}
-                type="text"
                 className="global-search__input"
                 value={value}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
+                onChange={onChange}
+                onKeyDown={handleInputKeyDown}
                 placeholder={placeholder}
+                size="md"
+                loading={isLoading}
+                onClear={handleClear}
+                autoFocus={autoFocus}
                 role="combobox"
                 aria-expanded="true"
                 aria-haspopup="listbox"
@@ -114,19 +101,6 @@ function SearchInput({
                 spellCheck="false"
                 data-testid={testId}
             />
-
-            {/* Clear button */}
-            {value && (
-                <button
-                    type="button"
-                    className="global-search__clear"
-                    onClick={handleClear}
-                    aria-label="Clear search"
-                    tabIndex={-1}
-                >
-                    <Icon name="close" size={18} />
-                </button>
-            )}
 
             {/* Keyboard shortcut hint */}
             <div className="global-search__shortcut-hint">

@@ -78,52 +78,24 @@
   flex-shrink: 0;
 }
 
-.global-search__input-icon {
-  color: $color-text-muted;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.global-search__spinner {
-  animation: spin 1s linear infinite;
-}
-
 .global-search__input {
   flex: 1;
-  height: 32px;
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  font-family: inherit;
-  color: $color-text-primary;
-  line-height: 1.5;
+  --search-input-bg: transparent;
+  --search-input-border: transparent;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 10px;
 
-  &::placeholder {
-    color: $color-text-muted;
+  .search-input__field {
+    font-size: 16px;
+    font-family: inherit;
+    line-height: 1.5;
   }
 
-  &:focus {
-    outline: none;
-  }
-}
-
-.global-search__clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: $color-text-muted;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-glass-light;
-    color: $color-text-primary;
+  &.search-input--focused {
+    box-shadow: none;
   }
 }
 
@@ -610,7 +582,9 @@
   }
 
   .global-search__input {
-    font-size: 16px; // Prevents iOS zoom
+    .search-input__field {
+      font-size: 16px; // Prevents iOS zoom
+    }
   }
 
   .global-search__shortcut-hint {
@@ -654,7 +628,7 @@
 
   .search-result-item,
   .global-search__filter-chip,
-  .global-search__clear,
+  .global-search__input .search-input__clear,
   .global-search__recent-item {
     transition: none;
   }

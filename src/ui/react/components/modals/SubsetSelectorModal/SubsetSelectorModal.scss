@@ -89,49 +89,14 @@
 // =============================================================================
 
 .subset-selector-modal__search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid $color-border-default;
-
-    > svg {
-        color: $color-text-muted;
-        flex-shrink: 0;
-    }
-}
-
-.subset-selector-modal__search-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    outline: none;
-
-    &::placeholder {
-        color: $color-text-muted;
-    }
-}
-
-.subset-selector-modal__search-clear {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: $radius-sm;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: $color-text-primary;
-    }
+    margin: $spacing-sm $spacing-md;
+    --search-input-bg: rgba(0, 0, 0, 0.2);
+    --search-input-border: $color-border-default;
+    --search-input-focus-border: $color-accent-blue;
+    --search-input-color: $color-text-primary;
+    --search-input-placeholder: $color-text-muted;
+    --search-input-icon: $color-text-muted;
+    --search-input-gap: 6px;
 }
 
 .subset-selector-modal__content {

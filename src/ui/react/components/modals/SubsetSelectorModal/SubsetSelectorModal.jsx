@@ -3,6 +3,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import './SubsetSelectorModal.scss';
 
@@ -166,25 +167,14 @@ export function SubsetSelectorModal({
 
                 {/* Search input */}
                 {showSearch && (
-                    <div className="subset-selector-modal__search">
-                        <Icon name="search" size={14} />
-                        <input
-                            type="text"
-                            placeholder="Search subsets or views..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="subset-selector-modal__search-input"
-                            autoFocus
-                        />
-                        {searchQuery && (
-                            <button
-                                className="subset-selector-modal__search-clear"
-                                onClick={() => setSearchQuery('')}
-                            >
-                                <Icon name="close" size={12} />
-                            </button>
-                        )}
-                    </div>
+                    <SearchInput
+                        className="subset-selector-modal__search"
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Search subsets or views..."
+                        size="sm"
+                        autoFocus
+                    />
                 )}
 
                 <div className="subset-selector-modal__content">

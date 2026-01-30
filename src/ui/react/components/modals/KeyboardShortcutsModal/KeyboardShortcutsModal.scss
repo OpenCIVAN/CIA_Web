@@ -101,75 +101,15 @@
 // =============================================================================
 
 .shortcuts-modal__search {
-  position: relative;
-  padding: 12px 16px;
-  border-bottom: 1px solid $color-border-subtle;
+  margin: 12px 16px;
   flex-shrink: 0;
-}
-
-.shortcuts-modal__search-icon {
-  position: absolute;
-  left: 28px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: $color-text-muted;
-  pointer-events: none;
-}
-
-.shortcuts-modal__search-input {
-  width: 100%;
-  padding: 8px 32px 8px 36px;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-default;
-  border-radius: 6px;
-  font-size: 13px;
-  color: $color-text-primary;
-  transition: border-color $transition-fast;
-
-  &::placeholder {
-    color: $color-text-muted;
-  }
-
-  &:hover {
-    border-color: $color-border-medium;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent-blue;
-  }
-}
-
-.shortcuts-modal__search-clear {
-  position: absolute;
-  right: 28px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $color-bg-tertiary;
-  border: none;
-  border-radius: 50%;
-  font-size: 14px;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-elevated;
-    color: $color-text-primary;
-  }
-
-  &:focus {
-    outline: none;
-  }
-
-  &:focus-visible {
-    box-shadow: 0 0 0 2px $color-accent-blue;
-  }
+  --search-input-bg: $color-bg-secondary;
+  --search-input-border: $color-border-default;
+  --search-input-focus-border: $color-accent-blue;
+  --search-input-color: $color-text-primary;
+  --search-input-placeholder: $color-text-muted;
+  --search-input-icon: $color-text-muted;
+  --search-input-gap: 8px;
 }
 
 // =============================================================================

@@ -5,13 +5,17 @@
     --search-input-bg: rgba(255, 255, 255, 0.05);
     --search-input-border: rgba(255, 255, 255, 0.1);
     --search-input-focus-border: var(--color-accent, #4ecdc4);
+    --search-input-focus-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
     --search-input-color: var(--color-text-primary, #e0e0e0);
     --search-input-placeholder: var(--color-text-muted, #888);
     --search-input-icon: var(--color-text-secondary, #a0a0a0);
+    --search-input-icon-size: 16px;
+    --search-input-gap: 8px;
 
     position: relative;
     display: flex;
     align-items: center;
+    gap: var(--search-input-gap);
     background: var(--search-input-bg);
     border: 1px solid var(--search-input-border);
     border-radius: 6px;
@@ -28,6 +32,8 @@
     &--sm {
         height: 28px;
         border-radius: 4px;
+        --search-input-icon-size: 14px;
+        --search-input-gap: 6px;
 
         .search-input__icon {
             padding-left: 8px;
@@ -46,6 +52,8 @@
     &--md {
         height: 36px;
         border-radius: 6px;
+        --search-input-icon-size: 16px;
+        --search-input-gap: 8px;
 
         .search-input__icon {
             padding-left: 10px;
@@ -64,6 +72,8 @@
     &--lg {
         height: 44px;
         border-radius: 8px;
+        --search-input-icon-size: 18px;
+        --search-input-gap: 8px;
 
         .search-input__icon {
             padding-left: 12px;
@@ -82,7 +92,7 @@
     // Focused state
     &--focused {
         border-color: var(--search-input-focus-border);
-        box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+        box-shadow: var(--search-input-focus-shadow);
     }
 
     // Disabled state
@@ -107,6 +117,7 @@
         &.search-input--sm {
             height: 40px;
             border-radius: 6px;
+            --search-input-icon-size: 18px;
 
             .search-input__field {
                 font-size: 14px;
@@ -116,6 +127,7 @@
         &.search-input--md {
             height: 48px;
             border-radius: 8px;
+            --search-input-icon-size: 20px;
 
             .search-input__field {
                 font-size: 15px;
@@ -125,6 +137,7 @@
         &.search-input--lg {
             height: 56px;
             border-radius: 10px;
+            --search-input-icon-size: 24px;
 
             .search-input__field {
                 font-size: 16px;
@@ -138,7 +151,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 var(--search-input-icon-size);
+    min-width: var(--search-input-icon-size);
     flex-shrink: 0;
+    width: var(--search-input-icon-size);
+    height: var(--search-input-icon-size);
     color: var(--search-input-icon);
     opacity: 0.7;
 

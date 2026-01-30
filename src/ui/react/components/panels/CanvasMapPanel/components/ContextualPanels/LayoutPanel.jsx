@@ -12,10 +12,8 @@ import React, { memo, useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
-import { Section } from '@UI/react/components/molecules/Section';
-import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { VGListItem } from '../shared';
+import { VGListItem, PanelSection, FilterToolbarCompact, QuickFiltersRow } from '../shared';
 import { getVGDisplayName } from '../../utils/gridUtils';
 
 /**
@@ -29,6 +27,9 @@ export const LayoutPanel = memo(function LayoutPanel({
   focusedVG,
   searchQuery,
   setSearchQuery,
+  filter,
+  quickFilterDefs = [],
+  quickFilterCounts = {},
   onVGClick,
   onVGDoubleClick,
   onVGRestore,
@@ -42,6 +43,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   sizeMode = 'standard',
 }) {
   const isCompact = sizeMode === 'compact';
+  const [showQuickFilters, setShowQuickFilters] = useState(!isCompact);
 
   // Filter state for ChipGroup
   const [activeFilter, setActiveFilter] = useState('all');
@@ -52,6 +54,12 @@ export const LayoutPanel = memo(function LayoutPanel({
 
   const explicitCount = viewGroups.filter(v => v.isExplicit).length;
   const implicitCount = viewGroups.filter(v => !v.isExplicit).length;
+
+  const effectiveSearchQuery = filter?.searchQuery ?? searchQuery ?? '';
+  const handleSearchChange = filter?.setSearchQuery ?? setSearchQuery;
+  const activeQuickFilters = filter?.quickFilters ?? [];
+  const handleToggleQuickFilter = filter?.toggleQuickFilter ?? (() => {});
+  const activeFilterCount = filter?.activeFilterCount ?? 0;
 
   // Apply filter
   const displayVGs = activeFilter === 'all'
@@ -64,7 +72,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   if (focusedVG) {
     return (
       <div className="contextual-panel">
-        <Section title="Edit ViewGroup" icon="pencil" collapsible={false}>
+        <PanelSection title="Edit ViewGroup" icon="pencil" sizeMode={sizeMode}>
           <div className="contextual-panel__actions">
             <Button variant="ghost" size="sm" icon="grid3x3" onClick={onChangeLayout}>
               {!isCompact && 'Change Layout'}
@@ -100,7 +108,7 @@ export const LayoutPanel = memo(function LayoutPanel({
               </Button>
             </div>
           )}
-        </Section>
+        </PanelSection>
       </div>
     );
   }
@@ -108,7 +116,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   return (
     <div className="contextual-panel">
       {/* On Canvas */}
-      <Section
+      <PanelSection
         title="On Canvas"
         icon="package"
         actions={
@@ -119,14 +127,25 @@ export const LayoutPanel = memo(function LayoutPanel({
             </button>
           </>
         }
-        collapsible={false}
+        sizeMode={sizeMode}
       >
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
+        <FilterToolbarCompact
+          searchQuery={effectiveSearchQuery}
+          onSearchChange={handleSearchChange}
+          onToggleFilters={() => setShowQuickFilters(prev => !prev)}
+          filtersOpen={showQuickFilters}
+          activeFilterCount={activeFilterCount}
           placeholder="Search groups..."
-          size="sm"
         />
+        {showQuickFilters && (
+          <QuickFiltersRow
+            quickFilterDefs={quickFilterDefs}
+            activeFilters={activeQuickFilters}
+            counts={quickFilterCounts}
+            onToggle={handleToggleQuickFilter}
+            compact={isCompact}
+          />
+        )}
         <ChipGroup
           chips={[
             { id: 'all', label: 'All' },
@@ -151,15 +170,15 @@ export const LayoutPanel = memo(function LayoutPanel({
             />
           ))}
         </div>
-      </Section>
+      </PanelSection>
 
       {/* Inactive VGs */}
       {inactiveVGs.length > 0 && (
-        <Section
+        <PanelSection
           title="Inactive"
           icon="eyeOff"
           actions={<Badge count={inactiveVGs.length} size="sm" />}
-          collapsible={false}
+          sizeMode={sizeMode}
         >
           <p className="contextual-panel__hint">Drag to canvas to restore, or click Restore</p>
           <div className="contextual-panel__list">
@@ -176,7 +195,7 @@ export const LayoutPanel = memo(function LayoutPanel({
               />
             ))}
           </div>
-        </Section>
+        </PanelSection>
       )}
     </div>
   );

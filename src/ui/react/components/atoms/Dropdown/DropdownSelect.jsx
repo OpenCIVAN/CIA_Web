@@ -61,7 +61,8 @@ import React, {
     isValidElement
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon, IconChevronDown, IconClose, IconCheck, IconSearch } from '@UI/react/components/atoms/Icon';
+import { Icon, IconChevronDown, IconClose, IconCheck } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { useDropdown } from './useDropdown';
 import './Dropdown.scss';
 
@@ -532,14 +533,13 @@ function DropdownSelect({
             {/* Search input */}
             {searchable && (
                 <div className="dropdown-select__search">
-                    <IconSearch sx={{ fontSize: 16 }} className="dropdown-select__search-icon" />
-                    <input
+                    <SearchInput
                         ref={searchInputRef}
-                        type="text"
                         className="dropdown-select__search-input"
-                        placeholder="Search..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={setSearchQuery}
+                        placeholder="Search..."
+                        size="sm"
                         onKeyDown={handleKeyDown}
                         aria-label="Search options"
                     />

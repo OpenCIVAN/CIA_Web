@@ -22,6 +22,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from '
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { IconButton } from '@UI/react/components/atoms/Button';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import './ViewContextBlock.scss';
 
@@ -210,26 +211,14 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
 
             {/* Search + Filter + Sort */}
             <div className="view-hub-flyout__toolbar">
-                <div className="view-hub-flyout__search">
-                    <Icon name="search" size={12} className="view-hub-flyout__search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Search views..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="view-hub-flyout__search-input"
-                        autoFocus
-                    />
-                    {search && (
-                        <button
-                            type="button"
-                            className="view-hub-flyout__search-clear"
-                            onClick={() => setSearch('')}
-                        >
-                            <Icon name="close" size={10} />
-                        </button>
-                    )}
-                </div>
+                <SearchInput
+                    className="view-hub-flyout__search"
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Search views..."
+                    size="sm"
+                    autoFocus
+                />
 
                 <button
                     type="button"
@@ -846,24 +835,14 @@ const LinksDropdown = memo(function LinksDropdown({
                 {/* View Picker Dropdown */}
                 {showViewPicker && (
                     <div className="sync-panel__view-picker">
-                        <div className="sync-panel__view-picker-search">
-                            <Icon name="search" size={12} />
-                            <input
-                                ref={viewPickerSearchRef}
-                                type="text"
-                                placeholder="Search views..."
-                                value={viewPickerSearch}
-                                onChange={(e) => setViewPickerSearch(e.target.value)}
-                            />
-                            {viewPickerSearch && (
-                                <button
-                                    className="sync-panel__view-picker-clear"
-                                    onClick={() => setViewPickerSearch('')}
-                                >
-                                    <Icon name="close" size={10} />
-                                </button>
-                            )}
-                        </div>
+                        <SearchInput
+                            ref={viewPickerSearchRef}
+                            className="sync-panel__view-picker-search"
+                            value={viewPickerSearch}
+                            onChange={setViewPickerSearch}
+                            placeholder="Search views..."
+                            size="sm"
+                        />
                         {/* Type filters */}
                         {viewPickerTypes.length > 1 && (
                             <div className="sync-panel__view-picker-filters">
@@ -1014,21 +993,14 @@ const LinksDropdown = memo(function LinksDropdown({
 
                     {/* Search bar */}
                     <div className="sync-panel__toolbar">
-                        <div className="sync-panel__search">
-                            <Icon name="search" size={12} />
-                            <input
-                                ref={searchRef}
-                                type="text"
-                                placeholder="Search..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                            {searchQuery && (
-                                <button className="sync-panel__search-clear" onClick={() => setSearchQuery('')}>
-                                    <Icon name="close" size={10} />
-                                </button>
-                            )}
-                        </div>
+                        <SearchInput
+                            ref={searchRef}
+                            className="sync-panel__search"
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search..."
+                            size="sm"
+                        />
                         <select
                             className="sync-panel__sort-select"
                             value={sortBy}

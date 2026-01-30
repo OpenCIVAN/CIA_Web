@@ -17,58 +17,19 @@
 
     // Search input
     &__search {
-        display: flex;
-        align-items: center;
-        gap: 8px;
         flex: 1;
         min-width: 0;
-        padding: 6px 8px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
-        border-radius: 6px;
-        transition: border-color 0.15s ease, background 0.15s ease;
+        --search-input-bg: rgba(255, 255, 255, 0.03);
+        --search-input-border: var(--color-border-subtle, rgba(255, 255, 255, 0.06));
+        --search-input-focus-border: var(--color-accent-blue, #3b82f6);
+        --search-input-color: var(--color-text-primary, #e5e7eb);
+        --search-input-placeholder: var(--color-text-muted, #6b7280);
+        --search-input-icon: var(--color-text-muted, #6b7280);
+        --search-input-gap: 6px;
 
-        &:focus-within {
-            border-color: var(--color-accent-blue, #3b82f6);
-            background: rgba(255, 255, 255, 0.04);
-        }
-    }
-
-    &__search-icon {
-        flex-shrink: 0;
-        color: var(--color-text-muted, #6b7280);
-    }
-
-    &__search-input {
-        flex: 1;
-        min-width: 0;
-        background: transparent;
-        border: none;
-        outline: none;
-        font-size: 11px;
-        font-family: inherit;
-        color: var(--color-text-primary, #e5e7eb);
-
-        &::placeholder {
-            color: var(--color-text-muted, #6b7280);
-        }
-    }
-
-    &__search-clear {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2px;
-        background: none;
-        border: none;
-        color: var(--color-text-muted, #6b7280);
-        cursor: pointer;
-        border-radius: 4px;
-        transition: color 0.15s ease, background 0.15s ease;
-
-        &:hover {
-            color: var(--color-text-secondary, #9ca3af);
-            background: rgba(255, 255, 255, 0.08);
+        .search-input__field {
+            font-size: 11px;
+            font-family: inherit;
         }
     }
 
@@ -238,17 +199,11 @@
         }
 
         .global-filters-bar__search {
-            padding: 10px 12px;
-            gap: 12px;
+            --search-input-gap: 10px;
         }
 
-        .global-filters-bar__search-input {
+        .global-filters-bar__search .search-input__field {
             font-size: 14px;
-            min-height: 24px;
-        }
-
-        .global-filters-bar__search-clear {
-            padding: 6px;
         }
 
         .global-filters-bar__filter-toggle,

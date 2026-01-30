@@ -14,15 +14,15 @@
   &__trigger {
     display: inline-flex;
     align-items: center;
-    gap: token('gap.xs');
-    padding: token('spacing.xs') token('spacing.sm');
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
 
-    background: token('colors.bg.secondary');
-    border: 1px solid token('colors.border.subtle');
-    border-radius: token('radius.md');
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
 
-    color: token('colors.text.secondary');
-    font-size: token('text.xs');
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
     font-family: inherit;
     font-weight: 500;
 
@@ -33,18 +33,18 @@
     transition: all 0.15s ease;
 
     &:hover {
-      background: token('colors.bg.hover');
-      border-color: token('colors.border.default');
+      background: $color-hover-bg;
+      border-color: $color-border-default;
     }
 
     &--open {
-      background: token('colors.bg.hover');
-      border-color: token('colors.border.default');
+      background: $color-hover-bg;
+      border-color: $color-border-default;
     }
 
     &--has-active {
-      border-color: token('colors.accent.blue');
-      color: token('colors.accent.blue');
+      border-color: $color-accent-blue;
+      color: $color-accent-blue;
     }
   }
 
@@ -55,10 +55,10 @@
     min-width: 14px;
     padding: 0 4px;
 
-    background: token('colors.accent.blue');
+    background: $color-accent-blue;
     border-radius: 8px;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-weight: 600;
     color: #fff;
     line-height: 14px;
@@ -70,23 +70,23 @@
 
   &__panel {
     min-width: 200px;
-    background: token('colors.bg.surface');
-    border: 1px solid token('colors.border.subtle');
-    border-radius: token('radius.lg');
-    box-shadow: token('shadows.lg');
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
     overflow: hidden;
   }
 
   &__header {
     display: flex;
     align-items: center;
-    gap: token('gap.xs');
-    padding: token('spacing.sm') token('spacing.md');
-    border-bottom: 1px solid token('colors.border.subtle');
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border-subtle;
 
-    font-size: token('text.xs');
+    font-size: $font-size-xs;
     font-weight: 600;
-    color: token('colors.text.tertiary');
+    color: $color-text-tertiary;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -94,8 +94,8 @@
   &__filters {
     display: flex;
     flex-direction: column;
-    gap: token('gap.xs');
-    padding: token('spacing.sm');
+    gap: $spacing-xs;
+    padding: $spacing-sm;
   }
 
   // =========================================================================
@@ -105,8 +105,8 @@
   &--vr {
     .filter-overflow-menu__trigger {
       min-height: 44px;
-      padding: token('spacing.sm') token('spacing.md');
-      font-size: token('text.sm');
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-size-sm;
     }
 
     .filter-overflow-menu__panel {

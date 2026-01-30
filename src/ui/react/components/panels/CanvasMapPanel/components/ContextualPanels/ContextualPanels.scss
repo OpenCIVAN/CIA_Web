@@ -59,6 +59,250 @@
     gap: $spacing-xs;
   }
 
+  // -------------------------------------------------------------------------
+  // Filter Toolbar - Search + Filter Toggle
+  // -------------------------------------------------------------------------
+  &__filter-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+
+    &:focus-within {
+      border-color: $color-border-default;
+      background: $color-glass-light;
+      box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 15%, transparent);
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+
+      // Override search input styles for embedded context
+      input {
+        background: transparent;
+        border: none;
+        padding: $spacing-xs $spacing-sm;
+        font-size: $font-size-xs;
+
+        &:focus {
+          outline: none;
+          box-shadow: none;
+        }
+      }
+
+      .search-input__icon {
+        color: $color-text-muted;
+      }
+
+      .search-input__clear {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  &__filter-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+      border-color: $color-border-subtle;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
+    }
+
+    &--active {
+      color: $color-accent-blue;
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
+
+      &:hover {
+        background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+      }
+    }
+  }
+
+  &__filter-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: $radius-full;
+    background: $color-accent-blue;
+    color: #fff;
+    font-size: 9px;
+    font-weight: $font-weight-bold;
+    line-height: 16px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+
+    // Pulse animation for attention
+    animation: filter-badge-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes filter-badge-pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Quick Filters Row
+  // -------------------------------------------------------------------------
+  &__quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    padding: $spacing-xs 0;
+    margin-bottom: $spacing-sm;
+
+    // Slide in animation when opened
+    animation: quick-filters-slide-in 0.2s ease-out;
+  }
+
+  @keyframes quick-filters-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Standalone Filter Button (when not in filter-bar)
+  // -------------------------------------------------------------------------
+  &__filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: $color-border-default;
+      color: $color-text-primary;
+    }
+
+    &--active {
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border-color: $color-accent-blue;
+      color: $color-accent-blue;
+    }
+
+    .icon {
+      transition: transform $transition-fast;
+    }
+
+    &--active .icon {
+      transform: rotate(180deg);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Active Filters Summary
+  // -------------------------------------------------------------------------
+  &__active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    margin-bottom: $spacing-sm;
+    background: color-mix(in srgb, $color-accent-blue 8%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 20%, transparent);
+    border-radius: $radius-md;
+    font-size: $font-size-xs;
+    color: $color-accent-blue;
+  }
+
+  &__active-filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px $spacing-xs;
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent);
+    border-radius: $radius-sm;
+    font-weight: $font-weight-medium;
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: color-mix(in srgb, $color-accent-blue 30%, transparent);
+      }
+    }
+  }
+
+  &__clear-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px $spacing-xs;
+    margin-left: auto;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-primary;
+      text-decoration: underline;
+    }
+  }
+
   // Warning box
   &__warning {
     padding: 10px;
@@ -80,6 +324,55 @@
       color: $color-text-muted;
       margin: 0;
       margin-bottom: $spacing-sm;
+    }
+  }
+}
+
+// Compact section wrapper for contextual panels
+.panel-section {
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  background: $color-glass-subtle;
+  overflow: hidden;
+  margin-bottom: $spacing-md;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-glass-light;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__content {
+    padding: $spacing-sm;
+  }
+
+  &[data-size-mode="compact"] {
+    margin-bottom: $spacing-sm;
+
+    .panel-section__header {
+      padding: 4px $spacing-xs;
+    }
+
+    .panel-section__content {
+      padding: $spacing-xs;
     }
   }
 }
@@ -350,6 +643,18 @@
   &__actions {
     display: flex;
     gap: $spacing-xs;
+    align-items: center;
+  }
+
+  &__cursor-toggle {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px 4px;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    background: $color-glass-subtle;
+    color: $color-text-muted;
   }
 
   &__action {

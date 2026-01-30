@@ -9,6 +9,7 @@
 import React, { memo, useRef, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '@UI/react/components/atoms';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 
 const RoomSection = memo(function RoomSection({
     viewingRoom,
@@ -121,16 +122,14 @@ const RoomSection = memo(function RoomSection({
             {showDropdown && (
                 <div className="room-header__room-dropdown">
                     <div className="room-header__dropdown-content">
-                        <div className="room-header__dropdown-search">
-                            <Icon name="search" size={12} />
-                            <input
-                                type="text"
-                                placeholder="Search rooms..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
+                        <SearchInput
+                            className="room-header__dropdown-search"
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search rooms..."
+                            size="sm"
+                            autoFocus
+                        />
                         <div className="room-header__dropdown-controls">
                             <div className="room-header__filter-row">
                                 {['all', 'project', 'personal', 'pinned'].map((filter) => (

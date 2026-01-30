@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { formatCellRef } from '../../utils/gridUtils';
 
 /**
@@ -15,12 +16,18 @@ import { formatCellRef } from '../../utils/gridUtils';
  * @param {boolean} [props.showLocation=true] - Whether to show location info
  * @param {Function} [props.onFollow] - Follow button handler
  * @param {Function} [props.onLocate] - Locate/go to handler
+ * @param {boolean} [props.showCursorToggle=false] - Whether to show cursor toggle
+ * @param {boolean} [props.cursorVisible=true] - Current cursor visibility
+ * @param {Function} [props.onToggleCursor] - Toggle cursor visibility
  */
 export const CollaboratorItem = memo(function CollaboratorItem({
   collaborator,
   showLocation = true,
   onFollow,
   onLocate,
+  showCursorToggle = false,
+  cursorVisible = true,
+  onToggleCursor,
 }) {
   const { name, avatar, color, viewport, cursor, isBroadcasting, isOnline } = collaborator;
 
@@ -62,6 +69,17 @@ export const CollaboratorItem = memo(function CollaboratorItem({
 
       {/* Action buttons */}
       <div className="collaborator-item__actions">
+        {showCursorToggle && (
+          <div className="collaborator-item__cursor-toggle">
+            <Icon name="mousePointer" size={12} />
+            <Toggle
+              checked={cursorVisible}
+              onChange={() => onToggleCursor?.(collaborator.id)}
+              size="sm"
+            />
+          </div>
+        )}
+
         {onLocate && isOnline && viewport && (
           <button
             className="collaborator-item__action"

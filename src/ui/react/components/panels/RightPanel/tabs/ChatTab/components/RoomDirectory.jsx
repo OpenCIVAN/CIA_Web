@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { sync as log } from '@Utils/logger.js';
 import './RoomDirectory.scss';
 
@@ -136,13 +137,6 @@ export function RoomDirectory({ projectId, onRoomJoined, onClose }) {
     }
   };
 
-  // Handle search on Enter key
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      searchRooms();
-    }
-  };
-
   return (
     <div className="room-directory">
       {/* Header */}
@@ -160,16 +154,14 @@ export function RoomDirectory({ projectId, onRoomJoined, onClose }) {
 
       {/* Search Controls */}
       <div className="room-directory__search">
-        <div className="room-directory__search-input">
-          <Icon name="search" size={14} />
-          <input
-            type="text"
-            placeholder="Search public rooms..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-          />
-        </div>
+        <SearchInput
+          className="room-directory__search-input"
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search public rooms..."
+          size="sm"
+          onSubmit={searchRooms}
+        />
 
         <select
           className="room-directory__server-select"

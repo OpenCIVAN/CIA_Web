@@ -22,26 +22,27 @@ import './CompanionPanel.scss';
  * @param {boolean} props.isOpen - Whether panel is open
  * @param {string} props.activeTab - Active tab ('views' or 'datasets')
  * @param {Function} props.onTabChange - Tab change handler
- * @param {Function} props.onClose - Close handler
  * @param {Array} props.views - All views data
  * @param {Array} props.datasets - All datasets data
  * @param {Function} props.onViewClick - View click handler
  * @param {Function} props.onDatasetClick - Dataset click handler
  * @param {Function} [props.onViewDragStart] - View drag start handler
  * @param {Function} [props.onDatasetDragStart] - Dataset drag start handler
+ * @param {string} [props.sizeMode='standard'] - Size mode for compact rendering
  */
 export const CompanionPanel = memo(function CompanionPanel({
   isOpen,
   activeTab,
   onTabChange,
-  onClose,
   views = [],
   datasets = [],
   onViewClick,
   onDatasetClick,
   onViewDragStart,
   onDatasetDragStart,
+  sizeMode = 'standard',
 }) {
+  const isCompact = sizeMode === 'compact';
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
@@ -78,52 +79,40 @@ export const CompanionPanel = memo(function CompanionPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="companion-panel">
+    <div className="companion-panel" data-size-mode={sizeMode}>
       {/* Header */}
       <div className="companion-panel__header">
         <div className="companion-panel__tabs">
           <button
-            className={`companion-panel__tab ${activeTab === 'views' ? 'companion-panel__tab--active' : ''}`}
+            className={`companion-panel__tab companion-panel__tab--views ${activeTab === 'views' ? 'companion-panel__tab--active' : ''}`}
             onClick={() => onTabChange('views')}
             type="button"
           >
-            <Icon name="layers" size={14} />
-            Views
-            <span className="companion-panel__count">{views.length}</span>
+            <Icon name="eye" size={14} />
+            {!isCompact && 'Views'}
           </button>
           <button
-            className={`companion-panel__tab ${activeTab === 'datasets' ? 'companion-panel__tab--active' : ''}`}
+            className={`companion-panel__tab companion-panel__tab--datasets ${activeTab === 'datasets' ? 'companion-panel__tab--active' : ''}`}
             onClick={() => onTabChange('datasets')}
             type="button"
           >
             <Icon name="database" size={14} />
-            Datasets
-            <span className="companion-panel__count">{datasets.length}</span>
+            {!isCompact && 'Data'}
           </button>
         </div>
-
-        <button
-          className="companion-panel__close"
-          onClick={onClose}
-          title="Close panel"
-          type="button"
-        >
-          <Icon name="x" size={14} />
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="companion-panel__search">
-        <SearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder={activeTab === 'views' ? 'Search views...' : 'Search datasets...'}
-          size="sm"
-        />
       </div>
 
       {/* Content */}
       <div className="companion-panel__content">
+        <div className="companion-panel__search">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={activeTab === 'views' ? 'Search views...' : 'Search datasets...'}
+            size="sm"
+          />
+          <p className="companion-panel__hint">Drag to add to canvas</p>
+        </div>
         {activeTab === 'views' && (
           <>
             {filteredViews.length > 0 ? (
@@ -173,12 +162,6 @@ export const CompanionPanel = memo(function CompanionPanel({
             )}
           </>
         )}
-      </div>
-
-      {/* Footer hint */}
-      <div className="companion-panel__footer">
-        <Icon name="grip" size={12} />
-        <span>Drag to add to canvas</span>
       </div>
     </div>
   );

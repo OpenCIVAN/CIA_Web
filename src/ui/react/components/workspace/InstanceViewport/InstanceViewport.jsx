@@ -342,6 +342,7 @@ export function InstanceViewport({
     const instanceIdRef = useRef(null);
     const menuButtonRefs = useRef(new Map());
     const spanPickerRef = useRef(null);
+    const readyNotifiedRef = useRef(false);
 
     // =========================================================================
     // STATE
@@ -697,8 +698,15 @@ export function InstanceViewport({
 
     // Call onReady when data has loaded (for progressive loading)
     useEffect(() => {
-        if (hasData && onReady) {
+        if (!onReady) return;
+
+        if (hasData && !readyNotifiedRef.current) {
+            readyNotifiedRef.current = true;
             onReady();
+        }
+
+        if (!hasData) {
+            readyNotifiedRef.current = false;
         }
     }, [hasData, onReady]);
 

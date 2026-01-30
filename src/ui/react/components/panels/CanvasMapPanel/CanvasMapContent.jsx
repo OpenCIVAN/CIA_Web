@@ -22,6 +22,8 @@ import { useViewGroups } from '@UI/react/hooks/useViewGroups';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence';
 import { useBookmarks } from '@UI/react/hooks/useBookmarks';
 import { useCanvas } from '@UI/react/hooks/useCanvas';
+import { useDatasets } from '@UI/react/hooks/useDatasets';
+import { useListFilter } from '@UI/react/hooks/useListFilter';
 
 // V2 Components
 import { ModeTabs } from './components/ModeTabs';
@@ -33,7 +35,7 @@ import { NavigatePanel, LayoutPanel, LinksPanel, TeamPanel } from './components/
 
 // Hooks and Utils
 import { useCanvasMapState } from './hooks/useCanvasMapState';
-import { MAP_MODES, DISPLAY_MODES } from './utils/constants';
+import { MAP_MODES, SIZE_MODE_BREAKPOINTS } from './utils/constants';
 import { getVGDisplayName } from './utils/gridUtils';
 
 // Styles - Component styles are imported by each component
@@ -52,7 +54,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   workspaceId,
   width,
   height,
-  sizeMode,
+  sizeMode: panelSizeMode,
 }) {
   const { isVR } = useAdaptive();
   const minimapContainerRef = useRef(null);
@@ -64,6 +66,9 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   // Canvas data
   const { canvas, viewport } = useCanvas();
 
+  // Loaded datasets
+  const loadedDatasets = useDatasets();
+
   // ViewGroups
   const {
     viewGroups: rawViewGroups,
@@ -72,10 +77,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   } = useViewGroups(workspaceId);
 
   // Collaborators
-  const {
-    users: rawCollaborators,
-    onlineCount,
-  } = useWorkspacePresence(workspaceId);
+  const { users: rawCollaborators } = useWorkspacePresence(workspaceId);
 
   // Bookmarks
   const {
@@ -101,6 +103,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       name: vg.name,
       color: vg.color || '#a855f7',
       isExplicit: !!vg.name,
+      isActive: vg.row !== undefined && vg.col !== undefined,
+      isLinked: !!vg.link,
+      isShared: vg.isShared ?? (vg.sharedWith?.length > 0),
+      isStarred: vg.isStarred ?? vg.starred ?? false,
       layoutId: vg.layout?.type || 'single',
       position: vg.row !== undefined ? {
         row: vg.row,
@@ -113,6 +119,34 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }));
   }, [visibleViewGroups]);
 
+  const vgQuickFilters = useMemo(() => ([
+    { id: 'active', label: 'Active', icon: 'checkCircle', predicate: (vg) => vg.isActive },
+    { id: 'linked', label: 'Linked', icon: 'link2', predicate: (vg) => vg.isLinked },
+    { id: 'shared', label: 'Shared', icon: 'share2', predicate: (vg) => vg.isShared },
+    { id: 'starred', label: 'Starred', icon: 'star', predicate: (vg) => vg.isStarred },
+  ]), []);
+
+  const vgFilter = useListFilter({
+    searchFields: (vg) => [
+      getVGDisplayName(vg),
+      ...(vg.views || []).map((v) => v.name || ''),
+    ],
+    quickFilterDefs: vgQuickFilters,
+    persistKey: workspaceId ? `canvasmap-vg-filters:${workspaceId}` : null,
+  });
+
+  const filteredViewGroups = useMemo(
+    () => vgFilter.applyFilters(viewGroups),
+    [viewGroups, vgFilter.applyFilters]
+  );
+
+  const quickFilterCounts = useMemo(() => {
+    return vgQuickFilters.reduce((acc, def) => {
+      acc[def.id] = viewGroups.filter(def.predicate).length;
+      return acc;
+    }, {});
+  }, [viewGroups, vgQuickFilters]);
+
   // Get inactive VGs (no position)
   const inactiveVGs = useMemo(() => {
     return viewGroups.filter(vg => !vg.position);
@@ -122,6 +156,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const activeViewGroups = useMemo(() => {
     return viewGroups.filter(vg => vg.position);
   }, [viewGroups]);
+
+  const filteredActiveViewGroups = useMemo(() => {
+    return filteredViewGroups.filter(vg => vg.position);
+  }, [filteredViewGroups]);
+
+  const filteredInactiveVGs = useMemo(() => {
+    return filteredViewGroups.filter(vg => !vg.position);
+  }, [filteredViewGroups]);
 
   // Transform viewports from canvas viewport
   const viewports = useMemo(() => {
@@ -137,7 +179,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }, [viewport]);
 
   // Transform collaborators to expected structure
-  const collaborators = useMemo(() => {
+  const baseCollaborators = useMemo(() => {
     return (rawCollaborators || []).map(user => ({
       id: user.id,
       name: user.name || user.email || 'Unknown',
@@ -177,6 +219,11 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return links;
   }, [activeViewGroups]);
 
+  const minimapVgLinks = useMemo(() => {
+    const visibleIds = new Set(filteredActiveViewGroups.map(vg => vg.id));
+    return vgLinks.filter(link => visibleIds.has(link.from) && visibleIds.has(link.to));
+  }, [vgLinks, filteredActiveViewGroups]);
+
   // View links (placeholder)
   const viewLinks = useMemo(() => [], []);
 
@@ -203,8 +250,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     );
   }, [activeViewGroups]);
 
-  // Datasets (placeholder - would come from workspace data)
-  const datasets = useMemo(() => [], []);
+  const datasets = useMemo(() => {
+    return (loadedDatasets || []).map((dataset) => ({
+      id: dataset.id,
+      name: dataset.name,
+      type: (dataset.fileType || 'default').toLowerCase(),
+      size: dataset.size,
+    }));
+  }, [loadedDatasets]);
 
   // ---------------------------------------------------------------------------
   // Initialize state from hook
@@ -215,12 +268,27 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     viewGroups: activeViewGroups,
     inactiveVGs,
     viewports,
-    collaborators,
+    collaborators: baseCollaborators,
     vgLinks,
     viewLinks,
     bookmarks,
     callbacks: {},
   });
+
+  const filteredActiveIds = useMemo(() => {
+    return new Set(filteredActiveViewGroups.map(vg => vg.id));
+  }, [filteredActiveViewGroups]);
+
+  const filteredFlattenedViews = useMemo(() => {
+    return (state.flattenedViews || []).filter(view => filteredActiveIds.has(view.vgId));
+  }, [state.flattenedViews, filteredActiveIds]);
+
+  const collaborators = useMemo(() => {
+    return baseCollaborators.map((collab) => ({
+      ...collab,
+      showCursor: state.collaboratorCursorVisibility?.[collab.id] ?? true,
+    }));
+  }, [baseCollaborators, state.collaboratorCursorVisibility]);
 
   // ---------------------------------------------------------------------------
   // Action Handlers (placeholder implementations)
@@ -286,30 +354,60 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement broadcast stop
   }, []);
 
+  const COMPANION_WIDTHS = { compact: 140, standard: 160 };
+  const QUICK_NAV_WIDTH = 40;
+  const MINIMAP_PADDING = 8;
+
+  const effectiveWidth = width - (state.companionOpen ? COMPANION_WIDTHS.standard : 0);
+  const effectiveSizeMode = (() => {
+    if (!Number.isFinite(effectiveWidth)) return panelSizeMode || 'standard';
+    if (effectiveWidth < SIZE_MODE_BREAKPOINTS.compact) return 'compact';
+    if (effectiveWidth >= SIZE_MODE_BREAKPOINTS.expanded) return 'expanded';
+    return 'standard';
+  })();
+
+  const isCompact = effectiveSizeMode === 'compact';
+  const companionWidth = state.companionOpen
+    ? (isCompact ? COMPANION_WIDTHS.compact : COMPANION_WIDTHS.standard)
+    : 0;
+
+  // Calculate minimap container dimensions
+  const quickNavWidth = state.toolbarPosition ? QUICK_NAV_WIDTH : 0;
+  const minimapWidth = Math.max(0, width - quickNavWidth - companionWidth - MINIMAP_PADDING * 2);
+  const minimapInnerHeight = Math.max(0, minimapHeight - MINIMAP_PADDING * 2);
+
+  // Calculate available heights
+  const headerHeight = state.focusedVGId ? 40 : 0;
+  const tabsHeight = 40;
+  const toolbarHeight = 40;
+  const chromeHeight = headerHeight + tabsHeight + toolbarHeight;
+  const contentHeight = Math.max(0, height - chromeHeight);
+
+  const isShort = height < 520;
+  const minContextualHeight = isCompact ? 130 : (isShort ? 150 : 180);
+  const minMinimapHeight = isShort ? 120 : 150;
+
+  let minimapHeight = Math.max(minMinimapHeight, Math.floor(contentHeight * 0.55));
+  if (contentHeight - minimapHeight < minContextualHeight) {
+    minimapHeight = Math.max(minMinimapHeight, contentHeight - minContextualHeight);
+  }
+
+  const contextualHeight = Math.max(minContextualHeight, contentHeight - minimapHeight);
+  const densityMode = isShort || isCompact ? 'dense' : 'standard';
+
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
 
   if (vgLoading) {
     return (
-      <div className="canvas-map-v2" data-vr={isVR} data-size-mode={sizeMode}>
+      <div className="canvas-map-v2" data-vr={isVR} data-size-mode={effectiveSizeMode}>
         <div className="canvas-map-v2__loading">
           Loading canvas data...
         </div>
       </div>
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Responsive adjustments
-  // ---------------------------------------------------------------------------
-
-  const isCompact = sizeMode === 'compact';
-  const isExpanded = sizeMode === 'expanded';
-
-  // Calculate minimap container dimensions
-  const minimapWidth = width - (isCompact ? 44 : 48) - (state.companionOpen ? 200 : 0);
-  const minimapHeight = height - 140 - (isCompact ? 200 : 280); // Account for tabs, toolbar, panel
 
   // ---------------------------------------------------------------------------
   // Render
@@ -319,7 +417,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     <div
       className={`canvas-map-v2 canvas-map-v2--${state.mapMode}`}
       data-vr={isVR}
-      data-size-mode={sizeMode}
+      data-size-mode={effectiveSizeMode}
+      data-density={densityMode}
     >
       {/* Breadcrumb / Back navigation (when focused) */}
       {state.focusedVGId && state.focusedVG && (
@@ -351,7 +450,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       <ModeTabs
         activeMode={state.mapMode}
         onModeChange={state.handleModeChange}
-        sizeMode={sizeMode}
+        sizeMode={effectiveSizeMode}
       />
 
       {/* Toolbar */}
@@ -365,7 +464,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         showCollaborators={state.showCollaborators}
         showBookmarks={state.showBookmarks}
         showInternals={state.showInternals}
-        showCursors={state.showCursors}
         linksSubTab={state.linksSubTab}
         setLinksSubTab={state.setLinksSubTab}
         collaborateSubTab={state.collaborateSubTab}
@@ -373,150 +471,170 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         onlineCollaboratorsCount={state.onlineCollaboratorsCount}
         onZoomIn={state.handleZoomIn}
         onZoomOut={state.handleZoomOut}
-        onZoomReset={state.handleZoomReset}
         toggleShowGridLabels={state.toggleShowGridLabels}
         toggleShowViewports={state.toggleShowViewports}
         toggleShowCollaborators={state.toggleShowCollaborators}
         toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
-        toggleShowCursors={state.toggleShowCursors}
         onAddVG={handleAddVG}
-        sizeMode={sizeMode}
+        sizeMode={effectiveSizeMode}
+        companionOpen={state.companionOpen}
+        onToggleCompanion={state.toggleCompanion}
       />
 
-      {/* Main Body with QuickNav, Minimap, and Companion */}
+      {/* Main Body with Minimap Row + Contextual Panel */}
       <div className="canvas-map-v2__body">
-        {/* QuickNav Toolbar */}
-        <QuickNavToolbar
-          onGoHome={handleGoHome}
-          onSetHome={handleSetHome}
-          onFitAll={handleFitAll}
-          onAddBookmark={handleAddBookmark}
-          companionOpen={state.companionOpen}
-          onToggleCompanion={state.toggleCompanion}
-        />
-
-        {/* Main content area */}
-        <div className="canvas-map-v2__main">
-          {/* Minimap */}
-          <div className="canvas-map-v2__minimap-container" ref={minimapContainerRef}>
-            <Minimap
-              canvas={canvasData}
-              viewGroups={activeViewGroups}
-              viewports={viewports}
-              collaborators={collaborators}
-              vgLinks={vgLinks}
-              bookmarks={bookmarks}
-              flattenedViews={state.flattenedViews}
-              displayMode={state.displayMode}
-              mapMode={state.mapMode}
-              minimapZoom={state.minimapZoom}
-              showGridLabels={state.showGridLabels}
-              showInternals={state.showInternals}
-              showViewports={state.showViewports}
-              showCollaborators={state.showCollaborators}
-              showBookmarks={state.showBookmarks}
-              showCursors={state.showCursors}
-              selectedVGId={state.selectedVGId}
-              selectedViewportId={state.selectedViewportId}
-              highlightedLinkId={state.highlightedLinkId}
-              onVGClick={state.handleVGClick}
-              onVGDoubleClick={state.handleVGDoubleClick}
-              onLinkClick={state.handleLinkClick}
-              getVGCenter={state.getVGCenter}
-              containerWidth={minimapWidth}
-              containerHeight={minimapHeight}
-            />
-          </div>
-
-          {/* Contextual Panel */}
-          <div className="canvas-map-v2__panel">
-            {state.mapMode === MAP_MODES.NAVIGATE && !state.focusedVGId && (
-              <NavigatePanel
-                bookmarks={bookmarks}
-                filteredBookmarks={state.filteredBookmarks}
-                searchQuery={state.searchQuery}
-                setSearchQuery={state.setSearchQuery}
+        <div
+          className="canvas-map-v2__minimap-row"
+          style={{ height: minimapHeight }}
+        >
+          {state.toolbarPosition === 'left' && (
+            <div className="canvas-map-v2__quicknav">
+              <QuickNavToolbar
+                position="left"
                 onGoHome={handleGoHome}
                 onSetHome={handleSetHome}
                 onFitAll={handleFitAll}
                 onAddBookmark={handleAddBookmark}
-                onBookmarkClick={handleBookmarkClick}
-                onBookmarkDelete={handleBookmarkDelete}
-                sizeMode={sizeMode}
               />
-            )}
+            </div>
+          )}
 
-            {state.mapMode === MAP_MODES.LAYOUT && (
-              <LayoutPanel
-                viewGroups={activeViewGroups}
-                filteredVGs={state.filteredVGs}
-                inactiveVGs={inactiveVGs}
+          <div className="canvas-map-v2__minimap-shell" ref={minimapContainerRef}>
+            <div className="canvas-map-v2__minimap-container">
+              <Minimap
+                canvas={canvasData}
+                viewGroups={filteredActiveViewGroups}
+                viewports={viewports}
+                collaborators={collaborators}
+                vgLinks={minimapVgLinks}
+                bookmarks={bookmarks}
+                flattenedViews={filteredFlattenedViews}
+                displayMode={state.displayMode}
+                mapMode={state.mapMode}
+                focusedVG={state.focusedVG}
+                minimapZoom={state.minimapZoom}
+                showGridLabels={state.showGridLabels}
+                showInternals={state.showInternals}
+                showViewports={state.showViewports}
+                showCollaborators={state.showCollaborators}
+                showBookmarks={state.showBookmarks}
+                showCursors={state.showCursors}
+                selectedVGId={state.selectedVGId}
+                selectedViewportId={state.selectedViewportId}
+                highlightedLinkId={state.highlightedLinkId}
+                onVGClick={state.handleVGClick}
+                onVGDoubleClick={state.handleVGDoubleClick}
+                onLinkClick={state.handleLinkClick}
+                containerWidth={minimapWidth}
+                containerHeight={minimapInnerHeight}
+              />
+            </div>
+          </div>
+
+          {state.toolbarPosition === 'right' && (
+            <div className="canvas-map-v2__quicknav canvas-map-v2__quicknav--right">
+              <QuickNavToolbar
+                position="right"
+                onGoHome={handleGoHome}
+                onSetHome={handleSetHome}
+                onFitAll={handleFitAll}
+                onAddBookmark={handleAddBookmark}
+              />
+            </div>
+          )}
+
+          <CompanionPanel
+            isOpen={state.companionOpen}
+            activeTab={state.companionTab}
+            onTabChange={state.setCompanionTab}
+            views={allViews}
+            datasets={datasets}
+            onViewClick={(view) => {
+              state.handleVGClick(view.vgId);
+            }}
+            onDatasetClick={(dataset) => {
+              console.log('Dataset clicked:', dataset);
+            }}
+            sizeMode={effectiveSizeMode}
+          />
+        </div>
+
+        {/* Contextual Panel */}
+        <div className="canvas-map-v2__panel" style={{ minHeight: contextualHeight }}>
+          {state.mapMode === MAP_MODES.NAVIGATE && !state.focusedVGId && (
+            <NavigatePanel
+              bookmarks={bookmarks}
+              filteredBookmarks={state.filteredBookmarks}
+              searchQuery={state.searchQuery}
+              setSearchQuery={state.setSearchQuery}
+              onGoHome={handleGoHome}
+              onSetHome={handleSetHome}
+              onFitAll={handleFitAll}
+              onAddBookmark={handleAddBookmark}
+              onBookmarkClick={handleBookmarkClick}
+              onBookmarkDelete={handleBookmarkDelete}
+              sizeMode={effectiveSizeMode}
+            />
+          )}
+
+          {state.mapMode === MAP_MODES.LAYOUT && (
+            <LayoutPanel
+                viewGroups={filteredActiveViewGroups}
+                filteredVGs={filteredActiveViewGroups}
+                inactiveVGs={filteredInactiveVGs}
                 selectedVGId={state.selectedVGId}
                 focusedVG={state.focusedVG}
                 searchQuery={state.searchQuery}
                 setSearchQuery={state.setSearchQuery}
+                filter={vgFilter}
+                quickFilterDefs={vgQuickFilters}
+                quickFilterCounts={quickFilterCounts}
                 onVGClick={state.handleVGClick}
                 onVGDoubleClick={state.handleVGDoubleClick}
                 onVGRestore={handleVGRestore}
                 onAddVG={handleAddVG}
-                sizeMode={sizeMode}
+                sizeMode={effectiveSizeMode}
               />
-            )}
+          )}
 
-            {state.mapMode === MAP_MODES.LINKS && (
-              <LinksPanel
-                linksSubTab={state.linksSubTab}
-                vgLinks={vgLinks}
-                viewLinks={viewLinks}
-                viewGroups={activeViewGroups}
-                allViews={allViews}
-                highlightedLinkId={state.highlightedLinkId}
-                onLinkClick={state.handleLinkClick}
-                sizeMode={sizeMode}
-              />
-            )}
+          {state.mapMode === MAP_MODES.LINKS && (
+            <LinksPanel
+              linksSubTab={state.linksSubTab}
+              vgLinks={vgLinks}
+              viewLinks={viewLinks}
+              viewGroups={activeViewGroups}
+              allViews={allViews}
+              highlightedLinkId={state.highlightedLinkId}
+              onLinkClick={state.handleLinkClick}
+              sizeMode={effectiveSizeMode}
+            />
+          )}
 
-            {state.mapMode === MAP_MODES.COLLABORATE && (
-              <TeamPanel
-                collaborateSubTab={state.collaborateSubTab}
-                viewports={viewports}
-                selectedViewportId={state.selectedViewportId}
-                collaborators={collaborators}
-                searchQuery={state.searchQuery}
-                setSearchQuery={state.setSearchQuery}
-                showCursors={state.showCursors}
-                myCursorVisible={state.myCursorVisible}
-                myCursorColor={state.myCursorColor}
-                onViewportClick={state.handleViewportClick}
-                onFollow={handleFollow}
-                onLocate={handleLocate}
-                onStartBroadcast={handleStartBroadcast}
-                onStopBroadcast={handleStopBroadcast}
-                onToggleShowCursors={state.toggleShowCursors}
-                onToggleMyCursorVisible={state.toggleMyCursorVisible}
-                onChangeMyCursorColor={state.setMyCursorColor}
-                sizeMode={sizeMode}
-              />
-            )}
-          </div>
+          {state.mapMode === MAP_MODES.TEAM && (
+            <TeamPanel
+              collaborateSubTab={state.collaborateSubTab}
+              viewports={viewports}
+              selectedViewportId={state.selectedViewportId}
+              collaborators={collaborators}
+              searchQuery={state.searchQuery}
+              setSearchQuery={state.setSearchQuery}
+              showCursors={state.showCursors}
+              myCursorVisible={state.myCursorVisible}
+              myCursorColor={state.myCursorColor}
+              onViewportClick={state.handleViewportClick}
+              onFollow={handleFollow}
+              onLocate={handleLocate}
+              onStartBroadcast={handleStartBroadcast}
+              onStopBroadcast={handleStopBroadcast}
+              onToggleShowCursors={state.toggleShowCursors}
+              onToggleMyCursorVisible={state.toggleMyCursorVisible}
+              onChangeMyCursorColor={state.setMyCursorColor}
+              onToggleCollaboratorCursor={state.toggleCollaboratorCursor}
+              sizeMode={effectiveSizeMode}
+            />
+          )}
         </div>
-
-        {/* Companion Panel */}
-        <CompanionPanel
-          isOpen={state.companionOpen}
-          activeTab={state.companionTab}
-          onTabChange={state.setCompanionTab}
-          onClose={state.toggleCompanion}
-          views={allViews}
-          datasets={datasets}
-          onViewClick={(view) => {
-            state.handleVGClick(view.vgId);
-          }}
-          onDatasetClick={(dataset) => {
-            console.log('Dataset clicked:', dataset);
-          }}
-        />
       </div>
     </div>
   );

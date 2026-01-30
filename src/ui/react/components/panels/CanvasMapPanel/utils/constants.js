@@ -10,7 +10,7 @@ export const MAP_MODES = {
   NAVIGATE: 'navigate',
   LAYOUT: 'layout',
   LINKS: 'links',
-  COLLABORATE: 'collaborate',
+  TEAM: 'team',
 };
 
 /**
@@ -38,8 +38,8 @@ export const MODE_CONFIG = {
     color: 'purple',
     description: 'Manage connections',
   },
-  [MAP_MODES.COLLABORATE]: {
-    id: MAP_MODES.COLLABORATE,
+  [MAP_MODES.TEAM]: {
+    id: MAP_MODES.TEAM,
     name: 'Team',
     icon: 'users',
     color: 'amber',
@@ -98,9 +98,9 @@ export const VIEW_TYPES = {
  * Size mode breakpoints for responsive behavior
  */
 export const SIZE_MODE_BREAKPOINTS = {
-  compact: 320,
+  compact: 300,
   standard: 380,
-  expanded: 480,
+  expanded: 440,
 };
 
 /**
