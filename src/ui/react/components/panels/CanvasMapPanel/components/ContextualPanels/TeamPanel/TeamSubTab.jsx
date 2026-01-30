@@ -1,24 +1,29 @@
 /**
  * @file TeamSubTab.jsx
- * @description "Team" sub-tab for TeamPanel - shows collaborators
+ * @description "Team" sub-tab for TeamPanel - shows collaborators with cursor controls
  */
 
 import React, { memo, useState, useCallback, useMemo } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { Badge } from '@UI/react/components/atoms/Badge';
+import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { Section } from '@UI/react/components/molecules/Section';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { CollaboratorItem } from '../../shared';
 
 /**
- * TeamSubTab - Team collaborators list
+ * TeamSubTab - Team collaborators list with cursor visibility controls
  */
 export const TeamSubTab = memo(function TeamSubTab({
   collaborators = [],
   searchQuery,
   setSearchQuery,
+  showCursors = true,
+  onToggleShowCursors,
   onFollow,
   onLocate,
+  onToggleCollaboratorCursor,
   sizeMode = 'standard',
 }) {
   // Filter state
@@ -71,6 +76,19 @@ export const TeamSubTab = memo(function TeamSubTab({
 
   return (
     <div className="team-subtab">
+      {/* Master Cursor Toggle */}
+      <div className="team-subtab__master-toggle">
+        <span className="team-subtab__master-label">
+          <Icon name="mousePointer" size={14} />
+          Show Cursors
+        </span>
+        <Toggle
+          checked={showCursors}
+          onChange={onToggleShowCursors}
+          size="sm"
+        />
+      </div>
+
       <SearchInput
         value={searchQuery}
         onChange={setSearchQuery}

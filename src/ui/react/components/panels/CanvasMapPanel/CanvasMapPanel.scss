@@ -1,6 +1,8 @@
 /**
  * CanvasMapPanel V2 Styles
  * Main panel layout and composition styles
+ *
+ * Uses glassmorphism and blue-tinted design system
  */
 
 @use "theme" as *;
@@ -22,10 +24,20 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: $color-bg-primary;
+
+  // Glassmorphism background
+  background: $color-glass-panel;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+
   color: $color-text-primary;
   font-family: $font-family-base;
   overflow: hidden;
+
+  // Subtle inner shadow for depth
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 48px rgba(0, 0, 0, 0.5);
 
   // VR mode adjustments
   &[data-vr="true"] {
@@ -126,25 +138,31 @@
   }
 
   // -------------------------------------------------------------------------
-  // Minimap Container
+  // Minimap Container - Takes 55% of available space
   // -------------------------------------------------------------------------
   &__minimap-container {
-    flex: 1;
-    min-height: 200px;
+    flex: 55 1 0%;
+    min-height: 150px;
     overflow: hidden;
-    background: $color-bg-primary;
+    // Canvas area uses neutral colors for data accuracy
+    background: $color-bg-canvas;
     position: relative;
   }
 
   // -------------------------------------------------------------------------
-  // Contextual Panel
+  // Contextual Panel - Takes 45% of available space
   // -------------------------------------------------------------------------
   &__panel {
+    flex: 45 1 0%;
+    min-height: 120px;
+    max-height: 50%;
     border-top: 1px solid $color-border-subtle;
-    max-height: 280px;
     overflow: auto;
-    flex-shrink: 0;
     background: $color-bg-secondary;
+
+    // Subtle glassmorphism for depth
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
@@ -169,14 +187,26 @@
       padding: $spacing-xs $spacing-sm;
     }
 
+    // Minimap takes more space in compact mode
+    .canvas-map-v2__minimap-container {
+      flex: 60 1 0%;
+    }
+
     .canvas-map-v2__panel {
-      max-height: 200px;
+      flex: 40 1 0%;
+      min-height: 100px;
     }
   }
 
   &[data-size-mode="expanded"] {
+    // Panel can be larger in expanded mode
+    .canvas-map-v2__minimap-container {
+      flex: 50 1 0%;
+    }
+
     .canvas-map-v2__panel {
-      max-height: 360px;
+      flex: 50 1 0%;
+      max-height: 60%;
     }
   }
 }

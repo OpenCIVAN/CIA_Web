@@ -3,8 +3,8 @@
  * @description Team/Collaborate mode panel for Canvas Map V2
  *
  * Contains:
- * - MeSubTab: User's viewports and status
- * - TeamSubTab: Team collaborators list
+ * - MeSubTab: User's viewports, cursor settings, and status
+ * - TeamSubTab: Team collaborators list with cursor controls
  */
 
 import React, { memo } from 'react';
@@ -27,6 +27,11 @@ export const TeamPanel = memo(function TeamPanel({
   isBroadcasting,
   followingUser,
 
+  // Cursor settings
+  showCursors = true,
+  myCursorVisible = true,
+  myCursorColor = '#22d3ee',
+
   // Viewport handlers
   onViewportClick,
   onAddViewport,
@@ -37,6 +42,12 @@ export const TeamPanel = memo(function TeamPanel({
   onStartBroadcast,
   onStopBroadcast,
   onStopFollowing,
+
+  // Cursor handlers
+  onToggleShowCursors,
+  onToggleMyCursorVisible,
+  onChangeMyCursorColor,
+  onToggleCollaboratorCursor,
 
   // Team handlers
   onFollow,
@@ -51,6 +62,8 @@ export const TeamPanel = memo(function TeamPanel({
         selectedViewportId={selectedViewportId}
         isBroadcasting={isBroadcasting}
         followingUser={followingUser}
+        myCursorVisible={myCursorVisible}
+        myCursorColor={myCursorColor}
         onViewportClick={onViewportClick}
         onAddViewport={onAddViewport}
         onDeleteViewport={onDeleteViewport}
@@ -58,6 +71,8 @@ export const TeamPanel = memo(function TeamPanel({
         onStartBroadcast={onStartBroadcast}
         onStopBroadcast={onStopBroadcast}
         onStopFollowing={onStopFollowing}
+        onToggleCursorVisible={onToggleMyCursorVisible}
+        onChangeCursorColor={onChangeMyCursorColor}
         sizeMode={sizeMode}
       />
     );
@@ -68,8 +83,11 @@ export const TeamPanel = memo(function TeamPanel({
       collaborators={collaborators}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
+      showCursors={showCursors}
+      onToggleShowCursors={onToggleShowCursors}
       onFollow={onFollow}
       onLocate={onLocate}
+      onToggleCollaboratorCursor={onToggleCollaboratorCursor}
       sizeMode={sizeMode}
     />
   );

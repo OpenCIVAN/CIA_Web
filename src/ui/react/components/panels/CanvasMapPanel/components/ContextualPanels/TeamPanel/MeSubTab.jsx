@@ -1,23 +1,40 @@
 /**
  * @file MeSubTab.jsx
- * @description "Me" sub-tab for TeamPanel - shows user's viewports and status
+ * @description "Me" sub-tab for TeamPanel - shows user's viewports, cursor settings, and status
  */
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
+import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { Section } from '@UI/react/components/molecules/Section';
 import { ViewportItem } from '../../shared';
 
 /**
- * MeSubTab - User's viewports and broadcasting status
+ * Available cursor colors
+ */
+const CURSOR_COLORS = [
+  '#22d3ee', // cyan
+  '#34d399', // green
+  '#fbbf24', // amber
+  '#fb7185', // pink
+  '#c084fc', // purple
+  '#60a5fa', // blue
+  '#f87171', // red
+  '#7dd3fc', // teal
+];
+
+/**
+ * MeSubTab - User's viewports, cursor settings, and broadcasting status
  */
 export const MeSubTab = memo(function MeSubTab({
   viewports = [],
   selectedViewportId,
   isBroadcasting,
   followingUser,
+  myCursorVisible = true,
+  myCursorColor = '#22d3ee',
   onViewportClick,
   onAddViewport,
   onDeleteViewport,
@@ -25,6 +42,8 @@ export const MeSubTab = memo(function MeSubTab({
   onStartBroadcast,
   onStopBroadcast,
   onStopFollowing,
+  onToggleCursorVisible,
+  onChangeCursorColor,
   sizeMode = 'standard',
 }) {
   const isCompact = sizeMode === 'compact';
@@ -59,71 +78,83 @@ export const MeSubTab = memo(function MeSubTab({
         </div>
       </Section>
 
-      {/* My Status */}
-      <Section title="My Status" icon="user" collapsible={false}>
-        <div className="team-subtab__status">
-          {/* Broadcasting */}
-          <div className="team-subtab__status-row">
-            <span className="team-subtab__status-label">
-              <Icon name="radio" size={12} />
-              Broadcasting
-            </span>
-            {isBroadcasting ? (
-              <Button
-                variant="danger"
-                size="sm"
-                icon="radioOff"
-                onClick={onStopBroadcast}
-              >
-                {!isCompact && 'Stop'}
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon="radio"
-                onClick={onStartBroadcast}
-              >
-                {!isCompact && 'Start Broadcasting'}
-              </Button>
-            )}
-          </div>
+      {/* Broadcasting */}
+      <Section title="Broadcast" icon="radio" collapsible={false}>
+        <div className="team-subtab__status-row">
+          <span className="team-subtab__status-label">
+            Broadcasting to team
+          </span>
+          <Toggle
+            checked={isBroadcasting}
+            onChange={isBroadcasting ? onStopBroadcast : onStartBroadcast}
+            size="sm"
+          />
+        </div>
+        {isBroadcasting && (
+          <p className="contextual-panel__hint contextual-panel__hint--success">
+            <Icon name="radio" size={12} /> Team members can follow your view
+          </p>
+        )}
+      </Section>
 
-          {/* Following */}
-          <div className="team-subtab__status-row">
-            <span className="team-subtab__status-label">
-              <Icon name="eye" size={12} />
-              Following
-            </span>
-            {followingUser ? (
-              <div className="team-subtab__following">
-                <span
-                  className="team-subtab__following-user"
-                  style={{ '--user-color': followingUser.color }}
-                >
-                  {followingUser.name}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon="x"
-                  onClick={onStopFollowing}
-                >
-                  {!isCompact && 'Stop'}
-                </Button>
-              </div>
-            ) : (
-              <span className="team-subtab__status-value">Nobody</span>
-            )}
+      {/* My Cursor */}
+      <Section title="My Cursor" icon="mousePointer" collapsible={false}>
+        <div className="team-subtab__status-row">
+          <span className="team-subtab__status-label">
+            Visible to team
+          </span>
+          <Toggle
+            checked={myCursorVisible}
+            onChange={onToggleCursorVisible}
+            size="sm"
+          />
+        </div>
+
+        {/* Cursor Color Picker */}
+        <div className="team-subtab__cursor-colors">
+          <span className="team-subtab__status-label">Color</span>
+          <div className="team-subtab__color-picker">
+            {CURSOR_COLORS.map(color => (
+              <button
+                key={color}
+                className={`team-subtab__color-btn ${myCursorColor === color ? 'team-subtab__color-btn--active' : ''}`}
+                style={{ '--color': color }}
+                onClick={() => onChangeCursorColor?.(color)}
+                title={`Set cursor color to ${color}`}
+                type="button"
+              />
+            ))}
           </div>
         </div>
       </Section>
 
-      {/* Cursor Visibility */}
-      <Section title="Visibility" icon="eye" collapsible={false}>
-        <p className="contextual-panel__hint">
-          Your cursor is visible to team members when you're in their viewport area.
-        </p>
+      {/* Following Status */}
+      <Section title="Following" icon="eye" collapsible={false}>
+        <div className="team-subtab__status-row">
+          <span className="team-subtab__status-label">
+            Currently following
+          </span>
+          {followingUser ? (
+            <div className="team-subtab__following">
+              <span
+                className="team-subtab__following-user"
+                style={{ '--user-color': followingUser.color }}
+              >
+                {followingUser.name}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="x"
+                onClick={onStopFollowing}
+              >
+                {!isCompact && 'Stop'}
+              </Button>
+            </div>
+          ) : (
+            <span className="team-subtab__status-value">Nobody</span>
+          )}
+        </div>
       </Section>
     </div>
   );

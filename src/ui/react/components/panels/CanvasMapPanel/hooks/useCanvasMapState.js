@@ -105,6 +105,14 @@ export function useCanvasMapState({
     loadPreference('showCursors', true)
   );
 
+  // My cursor settings (broadcast to collaborators)
+  const [myCursorVisible, setMyCursorVisibleState] = useState(() =>
+    loadPreference('myCursorVisible', true)
+  );
+  const [myCursorColor, setMyCursorColorState] = useState(() =>
+    loadPreference('myCursorColor', '#22d3ee')
+  );
+
   // Companion panel state
   const [companionOpen, setCompanionOpenState] = useState(() =>
     loadPreference('companionOpen', false)
@@ -171,6 +179,16 @@ export function useCanvasMapState({
   const setShowCursors = useCallback((show) => {
     setShowCursorsState(show);
     savePreference('showCursors', show);
+  }, []);
+
+  const setMyCursorVisible = useCallback((visible) => {
+    setMyCursorVisibleState(visible);
+    savePreference('myCursorVisible', visible);
+  }, []);
+
+  const setMyCursorColor = useCallback((color) => {
+    setMyCursorColorState(color);
+    savePreference('myCursorColor', color);
   }, []);
 
   const setCompanionOpen = useCallback((open) => {
@@ -357,6 +375,10 @@ export function useCanvasMapState({
     setShowCursors(prev => !prev);
   }, [setShowCursors]);
 
+  const toggleMyCursorVisible = useCallback(() => {
+    setMyCursorVisible(prev => !prev);
+  }, [setMyCursorVisible]);
+
   const toggleCompanion = useCallback(() => {
     setCompanionOpen(prev => !prev);
   }, [setCompanionOpen]);
@@ -392,6 +414,8 @@ export function useCanvasMapState({
     showBookmarks,
     showInternals,
     showCursors,
+    myCursorVisible,
+    myCursorColor,
     companionOpen,
     companionTab,
     linksSubTab,
@@ -413,6 +437,8 @@ export function useCanvasMapState({
     setShowBookmarks,
     setShowInternals,
     setShowCursors,
+    setMyCursorVisible,
+    setMyCursorColor,
     setCompanionOpen,
     setCompanionTab,
     setLinksSubTab,
@@ -450,6 +476,7 @@ export function useCanvasMapState({
     toggleShowBookmarks,
     toggleShowInternals,
     toggleShowCursors,
+    toggleMyCursorVisible,
     toggleCompanion,
     getVGCenter,
   };

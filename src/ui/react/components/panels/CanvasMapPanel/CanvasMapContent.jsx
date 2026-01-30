@@ -485,11 +485,17 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                 collaborators={collaborators}
                 searchQuery={state.searchQuery}
                 setSearchQuery={state.setSearchQuery}
+                showCursors={state.showCursors}
+                myCursorVisible={state.myCursorVisible}
+                myCursorColor={state.myCursorColor}
                 onViewportClick={state.handleViewportClick}
                 onFollow={handleFollow}
                 onLocate={handleLocate}
                 onStartBroadcast={handleStartBroadcast}
                 onStopBroadcast={handleStopBroadcast}
+                onToggleShowCursors={state.toggleShowCursors}
+                onToggleMyCursorVisible={state.toggleMyCursorVisible}
+                onChangeMyCursorColor={state.setMyCursorColor}
                 sizeMode={sizeMode}
               />
             )}
