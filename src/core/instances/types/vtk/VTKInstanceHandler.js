@@ -2408,7 +2408,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const sceneState = vtkSceneFeature.getState(instanceId) || {};
     const showGrid = sceneState.showGrid || false;
     const showAxes = sceneState.showAxes || false;
-    const backgroundPreset = sceneState.backgroundPreset || 'dark';
+    const backgroundPreset = sceneState.backgroundPreset || 'light';
 
     tools.push({
       id: "scene",

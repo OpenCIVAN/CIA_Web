@@ -29,7 +29,7 @@ export function useVTKScene(instanceId) {
   // Local state synced with feature
   const [sceneState, setSceneState] = useState(() => {
     return vtkSceneFeature.getState(instanceId) || {
-      backgroundPreset: 'dark',
+      backgroundPreset: 'light',
       showGrid: false,
       showAxes: false,
       gridPlane: 'xz',

@@ -47,12 +47,12 @@ function showFatalError(message) {
       align-items: center;
       justify-content: center;
       height: 100vh;
-      background: #1a1a1a;
-      color: #fff;
+      background: #f8f9fa;
+      color: #1e293b;
       font-family: system-ui;
       padding: 20px;
     ">
-      <h1 style="color: #ff4444;">Fatal Error</h1>
+      <h1 style="color: #dc2626;">Fatal Error</h1>
       <p style="max-width: 600px; text-align: center; line-height: 1.5;">
         ${message}
       </p>
@@ -61,7 +61,7 @@ function showFatalError(message) {
         style="
           margin-top: 20px;
           padding: 10px 20px;
-          background: #007acc;
+          background: #2563eb;
           border: none;
           border-radius: 4px;
           color: white;

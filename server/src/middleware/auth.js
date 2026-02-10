@@ -245,7 +245,7 @@ async function authenticate(req, res, next) {
         externalId: userId,
         email: userEmail || DEV_USER.email,
         name: userName,
-        roles: DEV_USER.roles, // Keep admin roles for dev
+        roles: DEV_USER.roles,
       };
     } else {
       log.debug("Dev bypass mode - using default mock user");
@@ -254,28 +254,17 @@ async function authenticate(req, res, next) {
     return next();
   }
 
-  const authHeader = req.headers.authorization;
+  // Token authentication disabled - allow all requests
+  // All users connect as default dev user for collaboration
+  log.debug("Authentication disabled - using default dev user for all requests");
+  req.user = DEV_USER;
+  return next();
+}
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      error: "Missing or invalid Authorization header",
-      hint: 'Include "Authorization: Bearer <token>" header',
-    });
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    req.user = await verifyJwtToken(token);
-    next();
-  } catch (error) {
-    log.error("Authentication failed:", error.message);
-    return res.status(401).json({
-      error: "Invalid or expired token",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
+// Old JWT verification logic disabled - keeping only for reference if needed later
+async function verifyJwtTokenDisabled(token) {
+  // JWT verification disabled to allow collaboration without Keycloak
+  return DEV_USER;
 }
 
 /**

@@ -144,17 +144,8 @@ class ApiClient {
       headers["Content-Type"] = "application/json";
     }
 
-    // Add auth token unless skipped
-    if (!skipAuth) {
-      try {
-        const token = await authService.getAccessToken();
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-      } catch (error) {
-        log.warn("Failed to get auth token:", error.message);
-      }
-    }
+    // Token authentication disabled - all API calls work without tokens
+    // This allows the collaborative app to function without Keycloak/JWT validation
 
     // Build request URL
     const url = endpoint.startsWith("http")

@@ -1,29 +1,70 @@
 // src/services/index.js
 // =============================================================================
-// CIA Web Application Services
+// CIA Web Application Services - Module-Based Organization
 // =============================================================================
 //
 // Services provide centralized business logic that coordinates between managers.
 // They are the preferred API for UI components to interact with the system.
 //
-// ARCHITECTURE:
-// - Services are singletons initialized after managers
-// - They listen to events and coordinate operations
-// - They emit through EventBus for UI updates
-// - Components should call services, not managers directly (for complex operations)
+// ORGANIZATION:
+// - View Operations: createAndPlaceView, linkingService
+// - Authentication: keycloak, session management
+// - Voice Communication: LiveKit integration
+// - Collaboration: real-time sync, cursors, annotations
+// - Data Management: caching, storage, sync
+// - Utilities: API client, logging
 //
 // USAGE:
 // import { viewLifecycleService } from '@Services';
-//
-// const view = await viewLifecycleService.createAndPlaceView(datasetId);
+// import { authService } from '@Services';
+// import { voiceRoomService } from '@Services/voice';
 //
 // =============================================================================
 
-// View lifecycle operations
-export { viewLifecycleService } from "./ViewLifecycleService.js";
+// ============================================================================
+// VIEW & CANVAS OPERATIONS
+// ============================================================================
 
-// View linking operations
+export { viewLifecycleService } from "./ViewLifecycleService.js";
 export { viewLinkingService, LINKING_EVENTS } from "./ViewLinkingService.js";
 
-// Re-export commonly used event bus items for convenience
+// ============================================================================
+// AUTHENTICATION & SESSION
+// ============================================================================
+
+export { authService } from "./authService.js";
+
+// ============================================================================
+// VOICE COMMUNICATION
+// ============================================================================
+
+export { voiceRoomService } from "./voice/voiceRoomService.js";
+export { voiceCommandService } from "./voice/voiceCommandService.js";
+export { voiceFeedbackService } from "./voice/voiceFeedbackService.js";
+
+// ============================================================================
+// DATA MANAGEMENT & CACHING
+// ============================================================================
+
+export { apiClient } from "./apiClient.js";
+export { DivergenceLevel, calculateDivergence, checkForServerReset, checkSyncStatus, clearSyncState, fetchServerStatus, performReconciliation, updateSyncState } from "./syncService.js";
+export { serverSync } from "./serverSync.js";
+export { initializeStorageProvider, checkServerHealth, getStorageConfig } from "./storage/storageService.js";
+export { dataCache } from "./storage/dataCache.js";
+
+// ============================================================================
+// THUMBNAIL SERVICES
+// ============================================================================
+
+export { ThumbnailCaptureService } from "./ThumbnailCaptureService.js";
+export { thumbnailCacheService } from "./thumbnails/ThumbnailCacheService.js";
+
+// ============================================================================
+// LIFECYCLE & STATE MANAGEMENT
+// ============================================================================
+
+// ============================================================================
+// CORE EVENT BUS (for reactivity)
+// ============================================================================
+
 export { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";

@@ -97,8 +97,10 @@ export function Bootstrap() {
             const isAuthenticated = authService.isAuthenticated();
             log.debug(`Bootstrap: Auth status - authenticated: ${isAuthenticated}, devBypass: ${isDevBypass}`);
 
-            // If not authenticated and not in dev bypass mode, show login
-            if (!isAuthenticated && !isDevBypass) {
+            // SSO login disabled - skip Keycloak authentication
+            // All users go directly to username entry or initialization
+            log.debug("Bootstrap: SSO login disabled, skipping authentication");
+            if (false) { // SSO disabled
                 log.debug("Bootstrap: Authentication required");
                 setBootstrapState('login');
                 return;

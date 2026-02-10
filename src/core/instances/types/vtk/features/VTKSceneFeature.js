@@ -42,9 +42,9 @@ const BACKGROUND_PRESETS = {
  * Default scene settings
  */
 const DEFAULT_SETTINGS = {
-  backgroundPreset: 'dark',
-  backgroundColorTop: [0.04, 0.04, 0.04],
-  backgroundColorBottom: [0.04, 0.04, 0.04],
+  backgroundPreset: 'light',
+  backgroundColorTop: [0.95, 0.95, 0.95],
+  backgroundColorBottom: [0.95, 0.95, 0.95],
   useGradient: false,
   showGrid: false,
   gridSize: 10,
@@ -714,8 +714,8 @@ export class VTKSceneFeature extends FeatureInterface {
       return [r, g, b];
     }
 
-    // Default to dark
-    return [0.04, 0.04, 0.04];
+    // Default to light
+    return [0.95, 0.95, 0.95];
   }
 }
 

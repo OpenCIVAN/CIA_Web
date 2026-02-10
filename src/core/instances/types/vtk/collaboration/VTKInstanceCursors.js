@@ -27,6 +27,7 @@ import {
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { worldToScreen } from "@VTK/utils/vtkRaycaster.js";
 import { cursor as log } from "@Utils/logger.js";
+import { hexToRgb, clamp } from "@Utils/colorHelpers.js";
 
 // VTK imports for 3D cursor actors
 import vtkCircleSource from "@kitware/vtk.js/Filters/Sources/CircleSource";
@@ -45,23 +46,6 @@ const REMOTE_ADAPTIVE_SMOOTHING = true;
 const REMOTE_SMOOTHING_MIN = 0.15;
 const REMOTE_SMOOTHING_MAX = 0.85;
 const REFERENCE_PIXELS_PER_WORLD = 120;
-
-/**
- * Parse hex color to RGB array [0-1]
- * @param {string} hexColor - Color in hex format (#RRGGBB)
- * @returns {[number, number, number]}
- */
-function hexToRgb(hexColor) {
-  const hex = hexColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16) / 255;
-  const g = parseInt(hex.substring(2, 4), 16) / 255;
-  const b = parseInt(hex.substring(4, 6), 16) / 255;
-  return [r, g, b];
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
 
 /**
  * VTKInstanceCursors - Manages collaborative cursor rendering in VTK scenes
