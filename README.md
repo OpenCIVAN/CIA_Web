@@ -1,44 +1,23 @@
-# CIA_Web
+# CIA Web
 
+**Collaborative Immersive Analytics Platform** — Real-time collaborative platform for immersive scientific data visualization with VTK.js, WebXR, React, and Y.js.
 
-## Project Overview
+## Quick Start
 
-A web-based, real-time collaborative platform for immersive scientific data visualization and analysis, leveraging advanced technologies for multi-user interaction and high-dimensional data exploration.
+→ **[See DEVELOPMENT_GUIDE.md for all setup and development info](DEVELOPMENT_GUIDE.md)**
 
-## Instructions
+## Key Technologies
 
-1. Install node dependencies from the `dependencies.txt` file:
+- **Frontend**: React 18 + VTK.js + WebXR
+- **Backend**: Node.js Express + PostgreSQL + MinIO
+- **Real-time**: Y.js CRDT + WebSocket
+- **Voice**: LiveKit WebRTC
+- **Workers**: Python VTK compute + Thumbnail generation
 
-   ```bash
-   xargs npm install < dependencies.txt
-   ```
+## Features
 
-2. Start the server from terminal
-   ```bash
-   npm start
-   ```
-3. Open Google Chrome and go to:
-   ```bash
-   http://localhost:9000/
-   ```
-4. Upload a **.vtp** file from the **vtp_files** folder manually.
-
-5. Open Developer Tools in Chrome: Right click > Inspect > WebXR
-
-## Accessing WebXR
-
-### Supported Browsers
-- **Google Chrome** (Recommended)
-- **Microsoft Edge**
-- **Firefox Nightly**
-
-### Browser Settings
-Before running the WebXR experience, enable the following flags in Chrome/Edge:
-1. Open `chrome://flags` (or `edge://flags` in Edge).
-2. Enable **WebXR**.
-3. Enable **WebGL 2.0**.
-4. Restart the browser.
-
-### Entering VR Mode
-1. Click the **'Enter VR'** button.
-2. Put on your VR headset and enjoy the experience!
+✓ 3D scientific visualization  
+✓ Real-time multi-user collaboration  
+✓ VR/WebXR support  
+✓ Server-authoritative architecture  
+✓ Light theme optimized for readability
