@@ -15,8 +15,9 @@ import { SavePointItem } from '../components/SavePointItem';
  * @param {Array} props.savePoints - Array of save point objects
  * @param {number|null} props.currentSavePoint - Index of current save point
  * @param {Function} props.onCreateSavePoint - Create new save point
- * @param {Function} props.onRevert - Revert to a save point
- * @param {Function} props.onDelete - Delete a save point
+ * @param {Function} props.onRevert - Revert to a save point (receives sp.id)
+ * @param {Function} props.onDelete - Delete a save point (receives sp.id)
+ * @param {boolean} props.isEditMode - Whether we're in transactional edit mode
  */
 export function SavePointsTab({
   savePoints = [],
@@ -24,6 +25,7 @@ export function SavePointsTab({
   onCreateSavePoint,
   onRevert,
   onDelete,
+  isEditMode,
 }) {
   return (
     <div className="save-points-tab">
@@ -34,6 +36,7 @@ export function SavePointsTab({
           label="Create Save Point"
           onClick={onCreateSavePoint}
           variant="secondary"
+          disabled={!isEditMode}
           fullWidth
         />
       </div>
@@ -47,7 +50,9 @@ export function SavePointsTab({
             </div>
             <div className="cop-empty-state__title">No save points</div>
             <div className="cop-empty-state__description">
-              Create a save point to bookmark the current canvas state
+              {isEditMode
+                ? 'Create a save point to bookmark the current canvas state'
+                : 'Enter Edit Layout mode to create save points'}
             </div>
           </div>
         ) : (
@@ -57,8 +62,8 @@ export function SavePointsTab({
                 key={sp.id || i}
                 savePoint={sp}
                 isCurrent={currentSavePoint === i}
-                onRevert={() => onRevert?.(i)}
-                onDelete={() => onDelete?.(i)}
+                onRevert={() => onRevert?.(sp.id)}
+                onDelete={() => onDelete?.(sp.id)}
               />
             ))}
           </div>

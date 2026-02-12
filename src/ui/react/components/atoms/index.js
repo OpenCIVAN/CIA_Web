@@ -85,3 +85,13 @@ export { ScopeIndicator } from './ScopeIndicator';
 
 // AdaptiveTooltip - VR-compatible tooltip with adaptive positioning
 export { AdaptiveTooltip } from './AdaptiveTooltip';
+
+// =============================================================================
+// LAYOUT / DIRECTION ATOMS
+// =============================================================================
+
+// DirectionPicker - Two-button directional selector for expansion direction
+export { DirectionPicker } from './DirectionPicker';
+
+// LayoutThumbnail - Mini grid preview of a layout definition
+export { LayoutThumbnail } from './LayoutThumbnail';

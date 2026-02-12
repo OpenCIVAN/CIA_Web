@@ -41,7 +41,7 @@ const MIN_PANEL_HEIGHT = 520;
 const PANEL_CONTENT_PADDING = 8;
 const PANEL_HEADER_HEIGHT = 40;
 
-export function CanvasMapPanel({ workspaceId, projectId }) {
+export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorkspace, onCreateWorkspace }) {
   const { togglePanel, getPanelState, updateSize } = usePanelShell();
   const canvasMapContext = useCanvasMap();
   const companionState = getPanelState(COMPANION_PANEL_ID);
@@ -120,6 +120,9 @@ export function CanvasMapPanel({ workspaceId, projectId }) {
           width={contentWidth}
           height={contentHeight}
           sizeMode={sizeMode}
+          workspaces={workspaces}
+          onOpenWorkspace={onOpenWorkspace}
+          onCreateWorkspace={onCreateWorkspace}
         />
         );
       }}

@@ -117,6 +117,38 @@
     display: flex;
   }
 
+  // Resize handle between minimap and bottom content
+  &__resize-handle {
+    flex: 0 0 auto;
+    height: 8px;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.15s ease;
+    touch-action: none;
+
+    &:hover,
+    &:active {
+      background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
+    }
+  }
+
+  &__resize-grip {
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: $color-border-subtle;
+    transition: background 0.15s ease, width 0.15s ease;
+
+    .canvas-map-v2__resize-handle:hover &,
+    .canvas-map-v2__resize-handle:active & {
+      background: $color-accent-cyan;
+      width: 48px;
+    }
+  }
+
   &__quicknav {
     display: flex;
     align-items: stretch;
@@ -138,6 +170,7 @@
     padding: $spacing-sm $spacing-md;
     background: color-mix(in srgb, var(--vg-color) 15%, $color-bg-secondary);
     border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 30%, transparent);
+    animation: breadcrumb-slide-down 0.2s $ease-out-expo;
   }
 
   &__breadcrumb-back {
@@ -321,6 +354,14 @@
     }
   }
 
+  &__no-workspace-footer {
+    margin-top: auto;
+    padding: $spacing-sm;
+    border-top: 1px solid $color-border-subtle;
+    background: $color-glass-subtle;
+    flex-shrink: 0;
+  }
+
   // -------------------------------------------------------------------------
   // Size Mode Responsive Adjustments
   // -------------------------------------------------------------------------
@@ -379,6 +420,19 @@
     .team-subtab {
       padding: $spacing-sm;
     }
+  }
+}
+
+// ─── Transition animations (Phase 5: Polish) ─────────────────────────────────
+
+@keyframes breadcrumb-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

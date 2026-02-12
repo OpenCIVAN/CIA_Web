@@ -194,6 +194,22 @@ class ServerSyncService {
       }
     });
 
+    // Canvas lock events - dispatch custom events for UI components
+    this.on("canvas:locked", (msg) => {
+      log.info(`Canvas locked by ${msg.lock?.lockedByName || msg.userId}`);
+      window.dispatchEvent(new CustomEvent("cia:canvas-locked", { detail: msg }));
+    });
+
+    this.on("canvas:lock-extended", (msg) => {
+      log.info(`Canvas lock extended: ${msg.canvasId}`);
+      window.dispatchEvent(new CustomEvent("cia:canvas-lock-extended", { detail: msg }));
+    });
+
+    this.on("canvas:unlocked", (msg) => {
+      log.info(`Canvas unlocked: ${msg.canvasId}`);
+      window.dispatchEvent(new CustomEvent("cia:canvas-unlocked", { detail: msg }));
+    });
+
     // Placement events - forward to CanvasManager
     this.on("placement:added", (msg) => {
       log.info(`Placement added to canvas ${msg.canvasId}`);

@@ -19,6 +19,7 @@ import {
   yCameras,
   yAvatars,
   yViewPresence,
+  yCanvasEditing,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
@@ -201,6 +202,46 @@ export function initializeCameraObserver() {
   log.debug("Camera observer initialized");
 }
 
+/**
+ * Canvas editing presence observer
+ * Watches for remote canvas editing updates (draft operations, reactions)
+ * for collaborative preview of pending changes
+ */
+let canvasEditingCallbacks = [];
+
+export function onCanvasEditingChange(callback) {
+  canvasEditingCallbacks.push(callback);
+  return () => {
+    canvasEditingCallbacks = canvasEditingCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeCanvasEditingObserver() {
+  log.debug("Setting up canvas editing observer");
+
+  yCanvasEditing.observe((event) => {
+    const myId = getUserId();
+
+    event.changes.keys.forEach((change, userId) => {
+      // Skip own editing state
+      if (userId === myId) return;
+
+      const data = yCanvasEditing.get(userId);
+      canvasEditingCallbacks.forEach((cb) => {
+        try {
+          cb({ action: change.action, userId, data });
+        } catch (error) {
+          log.error("Canvas editing observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  log.debug("Canvas editing observer initialized");
+}
+
 // ============================================================================
 // Initialize All Observers
 // ============================================================================
@@ -213,6 +254,7 @@ export function initializeAllObservers() {
   initializeAvatarObserver();
   initializeViewPresenceObserver();
   initializeCameraObserver(); // Real-time camera sync
+  initializeCanvasEditingObserver(); // Collaborative draft preview
 
   // State (datasets, views, annotations) comes from server via:
   // - REST API: useProjectFiles, DatasetManager.fetchDatasetsFromServer

@@ -1000,6 +1000,27 @@ CREATE INDEX idx_placements_canvas ON placements(canvas_id);
 CREATE INDEX idx_placements_content ON placements(content_type, content_id);
 CREATE INDEX idx_placements_position ON placements(canvas_id, row_index, col_index);
 
+-- Canvas Locks (transactional edit mode)
+CREATE TABLE canvas_locks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+    locked_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    locked_by_name VARCHAR(255),
+    expires_at TIMESTAMPTZ NOT NULL,
+    extend_count INT NOT NULL DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Note: "one active lock per canvas" is enforced at the application layer
+-- (expired locks are deleted before acquiring). A partial unique index on
+-- expires_at > NOW() is not possible because NOW() is STABLE, not IMMUTABLE.
+-- The queries already filter by expires_at > NOW() at runtime.
+
+CREATE INDEX idx_canvas_locks_canvas ON canvas_locks(canvas_id);
+CREATE INDEX idx_canvas_locks_user ON canvas_locks(locked_by);
+CREATE INDEX idx_canvas_locks_expires ON canvas_locks(expires_at);
+
 CREATE TABLE subsets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,

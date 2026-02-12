@@ -358,6 +358,308 @@ router.delete("/:id", async (req, res, next) => {
 });
 
 // ============================================================================
+// CANVAS LOCK ENDPOINTS (Transactional Editing)
+// ============================================================================
+
+/**
+ * Default lock duration in seconds (5 minutes)
+ */
+const DEFAULT_LOCK_SECONDS = 300;
+
+/**
+ * Max extension seconds per extend (5 minutes)
+ */
+const EXTENSION_SECONDS = 300;
+
+/**
+ * Maximum number of extensions allowed
+ */
+const MAX_EXTENSIONS = 5;
+
+/**
+ * GET /api/canvases/:id/lock
+ * Get current lock status for a canvas
+ */
+router.get("/:id/lock", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { pool } = req.app.locals;
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid canvas ID format" });
+    }
+
+    // Find active (non-expired) lock
+    const result = await pool.query(
+      `SELECT * FROM canvas_locks
+       WHERE canvas_id = $1 AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ locked: false, lock: null });
+    }
+
+    const lock = result.rows[0];
+    const timeRemaining = Math.max(
+      0,
+      Math.floor((new Date(lock.expires_at) - Date.now()) / 1000)
+    );
+
+    res.json({
+      locked: true,
+      lock: {
+        id: lock.id,
+        canvasId: lock.canvas_id,
+        lockedBy: lock.locked_by,
+        lockedByName: lock.locked_by_name,
+        expiresAt: lock.expires_at,
+        extendCount: lock.extend_count,
+        timeRemaining,
+        createdAt: lock.created_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/canvases/:id/lock
+ * Acquire a lock on a canvas for transactional editing.
+ * Returns 409 Conflict if already locked by another user.
+ */
+router.post("/:id/lock", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+    const { timeoutSeconds, userName } = req.body;
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid canvas ID format" });
+    }
+
+    // Verify user has access to this canvas
+    const canvasAccess = await getCanvasAccess(pool, id, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Clean up any expired locks first
+    await pool.query(
+      `DELETE FROM canvas_locks WHERE canvas_id = $1 AND expires_at <= NOW()`,
+      [id]
+    );
+
+    // Check for existing active lock
+    const existingLock = await pool.query(
+      `SELECT * FROM canvas_locks
+       WHERE canvas_id = $1 AND expires_at > NOW()
+       LIMIT 1`,
+      [id]
+    );
+
+    if (existingLock.rows.length > 0) {
+      const lock = existingLock.rows[0];
+      if (lock.locked_by === userId) {
+        // Same user already holds the lock — return it
+        const timeRemaining = Math.max(
+          0,
+          Math.floor((new Date(lock.expires_at) - Date.now()) / 1000)
+        );
+        return res.json({
+          id: lock.id,
+          canvasId: lock.canvas_id,
+          lockedBy: lock.locked_by,
+          lockedByName: lock.locked_by_name,
+          expiresAt: lock.expires_at,
+          timeRemaining,
+          extendCount: lock.extend_count,
+          reused: true,
+        });
+      }
+
+      // Different user holds the lock — conflict
+      return res.status(409).json({
+        error: "Canvas is locked",
+        code: "CANVAS_LOCKED",
+        lock: {
+          lockedBy: lock.locked_by,
+          lockedByName: lock.locked_by_name,
+          expiresAt: lock.expires_at,
+        },
+      });
+    }
+
+    // Acquire the lock
+    const lockDuration = Math.min(
+      timeoutSeconds || DEFAULT_LOCK_SECONDS,
+      DEFAULT_LOCK_SECONDS * (MAX_EXTENSIONS + 1)
+    );
+    const result = await pool.query(
+      `INSERT INTO canvas_locks (canvas_id, locked_by, locked_by_name, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '1 second' * $4)
+       RETURNING *`,
+      [id, userId, userName || null, lockDuration]
+    );
+
+    const lock = result.rows[0];
+
+    // Broadcast lock state to project
+    if (canvasAccess.project_id && wsManager) {
+      wsManager.broadcast(canvasAccess.project_id, {
+        type: "canvas:locked",
+        canvasId: id,
+        lock: {
+          id: lock.id,
+          lockedBy: lock.locked_by,
+          lockedByName: lock.locked_by_name,
+          expiresAt: lock.expires_at,
+        },
+        userId,
+      });
+    }
+
+    res.status(201).json({
+      id: lock.id,
+      canvasId: lock.canvas_id,
+      lockedBy: lock.locked_by,
+      lockedByName: lock.locked_by_name,
+      expiresAt: lock.expires_at,
+      timeRemaining: lockDuration,
+      extendCount: 0,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/canvases/:id/lock
+ * Extend an existing lock. Only the lock owner can extend.
+ */
+router.put("/:id/lock", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+    const { additionalSeconds } = req.body;
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid canvas ID format" });
+    }
+
+    // Find existing active lock owned by this user
+    const existingLock = await pool.query(
+      `SELECT * FROM canvas_locks
+       WHERE canvas_id = $1 AND locked_by = $2 AND expires_at > NOW()
+       LIMIT 1`,
+      [id, userId]
+    );
+
+    if (existingLock.rows.length === 0) {
+      return res.status(404).json({ error: "No active lock found for this user" });
+    }
+
+    const lock = existingLock.rows[0];
+
+    // Check extension limit
+    if (lock.extend_count >= MAX_EXTENSIONS) {
+      return res.status(400).json({
+        error: "Maximum extensions reached",
+        code: "MAX_EXTENSIONS",
+        maxExtensions: MAX_EXTENSIONS,
+      });
+    }
+
+    const extension = Math.min(additionalSeconds || EXTENSION_SECONDS, EXTENSION_SECONDS);
+
+    const result = await pool.query(
+      `UPDATE canvas_locks
+       SET expires_at = expires_at + INTERVAL '1 second' * $1,
+           extend_count = extend_count + 1
+       WHERE id = $2
+       RETURNING *`,
+      [extension, lock.id]
+    );
+
+    const updated = result.rows[0];
+    const timeRemaining = Math.max(
+      0,
+      Math.floor((new Date(updated.expires_at) - Date.now()) / 1000)
+    );
+
+    // Broadcast extension
+    const canvasAccess = await getCanvasAccess(pool, id, userId);
+    if (canvasAccess?.project_id && wsManager) {
+      wsManager.broadcast(canvasAccess.project_id, {
+        type: "canvas:lock-extended",
+        canvasId: id,
+        expiresAt: updated.expires_at,
+        extendCount: updated.extend_count,
+        userId,
+      });
+    }
+
+    res.json({
+      id: updated.id,
+      canvasId: updated.canvas_id,
+      expiresAt: updated.expires_at,
+      timeRemaining,
+      extendCount: updated.extend_count,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /api/canvases/:id/lock
+ * Release a lock. Only the lock owner can release.
+ */
+router.delete("/:id/lock", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid canvas ID format" });
+    }
+
+    // Delete the user's active lock
+    const result = await pool.query(
+      `DELETE FROM canvas_locks
+       WHERE canvas_id = $1 AND locked_by = $2 AND expires_at > NOW()
+       RETURNING *`,
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      // No active lock — that's fine, idempotent
+      return res.json({ success: true, released: false });
+    }
+
+    // Broadcast unlock
+    const canvasAccess = await getCanvasAccess(pool, id, userId);
+    if (canvasAccess?.project_id && wsManager) {
+      wsManager.broadcast(canvasAccess.project_id, {
+        type: "canvas:unlocked",
+        canvasId: id,
+        userId,
+      });
+    }
+
+    res.json({ success: true, released: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
 // PLACEMENT ENDPOINTS
 // ============================================================================
 

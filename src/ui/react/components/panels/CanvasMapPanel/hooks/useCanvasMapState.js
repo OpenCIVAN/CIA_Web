@@ -192,6 +192,9 @@ export function useCanvasMapState({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Active tool (resets to 'select' on mount)
+  const [activeTool, setActiveTool] = useState('select'); // 'select' | 'pan'
+
   // Persist state changes
   const setMapMode = useCallback((mode) => {
     const normalized = normalizeMapMode(mode);
@@ -519,6 +522,7 @@ export function useCanvasMapState({
     focusedVGId,
     searchQuery,
     sortOrder,
+    activeTool,
 
     // Setters
     setMapMode: handleModeChange,
@@ -540,6 +544,7 @@ export function useCanvasMapState({
     setCollaborateSubTab,
     setSearchQuery,
     setSortOrder,
+    setActiveTool,
     setSelectedVGId,
     setSelectedViewportId,
 

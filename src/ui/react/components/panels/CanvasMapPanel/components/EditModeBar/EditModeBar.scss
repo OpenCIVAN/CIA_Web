@@ -1,0 +1,119 @@
+/**
+ * EditModeBar Styles - Amber-themed editing indicator bar
+ */
+
+@use "theme" as *;
+
+.edit-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: color-mix(in srgb, $color-accent-amber 12%, $color-bg-secondary);
+  border-top: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
+  flex-shrink: 0;
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: $color-accent-amber;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__label {
+    letter-spacing: 0.5px;
+  }
+
+  &__count {
+    color: $color-text-secondary;
+    font-weight: $font-weight-normal;
+  }
+
+  &__timer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    font-variant-numeric: tabular-nums;
+
+    &--warning {
+      color: $color-accent-red;
+      animation: timer-pulse 1s ease-in-out infinite;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all $transition-fast;
+    background: transparent;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--commit {
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
+      color: $color-accent-green;
+      border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent-green 30%, transparent);
+      }
+    }
+
+    &--undo,
+    &--redo {
+      color: $color-text-secondary;
+      border-color: color-mix(in srgb, $color-text-secondary 25%, transparent);
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-text-secondary 12%, transparent);
+      }
+    }
+
+    &--extend {
+      background: color-mix(in srgb, $color-accent-amber 20%, transparent);
+      color: $color-accent-amber;
+      border-color: color-mix(in srgb, $color-accent-amber 40%, transparent);
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent-amber 30%, transparent);
+      }
+    }
+
+    &--discard {
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
+      color: $color-accent-red;
+      border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent-red 25%, transparent);
+      }
+    }
+  }
+}
+
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

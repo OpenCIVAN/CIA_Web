@@ -392,7 +392,7 @@ export class ViewGroup extends EventEmitter {
 
     getLayoutCapacity() {
         if (!this._layout) return 1;
-        if (this._layout.merged === 'top' || this._layout.merged === 'right') return 3;
+        if (this._layout.merged) return this._layout.cells || 3;
         return this._layout.rows * this._layout.cols;
     }
 

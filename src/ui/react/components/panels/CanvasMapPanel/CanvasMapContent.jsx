@@ -37,11 +37,29 @@ import { useListFilter } from '@UI/react/hooks/useListFilter';
 // V2 Components
 import { MapToolbar } from './components/MapToolbar';
 import { Minimap } from './components/Minimap';
+import { VGQuickOpsToolbar } from './components/QuickOps';
+import { EditModeBar } from './components/EditModeBar/EditModeBar';
 import { CanvasMapBottomPanel } from './components/BottomPanel/CanvasMapBottomPanel';
 import { ViewportsPanel, LayoutPanel, TeamPanel } from './components/ContextualPanels';
 
+// Transaction store
+import { useCanvasHistory, selectIsEditMode, selectPendingChangeCount } from '@UI/react/store/canvasTransactionStore';
+
+// Collaboration hooks
+import { useCanvasLockSync } from '@UI/react/hooks/useCanvasLockSync';
+import { useRemoteDraft } from '@UI/react/hooks/useRemoteDraft';
+import { useEditModeTimer } from '@UI/react/hooks/useEditModeTimer';
+
+// Edit mode dialog
+import { StillEditingDialog } from './components/EditModeBar/StillEditingDialog';
+
+// Footer: WorkspaceSelector
+import { WorkspaceSelector } from '@UI/react/components/molecules/WorkspaceSelector/WorkspaceSelector';
+
 // Hooks and Utils
 import { useCanvasMapState } from './hooks/useCanvasMapState';
+import { useVGQuickOps } from './hooks/useVGQuickOps';
+import { getInternalCells } from './hooks/useInternalCellLayout';
 import { MAP_MODES, SIZE_MODE_BREAKPOINTS, LAYOUTS } from './utils/constants';
 import { formatCellRef, getVGDisplayName } from './utils/gridUtils';
 import { addCustomTemplate, createTemplateFromViewGroup, saveServerTemplate } from '@Core/viewgroups/templates';
@@ -49,6 +67,7 @@ import { viewGroupManager } from '@Core/data/managers/ViewGroupManager';
 import { viewConfigurationManager } from '@Core/data/managers/ViewConfigurationManager';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager';
 import { toast } from '@UI/react/store/toastStore';
+import { viewAssignment } from '@UI/react/store/viewAssignmentStore';
 
 // Styles - Component styles are imported by each component
 import './CanvasMapPanel.scss';
@@ -69,6 +88,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   width,
   height,
   sizeMode: panelSizeMode,
+  // Footer props (for no-workspace state)
+  workspaces: workspacesProp,
+  onOpenWorkspace,
+  onCreateWorkspace,
 }) {
   const { isVR } = useAdaptive();
   const canvasMapContext = useCanvasMap();
@@ -76,6 +99,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const setPlacedVGs = canvasMapContext?.setPlacedVGs;
   const minimapContainerRef = useRef(null);
   const prevZoomRef = useRef(null);
+
+  // Minimap resize (drag handle between minimap and bottom panel)
+  const [minimapHeightOverride, setMinimapHeightOverride] = useState(null);
+  const resizeDragRef = useRef(null);
 
   // Local state for showing implicit VGs (debug feature)
   const [showImplicitVGs, setShowImplicitVGs] = useState(loadShowImplicitVGs);
@@ -114,6 +141,56 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     bookmarks: rawBookmarks,
     isLoading: bookmarksLoading,
   } = useBookmarks({ workspaceId, scope: 'all' });
+
+  // Transaction store (edit mode)
+  const txMode = useCanvasHistory((s) => s.mode);
+  const txDraft = useCanvasHistory((s) => s.draft);
+  const txEnterEditMode = useCanvasHistory((s) => s.enterEditMode);
+  const txCommitTransaction = useCanvasHistory((s) => s.commitTransaction);
+  const txDiscardTransaction = useCanvasHistory((s) => s.discardTransaction);
+  const txUndo = useCanvasHistory((s) => s.undo);
+  const txRedo = useCanvasHistory((s) => s.redo);
+  const txCanUndo = useCanvasHistory((s) => s.past.length > 0 && !s.isUndoing && !s.isRedoing);
+  const txCanRedo = useCanvasHistory((s) => s.future.length > 0 && !s.isUndoing && !s.isRedoing);
+  const isEditMode = txMode === 'transactional';
+  const pendingChangeCount = txDraft.operations.length;
+
+  // Collaboration: remote lock sync + draft preview
+  useCanvasLockSync(canvas?.id);
+  const remoteLock = useCanvasHistory((s) => s.remoteLock);
+  const { remoteOperations, remoteReactions, remoteSnapshots, hasRemoteDraft } = useRemoteDraft();
+  const [showRemoteDraft, setShowRemoteDraft] = useState(true);
+
+  // Timer / expiry dialog state
+  const [showExpiryDialog, setShowExpiryDialog] = useState(false);
+  const [graceTimeRemaining, setGraceTimeRemaining] = useState(null);
+  const graceIntervalRef = useRef(null);
+
+  const { timeRemaining, isWarning } = useEditModeTimer({
+    onExpired: () => setShowExpiryDialog(true),
+  });
+
+  // ---------------------------------------------------------------------------
+  // Keyboard shortcuts: undo/redo when in edit mode
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'z' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          txRedo();
+        } else {
+          txUndo();
+        }
+      }
+    };
+
+    const container = minimapContainerRef.current?.closest('.canvas-map-v2');
+    container?.addEventListener('keydown', handleKeyDown);
+    return () => container?.removeEventListener('keydown', handleKeyDown);
+  }, [isEditMode, txUndo, txRedo]);
 
   // ---------------------------------------------------------------------------
   // Transform data to match expected structure
@@ -475,6 +552,25 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     });
     return slots;
   }, [state.focusedVGId, rawViewGroups]);
+
+  // Focused VG layout (for QuickOps toolbar)
+  const focusedLayout = useMemo(() => {
+    if (!state.focusedVG) return null;
+    return LAYOUTS[state.focusedVG.layoutId] || LAYOUTS.single;
+  }, [state.focusedVG]);
+
+  // Compute minimal cell descriptors so quickOps validation (isRectangularSelection, hasMergedCellSelected) works
+  const focusedCellDescriptors = useMemo(() => {
+    if (!focusedLayout) return [];
+    return getInternalCells(focusedLayout, 100, 100, 0, { padding: 0, gap: 0 });
+  }, [focusedLayout]);
+
+  // Quick ops state (cell selection for merge/split gating)
+  const quickOps = useVGQuickOps({
+    focusedVG: state.focusedVG,
+    cells: focusedCellDescriptors,
+    onExitFocus: state.handleBackFromFocus,
+  });
 
   useEffect(() => {
     if (!state.setMinimapZoom) return;
@@ -1113,6 +1209,676 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement broadcast stop
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Edit Mode (Transactional Editing) handlers
+  // ---------------------------------------------------------------------------
+
+  const handleEnterEditMode = useCallback(async () => {
+    // Snapshot current VG positions + canvas dimensions
+    const snapshot = {
+      viewGroups: activeViewGroups.map((vg) => ({
+        id: vg.id,
+        name: vg.name,
+        color: vg.color,
+        position: vg.position ? { ...vg.position } : null,
+      })),
+      canvasDimensions: { rows: canvasData.rows, cols: canvasData.cols },
+    };
+
+    // Get current user name for lock display
+    const { getUser } = await import('@Services/authService.js');
+    const user = getUser();
+    const userName = user?.name || user?.email || 'Unknown';
+
+    const result = await txEnterEditMode(snapshot, {
+      canvasId: canvas?.id,
+      userName,
+    });
+    if (result?.success) {
+      toast.info('Edit session started', {
+        actionLabel: 'Open Operations Panel',
+        onAction: () => {
+          window.dispatchEvent(new CustomEvent('cia:toggle-popout', {
+            detail: { popoutId: 'canvasOps' },
+          }));
+        },
+        duration: 6000,
+      });
+    }
+  }, [activeViewGroups, canvasData, txEnterEditMode, canvas]);
+
+  const handleCommit = useCallback(async () => {
+    await txCommitTransaction();
+  }, [txCommitTransaction]);
+
+  const handleDiscard = useCallback(async () => {
+    await txDiscardTransaction();
+  }, [txDiscardTransaction]);
+
+  // ── Expiry dialog: grace period auto-discard (60s) ──
+  const GRACE_PERIOD_S = 60;
+
+  useEffect(() => {
+    if (!showExpiryDialog) {
+      if (graceIntervalRef.current) clearInterval(graceIntervalRef.current);
+      setGraceTimeRemaining(null);
+      return;
+    }
+
+    let remaining = GRACE_PERIOD_S;
+    setGraceTimeRemaining(remaining);
+
+    graceIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      setGraceTimeRemaining(remaining);
+      if (remaining <= 0) {
+        clearInterval(graceIntervalRef.current);
+        setShowExpiryDialog(false);
+        txDiscardTransaction();
+        toast.warning('Edit session expired — changes discarded');
+      }
+    }, 1000);
+
+    return () => {
+      if (graceIntervalRef.current) clearInterval(graceIntervalRef.current);
+    };
+  }, [showExpiryDialog, txDiscardTransaction]);
+
+  // Close dialog when exiting edit mode
+  useEffect(() => {
+    if (!isEditMode) setShowExpiryDialog(false);
+  }, [isEditMode]);
+
+  const handleExpiryExtend = useCallback(async () => {
+    setShowExpiryDialog(false);
+    const success = await useCanvasHistory.getState().extendLock();
+    if (success) {
+      toast.success('Edit session extended');
+    } else {
+      toast.error('Failed to extend — maximum extensions reached');
+    }
+  }, []);
+
+  const handleExpiryCommit = useCallback(async () => {
+    setShowExpiryDialog(false);
+    await txCommitTransaction();
+  }, [txCommitTransaction]);
+
+  const handleExpiryDiscard = useCallback(async () => {
+    setShowExpiryDialog(false);
+    await txDiscardTransaction();
+  }, [txDiscardTransaction]);
+
+  // ---------------------------------------------------------------------------
+  // Quick Ops handlers (Phase 3)
+  // ---------------------------------------------------------------------------
+
+  /** Apply a layout template to the focused VG */
+  const handleApplyTemplate = useCallback(async (layoutId) => {
+    if (!state.focusedVGId || !updateViewGroup) return;
+    const targetVG = rawViewGroups.find((vg) => vg.id === state.focusedVGId);
+    if (!targetVG) return;
+
+    const newLayout = LAYOUTS[layoutId] || LAYOUTS.single;
+    const position = targetVG.canvasPosition || targetVG.position || {};
+    const oldLayoutId = targetVG.layoutId || 'single';
+    const oldPosition = { ...position };
+
+    // New footprint must accommodate the layout's grid
+    const newRowSpan = Math.max(position.rowSpan || 1, newLayout.rows);
+    const newColSpan = Math.max(position.colSpan || 1, newLayout.cols);
+
+    try {
+      await updateViewGroup(state.focusedVGId, {
+        layoutId,
+        canvasPosition: {
+          row: position.row ?? 0,
+          col: position.col ?? 0,
+          rowSpan: newRowSpan,
+          colSpan: newColSpan,
+        },
+      });
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+
+      useCanvasHistory.getState().record({
+        type: 'RESIZE',
+        description: `Apply template "${layoutId}"`,
+        undo: async () => {
+          await updateViewGroup(state.focusedVGId, {
+            layoutId: oldLayoutId,
+            canvasPosition: oldPosition,
+          });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+        redo: async () => {
+          await updateViewGroup(state.focusedVGId, {
+            layoutId,
+            canvasPosition: { row: position.row ?? 0, col: position.col ?? 0, rowSpan: newRowSpan, colSpan: newColSpan },
+          });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+      });
+    } catch (err) {
+      console.error('Failed to apply template:', err);
+      toast.error('Failed to apply template');
+    }
+  }, [state.focusedVGId, rawViewGroups, updateViewGroup, syncViewGroupNow]);
+
+  /** Resize the internal grid (change layout rows/cols) */
+  const handleResizeInternal = useCallback(async ({ rows: newRows, cols: newCols }) => {
+    if (!state.focusedVGId || !updateViewGroup) return;
+    const targetVG = rawViewGroups.find((vg) => vg.id === state.focusedVGId);
+    if (!targetVG) return;
+
+    // Find or create matching layout ID
+    const matchingLayout = Object.entries(LAYOUTS).find(
+      ([, l]) => l.rows === newRows && l.cols === newCols && !l.merged
+    );
+    const newLayoutId = matchingLayout ? matchingLayout[0] : targetVG.layoutId || 'single';
+    const oldLayoutId = targetVG.layoutId || 'single';
+
+    const position = targetVG.canvasPosition || targetVG.position || {};
+    const oldPosition = { ...position };
+    const newRowSpan = Math.max(position.rowSpan || 1, newRows);
+    const newColSpan = Math.max(position.colSpan || 1, newCols);
+
+    try {
+      await updateViewGroup(state.focusedVGId, {
+        layoutId: newLayoutId,
+        canvasPosition: {
+          row: position.row ?? 0,
+          col: position.col ?? 0,
+          rowSpan: newRowSpan,
+          colSpan: newColSpan,
+        },
+      });
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+
+      useCanvasHistory.getState().record({
+        type: 'RESIZE',
+        description: `Resize internal grid to ${newRows}×${newCols}`,
+        undo: async () => {
+          await updateViewGroup(state.focusedVGId, {
+            layoutId: oldLayoutId,
+            canvasPosition: oldPosition,
+          });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+        redo: async () => {
+          await updateViewGroup(state.focusedVGId, {
+            layoutId: newLayoutId,
+            canvasPosition: { row: position.row ?? 0, col: position.col ?? 0, rowSpan: newRowSpan, colSpan: newColSpan },
+          });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+      });
+    } catch (err) {
+      console.error('Failed to resize internal grid:', err);
+      toast.error('Failed to resize internal grid');
+    }
+  }, [state.focusedVGId, rawViewGroups, updateViewGroup, syncViewGroupNow]);
+
+  /** Resize the canvas footprint (rowSpan/colSpan) */
+  const handleResizeFootprint = useCallback(async ({ rowSpan, colSpan, direction }) => {
+    if (!state.focusedVGId || !updateViewGroup) return;
+    const targetVG = rawViewGroups.find((vg) => vg.id === state.focusedVGId);
+    if (!targetVG) return;
+
+    const position = targetVG.canvasPosition || targetVG.position || {};
+    const oldPosition = { ...position };
+
+    let newRow = position.row ?? 0;
+    let newCol = position.col ?? 0;
+
+    // Adjust origin for directional expansion
+    if (direction === 'up') newRow = Math.max(0, newRow - 1);
+    if (direction === 'left') newCol = Math.max(0, newCol - 1);
+
+    const newPosition = { row: newRow, col: newCol, rowSpan, colSpan };
+
+    // Check canvas bounds and auto-expand
+    const neededRows = newRow + rowSpan;
+    const neededCols = newCol + colSpan;
+    if (setCanvasSize && (neededRows > canvasData.rows || neededCols > canvasData.cols)) {
+      setCanvasSize({
+        rows: Math.max(canvasData.rows, neededRows),
+        cols: Math.max(canvasData.cols, neededCols),
+      });
+    }
+
+    try {
+      await updateViewGroup(state.focusedVGId, { canvasPosition: newPosition });
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+
+      useCanvasHistory.getState().record({
+        type: 'RESIZE',
+        description: `Resize footprint to ${rowSpan}×${colSpan}`,
+        undo: async () => {
+          await updateViewGroup(state.focusedVGId, { canvasPosition: oldPosition });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+        redo: async () => {
+          await updateViewGroup(state.focusedVGId, { canvasPosition: newPosition });
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+      });
+    } catch (err) {
+      console.error('Failed to resize footprint:', err);
+      toast.error('Failed to resize footprint');
+    }
+  }, [state.focusedVGId, rawViewGroups, updateViewGroup, syncViewGroupNow, setCanvasSize, canvasData]);
+
+  /** Merge selected cells — changes layout from 2x2 to a merged variant (1+2 or 2+1) */
+  const handleMergeCells = useCallback(async (cellIndices) => {
+    if (!state.focusedVGId || !updateViewGroup || !focusedLayout) return;
+
+    // Only merge from 2x2 (the only layout with merged variants)
+    if (focusedLayout.merged || focusedLayout.rows !== 2 || focusedLayout.cols !== 2) {
+      toast.warning('Merge is only available for 2\u00d72 layouts');
+      return;
+    }
+
+    // Determine merge direction from cell positions
+    // 2x2 cells: idx 0=(0,0), 1=(0,1), 2=(1,0), 3=(1,1)
+    const positions = cellIndices.map(i => ({
+      row: Math.floor(i / focusedLayout.cols),
+      col: i % focusedLayout.cols,
+    }));
+    const allSameCol = positions.every(p => p.col === positions[0].col);
+    const allSameRow = positions.every(p => p.row === positions[0].row);
+
+    let targetLayoutId;
+    if (allSameCol && positions[0].col === 0) {
+      targetLayoutId = '1+2'; // merge left column
+    } else if (allSameCol && positions[0].col === 1) {
+      targetLayoutId = '2+1'; // merge right column
+    } else if (allSameRow) {
+      toast.warning('Row merge is not yet supported');
+      return;
+    } else {
+      toast.warning('Invalid merge selection');
+      return;
+    }
+
+    // Capture current views before layout change
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+    const oldLayoutId = state.focusedVG.layoutId || 'single';
+    const oldViews = focusedSlots ? [...focusedSlots] : [];
+
+    // Determine view mapping for new layout (3 slots)
+    let newViews;
+    if (targetLayoutId === '1+2') {
+      // Model: merged:'top' — slot 0=merged top, slot 1=bottom-left, slot 2=bottom-right
+      // Keep first view from merged pair, preserve others
+      newViews = [
+        oldViews[cellIndices[0]] || oldViews[cellIndices[1]], // merged cell
+        oldViews.find((v, i) => !cellIndices.includes(i) && v), // first remaining
+        oldViews.filter((v, i) => !cellIndices.includes(i))[1] || null, // second remaining
+      ];
+    } else { // '2+1'
+      // Model: merged:'right' — slot 0=top-left, slot 1=bottom-left, slot 2=merged right
+      const nonMerged = oldViews.filter((v, i) => !cellIndices.includes(i));
+      newViews = [
+        nonMerged[0] || null,
+        nonMerged[1] || null,
+        oldViews[cellIndices[0]] || oldViews[cellIndices[1]], // merged cell
+      ];
+    }
+
+    try {
+      await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
+
+      // Manually set views in correct positions
+      for (let i = 0; i < newViews.length; i++) {
+        const view = newViews[i];
+        if (view) {
+          await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+        }
+      }
+
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+      quickOps.clearSelection();
+
+      useCanvasHistory.getState().record({
+        type: 'MERGE',
+        description: `Merge cells into ${targetLayoutId}`,
+        undo: async () => {
+          await updateViewGroup(state.focusedVGId, { layoutId: oldLayoutId });
+          for (let i = 0; i < oldViews.length; i++) {
+            const view = oldViews[i];
+            if (view) {
+              await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+            }
+          }
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+        redo: async () => {
+          await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
+          for (let i = 0; i < newViews.length; i++) {
+            const view = newViews[i];
+            if (view) {
+              await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+            }
+          }
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+      });
+    } catch (err) {
+      console.error('[QuickOps] Merge failed:', err);
+      toast.error('Failed to merge cells');
+    }
+  }, [state.focusedVGId, state.focusedVG, focusedLayout, focusedSlots, updateViewGroup, syncViewGroupNow, quickOps]);
+
+  /** Split a merged cell — changes layout from a merged variant back to 2x2 */
+  const handleSplitCell = useCallback(async (cellIndex) => {
+    if (!state.focusedVGId || !updateViewGroup || !focusedLayout) return;
+
+    if (!focusedLayout.merged) {
+      toast.warning('No merged cells to split');
+      return;
+    }
+
+    const oldLayoutId = state.focusedVG.layoutId || 'single';
+    const targetLayoutId = '2x2';
+
+    // Capture current views (3 slots for merged layout)
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+    const oldViews = focusedSlots ? [...focusedSlots] : [];
+
+    // Map 3-slot views to 4-slot 2x2
+    // The split cell's view goes to the first of its constituent positions; the other becomes empty
+    let newViews;
+    if (oldLayoutId === '1+2') {
+      // Model: slot 0=merged top, slot 1=bottom-left, slot 2=bottom-right
+      // -> 2x2: slot 0=top-left, slot 1=top-right, slot 2=bottom-left, slot 3=bottom-right
+      newViews = [
+        oldViews[0], // merged -> top-left
+        null,         // top-right empty
+        oldViews[1], // bottom-left
+        oldViews[2], // bottom-right
+      ];
+    } else if (oldLayoutId === '2+1') {
+      // Model: slot 0=top-left, slot 1=bottom-left, slot 2=merged right
+      // -> 2x2: slot 0=top-left, slot 1=top-right, slot 2=bottom-left, slot 3=bottom-right
+      newViews = [
+        oldViews[0], // top-left
+        oldViews[2], // merged -> top-right
+        oldViews[1], // bottom-left
+        null,         // bottom-right empty
+      ];
+    } else {
+      toast.warning('Unknown merged layout');
+      return;
+    }
+
+    try {
+      await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
+
+      for (let i = 0; i < newViews.length; i++) {
+        const view = newViews[i];
+        if (view) {
+          await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+        }
+      }
+
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+      quickOps.clearSelection();
+
+      useCanvasHistory.getState().record({
+        type: 'UNMERGE',
+        description: `Split merged cell (${oldLayoutId} \u2192 2\u00d72)`,
+        undo: async () => {
+          await updateViewGroup(state.focusedVGId, { layoutId: oldLayoutId });
+          for (let i = 0; i < oldViews.length; i++) {
+            const view = oldViews[i];
+            if (view) {
+              await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+            }
+          }
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+        redo: async () => {
+          await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
+          for (let i = 0; i < newViews.length; i++) {
+            const view = newViews[i];
+            if (view) {
+              await viewGroupManager.setViewAtSlot(state.focusedVGId, i, view.id, view.name, view.type, view.datasetId);
+            }
+          }
+          if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+        },
+      });
+    } catch (err) {
+      console.error('[QuickOps] Split failed:', err);
+      toast.error('Failed to split cell');
+    }
+  }, [state.focusedVGId, state.focusedVG, focusedLayout, focusedSlots, updateViewGroup, syncViewGroupNow, quickOps]);
+
+  // ── Phase 4: Cell interaction handlers ────────────────────────────────
+
+  /** Handle drag-to-swap or drag-to-move between cells */
+  const handleCellDragComplete = useCallback(async ({ sourceCellIndex, targetCellIndex, sourceView, targetView }) => {
+    if (!state.focusedVGId) return;
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+
+    const ensureSync = async () => {
+      if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+    };
+
+    if (targetView) {
+      // SWAP: set both slots cross-wise
+      const srcViewId = sourceView.id;
+      const srcViewName = sourceView.name;
+      const srcViewType = sourceView.type;
+      const srcDatasetId = sourceView.datasetId || null;
+      const tgtViewId = targetView.id;
+      const tgtViewName = targetView.name;
+      const tgtViewType = targetView.type;
+      const tgtDatasetId = targetView.datasetId || null;
+
+      await viewGroupManager.setViewAtSlot(group.id, sourceCellIndex, tgtViewId, tgtViewName, tgtViewType, tgtDatasetId);
+      await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, srcViewId, srcViewName, srcViewType, srcDatasetId);
+      await ensureSync();
+
+      useCanvasHistory.getState().record({
+        type: 'SWAP',
+        description: `Swap "${srcViewName}" with "${tgtViewName}"`,
+        undo: async () => {
+          await viewGroupManager.setViewAtSlot(group.id, sourceCellIndex, srcViewId, srcViewName, srcViewType, srcDatasetId);
+          await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, tgtViewId, tgtViewName, tgtViewType, tgtDatasetId);
+          await ensureSync();
+        },
+        redo: async () => {
+          await viewGroupManager.setViewAtSlot(group.id, sourceCellIndex, tgtViewId, tgtViewName, tgtViewType, tgtDatasetId);
+          await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, srcViewId, srcViewName, srcViewType, srcDatasetId);
+          await ensureSync();
+        },
+      });
+    } else {
+      // MOVE: remove from source, set at target
+      const viewId = sourceView.id;
+      const viewName = sourceView.name;
+      const viewType = sourceView.type;
+      const datasetId = sourceView.datasetId || null;
+
+      await viewGroupManager.removeViewFromGroup(group.id, viewId);
+      await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, viewId, viewName, viewType, datasetId);
+      await ensureSync();
+
+      useCanvasHistory.getState().record({
+        type: 'MOVE',
+        description: `Move "${viewName}" to cell ${targetCellIndex}`,
+        undo: async () => {
+          await viewGroupManager.removeViewFromGroup(group.id, viewId);
+          await viewGroupManager.setViewAtSlot(group.id, sourceCellIndex, viewId, viewName, viewType, datasetId);
+          await ensureSync();
+        },
+        redo: async () => {
+          await viewGroupManager.removeViewFromGroup(group.id, viewId);
+          await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, viewId, viewName, viewType, datasetId);
+          await ensureSync();
+        },
+      });
+    }
+  }, [state.focusedVGId, syncViewGroupNow]);
+
+  /** Handle cell assignment via CompanionPanel */
+  const handleCellAssign = useCallback((cellIndex) => {
+    if (!state.focusedVGId || !state.focusedVG) return;
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+
+    // Determine cell row/col from layout
+    const layout = LAYOUTS[state.focusedVG.layoutId] || LAYOUTS.single;
+    const layoutCols = layout.cols || 1;
+    const cellRow = Math.floor(cellIndex / layoutCols);
+    const cellCol = cellIndex % layoutCols;
+
+    quickOps.startAssigning(cellIndex);
+
+    viewAssignment.request({
+      vgId: state.focusedVGId,
+      cellRow,
+      cellCol,
+      vgName: state.focusedVG.name || 'ViewGroup',
+      vgColor: state.focusedVG.color,
+      source: 'focusedView',
+      onAssign: (view, mode) => {
+        handleFocusedVGSlotDrop(cellIndex, { type: 'view', view });
+        quickOps.clearAssigning();
+      },
+      onCancel: () => {
+        quickOps.clearAssigning();
+      },
+    });
+  }, [state.focusedVGId, state.focusedVG, quickOps, handleFocusedVGSlotDrop]);
+
+  /** Handle targeting resolution (swap/move/clone from context menu) */
+  const handleTargetingResolve = useCallback((targetCellIndex) => {
+    if (!quickOps?.targeting) return;
+    const result = quickOps.resolveTargeting(targetCellIndex);
+    if (!result) return;
+
+    const targetView = focusedSlots?.[targetCellIndex] || null;
+
+    if (result.action === 'swap') {
+      handleCellDragComplete({
+        sourceCellIndex: result.sourceCellIndex,
+        targetCellIndex,
+        sourceView: result.sourceView,
+        targetView,
+      });
+    } else if (result.action === 'move') {
+      handleCellDragComplete({
+        sourceCellIndex: result.sourceCellIndex,
+        targetCellIndex,
+        sourceView: result.sourceView,
+        targetView: null,
+      });
+    } else if (result.action === 'clone') {
+      // Clone: place a copy in the target without removing from source
+      if (!state.focusedVGId) return;
+      const group = viewGroupManager.getViewGroup(state.focusedVGId);
+      if (!group) return;
+
+      const viewId = result.sourceView.id;
+      const viewName = result.sourceView.name;
+      const viewType = result.sourceView.type;
+      const datasetId = result.sourceView.datasetId || null;
+
+      (async () => {
+        await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, viewId, viewName, viewType, datasetId);
+        if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+
+        useCanvasHistory.getState().record({
+          type: 'ADD',
+          description: `Duplicate "${viewName}" to cell ${targetCellIndex}`,
+          undo: async () => {
+            await viewGroupManager.removeViewFromGroup(group.id, viewId);
+            if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+          },
+          redo: async () => {
+            await viewGroupManager.setViewAtSlot(group.id, targetCellIndex, viewId, viewName, viewType, datasetId);
+            if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
+          },
+        });
+      })();
+    }
+  }, [quickOps, focusedSlots, state.focusedVGId, syncViewGroupNow, handleCellDragComplete]);
+
+  /** Open the VG Editor for the focused VG */
+  const handleOpenFocusedEditor = useCallback(() => {
+    if (!state.focusedVG) return;
+    handleOpenEditor(state.focusedVG);
+  }, [state.focusedVG, handleOpenEditor]);
+
+  // Handle VG move in edit mode (from Minimap pointer drag)
+  const handleEditModeMove = useCallback(async ({ vgId, toRow, toCol }) => {
+    if (!updateViewGroup) return;
+    const targetVG = rawViewGroups.find((vg) => vg.id === vgId);
+    if (!targetVG) return;
+
+    const position = targetVG.canvasPosition || targetVG.position || {};
+    const oldRow = position.row ?? 0;
+    const oldCol = position.col ?? 0;
+    const rowSpan = position.rowSpan || 1;
+    const colSpan = position.colSpan || 1;
+
+    // Apply visual change immediately
+    await updateViewGroup(vgId, {
+      canvasPosition: { row: toRow, col: toCol, rowSpan, colSpan },
+    });
+
+    // Record the operation (stages to draft in transactional mode)
+    useCanvasHistory.getState().record({
+      type: 'MOVE',
+      description: `Move VG to (${toRow}, ${toCol})`,
+      undo: async () => {
+        await updateViewGroup(vgId, {
+          canvasPosition: { row: oldRow, col: oldCol, rowSpan, colSpan },
+        });
+      },
+      redo: async () => {
+        await updateViewGroup(vgId, {
+          canvasPosition: { row: toRow, col: toCol, rowSpan, colSpan },
+        });
+      },
+    });
+  }, [rawViewGroups, updateViewGroup]);
+
+  // Handle VG removal in edit mode
+  const handleEditModeRemove = useCallback(async (vgId) => {
+    if (!updateViewGroup) return;
+    const targetVG = rawViewGroups.find((vg) => vg.id === vgId);
+    if (!targetVG) return;
+
+    const position = targetVG.canvasPosition || targetVG.position || {};
+    const savedPosition = { ...position };
+
+    // Remove from canvas by clearing position
+    await updateViewGroup(vgId, { canvasPosition: null });
+
+    useCanvasHistory.getState().record({
+      type: 'DELETE',
+      description: `Remove VG from canvas`,
+      undo: async () => {
+        await updateViewGroup(vgId, { canvasPosition: savedPosition });
+      },
+      redo: async () => {
+        await updateViewGroup(vgId, { canvasPosition: null });
+      },
+    });
+  }, [rawViewGroups, updateViewGroup]);
+
+  // Draft snapshot for change indicators in Minimap
+  const draftSnapshot = useMemo(() => {
+    if (!isEditMode || !txDraft.snapshot) return null;
+    return txDraft.snapshot;
+  }, [isEditMode, txDraft.snapshot]);
+
   const QUICK_NAV_WIDTH = 40;
   const MINIMAP_PADDING = 8;
 
@@ -1146,12 +1912,45 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const maxMinimapHeight = Math.max(60, contentHeight - contextualFloor);
   const targetMinimapHeight = Math.floor(contentHeight * minimapShare);
 
-  const minimapHeight = Math.max(
+  const computedMinimapHeight = Math.max(
     60,
     Math.min(maxMinimapHeight, Math.max(minMinimapHeight, targetMinimapHeight))
   );
+  // Use user override when set, clamped to valid range
+  const minimapHeight = minimapHeightOverride !== null
+    ? Math.max(60, Math.min(contentHeight - 80, minimapHeightOverride))
+    : computedMinimapHeight;
   const contextualHeight = Math.max(80, contentHeight - minimapHeight);
   const densityMode = isShort || isCompact ? 'dense' : 'standard';
+
+  // Resize handle handlers
+  const handleResizePointerDown = useCallback((e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = minimapHeight;
+    resizeDragRef.current = { startY, startHeight };
+
+    const handleMove = (moveEvt) => {
+      if (!resizeDragRef.current) return;
+      const delta = moveEvt.clientY - resizeDragRef.current.startY;
+      const newHeight = resizeDragRef.current.startHeight + delta;
+      setMinimapHeightOverride(Math.max(60, Math.min(contentHeight - 80, newHeight)));
+    };
+
+    const handleUp = () => {
+      resizeDragRef.current = null;
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [minimapHeight, contentHeight]);
+
+  // Reset override when panel resizes
+  useEffect(() => {
+    setMinimapHeightOverride(null);
+  }, [height]);
 
   // Calculate minimap container dimensions (after minimapHeight is calculated)
   const quickNavWidth = state.toolbarPosition ? QUICK_NAV_WIDTH : 0;
@@ -1185,7 +1984,16 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         <div className="canvas-map-v2__empty-state">
           <Icon name="map" size={32} />
           <p>No workspace selected</p>
-          <span>Select or create a workspace to view the canvas map</span>
+          <span>Select or create a workspace to get started</span>
+        </div>
+        <div className="canvas-map-v2__no-workspace-footer">
+          <WorkspaceSelector
+            workspace={null}
+            workspaces={workspacesProp || []}
+            onSelect={(ws) => onOpenWorkspace?.(ws.id)}
+            onCreate={onCreateWorkspace}
+            label="Open Workspace"
+          />
         </div>
       </div>
     );
@@ -1271,9 +2079,18 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         toggleShowViews={state.toggleShowViews}
         toggleShowVGs={state.toggleShowVGs}
         onAddVG={handleAddVG}
+        isEditMode={isEditMode}
+        onEditLayout={handleEnterEditMode}
+        onCommit={handleCommit}
+        onDiscard={handleDiscard}
+        pendingChangeCount={pendingChangeCount}
         showImplicitVGs={showImplicitVGs}
         toggleShowImplicitVGs={toggleShowImplicitVGs}
         sizeMode={effectiveSizeMode}
+        remoteLock={remoteLock}
+        hasRemoteDraft={hasRemoteDraft}
+        showRemoteDraft={showRemoteDraft}
+        toggleShowRemoteDraft={() => setShowRemoteDraft((p) => !p)}
       />
 
       {/* Main Body with Companion Panel beside content */}
@@ -1373,6 +2190,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   onFocusedVGRename={handleFocusedVGRename}
                   onFocusedVGSlotDrop={handleFocusedVGSlotDrop}
                   onFocusedVGSlotClear={handleFocusedVGSlotClear}
+                  onBackFromFocus={state.handleBackFromFocus}
                   onVGClick={state.handleVGClick}
                   onVGDoubleClick={handleVGDoubleClick}
                   onLinkClick={state.handleLinkClick}
@@ -1380,10 +2198,62 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   containerWidth={minimapWidth}
                   containerHeight={minimapInnerHeight}
                   resetPanSignal={minimapResetSignal}
+                  isEditMode={isEditMode}
+                  onMoveVG={isEditMode ? handleEditModeMove : undefined}
+                  onRemoveVG={isEditMode ? handleEditModeRemove : undefined}
+                  draftSnapshot={draftSnapshot}
+                  remoteDraftSnapshot={showRemoteDraft && !isEditMode ? remoteSnapshots[0] : null}
+                  remoteOperations={showRemoteDraft && !isEditMode ? remoteOperations : []}
+                  quickOps={quickOps}
+                  onCellDragComplete={handleCellDragComplete}
+                  onCellAssign={handleCellAssign}
+                  onTargetingResolve={handleTargetingResolve}
                 />
               </div>
             </div>
           </div>
+
+          {/* Resize handle between minimap and bottom content */}
+          <div
+            className="canvas-map-v2__resize-handle"
+            onPointerDown={handleResizePointerDown}
+            title="Drag to resize minimap"
+          >
+            <div className="canvas-map-v2__resize-grip" />
+          </div>
+
+          {state.focusedVG && (
+            <VGQuickOpsToolbar
+              focusedVG={state.focusedVG}
+              focusedLayout={focusedLayout}
+              focusedSlots={focusedSlots}
+              cells={[]}
+              canvas={canvasData}
+              viewGroups={activeViewGroups}
+              quickOps={quickOps}
+              onApplyTemplate={handleApplyTemplate}
+              onResizeInternal={handleResizeInternal}
+              onResizeFootprint={handleResizeFootprint}
+              onMergeCells={handleMergeCells}
+              onSplitCell={handleSplitCell}
+              onOpenEditor={handleOpenFocusedEditor}
+            />
+          )}
+
+          {isEditMode && (
+            <EditModeBar
+              pendingChangeCount={pendingChangeCount}
+              onCommit={handleCommit}
+              onDiscard={handleDiscard}
+              timeRemaining={timeRemaining}
+              isWarning={isWarning}
+              onExtend={handleExpiryExtend}
+              canUndo={txCanUndo}
+              canRedo={txCanRedo}
+              onUndo={txUndo}
+              onRedo={txRedo}
+            />
+          )}
 
           <CanvasMapBottomPanel
           mapMode={state.mapMode}
@@ -1488,6 +2358,16 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         </CanvasMapBottomPanel>
         </div>
       </div>
+
+      <StillEditingDialog
+        isOpen={showExpiryDialog}
+        onClose={() => setShowExpiryDialog(false)}
+        onExtend={handleExpiryExtend}
+        onCommit={handleExpiryCommit}
+        onDiscard={handleExpiryDiscard}
+        pendingChangeCount={pendingChangeCount}
+        graceTimeRemaining={graceTimeRemaining}
+      />
     </div>
   );
 });

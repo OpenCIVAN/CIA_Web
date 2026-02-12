@@ -22,6 +22,8 @@ import {
   deleteServerTemplate,
 } from '@Core/viewgroups/templates';
 import { UnifiedCompanionPanel, useCompanionMode } from './UnifiedCompanionPanel';
+import { AssignmentBanner } from './AssignmentBanner';
+import { useViewAssignment, selectIsAssigning, selectTargetCellRef, viewAssignment } from '@UI/react/store/viewAssignmentStore';
 
 export const COMPANION_PANEL_ID = 'companion';
 
@@ -234,13 +236,23 @@ export const UnifiedCompanionPanelShell = memo(function UnifiedCompanionPanelShe
     }
   }, [mode]);
 
+  // ── View assignment mode ──────────────────────────────────────────────
+  const isAssigning = useViewAssignment(selectIsAssigning);
+  const targetCellRef = useViewAssignment(selectTargetCellRef);
+  const assignTarget = useViewAssignment((s) => s.target);
+
   const handleViewClick = useCallback((view) => {
+    // If assigning, complete the assignment instead of navigating
+    if (isAssigning) {
+      viewAssignment.complete(view, 'replace');
+      return;
+    }
     if (view?.vgId) {
       window.dispatchEvent(new CustomEvent('cia:goto-viewgroup', {
         detail: { viewGroupId: view.vgId },
       }));
     }
-  }, []);
+  }, [isAssigning]);
 
   const handleTemplateClick = useCallback((template) => {
     if (!template?.id) return;
@@ -269,6 +281,13 @@ export const UnifiedCompanionPanelShell = memo(function UnifiedCompanionPanelShe
     >
       {({ sizeMode }) => (
         <>
+          {isAssigning && (
+            <AssignmentBanner
+              targetLabel={targetCellRef || 'cell'}
+              vgColor={assignTarget?.vgColor}
+              onCancel={() => viewAssignment.cancel()}
+            />
+          )}
           <UnifiedCompanionPanel
             isOpen
             views={views}

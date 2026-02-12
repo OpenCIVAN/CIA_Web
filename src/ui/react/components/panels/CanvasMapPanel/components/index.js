@@ -31,6 +31,12 @@ export {
   DatasetItem,
 } from "../../CompanionPanel";
 
+// QuickOps
+export { VGQuickOpsToolbar } from './QuickOps';
+
+// EditModeBar
+export { EditModeBar } from "./EditModeBar/EditModeBar";
+
 // BottomPanel
 export { CanvasMapBottomPanel } from "./BottomPanel/CanvasMapBottomPanel";
 

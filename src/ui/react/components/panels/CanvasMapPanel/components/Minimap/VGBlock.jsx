@@ -11,8 +11,10 @@
  */
 
 import React, { memo, useMemo } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { LAYOUTS } from '../../utils/constants';
 import { getVGDisplayName } from '../../utils/gridUtils';
+import { getInternalCells } from '../../hooks/useInternalCellLayout';
 
 /**
  * VGBlock - ViewGroup on minimap
@@ -44,6 +46,15 @@ export const VGBlock = memo(function VGBlock({
   onDoubleClick,
   onDragStart,
   onDragEnd,
+  // Edit mode props
+  isEditMode = false,
+  onPointerDown,
+  isBeingMoved = false,
+  onRemove,
+  // Draft change indicator
+  changeStatus, // 'added' | 'moved' | 'removed' | null
+  // Focus dimming
+  dimmed = false,
 }) {
   const name = displayName || getVGDisplayName(vg);
   const layout = LAYOUTS[vg.layoutId] || LAYOUTS.single;
@@ -65,105 +76,23 @@ export const VGBlock = memo(function VGBlock({
   // Calculate internal grid cells
   const internalCells = useMemo(() => {
     if (!showInternals) return [];
-
-    const cells = [];
-    const { rows, cols, merged } = layout;
     const padding = 4;
-    const internalGap = 2;
-    const internalWidth = position.colSpan * cellSize + (position.colSpan - 1) * gap - padding * 2;
-    const internalHeight = position.rowSpan * cellSize + (position.rowSpan - 1) * gap - padding * 2;
-    const cellWidth = (internalWidth - (cols - 1) * internalGap) / cols;
-    const cellHeight = (internalHeight - (rows - 1) * internalGap) / rows;
-
-    if (merged === 'top') {
-      // 1+2 layout
-      cells.push({
-        x: padding,
-        y: padding,
-        width: internalWidth,
-        height: cellHeight,
-        filled: views.length > 0,
-      });
-      cells.push({
-        x: padding,
-        y: padding + cellHeight + internalGap,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 1,
-      });
-      cells.push({
-        x: padding + cellWidth + internalGap,
-        y: padding + cellHeight + internalGap,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 2,
-      });
-    } else if (merged === 'right') {
-      // 2+1 layout
-      cells.push({
-        x: padding,
-        y: padding,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 0,
-      });
-      cells.push({
-        x: padding,
-        y: padding + cellHeight + internalGap,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 1,
-      });
-      cells.push({
-        x: padding + cellWidth + internalGap,
-        y: padding,
-        width: cellWidth,
-        height: internalHeight,
-        filled: views.length > 2,
-      });
-    } else if (merged === 'left') {
-      // 1+2 layout (merged left)
-      cells.push({
-        x: padding,
-        y: padding,
-        width: cellWidth,
-        height: internalHeight,
-        filled: views.length > 0,
-      });
-      cells.push({
-        x: padding + cellWidth + internalGap,
-        y: padding,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 1,
-      });
-      cells.push({
-        x: padding + cellWidth + internalGap,
-        y: padding + cellHeight + internalGap,
-        width: cellWidth,
-        height: cellHeight,
-        filled: views.length > 2,
-      });
-    } else {
-      // Standard grid
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const idx = r * cols + c;
-          if (idx < layout.cells) {
-            cells.push({
-              x: padding + c * (cellWidth + internalGap),
-              y: padding + r * (cellHeight + internalGap),
-              width: cellWidth,
-              height: cellHeight,
-              filled: idx < views.length,
-            });
-          }
-        }
-      }
-    }
-
-    return cells;
+    const w = position.colSpan * cellSize + (position.colSpan - 1) * gap - padding * 2;
+    const h = position.rowSpan * cellSize + (position.rowSpan - 1) * gap - padding * 2;
+    return getInternalCells(layout, w, h, views.length, { padding, gap: 2 });
   }, [showInternals, layout, position, cellSize, gap, views.length]);
+
+  // In edit mode, use pointer events instead of HTML5 drag
+  const effectiveDraggable = isEditMode ? false : (draggable && !subtle);
+
+  const handlePointerDown = isEditMode && onPointerDown
+    ? (e) => {
+        e.stopPropagation(); // prevent minimap panning
+        onPointerDown(e, vg);
+      }
+    : undefined;
+
+  const changeStatusClass = changeStatus ? `vg-block--${changeStatus}` : '';
 
   return (
     <div
@@ -171,13 +100,18 @@ export const VGBlock = memo(function VGBlock({
         ${isSelected ? 'vg-block--selected' : ''}
         ${isGhosted ? 'vg-block--ghosted' : ''}
         ${!isExplicit ? 'vg-block--implicit' : ''}
-        ${subtle ? 'vg-block--subtle' : ''}`}
+        ${subtle ? 'vg-block--subtle' : ''}
+        ${isBeingMoved ? 'vg-block--moving' : ''}
+        ${isEditMode ? 'vg-block--edit-mode' : ''}
+        ${dimmed ? 'vg-block--dimmed' : ''}
+        ${changeStatusClass}`}
       style={style}
-      draggable={draggable && !subtle}
-      onDragStart={draggable && !subtle ? onDragStart : undefined}
-      onDragEnd={draggable && !subtle ? onDragEnd : undefined}
+      draggable={effectiveDraggable}
+      onDragStart={effectiveDraggable ? onDragStart : undefined}
+      onDragEnd={effectiveDraggable ? onDragEnd : undefined}
+      onPointerDown={handlePointerDown}
       onClick={subtle ? undefined : onClick}
-      onDoubleClick={subtle ? undefined : onDoubleClick}
+      onDoubleClick={onDoubleClick}
       role={subtle ? undefined : 'button'}
       tabIndex={subtle ? -1 : 0}
       title={`${name} (${position.rowSpan}x${position.colSpan})`}
@@ -191,6 +125,28 @@ export const VGBlock = memo(function VGBlock({
     >
       {/* Name label */}
       <span className="vg-block__name">{name}</span>
+
+      {/* Change status badge */}
+      {changeStatus && (
+        <span className={`vg-block__change-badge vg-block__change-badge--${changeStatus}`}>
+          {changeStatus === 'added' ? 'NEW' : changeStatus === 'moved' ? 'MOVED' : changeStatus === 'removed' ? 'REMOVING' : ''}
+        </span>
+      )}
+
+      {/* Remove button in edit mode */}
+      {isEditMode && onRemove && (
+        <button
+          type="button"
+          className="vg-block__remove-btn"
+          title="Remove from canvas"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(vg.id);
+          }}
+        >
+          <Icon name="close" size={10} />
+        </button>
+      )}
 
       {/* Internal layout grid */}
       {showInternals && internalCells.length > 0 && (

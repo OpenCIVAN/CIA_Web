@@ -6,3 +6,5 @@
 export { useCanvasMapState } from './useCanvasMapState';
 export { useMinimapPanning } from './useMinimapPanning';
 export { useMinimapCellSize } from './useMinimapCellSize';
+export { getInternalCells } from './useInternalCellLayout';
+export { useVGQuickOps } from './useVGQuickOps';

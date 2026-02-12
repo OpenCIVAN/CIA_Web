@@ -135,6 +135,8 @@ export const SearchInput = memo(forwardRef(function SearchInput({
                 onKeyDown={handleKeyDown}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => e.preventDefault()}
                 placeholder={placeholder}
                 disabled={disabled}
                 autoFocus={autoFocus}

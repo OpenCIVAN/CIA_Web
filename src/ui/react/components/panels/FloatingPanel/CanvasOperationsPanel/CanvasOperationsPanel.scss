@@ -1236,3 +1236,147 @@
     padding: 12px 12px 8px;
   }
 }
+
+// =============================================================================
+// USERS TAB — LOCK INFO
+// =============================================================================
+
+.users-tab__lock-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  margin: $spacing-xs;
+  background: color-mix(in srgb, $color-accent-amber 15%, $color-bg-tertiary);
+  border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.users-tab__lock-info--remote {
+  background: color-mix(in srgb, $color-accent-blue 15%, $color-bg-tertiary);
+  border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
+}
+
+.users-tab__lock-timer {
+  font-variant-numeric: tabular-nums;
+  color: $color-accent-amber;
+  font-weight: $font-weight-semibold;
+}
+
+// =============================================================================
+// OPERATION ITEM — REACTIONS
+// =============================================================================
+
+.operation-item {
+  // Make the item a flex column when reactions are present
+  &__reactions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 1px solid $color-border-subtle;
+    background: $color-bg-tertiary;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.1s ease;
+
+    &:hover {
+      border-color: $color-border-medium;
+      background: $color-bg-secondary;
+    }
+
+    &--own {
+      border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    }
+  }
+
+  &__reaction-emoji {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  &__reaction-count {
+    font-size: 9px;
+    font-weight: 600;
+    color: $color-text-muted;
+  }
+
+  &__reaction-add-wrapper {
+    position: relative;
+  }
+
+  &__reaction-add {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 1px dashed $color-border-subtle;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-text-muted;
+    transition: all 0.1s ease;
+
+    &:hover {
+      border-color: $color-border-medium;
+      color: $color-text-secondary;
+      background: $color-bg-tertiary;
+    }
+  }
+
+  &__reaction-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+
+  &__reaction-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 4px;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-default;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+  }
+
+  &__reaction-option {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s ease;
+
+    &:hover {
+      background: $color-bg-tertiary;
+    }
+
+    &--active {
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    }
+  }
+}

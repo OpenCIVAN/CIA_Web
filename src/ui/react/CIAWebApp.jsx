@@ -1758,7 +1758,13 @@ export function CIAWebApp({ username, userId, projectId }) {
               <FloatingCanvasNavigator />
 
               {/* Canvas Map Panel (PanelShell floating panel) */}
-              <CanvasMapPanel workspaceId={currentWorkspaceId} projectId={projectId} />
+              <CanvasMapPanel
+                workspaceId={currentWorkspaceId}
+                projectId={projectId}
+                workspaces={workspaces}
+                onOpenWorkspace={handleOpenWorkspace}
+                onCreateWorkspace={handleCreateWorkspace}
+              />
 
               {/* Unified Companion Panel (PanelShell floating panel) */}
               <UnifiedCompanionPanelShell
@@ -1774,8 +1780,6 @@ export function CIAWebApp({ username, userId, projectId }) {
                 isOpen={openPopouts.includes("canvasOps")}
                 onClose={() => handleTogglePopout("canvasOps")}
                 onMinimize={() => handleTogglePopout("canvasOps")}
-                pendingOperations={[]}
-                transactions={[]}
                 collaborators={roomMembers.map((member, idx) => ({
                   id: member.odId || `user-${idx}`,
                   name: member.name || 'Unknown',
@@ -1784,7 +1788,6 @@ export function CIAWebApp({ username, userId, projectId }) {
                   viewport: { row: 1, col: 1 },
                   cursor: { row: 1, col: 1 },
                 }))}
-                savePoints={[]}
                 currentUserId={userId}
               />
             </ThreeEdgeLayout>

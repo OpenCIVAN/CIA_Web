@@ -100,9 +100,22 @@ export const MapToolbar = memo(function MapToolbar({
   onCreateLink,
   onBreakLink,
 
+  // Edit mode (transactional editing)
+  isEditMode = false,
+  onEditLayout,
+  onCommit,
+  onDiscard,
+  pendingChangeCount = 0,
+
   // Debug: implicit VGs
   showImplicitVGs,
   toggleShowImplicitVGs,
+
+  // Remote collaboration
+  remoteLock,
+  hasRemoteDraft,
+  showRemoteDraft,
+  toggleShowRemoteDraft,
 
   sizeMode = 'standard',
 }) {
@@ -187,12 +200,41 @@ export const MapToolbar = memo(function MapToolbar({
             title="Internal layouts"
             activeColor="var(--accent-green)"
           />
-          {!isCompact && (
+          <Separator />
+          {isEditMode ? (
             <>
-              <Separator />
-              <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
-              <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
-              <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
+              <span className="map-toolbar__editing-badge">EDITING</span>
+              {pendingChangeCount > 0 && (
+                <span className="map-toolbar__pending-count">{pendingChangeCount}</span>
+              )}
+              <ToolbarBtn
+                icon="check"
+                onClick={onCommit}
+                title="Commit changes"
+                disabled={pendingChangeCount === 0}
+                activeColor="var(--accent-green)"
+                active
+              />
+              <ToolbarBtn
+                icon="close"
+                onClick={onDiscard}
+                title="Discard changes"
+                activeColor="var(--accent-red)"
+                active
+              />
+            </>
+          ) : (
+            <>
+              {onEditLayout && (
+                <ToolbarBtn icon="pencil" onClick={onEditLayout} title="Edit Layout" />
+              )}
+              {!isCompact && (
+                <>
+                  <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
+                  <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
+                  <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
+                </>
+              )}
             </>
           )}
         </>
@@ -233,6 +275,25 @@ export const MapToolbar = memo(function MapToolbar({
             size="sm"
           />
         </>
+      )}
+
+      {/* Remote lock badge */}
+      {remoteLock && !isEditMode && (
+        <span className="map-toolbar__lock-badge" title={`${remoteLock.lockedByName || 'Someone'} is editing`}>
+          <Icon name="lock" size={12} />
+          <span>{remoteLock.lockedByName || 'Locked'}</span>
+        </span>
+      )}
+
+      {/* Draft layer toggle (visible when someone else is editing) */}
+      {hasRemoteDraft && !isEditMode && (
+        <ToolbarBtn
+          icon="layers"
+          active={showRemoteDraft}
+          onClick={toggleShowRemoteDraft}
+          title={showRemoteDraft ? "Hide pending changes" : "Show pending changes"}
+          activeColor="var(--accent-amber)"
+        />
       )}
 
       <div className="map-toolbar__spacer" />

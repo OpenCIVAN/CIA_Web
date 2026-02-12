@@ -1,0 +1,315 @@
+/**
+ * VGQuickOpsToolbar styles
+ */
+
+@use "theme" as *;
+
+// ─── Main toolbar ──────────────────────────────────────────────────────────
+
+.quick-ops-toolbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+
+  background: color-mix(in srgb, $color-accent-cyan 8%, $color-bg-secondary);
+  border-top: 1px solid color-mix(in srgb, $color-accent-cyan 30%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, $color-accent-cyan 30%, transparent);
+
+  // Phase 5: slide-up entrance animation
+  animation: toolbar-slide-up 0.2s $ease-out-expo;
+
+  // Prevent text selection while interacting
+  user-select: none;
+
+  &__section {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &--left {
+      padding-right: 6px;
+      border-right: 1px solid $color-border-subtle;
+    }
+
+    &--center {
+      padding: 0 6px;
+    }
+
+    &--right {
+      padding-left: 6px;
+      border-left: 1px solid $color-border-subtle;
+      gap: 2px;
+    }
+  }
+
+  // ─── Template button ─────────────────────────────────────────────────
+
+  &__template-anchor {
+    position: relative;
+  }
+
+  &__template-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+    }
+  }
+
+  // ─── Action buttons (merge, split, edit) ─────────────────────────────
+
+  &__merge-btn,
+  &__split-btn,
+  &__edit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  &__merge-btn {
+    color: $color-accent-amber;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+    }
+  }
+
+  &__split-btn {
+    color: $color-accent-purple;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+    }
+  }
+
+  &__edit-btn {
+    color: $color-accent-cyan;
+
+    &:hover {
+      background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
+    }
+  }
+
+  &__btn--disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Template Picker popover ────────────────────────────────────────────────
+
+.template-picker {
+  // Rendered inside DropdownPortal which handles positioning
+  min-width: 180px;
+  max-width: 240px;
+  padding: 8px;
+
+  background: $color-glass-panel;
+  backdrop-filter: blur(12px);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  &__section {
+    & + & {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid $color-border-subtle;
+    }
+  }
+
+  &__section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-tertiary;
+    margin-bottom: 4px;
+  }
+
+  &__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-primary;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+    }
+
+    &--current {
+      background: color-mix(in srgb, $color-accent-cyan 10%, transparent);
+    }
+  }
+
+  &__item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__item-label {
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__item-dims {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-tertiary;
+  }
+
+  &__item-badge {
+    font-size: 8px;
+    font-weight: 600;
+    color: $color-accent-amber;
+    background: color-mix(in srgb, $color-accent-amber 12%, transparent);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+}
+
+// ─── Dimension Controls ─────────────────────────────────────────────────────
+
+.dim-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  font-family: $font-family-mono;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  &__label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: $color-text-tertiary;
+    min-width: 52px;
+    font-family: $font-family-base;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid $color-border-subtle;
+    border-radius: 3px;
+    background: transparent;
+    color: $color-text-secondary;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+      border-color: $color-border-default;
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+
+  &__value {
+    min-width: 14px;
+    text-align: center;
+    color: $color-text-primary;
+    font-weight: 600;
+  }
+
+  &__sep {
+    color: $color-text-tertiary;
+    margin: 0 1px;
+  }
+
+  &__ref {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    margin-left: 4px;
+    opacity: 0.7;
+  }
+
+  &__plus-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  &__picker-popup {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    padding: 4px;
+    background: $color-glass-panel;
+    backdrop-filter: blur(12px);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+}
+
+// Phase 5: toolbar slide-up animation
+@keyframes toolbar-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

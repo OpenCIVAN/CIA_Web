@@ -199,7 +199,14 @@
   &__focused-overlay {
     position: absolute;
     z-index: 6;
+    // Allow pointer events to pass through to grid for panning,
+    // but children with pointer-events: auto (cells, header) remain interactive
     pointer-events: none;
+    // Ensure background taps reach minimap for panning
+    touch-action: none;
+    // Phase 5: zoom-in entrance animation
+    animation: focus-zoom-in 0.25s $ease-out-expo;
+    transform-origin: center center;
   }
 
   &__focused-header {
@@ -215,6 +222,8 @@
     border-radius: $radius-md;
     pointer-events: auto;
     box-shadow: var(--shadow-md);
+    // Phase 5: slide-down entrance
+    animation: focus-header-in 0.2s $ease-out-expo;
   }
 
   &__focused-name {
@@ -260,6 +269,12 @@
     gap: 4px;
     padding: 4px;
     overflow: hidden;
+    // Inherit grab cursor from minimap for panning
+    cursor: inherit;
+    // Phase 5: staggered entrance animation
+    animation: cell-fade-in 0.2s ease backwards;
+    // Phase 5: smooth state transitions
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   }
 
   &__focused-cell--filled {
@@ -289,6 +304,112 @@
     gap: 4px;
     color: $color-text-muted;
     font-size: 9px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: $color-glass-light;
+    }
+  }
+
+  // Phase 5: Keyboard focus ring for cells
+  &__focused-cell:focus-visible {
+    outline: 2px solid $color-accent-cyan;
+    outline-offset: -2px;
+    z-index: 2;
+  }
+
+  &__focused-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: 0;
+    color: $color-text-muted;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: $radius-sm;
+
+    &:hover {
+      color: $color-text-primary;
+      background: $color-glass-light;
+    }
+  }
+
+  &__focused-header-sep {
+    color: $color-text-muted;
+    font-size: 10px;
+    opacity: 0.5;
+  }
+
+  &__focused-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__focused-badge {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    background: $color-glass-light;
+    padding: 1px 5px;
+    border-radius: $radius-sm;
+    white-space: nowrap;
+  }
+
+  &__focused-cell--selected {
+    border-color: $color-accent-amber;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-amber 40%, transparent);
+  }
+
+  &__focused-cell--drag-source {
+    border-style: dashed;
+    opacity: 0.5;
+  }
+
+  &__focused-cell--drag-target {
+    border-color: $color-accent-cyan;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-cyan 40%, transparent);
+  }
+
+  &__focused-cell--targeting-valid {
+    border-color: $color-accent-green;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-green 35%, transparent);
+    cursor: pointer;
+  }
+
+  &__focused-cell--targeting-pulse {
+    border-color: $color-accent-amber;
+    animation: targeting-pulse 1.5s ease-in-out infinite;
+    cursor: pointer;
+  }
+
+  &__focused-cell--assigning {
+    border-color: $color-accent-amber;
+    animation: assignment-pulse 1.5s ease-in-out infinite;
+  }
+
+  &__focused-cell-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  &__focused-cell-dataset {
+    font-size: 8px;
+    color: $color-text-muted;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__focused-cell-remove {
@@ -423,6 +544,38 @@
     background: linear-gradient(0deg, var(--fade-color), transparent);
   }
 
+  // Move ghost during edit mode VG drag
+  &__move-ghost {
+    position: absolute;
+    border: 2px dashed color-mix(in srgb, var(--ghost-color, $color-accent-cyan) 80%, transparent);
+    background: color-mix(in srgb, var(--ghost-color, $color-accent-cyan) 15%, transparent);
+    border-radius: $radius-md;
+    pointer-events: none;
+    z-index: 10;
+    animation: ghost-pulse 1s ease-in-out infinite;
+  }
+
+  // Dashed outline at original position for moved VGs
+  &__moved-ghost {
+    position: absolute;
+    border: 2px dashed $color-accent-red;
+    border-radius: $radius-md;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // Faded ghost outline for removed VGs
+  &__removed-ghost {
+    position: absolute;
+    border: 1px dashed color-mix(in srgb, var(--ghost-color, $color-text-muted) 40%, transparent);
+    background: color-mix(in srgb, var(--ghost-color, $color-text-muted) 5%, transparent);
+    border-radius: $radius-md;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.5;
+  }
+
   // Companion panel offset support
   &--companion-left {
     margin-left: var(--companion-offset, 0);
@@ -430,6 +583,94 @@
 
   &--companion-right {
     margin-right: var(--companion-offset, 0);
+  }
+}
+
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes targeting-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-amber 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, $color-accent-amber 20%, transparent);
+  }
+}
+
+// Phase 5: Focus-enter zoom animation
+@keyframes focus-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Phase 5: Cell staggered fade-in
+@keyframes cell-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Phase 5: Focus header slide-down
+@keyframes focus-header-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Phase 5: Assignment target amber pulse
+@keyframes assignment-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-amber 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, $color-accent-amber 25%, transparent);
+  }
+}
+
+// Drag ghost (portaled to body)
+.minimap__drag-ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: $color-bg-secondary;
+  border: 2px solid var(--ghost-color, $color-accent-cyan);
+  border-radius: $radius-md;
+  box-shadow: $shadow-glass-lg;
+  backdrop-filter: $blur-medium;
+
+  &-name {
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60px;
+  }
+
+  svg {
+    color: var(--ghost-color, $color-accent-cyan);
+    flex-shrink: 0;
   }
 }
 
@@ -493,17 +734,18 @@
     border-style: dashed;
   }
 
-  // Subtle mode: thinner borders, no fill, click-through for dual display
+  // Subtle mode: thinner borders, no fill, visually recessed for dual display
+  // pointer-events kept so double-click can enter focused mode
   &--subtle {
     background: transparent;
     border-width: 1px;
     border-color: color-mix(in srgb, var(--vg-color) 40%, transparent);
-    pointer-events: none;
     z-index: 0;
+    cursor: default;
 
     &:hover {
-      background: transparent;
-      border-color: color-mix(in srgb, var(--vg-color) 40%, transparent);
+      background: color-mix(in srgb, var(--vg-color) 6%, transparent);
+      border-color: color-mix(in srgb, var(--vg-color) 50%, transparent);
     }
 
     .vg-block__name {
@@ -539,6 +781,100 @@
 
     &--filled {
       background: color-mix(in srgb, var(--vg-color) 30%, $color-glass-medium);
+    }
+  }
+
+  // Edit mode state
+  &--edit-mode {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &--moving {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  &--dimmed {
+    opacity: 0.3;
+    filter: saturate(0.4);
+    pointer-events: none;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+  }
+
+  // Change status indicators
+  &--added {
+    box-shadow: 0 0 8px color-mix(in srgb, $color-accent-green 50%, transparent);
+  }
+
+  &--moved {
+    box-shadow: 0 0 8px color-mix(in srgb, $color-accent-blue 50%, transparent);
+  }
+
+  &--removed {
+    box-shadow: 0 0 8px color-mix(in srgb, $color-accent-red 50%, transparent);
+    opacity: 0.6;
+  }
+
+  // Remove button
+  &__remove-btn {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-accent-red;
+    color: white;
+    border: 1px solid color-mix(in srgb, $color-accent-red 80%, white);
+    border-radius: 999px;
+    cursor: pointer;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity $transition-fast;
+    padding: 0;
+
+    &:hover {
+      background: color-mix(in srgb, $color-accent-red 85%, white);
+    }
+  }
+
+  &--edit-mode:hover &__remove-btn,
+  &--edit-mode &__remove-btn {
+    opacity: 1;
+  }
+
+  // Change badge
+  &__change-badge {
+    position: absolute;
+    top: -6px;
+    left: 2px;
+    font-size: 7px;
+    font-weight: $font-weight-bold;
+    letter-spacing: 0.3px;
+    padding: 1px 3px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 4;
+
+    &--added {
+      background: $color-accent-green;
+      color: white;
+    }
+
+    &--moved {
+      background: $color-accent-blue;
+      color: white;
+    }
+
+    &--removed {
+      background: $color-accent-red;
+      color: white;
     }
   }
 }

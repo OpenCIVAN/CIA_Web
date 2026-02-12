@@ -22,7 +22,9 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
 import { MAP_MODES, MINIMAP_CONSTANTS, LAYOUTS } from '../../utils/constants';
-import { colToLetter, getGridCenter, clamp, getVGDisplayName } from '../../utils/gridUtils';
+import { colToLetter, getGridCenter, clamp } from '../../utils/gridUtils';
+import { VGFocusedView } from './VGFocusedView';
+import { getInternalCells } from '../../hooks/useInternalCellLayout';
 import './Minimap.scss';
 
 /**
@@ -63,6 +65,7 @@ export const Minimap = memo(function Minimap({
   onFocusedVGRename,
   onFocusedVGSlotDrop,
   onFocusedVGSlotClear,
+  onBackFromFocus,
 
   // Container dimensions
   containerWidth,
@@ -81,27 +84,35 @@ export const Minimap = memo(function Minimap({
 
   // Control signals
   resetPanSignal = 0,
+
+  // Edit mode (transactional editing)
+  isEditMode = false,
+  onMoveVG,
+  onRemoveVG,
+  draftSnapshot,
+  displayViewGroups: displayViewGroupsProp,
+
+  // Remote draft preview (collaboration)
+  remoteDraftSnapshot,
+  remoteOperations = [],
+
+  // Quick ops (passed from parent)
+  quickOps,
+
+  // Phase 4: cell interaction handlers
+  onCellDragComplete,
+  onCellAssign,
+  onTargetingResolve,
 }) {
   const { rows, cols, homePosition } = canvas;
   const containerRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState(null);
-  const [focusedDropIndex, setFocusedDropIndex] = useState(null);
-  const [isRenamingFocused, setIsRenamingFocused] = useState(false);
-  const [focusedNameDraft, setFocusedNameDraft] = useState('');
 
-  const commitFocusedRename = useCallback(() => {
-    if (!focusedVG) return;
-    const trimmed = focusedNameDraft.trim();
-    if (!trimmed) {
-      setFocusedNameDraft(focusedVG.name || getVGDisplayName(focusedVG));
-      return;
-    }
-    if (trimmed === (focusedVG.name || '')) {
-      return;
-    }
-    onFocusedVGRename?.(trimmed);
-  }, [focusedVG, focusedNameDraft, onFocusedVGRename]);
+  // Edit mode VG move state
+  const [movingVG, setMovingVG] = useState(null); // { vg, startX, startY }
+  const [moveGhost, setMoveGhost] = useState(null); // { row, col, rowSpan, colSpan, color }
+  const moveGhostRef = useRef(null); // ref to avoid stale closure in pointer up
 
   // Calculate cell sizing
   const sizing = useMinimapCellSize({
@@ -183,22 +194,14 @@ export const Minimap = memo(function Minimap({
     return viewGroups;
   }, [collisionViewGroups, viewGroups]);
 
-  useEffect(() => {
-    if (!focusedVG) {
-      setFocusedNameDraft('');
-      setIsRenamingFocused(false);
-      return;
-    }
-    setFocusedNameDraft(focusedVG.name || getVGDisplayName(focusedVG));
-    setIsRenamingFocused(false);
-  }, [focusedVG?.id, focusedVG?.name]);
-
+  // Pan to focused VG center when focus changes (not on every panning state update)
   useEffect(() => {
     if (!focusedVG?.position) return;
     const { row, col, rowSpan, colSpan } = focusedVG.position;
     const center = getGridCenter(row, col, rowSpan, colSpan, cellSize, renderGap);
     panning.panToPosition(center.x, center.y);
-  }, [focusedVG?.id, focusedVG?.position, cellSize, renderGap, panning]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-center when focus target changes
+  }, [focusedVG?.id, cellSize, renderGap]);
 
   const parseDragPayload = useCallback((event) => {
     const jsonPayload = event.dataTransfer?.getData('application/json');
@@ -249,6 +252,98 @@ export const Minimap = memo(function Minimap({
       window.__ciaDragPayload = null;
     }
   }, []);
+
+  // ── Edit mode: pointer-event VG move handler ─────────────────────────
+  const handleVGPointerDown = useCallback((event, vg) => {
+    if (!isEditMode || !onMoveVG || !containerRef.current) return;
+
+    event.preventDefault();
+    const pointerId = event.pointerId;
+    containerRef.current.setPointerCapture(pointerId);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    setMovingVG({ vg, startX, startY });
+
+    const handlePointerMove = (e) => {
+      if (!containerRef.current) return;
+      // Compute target cell from pointer position
+      const rect = containerRef.current.getBoundingClientRect();
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      const contentX = localX - MINIMAP_CONSTANTS.SCROLL_PADDING - (showGridLabels ? headerSize : 0) + panning.panOffset.x;
+      const contentY = localY - MINIMAP_CONSTANTS.SCROLL_PADDING - (showGridLabels ? headerSize : 0) + panning.panOffset.y;
+
+      const rawCol = Math.floor(contentX / renderPitch);
+      const rawRow = Math.floor(contentY / renderPitch);
+      const rowSpan = vg.position?.rowSpan || 1;
+      const colSpan = vg.position?.colSpan || 1;
+      const maxCol = Math.max(0, cols - colSpan);
+      const maxRow = Math.max(0, rows - rowSpan);
+      const col = clamp(rawCol, 0, maxCol);
+      const row = clamp(rawRow, 0, maxRow);
+
+      const ghostVal = { row, col, rowSpan, colSpan, color: vg.color };
+      setMoveGhost(ghostVal);
+      moveGhostRef.current = ghostVal;
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+
+      if (containerRef.current) {
+        try { containerRef.current.releasePointerCapture(pointerId); } catch {}
+      }
+
+      // Finalize move using ref (avoids stale closure)
+      const ghost = moveGhostRef.current;
+      setMovingVG(null);
+      setMoveGhost(null);
+      moveGhostRef.current = null;
+
+      if (ghost && onMoveVG) {
+        onMoveVG({ vgId: vg.id, toRow: ghost.row, toCol: ghost.col });
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  }, [isEditMode, onMoveVG, showGridLabels, headerSize, panning.panOffset.x, panning.panOffset.y, renderPitch, cols, rows]);
+
+  // ── Compute change status for each VG (draft indicators) ─────────────
+  const getChangeStatus = useCallback((vgId) => {
+    if (!isEditMode || !draftSnapshot) return null;
+    const snapshotVG = draftSnapshot.find((s) => s.id === vgId);
+    const currentVG = viewGroups.find((v) => v.id === vgId);
+    if (!snapshotVG && currentVG) return 'added';
+    if (snapshotVG && !currentVG) return 'removed';
+    if (snapshotVG && currentVG && currentVG.position) {
+      const sp = snapshotVG.position;
+      const cp = currentVG.position;
+      if (sp && cp && (sp.row !== cp.row || sp.col !== cp.col)) return 'moved';
+    }
+    return null;
+  }, [isEditMode, draftSnapshot, viewGroups]);
+
+  // ── Ghost outlines for removed VGs ─────────────────────────────────────
+  const removedVGGhosts = useMemo(() => {
+    if (!isEditMode || !draftSnapshot) return [];
+    const currentIds = new Set(viewGroups.map((v) => v.id));
+    return draftSnapshot.filter((s) => !currentIds.has(s.id) && s.position);
+  }, [isEditMode, draftSnapshot, viewGroups]);
+
+  // Ghost outlines for MOVED VGs — show original position with dashed outline
+  const movedVGGhosts = useMemo(() => {
+    if (!isEditMode || !draftSnapshot) return [];
+    return draftSnapshot
+      .filter((snap) => {
+        const current = viewGroups.find((v) => v.id === snap.id);
+        if (!current?.position || !snap.position) return false;
+        return current.position.row !== snap.position.row || current.position.col !== snap.position.col;
+      })
+      .map((snap) => ({ ...snap, originalPosition: snap.position }));
+  }, [isEditMode, draftSnapshot, viewGroups]);
 
   const resolveSpanForData = useCallback((data) => {
     if (!data) return { rowSpan: 1, colSpan: 1 };
@@ -347,55 +442,11 @@ export const Minimap = memo(function Minimap({
     const internalGap = Math.max(2, Math.round(cellSize * 0.06));
     const width = focusedVG.position.colSpan * cellSize + (focusedVG.position.colSpan - 1) * renderGap;
     const height = focusedVG.position.rowSpan * cellSize + (focusedVG.position.rowSpan - 1) * renderGap;
-    const innerWidth = width - padding * 2;
-    const innerHeight = height - padding * 2;
-    const colWidth = (innerWidth - internalGap) / 2;
-    const rowHeight = (innerHeight - internalGap) / 2;
-    const cells = [];
-
-    if (focusedLayout.merged === 'top') {
-      cells.push({ index: 0, x: padding, y: padding, width: innerWidth, height: rowHeight });
-      cells.push({ index: 1, x: padding, y: padding + rowHeight + internalGap, width: colWidth, height: rowHeight });
-      cells.push({ index: 2, x: padding + colWidth + internalGap, y: padding + rowHeight + internalGap, width: colWidth, height: rowHeight });
-      return cells;
-    }
-
-    if (focusedLayout.merged === 'right') {
-      cells.push({ index: 0, x: padding, y: padding, width: colWidth, height: rowHeight });
-      cells.push({ index: 1, x: padding + colWidth + internalGap, y: padding, width: colWidth, height: innerHeight });
-      cells.push({ index: 2, x: padding, y: padding + rowHeight + internalGap, width: colWidth, height: rowHeight });
-      return cells;
-    }
-
-    if (focusedLayout.merged === 'left') {
-      cells.push({ index: 0, x: padding, y: padding, width: colWidth, height: innerHeight });
-      cells.push({ index: 1, x: padding + colWidth + internalGap, y: padding, width: colWidth, height: rowHeight });
-      cells.push({ index: 2, x: padding + colWidth + internalGap, y: padding + rowHeight + internalGap, width: colWidth, height: rowHeight });
-      return cells;
-    }
-
-    const rowsCount = focusedLayout.rows || 1;
-    const colsCount = focusedLayout.cols || 1;
-    const cellWidth = (innerWidth - (colsCount - 1) * internalGap) / colsCount;
-    const cellHeight = (innerHeight - (rowsCount - 1) * internalGap) / rowsCount;
-    const cellCount = focusedLayout.cells || rowsCount * colsCount;
-
-    for (let r = 0; r < rowsCount; r += 1) {
-      for (let c = 0; c < colsCount; c += 1) {
-        const index = r * colsCount + c;
-        if (index >= cellCount) continue;
-        cells.push({
-          index,
-          x: padding + c * (cellWidth + internalGap),
-          y: padding + r * (cellHeight + internalGap),
-          width: cellWidth,
-          height: cellHeight,
-        });
-      }
-    }
-
-    return cells;
-  }, [focusedVG?.position, focusedLayout, cellSize, renderGap]);
+    const innerW = width - padding * 2;
+    const innerH = height - padding * 2;
+    const filledCount = focusedSlots ? focusedSlots.filter(Boolean).length : 0;
+    return getInternalCells(focusedLayout, innerW, innerH, filledCount, { padding, gap: internalGap });
+  }, [focusedVG?.position, focusedLayout, cellSize, renderGap, focusedSlots]);
 
   return (
     <div
@@ -643,6 +694,7 @@ export const Minimap = memo(function Minimap({
                   const isSubtle = showViews && showVGs;
                   const isFocused = focusedVG?.id === vg.id;
                   const allowInternals = mapMode === MAP_MODES.LAYOUT && showInternals;
+                  const isDimmedByFocus = !!focusedVG && focusedVG.id !== vg.id;
 
                   return (
                     <VGBlock
@@ -659,121 +711,78 @@ export const Minimap = memo(function Minimap({
                       onDragEnd={handleVGDragEnd}
                       onClick={() => onVGClick(vg.id)}
                       onDoubleClick={() => onVGDoubleClick(vg.id)}
+                      isEditMode={isEditMode}
+                      onPointerDown={isEditMode ? handleVGPointerDown : undefined}
+                      isBeingMoved={movingVG?.vg?.id === vg.id}
+                      onRemove={isEditMode ? onRemoveVG : undefined}
+                      changeStatus={getChangeStatus(vg.id)}
+                      dimmed={isDimmedByFocus}
                     />
                   );
                 })}
 
-                {focusedVG?.position && focusedCells.length > 0 && (
+                {/* Ghost footprint during VG move in edit mode */}
+                {moveGhost && (
                   <div
-                    className="minimap__focused-overlay"
+                    className="minimap__move-ghost"
                     style={{
-                      left: focusedVG.position.col * renderPitch,
-                      top: focusedVG.position.row * renderPitch,
-                      width: focusedVG.position.colSpan * cellSize + (focusedVG.position.colSpan - 1) * renderGap,
-                      height: focusedVG.position.rowSpan * cellSize + (focusedVG.position.rowSpan - 1) * renderGap,
-                      '--vg-color': focusedVG.color,
+                      left: moveGhost.col * renderPitch,
+                      top: moveGhost.row * renderPitch,
+                      width: moveGhost.colSpan * cellSize + (moveGhost.colSpan - 1) * renderGap,
+                      height: moveGhost.rowSpan * cellSize + (moveGhost.rowSpan - 1) * renderGap,
+                      '--ghost-color': moveGhost.color,
                     }}
-                  >
-                    <div className="minimap__focused-header">
-                      {isRenamingFocused ? (
-                        <input
-                          type="text"
-                          className="minimap__focused-name-input"
-                          value={focusedNameDraft}
-                          onChange={(e) => setFocusedNameDraft(e.target.value)}
-                          onBlur={() => {
-                            setIsRenamingFocused(false);
-                            commitFocusedRename();
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              setIsRenamingFocused(false);
-                              commitFocusedRename();
-                            }
-                            if (e.key === 'Escape') {
-                              setIsRenamingFocused(false);
-                              setFocusedNameDraft(focusedVG.name || getVGDisplayName(focusedVG));
-                            }
-                          }}
-                        />
-                      ) : (
-                        <button
-                          type="button"
-                          className="minimap__focused-name"
-                          title="Click to rename ViewGroup"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsRenamingFocused(true);
-                          }}
-                        >
-                          {focusedVG.name || getVGDisplayName(focusedVG)}
-                          <Icon name="pencil" size={12} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="minimap__focused-cells">
-                      {focusedCells.map((cell) => {
-                        const view = focusedSlots?.[cell.index] || null;
-                        const isDropTarget = focusedDropIndex === cell.index;
-                        return (
-                          <div
-                            key={cell.index}
-                            className={`minimap__focused-cell ${view ? 'minimap__focused-cell--filled' : ''} ${isDropTarget ? 'minimap__focused-cell--drop' : ''}`}
-                            style={{
-                              left: cell.x,
-                              top: cell.y,
-                              width: cell.width,
-                              height: cell.height,
-                            }}
-                            onDragOver={(e) => {
-                              const payload = parseDragPayload(e);
-                              if (!isViewPayload(payload)) return;
-                              e.preventDefault();
-                              e.stopPropagation();
-                              e.dataTransfer.dropEffect = 'copy';
-                              setFocusedDropIndex(cell.index);
-                            }}
-                            onDragLeave={(e) => {
-                              if (e.currentTarget.contains(e.relatedTarget)) return;
-                              setFocusedDropIndex(null);
-                            }}
-                            onDrop={(e) => {
-                              const payload = parseDragPayload(e);
-                              if (!isViewPayload(payload)) return;
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onFocusedVGSlotDrop?.(cell.index, payload);
-                              setFocusedDropIndex(null);
-                            }}
-                          >
-                            {view ? (
-                              <>
-                                <span className="minimap__focused-cell-name">
-                                  {view.name || 'View'}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="minimap__focused-cell-remove"
-                                  title="Remove view"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onFocusedVGSlotClear?.(cell.index);
-                                  }}
-                                >
-                                  <Icon name="close" size={10} />
-                                </button>
-                              </>
-                            ) : (
-                              <span className="minimap__focused-cell-empty">
-                                <Icon name="plus" size={12} />
-                                Drop view
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  />
+                )}
+
+                {/* Ghost outlines for removed VGs in edit mode */}
+                {isEditMode && removedVGGhosts.map(ghost => (
+                  <div
+                    key={`removed-${ghost.id}`}
+                    className="minimap__removed-ghost"
+                    style={{
+                      left: ghost.position.col * renderPitch,
+                      top: ghost.position.row * renderPitch,
+                      width: (ghost.position.colSpan || 1) * cellSize + ((ghost.position.colSpan || 1) - 1) * renderGap,
+                      height: (ghost.position.rowSpan || 1) * cellSize + ((ghost.position.rowSpan || 1) - 1) * renderGap,
+                      '--ghost-color': ghost.color || '#94a3b8',
+                    }}
+                  />
+                ))}
+
+                {/* Ghost outlines for moved VGs at original positions */}
+                {isEditMode && movedVGGhosts.map((ghost) => (
+                  <div
+                    key={`moved-ghost-${ghost.id}`}
+                    className="minimap__moved-ghost"
+                    style={{
+                      left: ghost.originalPosition.col * renderPitch,
+                      top: ghost.originalPosition.row * renderPitch,
+                      width: (ghost.originalPosition.colSpan || 1) * cellSize + ((ghost.originalPosition.colSpan || 1) - 1) * renderGap,
+                      height: (ghost.originalPosition.rowSpan || 1) * cellSize + ((ghost.originalPosition.rowSpan || 1) - 1) * renderGap,
+                    }}
+                    title={`Original position of ${ghost.name || ghost.id}`}
+                  />
+                ))}
+
+                {focusedVG?.position && focusedCells.length > 0 && (
+                  <VGFocusedView
+                    focusedVG={focusedVG}
+                    focusedSlots={focusedSlots}
+                    cells={focusedCells}
+                    cellSize={cellSize}
+                    renderGap={renderGap}
+                    onRename={onFocusedVGRename}
+                    onSlotDrop={onFocusedVGSlotDrop}
+                    onSlotClear={onFocusedVGSlotClear}
+                    onBackToCanvas={onBackFromFocus}
+                    parseDragPayload={parseDragPayload}
+                    isViewPayload={isViewPayload}
+                    quickOps={quickOps}
+                    onCellDragComplete={onCellDragComplete}
+                    onCellAssign={onCellAssign}
+                    onTargetingResolve={onTargetingResolve}
+                  />
                 )}
 
                 {/* View Cells (View mode) */}
@@ -836,8 +845,6 @@ export const Minimap = memo(function Minimap({
           </div>
         </div>
       </div>
-
-      {/* Edge fades removed to match spec */}
 
       {/* Panning indicator */}
       {panning.canPan && (

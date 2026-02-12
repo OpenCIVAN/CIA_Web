@@ -533,6 +533,67 @@
     color: $color-text-muted;
     flex-shrink: 0;
   }
+
+  &__action-badge {
+    font-size: 9px;
+    font-weight: $font-weight-semibold;
+    flex-shrink: 0;
+  }
+}
+
+// Assignment Banner
+.assignment-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: color-mix(in srgb, var(--assign-color, $color-accent-cyan) 12%, $color-bg-secondary);
+  border-left: 3px solid var(--assign-color, $color-accent-cyan);
+  border-bottom: 1px solid $color-border-subtle;
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0;
+
+    svg {
+      color: var(--assign-color, $color-accent-cyan);
+      flex-shrink: 0;
+    }
+  }
+
+  &__label {
+    font-size: 11px;
+    color: $color-text-secondary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    strong {
+      color: $color-text-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__cancel {
+    background: transparent;
+    border: 1px solid $color-border-subtle;
+    color: $color-text-muted;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-primary;
+      border-color: $color-border-medium;
+      background: $color-glass-light;
+    }
+  }
 }
 
 // Dataset Item

@@ -43,6 +43,10 @@ function EmptyState() {
  * @param {Function} props.onCancel - Cancel all pending operations
  * @param {boolean} props.hasChanges - Whether there are pending changes
  * @param {number} props.selectedCount - Number of selected operations
+ * @param {Object} props.reactions - Reactions map { [changeId]: [...] }
+ * @param {Function} props.onAddReaction - Add a reaction
+ * @param {Function} props.onRemoveReaction - Remove a reaction
+ * @param {string} props.currentUserId - Current user's ID
  */
 export function TransactionTab({
   operations = [],
@@ -54,6 +58,10 @@ export function TransactionTab({
   onCancel,
   hasChanges,
   selectedCount = 0,
+  reactions = {},
+  onAddReaction,
+  onRemoveReaction,
+  currentUserId,
 }) {
   if (!hasChanges) {
     return <EmptyState />;
@@ -91,6 +99,10 @@ export function TransactionTab({
               isSelected={selectedOps[i]}
               onToggle={() => onToggleOp(i)}
               showCheckbox
+              reactions={reactions[op.id] || []}
+              onAddReaction={onAddReaction ? (emoji) => onAddReaction(op.id, { userId: currentUserId, userName: 'You', userColor: 'teal', emoji }) : undefined}
+              onRemoveReaction={onRemoveReaction ? (emoji) => onRemoveReaction(op.id, currentUserId, emoji) : undefined}
+              currentUserId={currentUserId}
             />
           ))}
         </div>

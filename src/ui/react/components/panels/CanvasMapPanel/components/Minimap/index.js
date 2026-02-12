@@ -12,4 +12,10 @@ export { CollaboratorIndicator } from './CollaboratorIndicator';
 export { CursorIndicator } from './CursorIndicator';
 export { LinkLines } from './LinkLines';
 
+export { VGFocusedView } from './VGFocusedView';
+export { VGFocusHeader } from './VGFocusHeader';
+export { FocusedCell } from './FocusedCell';
+export { CellContextMenu } from './CellContextMenu';
+export { DragGhost } from './DragGhost';
+
 export { default } from './Minimap';

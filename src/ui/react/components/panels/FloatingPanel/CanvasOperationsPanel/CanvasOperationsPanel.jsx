@@ -2,16 +2,19 @@
  * @file CanvasOperationsPanel.jsx
  * @description Canvas Operations Panel - Manages canvas layout transactions, audit logs,
  * user awareness, and save points. Draggable and resizable floating panel.
+ * Wired to canvasTransactionStore for live data.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { TabButton } from '@UI/react/components/molecules';
+import { useCanvasHistory } from '@UI/react/store/canvasTransactionStore';
 import { TransactionTab } from './tabs/TransactionTab';
 import { AuditLogTab } from './tabs/AuditLogTab';
 import { UsersTab } from './tabs/UsersTab';
 import { SavePointsTab } from './tabs/SavePointsTab';
-import { TABS, TAB_CONFIG, DEFAULT_AUDIT_STATE } from './CanvasOperationsPanel.logic';
+import { useRemoteDraft } from '@UI/react/hooks/useRemoteDraft';
+import { TABS, TAB_CONFIG, DEFAULT_AUDIT_STATE, getTimeSegment } from './CanvasOperationsPanel.logic';
 import './CanvasOperationsPanel.scss';
 
 // =============================================================================
@@ -72,25 +75,95 @@ export function CanvasOperationsPanel({
   isOpen = true,
   onClose,
   onMinimize,
-  // Data
-  pendingOperations = [],
-  transactions = [],
   collaborators = [],
-  savePoints = [],
   currentUserId,
-  // Callbacks
-  onApplyOperations,
-  onCancelOperations,
-  onRevertOperation,
-  onUndoTransaction,
   onFollowUser,
   onGoToViewport,
   onGoToCursor,
-  onCreateSavePoint,
-  onRevertToSavePoint,
-  onDeleteSavePoint,
 }) {
   const containerRef = useRef(null);
+
+  // ── Store subscriptions ─────────────────────────────────────────────────
+  const txMode = useCanvasHistory((s) => s.mode);
+  const txDraft = useCanvasHistory((s) => s.draft);
+  const txLock = useCanvasHistory((s) => s.lock);
+  const txTimeRemaining = useCanvasHistory((s) => s.timeRemaining);
+  const txAuditLog = useCanvasHistory((s) => s.auditLog);
+  const txSavePoints = useCanvasHistory((s) => s.savePoints);
+  const txPast = useCanvasHistory((s) => s.past);
+  const txReactions = useCanvasHistory((s) => s.reactions);
+
+  // Store actions
+  const txRevertDraftOperation = useCanvasHistory((s) => s.revertDraftOperation);
+  const txCommitTransaction = useCanvasHistory((s) => s.commitTransaction);
+  const txDiscardTransaction = useCanvasHistory((s) => s.discardTransaction);
+  const txCreateSavePoint = useCanvasHistory((s) => s.createSavePoint);
+  const txRevertToSavePoint = useCanvasHistory((s) => s.revertToSavePoint);
+  const txUndo = useCanvasHistory((s) => s.undo);
+  const txExtendLock = useCanvasHistory((s) => s.extendLock);
+  const txAddReaction = useCanvasHistory((s) => s.addReaction);
+  const txRemoveReaction = useCanvasHistory((s) => s.removeReaction);
+
+  // ── Remote draft (collaboration) ────────────────────────────────────────
+  const { remoteReactions } = useRemoteDraft();
+  const txRemoteLock = useCanvasHistory((s) => s.remoteLock);
+
+  // Merge local + remote reactions
+  const mergedReactions = useMemo(() => {
+    const merged = { ...txReactions };
+    Object.entries(remoteReactions).forEach(([changeId, reactions]) => {
+      merged[changeId] = [...(merged[changeId] || []), ...reactions];
+    });
+    return merged;
+  }, [txReactions, remoteReactions]);
+
+  // ── Derived data ────────────────────────────────────────────────────────
+  const isEditMode = txMode === 'transactional';
+
+  const pendingOperations = useMemo(() => {
+    return txDraft.operations.map((op) => ({
+      id: op.id,
+      type: op.type,
+      detail: op.description,
+      description: op.description,
+      timestamp: op.timestamp,
+    }));
+  }, [txDraft.operations]);
+
+  const transactions = useMemo(() => {
+    return txPast.map((entry, index) => {
+      const isBatch = entry.type === 'BATCH';
+      return {
+        id: entry.id || `tx-${index}`,
+        user: 'You',
+        timestamp: entry.timestamp,
+        segment: getTimeSegment(new Date(entry.timestamp)),
+        operations: isBatch
+          ? (entry.subOperations || [{ type: entry.type, label: entry.description, detail: entry.description, timestamp: entry.timestamp }])
+          : [{ type: entry.type, label: entry.description, detail: entry.description, timestamp: entry.timestamp }],
+      };
+    }).reverse();
+  }, [txPast]);
+
+  const displaySavePoints = useMemo(() => {
+    return txSavePoints.map((sp) => ({
+      id: sp.id,
+      name: sp.name,
+      label: sp.name,
+      timestamp: new Date(sp.timestamp).toLocaleTimeString(),
+      createdAt: new Date(sp.timestamp),
+      operationIndex: sp.operationIndex,
+      user: 'You',
+      viewCount: sp.operationIndex,
+    }));
+  }, [txSavePoints]);
+
+  const collaboratorsWithLock = useMemo(() => {
+    return collaborators.map((c) => ({
+      ...c,
+      editing: txLock?.lockedBy === c.id,
+    }));
+  }, [collaborators, txLock]);
 
   // Position & size state
   const [position, setPosition] = useState(loadPosition);
@@ -112,6 +185,14 @@ export function CanvasOperationsPanel({
   const [selectedOps, setSelectedOps] = useState(() =>
     new Array(pendingOperations.length).fill(true)
   );
+
+  // Sync selectedOps when pendingOperations length changes
+  useEffect(() => {
+    setSelectedOps((prev) => {
+      if (prev.length === pendingOperations.length) return prev;
+      return new Array(pendingOperations.length).fill(true);
+    });
+  }, [pendingOperations.length]);
 
   // Audit log state
   const [auditState, setAuditState] = useState(DEFAULT_AUDIT_STATE);
@@ -290,7 +371,7 @@ export function CanvasOperationsPanel({
 
   // Compute badge counts
   const pendingCount = pendingOperations.length;
-  const onlineCount = collaborators.filter(c => c.online && c.id !== currentUserId).length;
+  const onlineCount = collaboratorsWithLock.filter(c => c.online && c.id !== currentUserId).length;
 
   const getBadgeCount = useCallback((badgeKey) => {
     if (badgeKey === 'pendingCount') return pendingCount;
@@ -316,13 +397,12 @@ export function CanvasOperationsPanel({
   }, [pendingOperations.length]);
 
   const handleApply = useCallback(() => {
-    const opsToApply = pendingOperations.filter((_, i) => selectedOps[i]);
-    onApplyOperations?.(opsToApply);
-  }, [pendingOperations, selectedOps, onApplyOperations]);
+    txCommitTransaction();
+  }, [txCommitTransaction]);
 
   const handleCancel = useCallback(() => {
-    onCancelOperations?.();
-  }, [onCancelOperations]);
+    txDiscardTransaction();
+  }, [txDiscardTransaction]);
 
   // Audit log handlers
   const handleRevertOperation = useCallback((opId, txId) => {
@@ -330,8 +410,9 @@ export function CanvasOperationsPanel({
       ...prev,
       revertedOperations: new Set([...prev.revertedOperations, opId]),
     }));
-    onRevertOperation?.(opId, txId);
-  }, [onRevertOperation]);
+    // For draft operations, revert via store
+    txRevertDraftOperation(opId);
+  }, [txRevertDraftOperation]);
 
   const handleUndoTransaction = useCallback((txId) => {
     const tx = transactions.find(t => t.id === txId);
@@ -343,8 +424,8 @@ export function CanvasOperationsPanel({
         revertedOperations: newReverted,
       }));
     }
-    onUndoTransaction?.(txId);
-  }, [transactions, auditState.revertedOperations, onUndoTransaction]);
+    txUndo();
+  }, [transactions, auditState.revertedOperations, txUndo]);
 
   // Users tab handlers
   const handleFollow = useCallback((userId) => {
@@ -355,21 +436,23 @@ export function CanvasOperationsPanel({
 
   // Save points handlers
   const handleCreateSavePoint = useCallback(() => {
-    onCreateSavePoint?.();
-    setCurrentSavePoint(0);
-  }, [onCreateSavePoint]);
+    txCreateSavePoint();
+    setCurrentSavePoint(displaySavePoints.length);
+  }, [txCreateSavePoint, displaySavePoints.length]);
 
-  const handleRevertToSavePoint = useCallback((index) => {
-    setCurrentSavePoint(index);
-    onRevertToSavePoint?.(index);
-  }, [onRevertToSavePoint]);
+  const handleRevertToSavePoint = useCallback((spId) => {
+    const idx = displaySavePoints.findIndex((sp) => sp.id === spId);
+    setCurrentSavePoint(idx >= 0 ? idx : null);
+    txRevertToSavePoint(spId);
+  }, [txRevertToSavePoint, displaySavePoints]);
 
-  const handleDeleteSavePoint = useCallback((index) => {
-    onDeleteSavePoint?.(index);
-    if (currentSavePoint === index) {
+  const handleDeleteSavePoint = useCallback((spId) => {
+    // Delete not yet in store — filter locally via no-op
+    const idx = displaySavePoints.findIndex((sp) => sp.id === spId);
+    if (currentSavePoint === idx) {
       setCurrentSavePoint(null);
     }
-  }, [currentSavePoint, onDeleteSavePoint]);
+  }, [currentSavePoint, displaySavePoints]);
 
   // ===========================================================================
   // RENDER
@@ -448,13 +531,17 @@ export function CanvasOperationsPanel({
             onCancel={handleCancel}
             hasChanges={hasChanges}
             selectedCount={selectedCount}
+            reactions={mergedReactions}
+            onAddReaction={txAddReaction}
+            onRemoveReaction={txRemoveReaction}
+            currentUserId={currentUserId}
           />
         )}
 
         {activeTab === TABS.AUDIT && (
           <AuditLogTab
             transactions={transactions}
-            collaborators={collaborators}
+            collaborators={collaboratorsWithLock}
             auditState={auditState}
             setAuditState={setAuditState}
             onRevertOperation={handleRevertOperation}
@@ -465,7 +552,12 @@ export function CanvasOperationsPanel({
 
         {activeTab === TABS.USERS && (
           <UsersTab
-            collaborators={collaborators}
+            collaborators={collaboratorsWithLock}
+            lock={txLock}
+            remoteLock={txRemoteLock}
+            timeRemaining={txTimeRemaining}
+            isEditMode={isEditMode}
+            onExtendLock={txExtendLock}
             followingUser={followingUser}
             onFollow={handleFollow}
             onGoToViewport={onGoToViewport}
@@ -476,11 +568,12 @@ export function CanvasOperationsPanel({
 
         {activeTab === TABS.SAVEPOINTS && (
           <SavePointsTab
-            savePoints={savePoints}
+            savePoints={displaySavePoints}
             currentSavePoint={currentSavePoint}
             onCreateSavePoint={handleCreateSavePoint}
             onRevert={handleRevertToSavePoint}
             onDelete={handleDeleteSavePoint}
+            isEditMode={isEditMode}
           />
         )}
       </div>

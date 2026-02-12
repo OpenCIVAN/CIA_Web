@@ -1,0 +1,59 @@
+/**
+ * LayoutThumbnail styles
+ */
+
+@use "theme" as *;
+
+.layout-thumbnail {
+  display: grid;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: $color-border-default;
+    background: color-mix(in srgb, $color-glass-medium 40%, transparent);
+  }
+
+  &--highlighted {
+    border-color: $color-accent-cyan;
+    background: color-mix(in srgb, $color-accent-cyan 10%, transparent);
+
+    .layout-thumbnail__cell {
+      background: color-mix(in srgb, $color-accent-cyan 50%, transparent);
+    }
+  }
+
+  &--sm {
+    width: 24px;
+    height: 24px;
+    gap: 1px;
+    padding: 2px;
+  }
+
+  &--md {
+    width: 32px;
+    height: 32px;
+    gap: 2px;
+    padding: 3px;
+  }
+
+  &--lg {
+    width: 48px;
+    height: 48px;
+    gap: 2px;
+    padding: 4px;
+  }
+
+  &__cell {
+    background: $color-glass-medium;
+    border-radius: 1px;
+    min-width: 0;
+    min-height: 0;
+  }
+}

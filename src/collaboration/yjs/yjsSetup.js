@@ -56,6 +56,10 @@ export const yAvatars = ydoc.getMap("avatars");
 // VR controllers: `${userId}_${hand}` -> { position, rotation, buttons, ... }
 export const yVRControllers = ydoc.getMap("vrControllers");
 
+// Canvas editing presence: userId -> { draft: { operations: [...] }, reactions: {...}, timestamp }
+// Ephemeral editing state for collaborative preview of pending changes
+export const yCanvasEditing = ydoc.getMap("canvasEditing");
+
 // Text chat: Array of { userId, message, timestamp }
 // NOTE: Planning migration to Matrix-CRDT for federation and E2EE
 export const yText = ydoc.getArray("chatMessages");
@@ -270,6 +274,24 @@ export function syncCameraToYjs(viewId, userId, cameraState) {
     });
   } catch (error) {
     log.error("Failed to sync camera to Y.js:", error);
+  }
+}
+
+/**
+ * Sync canvas editing presence to Y.js for collaborative draft preview
+ * @param {string} userId - User ID of the editor
+ * @param {Object|null} editingData - { operations, reactions, snapshot, timestamp } or null to clear
+ */
+export function syncCanvasEditingToYjs(userId, editingData) {
+  if (!userId) return;
+  try {
+    if (!editingData) {
+      yCanvasEditing.delete(userId);
+    } else {
+      yCanvasEditing.set(userId, editingData);
+    }
+  } catch (error) {
+    log.error("Failed to sync canvas editing to Y.js:", error);
   }
 }
 

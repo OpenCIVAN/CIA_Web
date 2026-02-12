@@ -1,0 +1,56 @@
+@use "theme" as *;
+
+.direction-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  &--vertical {
+    flex-direction: column;
+  }
+
+  &--horizontal {
+    flex-direction: row;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid $color-border-subtle;
+    border-radius: 4px;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.06);
+      color: $color-text-primary;
+      border-color: $color-border-medium;
+    }
+
+    &:active:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &--disabled,
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+
+  // Size: sm (default)
+  &--sm &__btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  // Size: md
+  &--md &__btn {
+    width: 32px;
+    height: 32px;
+  }
+}

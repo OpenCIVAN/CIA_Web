@@ -51,6 +51,7 @@ export const ViewListItem = memo(function ViewListItem({
   viewTypes = DEFAULT_VIEW_TYPES,
   useCount = 0,
   usageLabel = 'In Use',
+  actionLabel,
 }) {
   const viewType = viewTypes[view.type] || viewTypes.data || DEFAULT_VIEW_TYPES.data;
   const isInUse = useCount > 0;
@@ -114,8 +115,14 @@ export const ViewListItem = memo(function ViewListItem({
         </span>
       )}
 
-      {/* Type label */}
-      <span className="view-list-item__type">{viewType.name}</span>
+      {/* Type label or action badge */}
+      {actionLabel ? (
+        <span className="view-list-item__action-badge" style={{ color: vgColor || 'var(--color-accent-green)' }}>
+          {actionLabel}
+        </span>
+      ) : (
+        <span className="view-list-item__type">{viewType.name}</span>
+      )}
     </div>
   );
 });
