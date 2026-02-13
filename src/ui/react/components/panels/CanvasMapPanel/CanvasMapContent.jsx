@@ -36,8 +36,9 @@ import { useListFilter } from '@UI/react/hooks/useListFilter';
 
 // V2 Components
 import { MapToolbar } from './components/MapToolbar';
+import { ModeTabs } from './components/ModeTabs';
 import { Minimap } from './components/Minimap';
-import { VGQuickOpsToolbar } from './components/QuickOps';
+import { VGContextBar } from './components/QuickOps';
 import { EditModeBar } from './components/EditModeBar/EditModeBar';
 import { CanvasMapBottomPanel } from './components/BottomPanel/CanvasMapBottomPanel';
 import { ViewportsPanel, LayoutPanel, TeamPanel } from './components/ContextualPanels';
@@ -98,7 +99,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const placedVGIds = canvasMapContext?.placedVGIds || [];
   const setPlacedVGs = canvasMapContext?.setPlacedVGs;
   const minimapContainerRef = useRef(null);
-  const prevZoomRef = useRef(null);
 
   // Minimap resize (drag handle between minimap and bottom panel)
   const [minimapHeightOverride, setMinimapHeightOverride] = useState(null);
@@ -478,11 +478,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return links;
   }, [activeViewGroups]);
 
-  const minimapVgLinks = useMemo(() => {
-    const visibleIds = new Set(filteredActiveViewGroups.map(vg => vg.id));
-    return vgLinks.filter(link => visibleIds.has(link.from) && visibleIds.has(link.to));
-  }, [vgLinks, filteredActiveViewGroups]);
-
   // View links (placeholder)
   const viewLinks = useMemo(() => [], []);
 
@@ -522,6 +517,13 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const filteredActiveIds = useMemo(() => {
     return new Set(filteredActiveViewGroups.map(vg => vg.id));
   }, [filteredActiveViewGroups]);
+
+  // Compute dimmed VG IDs for search/filter dimming on minimap
+  const dimmedVGIds = useMemo(() => {
+    if (!state.searchQuery && !vgFilter.quickFilters?.length) return new Set();
+    const filteredIds = new Set(filteredActiveViewGroups.map(vg => vg.id));
+    return new Set(activeViewGroups.filter(vg => !filteredIds.has(vg.id)).map(vg => vg.id));
+  }, [activeViewGroups, filteredActiveViewGroups, state.searchQuery, vgFilter.quickFilters]);
 
   const filteredFlattenedViews = useMemo(() => {
     return (state.flattenedViews || []).filter(view => filteredActiveIds.has(view.vgId));
@@ -571,24 +573,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     cells: focusedCellDescriptors,
     onExitFocus: state.handleBackFromFocus,
   });
-
-  useEffect(() => {
-    if (!state.setMinimapZoom) return;
-    if (state.focusedVGId && state.focusedVG?.position) {
-      if (prevZoomRef.current === null) {
-        prevZoomRef.current = state.minimapZoom;
-      }
-      const targetZoom = Math.max(state.minimapZoom, 140);
-      if (targetZoom !== state.minimapZoom) {
-        state.setMinimapZoom(targetZoom);
-      }
-      return;
-    }
-    if (prevZoomRef.current !== null) {
-      state.setMinimapZoom(prevZoomRef.current);
-      prevZoomRef.current = null;
-    }
-  }, [state.focusedVGId, state.focusedVG, state.minimapZoom, state.setMinimapZoom]);
 
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [followingUser, setFollowingUser] = useState(null);
@@ -736,6 +720,29 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return { row: 0, col: 0 };
   }, [activeViewGroups, canvasData.cols, canvasData.rows]);
 
+  const handleExpandCanvas = useCallback((direction) => {
+    if (!setCanvasSize || !canvasData) return;
+    if (direction === 'top' || direction === 'bottom') {
+      const newRows = Math.max(1, canvasData.rows + 1);
+      setCanvasSize({ rows: newRows, cols: canvasData.cols });
+    } else if (direction === 'left' || direction === 'right') {
+      const newCols = Math.max(1, canvasData.cols + 1);
+      setCanvasSize({ rows: canvasData.rows, cols: newCols });
+    }
+  }, [setCanvasSize, canvasData]);
+
+  const handleViewportMove = useCallback(({ id, toRow, toCol }) => {
+    setCustomViewports((prev) =>
+      prev.map((vp) => {
+        if (vp.id !== id) return vp;
+        return {
+          ...vp,
+          position: { ...vp.position, row: toRow, col: toCol },
+        };
+      })
+    );
+  }, []);
+
   const handleAdjustRows = useCallback((delta) => {
     if (!setCanvasSize || !canvasData) return;
     const newRows = Math.max(1, canvasData.rows + delta);
@@ -821,7 +828,11 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       return;
     }
 
-    if (data.type === 'template-create') {
+    const isTemplateCreate = data.type === 'template-create'
+      || data.templateId
+      || (data.layoutId && !data.vgId);
+
+    if (isTemplateCreate) {
       if (!createViewGroup || !updateViewGroup) return;
 
       try {
@@ -881,18 +892,19 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }, [deleteViewGroup, viewGroups]);
 
   const handleFocusedVGRename = useCallback(async (newName) => {
-    if (!state.focusedVGId || !updateViewGroup) return;
+    const targetId = state.focusedVGId || state.selectedVGId;
+    if (!targetId || !updateViewGroup) return;
     if (!newName?.trim()) return;
     try {
-      await updateViewGroup(state.focusedVGId, { name: newName.trim() });
+      await updateViewGroup(targetId, { name: newName.trim() });
       if (syncViewGroupNow) {
-        await syncViewGroupNow(state.focusedVGId);
+        await syncViewGroupNow(targetId);
       }
     } catch (err) {
       toast.error('Failed to rename ViewGroup');
       console.error('Failed to rename ViewGroup:', err);
     }
-  }, [state.focusedVGId, updateViewGroup, syncViewGroupNow]);
+  }, [state.focusedVGId, state.selectedVGId, updateViewGroup, syncViewGroupNow]);
 
   const handleFocusedVGSlotDrop = useCallback(async (slotIndex, data) => {
     if (!state.focusedVGId || !data) return;
@@ -1246,6 +1258,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       });
     }
   }, [activeViewGroups, canvasData, txEnterEditMode, canvas]);
+
+  useEffect(() => {
+    const handleHeaderEdit = () => {
+      handleEnterEditMode();
+    };
+    window.addEventListener('cia:canvas-map-edit', handleHeaderEdit);
+    return () => window.removeEventListener('cia:canvas-map-edit', handleHeaderEdit);
+  }, [handleEnterEditMode]);
 
   const handleCommit = useCallback(async () => {
     await txCommitTransaction();
@@ -1893,8 +1913,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const isCompact = effectiveSizeMode === 'compact';
 
   // Calculate available heights
-  const headerHeight = state.focusedVGId ? 40 : 0;
-  const toolbarVG = state.focusedVG || viewGroups.find((vg) => vg.id === state.selectedVGId);
+  const headerHeight = 0;
   const tabsHeight = 40;
   const toolbarHeight = 40;
   const chromeHeight = headerHeight + tabsHeight + toolbarHeight;
@@ -2027,71 +2046,53 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       data-vr={isVR}
       data-size-mode={effectiveSizeMode}
       data-density={densityMode}
+      data-edit-mode={isEditMode || undefined}
     >
-      {/* Breadcrumb / Back navigation (when focused) */}
-      {state.focusedVGId && state.focusedVG && (
-        <div
-          className="canvas-map-v2__breadcrumb"
-          style={{ '--vg-color': state.focusedVG.color }}
-        >
-          <button
-            className="canvas-map-v2__breadcrumb-back"
-            onClick={state.handleBackFromFocus}
-          >
-            <Icon name="chevronLeft" size={14} />
-            {!isCompact && 'Canvas'}
-          </button>
-          <Icon name="chevronRight" size={14} className="canvas-map-v2__breadcrumb-sep" />
-          <div className="canvas-map-v2__breadcrumb-current">
-            <div
-              className="canvas-map-v2__breadcrumb-dot"
-              style={{ background: state.focusedVG.color }}
-            />
-            <span style={{ color: state.focusedVG.color }}>
-              {getVGDisplayName(state.focusedVG)}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Mode Tabs */}
+      <ModeTabs
+        activeMode={state.mapMode}
+        onModeChange={state.handleModeChange}
+        sizeMode={effectiveSizeMode}
+      />
 
       {/* Toolbar */}
-      <MapToolbar
-        mapMode={state.mapMode}
-        showViews={state.showViews}
-        showVGs={state.showVGs}
-        minimapZoom={state.minimapZoom}
-        showViewports={state.showViewports}
-        showCollaborators={state.showCollaborators}
-        showBookmarks={state.showBookmarks}
-        showInternals={state.showInternals}
-        linksSubTab={state.linksSubTab}
-        setLinksSubTab={state.setLinksSubTab}
-        collaborateSubTab={state.collaborateSubTab}
-        setCollaborateSubTab={state.setCollaborateSubTab}
-        onlineCollaboratorsCount={state.onlineCollaboratorsCount}
+        <MapToolbar
+          minimapZoom={state.minimapZoom}
+          showViewports={state.showViewports}
+          showBookmarks={state.showBookmarks}
+          showInternals={state.showInternals}
+          showCursors={state.showCursors}
         onZoomIn={state.handleZoomIn}
         onZoomOut={state.handleZoomOut}
         onResetView={handleResetMinimapView}
         toggleShowViewports={state.toggleShowViewports}
-        toggleShowCollaborators={state.toggleShowCollaborators}
         toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
-        toggleShowViews={state.toggleShowViews}
-        toggleShowVGs={state.toggleShowVGs}
-        onAddVG={handleAddVG}
+        toggleShowCursors={state.toggleShowCursors}
         isEditMode={isEditMode}
-        onEditLayout={handleEnterEditMode}
-        onCommit={handleCommit}
-        onDiscard={handleDiscard}
-        pendingChangeCount={pendingChangeCount}
-        showImplicitVGs={showImplicitVGs}
-        toggleShowImplicitVGs={toggleShowImplicitVGs}
-        sizeMode={effectiveSizeMode}
         remoteLock={remoteLock}
-        hasRemoteDraft={hasRemoteDraft}
-        showRemoteDraft={showRemoteDraft}
-        toggleShowRemoteDraft={() => setShowRemoteDraft((p) => !p)}
-      />
+          hasRemoteDraft={hasRemoteDraft}
+          showRemoteDraft={showRemoteDraft}
+          toggleShowRemoteDraft={() => setShowRemoteDraft((p) => !p)}
+          onEditLayout={handleEnterEditMode}
+          sizeMode={effectiveSizeMode}
+        />
+
+      {/* Edit mode bar - between toolbar and minimap */}
+      {isEditMode && (
+        <EditModeBar
+          pendingChangeCount={pendingChangeCount}
+          onCommit={handleCommit}
+          onDiscard={handleDiscard}
+          timeRemaining={timeRemaining}
+          isWarning={isWarning}
+          onExtend={handleExpiryExtend}
+          canUndo={txCanUndo}
+          canRedo={txCanRedo}
+          onUndo={txUndo}
+          onRedo={txRedo}
+        />
+      )}
 
       {/* Main Body with Companion Panel beside content */}
       <div className="canvas-map-v2__body">
@@ -2099,101 +2100,35 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         <div className="canvas-map-v2__main-content">
           <div
             className="canvas-map-v2__minimap-row"
-            style={{ height: minimapHeight }}
+            style={{ flex: `0 1 ${minimapHeight}px`, minHeight: 60 }}
           >
             <div className="canvas-map-v2__minimap-shell" ref={minimapContainerRef}>
               <div className="canvas-map-v2__minimap-container">
-                {toolbarVG && (
-                  <div
-                    className="canvas-map-v2__focus-toolbar-wrapper"
-                    style={{ '--vg-color': toolbarVG.color }}
-                  >
-                    <div className="canvas-map-v2__focus-toolbar-name">
-                      {getVGDisplayName(toolbarVG)}
-                    </div>
-                    <div className="canvas-map-v2__focus-toolbar">
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn"
-                        onClick={() => handleOpenEditor(toolbarVG)}
-                        title="Edit ViewGroup"
-                      >
-                        <Icon name="pencil" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn"
-                        onClick={() => handleOpenEditor(toolbarVG)}
-                        title="Add view"
-                      >
-                        <Icon name="plus" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn"
-                        onClick={() => handleDuplicateVG(toolbarVG?.id)}
-                        title="Duplicate ViewGroup"
-                      >
-                        <Icon name="copy" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn"
-                        onClick={() => handleSaveTemplate('personal')}
-                        title="Save template"
-                      >
-                        <Icon name="save" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn"
-                        onClick={() => handleSaveTemplate('project')}
-                        title="Save project template"
-                      >
-                        <Icon name="share" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="canvas-map-v2__focus-btn canvas-map-v2__focus-btn--danger"
-                        onClick={() => handleDeleteVG(toolbarVG?.id)}
-                        title="Delete ViewGroup"
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
                 <Minimap
                   canvas={canvasData}
-                  viewGroups={filteredActiveViewGroups}
+                  viewGroups={activeViewGroups}
                   collisionViewGroups={activeViewGroups}
                   viewports={customViewports}
                   collaborators={collaborators}
-                  vgLinks={minimapVgLinks}
-                  bookmarks={bookmarks}
                   flattenedViews={filteredFlattenedViews}
-                  showViews={state.showViews}
-                  showVGs={state.showVGs}
+                  showViews={false}
+                  showVGs
                   mapMode={state.mapMode}
                   focusedVG={state.focusedVG}
                   minimapZoom={state.minimapZoom}
                   showGridLabels
                   showInternals={state.showInternals || !!state.focusedVGId}
                   showViewports={state.showViewports}
-                  showCollaborators={state.showCollaborators}
-                  showBookmarks={state.showBookmarks}
+                  showCollaborators={state.showCollaborators || state.mapMode === MAP_MODES.TEAM}
                   showCursors={state.showCursors}
                   selectedVGId={state.selectedVGId}
                   selectedViewportId={selectedViewportId}
-                  highlightedLinkId={state.highlightedLinkId}
                   focusedSlots={focusedSlots}
-                  onFocusedVGRename={handleFocusedVGRename}
                   onFocusedVGSlotDrop={handleFocusedVGSlotDrop}
                   onFocusedVGSlotClear={handleFocusedVGSlotClear}
                   onBackFromFocus={state.handleBackFromFocus}
                   onVGClick={state.handleVGClick}
                   onVGDoubleClick={handleVGDoubleClick}
-                  onLinkClick={state.handleLinkClick}
                   onDropItem={handleCanvasDrop}
                   containerWidth={minimapWidth}
                   containerHeight={minimapInnerHeight}
@@ -2205,13 +2140,38 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   remoteDraftSnapshot={showRemoteDraft && !isEditMode ? remoteSnapshots[0] : null}
                   remoteOperations={showRemoteDraft && !isEditMode ? remoteOperations : []}
                   quickOps={quickOps}
+                  onApplyTemplate={handleApplyTemplate}
+                  onMergeCells={handleMergeCells}
+                  onSplitCell={handleSplitCell}
+                  onOpenEditor={handleOpenFocusedEditor}
                   onCellDragComplete={handleCellDragComplete}
                   onCellAssign={handleCellAssign}
                   onTargetingResolve={handleTargetingResolve}
+                  dimmedVGIds={dimmedVGIds}
+                  onExpandCanvas={handleExpandCanvas}
+                  onViewportMove={handleViewportMove}
                 />
               </div>
             </div>
           </div>
+
+          {/* VG Context Bar - below minimap when selected or focused */}
+          {(state.focusedVGId || state.selectedVGId) && (
+            <VGContextBar
+              selectedVG={state.selectedVG}
+              focusedVG={state.focusedVG}
+              canvas={canvasData}
+              viewGroups={activeViewGroups}
+              onResizeInternal={handleResizeInternal}
+              onResizeFootprint={handleResizeFootprint}
+              onRename={handleFocusedVGRename}
+              onDeselect={() => state.setSelectedVGId(null)}
+              onDuplicate={handleDuplicateVG}
+              onSaveTemplate={handleSaveTemplate}
+              onDelete={handleDeleteVG}
+              onEditVG={handleOpenEditor}
+            />
+          )}
 
           {/* Resize handle between minimap and bottom content */}
           <div
@@ -2222,42 +2182,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
             <div className="canvas-map-v2__resize-grip" />
           </div>
 
-          {state.focusedVG && (
-            <VGQuickOpsToolbar
-              focusedVG={state.focusedVG}
-              focusedLayout={focusedLayout}
-              focusedSlots={focusedSlots}
-              cells={[]}
-              canvas={canvasData}
-              viewGroups={activeViewGroups}
-              quickOps={quickOps}
-              onApplyTemplate={handleApplyTemplate}
-              onResizeInternal={handleResizeInternal}
-              onResizeFootprint={handleResizeFootprint}
-              onMergeCells={handleMergeCells}
-              onSplitCell={handleSplitCell}
-              onOpenEditor={handleOpenFocusedEditor}
-            />
-          )}
 
-          {isEditMode && (
-            <EditModeBar
-              pendingChangeCount={pendingChangeCount}
-              onCommit={handleCommit}
-              onDiscard={handleDiscard}
-              timeRemaining={timeRemaining}
-              isWarning={isWarning}
-              onExtend={handleExpiryExtend}
-              canUndo={txCanUndo}
-              canRedo={txCanRedo}
-              onUndo={txUndo}
-              onRedo={txRedo}
-            />
-          )}
-
-          <CanvasMapBottomPanel
-          mapMode={state.mapMode}
-          onModeChange={state.handleModeChange}
+        <CanvasMapBottomPanel
           sizeMode={effectiveSizeMode}
           searchQuery={state.searchQuery}
           setSearchQuery={state.setSearchQuery}
@@ -2266,10 +2192,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           tagOptions={viewGroupTags}
           quickFilterDefs={vgQuickFilters}
           quickFilterCounts={quickFilterCounts}
-          minimapZoom={state.minimapZoom}
-          onZoomIn={state.handleZoomIn}
-          onZoomOut={state.handleZoomOut}
-          onZoomReset={state.handleZoomReset}
           onMove={handleMove}
           onGoHome={handleGoHome}
           onSetHome={handleSetHome}
@@ -2277,13 +2199,16 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           onAddBookmark={handleAddBookmark}
           currentPositionLabel={currentPositionLabel}
           isAtHome={isAtHome}
-          minHeight={contextualHeight}
+          minHeight={0}
           totalVGCount={viewGroups.length}
           activeVGCount={activeViewGroups.length}
           filteredVGCount={filteredViewGroups.length}
           workspaceName={workspaceDisplayName}
+          canvasRows={canvasData.rows}
+          canvasCols={canvasData.cols}
+          totalViewCount={state.flattenedViews?.length || 0}
         >
-          {state.mapMode === MAP_MODES.NAVIGATE && (
+          {state.mapMode === MAP_MODES.VIEWPORTS && (
             <ViewportsPanel
               viewports={customViewports}
               selectedViewportId={selectedViewportId}

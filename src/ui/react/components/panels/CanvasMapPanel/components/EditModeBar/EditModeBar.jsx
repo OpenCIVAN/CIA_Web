@@ -39,22 +39,24 @@ export const EditModeBar = memo(function EditModeBar({
 
   return (
     <div className="edit-mode-bar">
-      <div className="edit-mode-bar__status">
-        <Icon name="pencil" size={12} />
-        <span className="edit-mode-bar__label">EDITING</span>
-        <span className="edit-mode-bar__count">
-          {pendingChangeCount} change{pendingChangeCount !== 1 ? 's' : ''}
-        </span>
-      </div>
-
-      {timeRemaining != null && (
-        <div className={`edit-mode-bar__timer ${isWarning ? 'edit-mode-bar__timer--warning' : ''}`}>
-          <Icon name="clock" size={12} />
-          <span>
-            {Math.floor(timeRemaining / 60)}:{String(Math.round(timeRemaining) % 60).padStart(2, '0')}
+      <div className="edit-mode-bar__meta">
+        <div className="edit-mode-bar__status">
+          <Icon name="pencil" size={12} />
+          <span className="edit-mode-bar__label">EDITING</span>
+          <span className="edit-mode-bar__count">
+            {pendingChangeCount} change{pendingChangeCount !== 1 ? 's' : ''}
           </span>
         </div>
-      )}
+
+        {timeRemaining != null && (
+          <div className={`edit-mode-bar__timer ${isWarning ? 'edit-mode-bar__timer--warning' : ''}`}>
+            <Icon name="clock" size={12} />
+            <span>
+              {Math.floor(timeRemaining / 60)}:{String(Math.round(timeRemaining) % 60).padStart(2, '0')}
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="edit-mode-bar__actions">
         {onUndo && (
@@ -64,9 +66,10 @@ export const EditModeBar = memo(function EditModeBar({
             onClick={onUndo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
+            aria-label="Undo"
           >
             <Icon name="undo" size={12} />
-            <span>Undo</span>
+            <span className="edit-mode-bar__btn-label">Undo</span>
           </button>
         )}
         {onRedo && (
@@ -76,9 +79,10 @@ export const EditModeBar = memo(function EditModeBar({
             onClick={onRedo}
             disabled={!canRedo}
             title="Redo (Ctrl+Shift+Z)"
+            aria-label="Redo"
           >
             <Icon name="redo" size={12} />
-            <span>Redo</span>
+            <span className="edit-mode-bar__btn-label">Redo</span>
           </button>
         )}
         {onExtend && (
@@ -87,9 +91,10 @@ export const EditModeBar = memo(function EditModeBar({
             className="edit-mode-bar__btn edit-mode-bar__btn--extend"
             onClick={onExtend}
             title="Extend editing time"
+            aria-label="Extend editing time"
           >
             <Icon name="clock" size={12} />
-            <span>Extend</span>
+            <span className="edit-mode-bar__btn-label">Extend</span>
           </button>
         )}
         <button
@@ -97,9 +102,10 @@ export const EditModeBar = memo(function EditModeBar({
           className="edit-mode-bar__btn edit-mode-bar__btn--discard"
           onClick={onDiscard}
           title="Discard all changes"
+          aria-label="Discard all changes"
         >
           <Icon name="close" size={12} />
-          <span>Discard</span>
+          <span className="edit-mode-bar__btn-label">Discard</span>
         </button>
         <button
           type="button"
@@ -107,9 +113,10 @@ export const EditModeBar = memo(function EditModeBar({
           onClick={onCommit}
           disabled={!hasChanges}
           title={hasChanges ? 'Commit all changes' : 'No changes to commit'}
+          aria-label="Commit all changes"
         >
           <Icon name="check" size={12} />
-          <span>Commit</span>
+          <span className="edit-mode-bar__btn-label">Commit</span>
         </button>
       </div>
     </div>

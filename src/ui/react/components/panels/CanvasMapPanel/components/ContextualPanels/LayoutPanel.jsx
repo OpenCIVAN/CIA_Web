@@ -52,6 +52,27 @@ export const LayoutPanel = memo(function LayoutPanel({
     setActiveFilter(filterId);
   }, []);
 
+  const handleTemplateDragStart = useCallback((event, template) => {
+    const payload = {
+      type: 'template-create',
+      templateId: template.id || null,
+      templateName: template.label,
+      layoutId: template.layoutId || 'single',
+    };
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/json', JSON.stringify(payload));
+    event.dataTransfer.setData('text/plain', JSON.stringify(payload));
+    if (typeof window !== 'undefined') {
+      window.__ciaDragPayload = payload;
+    }
+  }, []);
+
+  const handleTemplateDragEnd = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.__ciaDragPayload = null;
+    }
+  }, []);
+
   const explicitCount = viewGroups.filter(v => v.isExplicit).length;
   const implicitCount = viewGroups.filter(v => !v.isExplicit).length;
 
@@ -196,6 +217,10 @@ export const LayoutPanel = memo(function LayoutPanel({
               type="button"
               className="layout-panel__template-btn"
               onClick={() => onAddVG?.(template.layoutId)}
+              draggable
+              onDragStart={(event) => handleTemplateDragStart(event, template)}
+              onDragEnd={handleTemplateDragEnd}
+              title="Drag to canvas"
             >
               <Icon name="layoutGrid" size={12} />
               <span>{template.label}</span>

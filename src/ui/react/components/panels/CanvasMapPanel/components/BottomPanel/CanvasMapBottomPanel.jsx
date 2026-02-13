@@ -3,18 +3,24 @@
  * @description Bottom panel layout for CanvasMap V2 (search, tabs, d-pad)
  */
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { FilterToolbar } from '@UI/react/components/organisms/FilterToolbar';
 import { SquareDPad } from '@UI/react/components/molecules/DPadNav';
-import { MODE_CONFIG } from '../../utils/constants';
 import { tokens } from '@UI/react/styles/tokens';
 
-const getModeIconName = (modeConfig) => modeConfig.icon || 'layoutGrid';
+const COLOR_VARS = {
+  bgSecondary: 'var(--color-bg-secondary)',
+  borderSubtle: 'var(--color-border-subtle)',
+  glassSubtle: 'var(--color-glass-subtle)',
+  textMuted: 'var(--color-text-muted)',
+  textTertiary: 'var(--color-text-tertiary)',
+  accentCyan: 'var(--color-accent-cyan)',
+  accentGreen: 'var(--color-accent-green)',
+  accentCyanSoft: 'rgba(var(--color-accent-cyan-rgb), 0.12)',
+};
 
 export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
-  mapMode,
-  onModeChange,
   sizeMode,
   searchQuery,
   setSearchQuery,
@@ -23,15 +29,11 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
   tagOptions = [],
   quickFilterDefs = [],
   quickFilterCounts = {},
-  minimapZoom,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
   onMove,
   onGoHome,
   onSetHome,
-  onFitAll,
   onAddBookmark,
+  onOpenSettings,
   currentPositionLabel,
   isAtHome,
   minHeight,
@@ -40,12 +42,11 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
   totalVGCount = 0,
   activeVGCount = 0,
   filteredVGCount = 0,
-  workspaceName,
+  canvasRows = 0,
+  canvasCols = 0,
+  totalViewCount = 0,
 }) {
-  // Balanced sizes to match SquareDPad
-  const dpadSize = sizeMode === 'compact' ? 72 : sizeMode === 'minimal' ? 64 : 84;
-  const deckWidth = dpadSize + 28;
-  const showTabLabels = sizeMode === 'expanded';
+  const dpadSizeMode = sizeMode === 'compact' ? 'minimal' : 'compact';
   const showQuickLabel = sizeMode !== 'compact';
 
   const quickFilters = useMemo(() => quickFilterDefs, [quickFilterDefs]);
@@ -58,44 +59,65 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
     [filterConfig, quickFilters]
   );
 
+  const clearQuickFilters = useCallback(() => {
+    const active = filter?.quickFilters || [];
+    active.forEach((id) => filter?.toggleQuickFilter?.(id));
+  }, [filter]);
+
+  const isAllActive = !(filter?.quickFilters?.length);
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        flex: 1,
-        minHeight: minHeight || 0,
-        background: tokens.colors.bg.secondary,
-        borderTop: `1px solid ${tokens.colors.border.subtle}`,
+        flex: '1 1 0',
+        minHeight: 48,
+        background: COLOR_VARS.bgSecondary,
+        borderTop: `1px solid ${COLOR_VARS.borderSubtle}`,
         overflow: 'hidden',
       }}
     >
       <div
         style={{
           padding: tokens.spacing.sm,
-          borderBottom: `1px solid ${tokens.colors.border.subtle}`,
-          background: tokens.colors.bg.secondary,
+          borderBottom: `1px solid ${COLOR_VARS.borderSubtle}`,
+          background: COLOR_VARS.bgSecondary,
         }}
       >
-        <FilterToolbar
-          filter={{
-            ...filter,
-            searchQuery,
-            setSearchQuery: (next) => {
-              setSearchQuery?.(next);
-              filter?.setSearchQuery?.(next);
-            },
-          }}
-          config={toolbarConfig}
-          tags={tagOptions}
-          quickFilterCounts={quickFilterCounts}
-          variant="embedded"
-          showQuickFilters={false}
-          showTypeFilter
-          showTagFilter
-          showSortFilter={(toolbarConfig.sortOptions || []).length > 0}
-          searchPlaceholder="Search views, datasets..."
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+          <div style={{ flexShrink: 0 }}>
+            <SquareDPad
+              sizeMode={dpadSizeMode}
+              onMove={onMove}
+              onGoHome={onGoHome}
+              centerLabel={currentPositionLabel}
+              isAtHome={isAtHome}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <FilterToolbar
+              filter={{
+                ...filter,
+                searchQuery,
+                setSearchQuery: (next) => {
+                  setSearchQuery?.(next);
+                  filter?.setSearchQuery?.(next);
+                },
+              }}
+              config={toolbarConfig}
+              tags={tagOptions}
+              quickFilterCounts={quickFilterCounts}
+              variant="embedded"
+              stacked
+              showQuickFilters={false}
+              showTypeFilter
+              showTagFilter={false}
+              showSortFilter={(toolbarConfig.sortOptions || []).length > 0}
+              searchPlaceholder="Search views, datasets..."
+            />
+          </div>
+        </div>
 
         {quickFilterDefs.length > 0 && (
           <div
@@ -113,7 +135,7 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
               <span
                 style={{
                   fontSize: tokens.fontSize.xs,
-                  color: tokens.colors.text.muted,
+                  color: COLOR_VARS.textMuted,
                   marginRight: tokens.spacing.xs,
                   flexShrink: 0,
                 }}
@@ -121,6 +143,26 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
                 Quick:
               </span>
             )}
+            <button
+              type="button"
+              onClick={clearQuickFilters}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: tokens.spacing.xs,
+                padding: '2px 8px',
+                borderRadius: tokens.radius.md,
+                border: `1px solid ${isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
+                background: isAllActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
+                color: isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
+                fontSize: tokens.fontSize.xs,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              All
+              <span style={{ opacity: 0.75 }}>{totalVGCount}</span>
+            </button>
             {quickFilterDefs.map((def) => {
               const isActive = filter?.quickFilters?.includes(def.id);
               const count = quickFilterCounts?.[def.id];
@@ -135,12 +177,13 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
                     gap: tokens.spacing.xs,
                     padding: '2px 8px',
                     borderRadius: tokens.radius.md,
-                    border: `1px solid ${isActive ? tokens.colors.accent.cyan : tokens.colors.border.subtle}`,
-                    background: isActive ? `${tokens.colors.accent.cyan}20` : tokens.colors.glass.subtle,
-                    color: isActive ? tokens.colors.accent.cyan : tokens.colors.text.muted,
+                    border: `1px solid ${isActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
+                    background: isActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
+                    color: isActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
                     fontSize: tokens.fontSize.xs,
                     cursor: 'pointer',
                     flexShrink: 0,
+                    opacity: count === 0 ? 0.4 : 1,
                   }}
                 >
                   {def.label}
@@ -154,131 +197,7 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
         )}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', minWidth: 0 }}>
-        <div
-          style={{
-            width: deckWidth,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: tokens.spacing.sm,
-            padding: tokens.spacing.sm,
-            borderRight: `1px solid ${tokens.colors.border.subtle}`,
-            background: tokens.colors.bg.tertiary,
-            minHeight: 0,
-            overflowY: 'auto',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              background: tokens.colors.bg.secondary,
-              borderRadius: tokens.radius.lg,
-              border: `1px solid ${tokens.colors.border.subtle}`,
-              padding: tokens.spacing.xs,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <SquareDPad
-              sizeMode={sizeMode === 'expanded' ? 'standard' : sizeMode}
-              onMove={onMove}
-              onGoHome={onGoHome}
-              centerLabel={currentPositionLabel}
-              isAtHome={isAtHome}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: tokens.spacing.xs,
-              background: tokens.colors.bg.secondary,
-              borderRadius: tokens.radius.lg,
-              border: `1px solid ${tokens.colors.border.subtle}`,
-              padding: tokens.spacing.xs,
-            }}
-          >
-            {[
-              { icon: 'home', label: 'Go Home', onClick: onGoHome },
-              { icon: 'crosshair', label: 'Set Home', onClick: onSetHome },
-              { icon: 'scan', label: 'Fit All', onClick: onFitAll },
-              { icon: 'bookmark', label: 'Bookmark', onClick: onAddBookmark },
-            ].map((action) => (
-              <button
-                key={action.label}
-                type="button"
-                onClick={action.onClick}
-                title={action.label}
-                style={{
-                  height: 26,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: tokens.radius.md,
-                  border: `1px solid ${tokens.colors.border.subtle}`,
-                  background: 'transparent',
-                  color: tokens.colors.text.muted,
-                  cursor: 'pointer',
-                }}
-              >
-                <Icon name={action.icon} size={14} />
-              </button>
-            ))}
-          </div>
-
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-          <div style={{ padding: tokens.spacing.sm, borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
-            <div
-              style={{
-                display: 'flex',
-                gap: tokens.spacing.sm,
-                flexWrap: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              {Object.values(MODE_CONFIG).map((mode) => {
-                const isActive = mapMode === mode.id;
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => onModeChange(mode.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: tokens.spacing.xs,
-                      padding: showTabLabels ? '6px 8px' : '6px',
-                      borderRadius: tokens.radius.sm,
-                      border: 'none',
-                      borderBottom: `2px solid ${isActive ? tokens.colors.accent[mode.color] : 'transparent'}`,
-                      background: 'transparent',
-                      color: isActive ? tokens.colors.accent[mode.color] : tokens.colors.text.muted,
-                      cursor: 'pointer',
-                      fontSize: tokens.fontSize.xs,
-                      fontWeight: isActive ? 600 : 500,
-                      flex: '1 1 0',
-                      minWidth: 0,
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={mode.name}
-                  >
-                    <Icon name={getModeIconName(mode)} size={12} />
-                    {showTabLabels && <span>{mode.name}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>{children}</div>
-        </div>
-      </div>
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>{children}</div>
 
       {/* Status footer */}
       <div
@@ -286,54 +205,84 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
           display: 'flex',
           alignItems: 'center',
           gap: tokens.spacing.md,
-          padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
-          borderTop: `1px solid ${tokens.colors.border.subtle}`,
-          background: tokens.colors.glass.subtle,
+          padding: `${tokens.spacing.sm} ${tokens.spacing.sm}`,
+          paddingBottom: tokens.spacing.md,
+          borderTop: `1px solid ${COLOR_VARS.borderSubtle}`,
+          background: COLOR_VARS.glassSubtle,
           flexShrink: 0,
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+          {[
+            { icon: 'home', label: 'Go Home', onClick: onGoHome },
+            { icon: 'crosshair', label: 'Set Home', onClick: onSetHome },
+            { icon: 'bookmark', label: 'Bookmarks', onClick: onAddBookmark },
+            { icon: 'settings', label: 'Settings', onClick: onOpenSettings, disabled: !onOpenSettings },
+          ].map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={action.onClick}
+              title={action.label}
+              disabled={action.disabled}
+              style={{
+                height: 24,
+                width: 24,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: tokens.radius.sm,
+                border: `1px solid ${COLOR_VARS.borderSubtle}`,
+                background: 'transparent',
+                color: COLOR_VARS.textMuted,
+                cursor: action.disabled ? 'not-allowed' : 'pointer',
+                opacity: action.disabled ? 0.4 : 1,
+              }}
+            >
+              <Icon name={action.icon} size={12} />
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1 }} />
+        {canvasRows > 0 && canvasCols > 0 && (
+          <span
+            style={{
+              fontSize: '9px',
+              color: COLOR_VARS.textTertiary,
+              fontFamily: tokens.fontFamily?.mono || 'monospace',
+            }}
+          >
+            {canvasRows}&times;{canvasCols}
+          </span>
+        )}
         <span
           style={{
             fontSize: '9px',
-            color: tokens.colors.text.muted,
+            color: COLOR_VARS.textMuted,
           }}
         >
           {filteredVGCount !== totalVGCount
             ? `${filteredVGCount} of ${totalVGCount} VGs`
             : `${totalVGCount} VG${totalVGCount !== 1 ? 's' : ''}`}
         </span>
+        {totalViewCount > 0 && (
+          <span
+            style={{
+              fontSize: '9px',
+              color: COLOR_VARS.textMuted,
+            }}
+          >
+            {totalViewCount} view{totalViewCount !== 1 ? 's' : ''}
+          </span>
+        )}
         <span
           style={{
             fontSize: '9px',
-            color: tokens.colors.accent.green,
+            color: COLOR_VARS.accentGreen,
           }}
         >
           {activeVGCount} active
         </span>
-        {workspaceName && (
-          <span
-            style={{
-              marginLeft: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: tokens.spacing.xs,
-              fontSize: '9px',
-              color: tokens.colors.text.muted,
-              background: tokens.colors.glass.subtle,
-              border: `1px solid ${tokens.colors.border.subtle}`,
-              borderRadius: tokens.radius.md,
-              padding: '2px 6px',
-              whiteSpace: 'nowrap',
-              maxWidth: '50%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-            title={`Workspace: ${workspaceName}`}
-          >
-            <Icon name="layers" size={10} />
-            Workspace: {workspaceName}
-          </span>
-        )}
       </div>
     </div>
   );

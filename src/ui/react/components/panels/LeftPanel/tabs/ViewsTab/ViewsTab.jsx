@@ -24,11 +24,10 @@ import { PanelHeader } from '../../components/PanelHeader';
 import { SectionNavGroup, FilterToolbar } from '@UI/react/components/organisms';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/molecules/ViewItem';
-import {
-    CanvasNavigator,
-    useLayoutPanelContext,
-    useLayoutPanel,
-} from '@UI/react/components/panels/LayoutPanel';
+// NOTE: CanvasNavigator, useLayoutPanelContext, useLayoutPanel imports removed
+// after LayoutPanel UI cleanup. This component is no longer registered in the
+// LeftPanel tab registry (superseded by CanvasMapPanel).
+import { useLayoutPanelContext } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
 import { useViewsTab, VIEW_MODES } from './hooks/useViewsTab';
 import { viewLifecycleService } from '@Services';
 import './ViewsTab.scss';

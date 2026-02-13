@@ -297,7 +297,7 @@ CREATE TABLE viewgroups (
     color VARCHAR(20) DEFAULT '#a855f7',
     layout_id VARCHAR(50) DEFAULT 'single',
     slots JSONB DEFAULT '[]',
-    canvas_position JSONB DEFAULT '{"row": 0, "col": 0, "rowSpan": 1, "colSpan": 1}',
+    canvas_position JSONB DEFAULT NULL,
     owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     visibility VARCHAR(20) DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
     shared_with JSONB DEFAULT '[]',

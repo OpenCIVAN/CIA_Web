@@ -47,17 +47,23 @@ export function useMinimapPanning({
   // Calculate pan bounds with extended padding (V2Spec: ~3 cells beyond bounds)
   // This allows users to access obstructed areas
   const panPaddingCells = MINIMAP_CONSTANTS.PAN_PADDING_CELLS ?? 3;
-  const panPadding = cellPitch > 0 ? cellPitch * panPaddingCells : 50;
+  const panPaddingNegCells = MINIMAP_CONSTANTS.PAN_PADDING_NEG_CELLS ?? panPaddingCells;
+  const panPaddingPosCells = MINIMAP_CONSTANTS.PAN_PADDING_POS_CELLS ?? panPaddingCells;
+  const panPaddingNeg = cellPitch > 0 ? cellPitch * panPaddingNegCells : 50;
+  const panPaddingPos = cellPitch > 0 ? cellPitch * panPaddingPosCells : 50;
 
   // Add companion width to pan limits on BOTH sides when open
   // This allows user to access full map when companion overlays part of it
   const companionPanExtra = companionOpen ? companionOffset : 0;
 
   // Extended bounds: can pan beyond content in both directions
-  const minPanX = Math.min(0, viewportWidth - contentWidth) - panPadding - companionPanExtra;
-  const minPanY = Math.min(0, viewportHeight - contentHeight) - panPadding;
-  const maxPanX = panPadding + companionPanExtra;
-  const maxPanY = panPadding;
+  const overflowX = Math.max(0, contentWidth - viewportWidth);
+  const overflowY = Math.max(0, contentHeight - viewportHeight);
+  // Allow a small negative drift for top/left, and more positive for bottom/right
+  const minPanX = -panPaddingNeg - companionPanExtra;
+  const minPanY = -panPaddingNeg;
+  const maxPanX = overflowX + panPaddingPos + companionPanExtra;
+  const maxPanY = overflowY + panPaddingPos;
 
   const canPan = enabled;
 

@@ -17,14 +17,13 @@ import { ViewCell } from './ViewCell';
 import { ViewportIndicator } from './ViewportIndicator';
 import { CollaboratorIndicator } from './CollaboratorIndicator';
 import { CursorIndicator } from './CursorIndicator';
-import { LinkLines } from './LinkLines';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
 import { MAP_MODES, MINIMAP_CONSTANTS, LAYOUTS } from '../../utils/constants';
-import { colToLetter, getGridCenter, clamp } from '../../utils/gridUtils';
+import { colToLetter, clamp } from '../../utils/gridUtils';
 import { VGFocusedView } from './VGFocusedView';
-import { getInternalCells } from '../../hooks/useInternalCellLayout';
+import { ExpansionGutter } from './ExpansionGutter';
 import './Minimap.scss';
 
 /**
@@ -36,8 +35,6 @@ export const Minimap = memo(function Minimap({
   viewGroups,
   viewports,
   collaborators,
-  vgLinks,
-  bookmarks,
   flattenedViews,
 
   // Display settings
@@ -49,20 +46,16 @@ export const Minimap = memo(function Minimap({
   showInternals,
   showViewports,
   showCollaborators,
-  showBookmarks,
   showCursors,
 
   // Selection state
   selectedVGId,
   selectedViewportId,
-  highlightedLinkId,
 
   // Handlers
   onVGClick,
   onVGDoubleClick,
-  onLinkClick,
   onDropItem,
-  onFocusedVGRename,
   onFocusedVGSlotDrop,
   onFocusedVGSlotClear,
   onBackFromFocus,
@@ -98,13 +91,24 @@ export const Minimap = memo(function Minimap({
 
   // Quick ops (passed from parent)
   quickOps,
+  onApplyTemplate,
+  onMergeCells,
+  onSplitCell,
+  onOpenEditor,
 
   // Phase 4: cell interaction handlers
   onCellDragComplete,
   onCellAssign,
   onTargetingResolve,
+
+  // Search dimming
+  dimmedVGIds,
+
+  // Canvas expansion & viewport drag
+  onExpandCanvas,
+  onViewportMove,
 }) {
-  const { rows, cols, homePosition } = canvas;
+  const { rows, cols } = canvas;
   const containerRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState(null);
@@ -122,28 +126,27 @@ export const Minimap = memo(function Minimap({
     cols,
     zoom: minimapZoom,
     showLabels: showGridLabels,
-    focusedVG,
   });
 
   const { cellSize, headerSize } = sizing;
-  const renderGap = 0;
+  const renderGap = MINIMAP_CONSTANTS.GRID_GAP;
   const renderPitch = cellSize + renderGap;
   const gridExtra = MINIMAP_CONSTANTS.EXTRA_GRID_CELLS ?? 2;
   const gridCols = Math.max(cols + gridExtra, cols);
   const gridRows = Math.max(rows + gridExtra, rows);
-  const gridWidth = gridCols * renderPitch;
-  const gridHeight = gridRows * renderPitch;
+  const gridWidth = gridCols * cellSize + (gridCols - 1) * renderGap;
+  const gridHeight = gridRows * cellSize + (gridRows - 1) * renderGap;
+  const canvasWidth = cols * cellSize + (cols - 1) * renderGap;
+  const canvasHeight = rows * cellSize + (rows - 1) * renderGap;
   const scrollPadding = MINIMAP_CONSTANTS.SCROLL_PADDING * 2;
   const labelOffset = showGridLabels ? headerSize : 0;
-  const majorEvery = 5;
-  const minorLineColor = 'rgba(96, 165, 250, 0.16)';
-  const majorLineColor = 'rgba(96, 165, 250, 0.34)';
-  const canvasOutlineColor = 'rgba(148, 163, 184, 0.35)';
+  const isFocused = !!focusedVG;
+  const cellRadius = Math.max(3, Math.round(cellSize * 0.16));
 
   // Panning support with extended bounds (V2Spec: allows panning ~3 cells beyond content)
   const cellPitch = renderPitch;
 
-  const panEnabled = sizing.needsPanning || MINIMAP_CONSTANTS.PAN_PADDING_CELLS > 0;
+  const panEnabled = !focusedVG && (sizing.needsPanning || MINIMAP_CONSTANTS.PAN_PADDING_CELLS > 0);
   const panning = useMinimapPanning({
     contentWidth: gridWidth + labelOffset + scrollPadding,
     contentHeight: gridHeight + labelOffset + scrollPadding,
@@ -160,28 +163,6 @@ export const Minimap = memo(function Minimap({
     panning.resetPan();
   }, [resetPanSignal, panning.resetPan]);
 
-  // Calculate which VGs are involved in the highlighted link
-  const highlightedLinkVGs = useMemo(() => {
-    if (!highlightedLinkId) return new Set();
-    const link = vgLinks.find(l => l.id === highlightedLinkId);
-    if (!link) return new Set();
-    return new Set([link.from, link.to]);
-  }, [highlightedLinkId, vgLinks]);
-
-  const getVGCenter = useCallback((vgId) => {
-    const vg = viewGroups.find(v => v.id === vgId);
-    if (!vg?.position) return null;
-
-    return getGridCenter(
-      vg.position.row,
-      vg.position.col,
-      vg.position.rowSpan,
-      vg.position.colSpan,
-      cellSize,
-      renderGap
-    );
-  }, [viewGroups, cellSize, renderGap]);
-
   // Collaborators with cursor data for cursor indicators
   const collaboratorsWithCursors = useMemo(() => {
     return collaborators.filter(c => c.isOnline && c.cursor && (c.showCursor ?? true));
@@ -194,14 +175,10 @@ export const Minimap = memo(function Minimap({
     return viewGroups;
   }, [collisionViewGroups, viewGroups]);
 
-  // Pan to focused VG center when focus changes (not on every panning state update)
-  useEffect(() => {
-    if (!focusedVG?.position) return;
-    const { row, col, rowSpan, colSpan } = focusedVG.position;
-    const center = getGridCenter(row, col, rowSpan, colSpan, cellSize, renderGap);
-    panning.panToPosition(center.x, center.y);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-center when focus target changes
-  }, [focusedVG?.id, cellSize, renderGap]);
+  const focusedLayout = useMemo(() => {
+    if (!focusedVG) return null;
+    return LAYOUTS[focusedVG.layoutId] || LAYOUTS.single;
+  }, [focusedVG]);
 
   const parseDragPayload = useCallback((event) => {
     const jsonPayload = event.dataTransfer?.getData('application/json');
@@ -356,7 +333,7 @@ export const Minimap = memo(function Minimap({
       const colSpan = vg.position?.colSpan || layout.cols || 1;
       return { rowSpan, colSpan };
     }
-    if (data.type === 'template-create') {
+    if (data.type === 'template-create' || data.templateId || (data.layoutId && !data.vgId)) {
       const layout = LAYOUTS[data.layoutId] || LAYOUTS.single;
       return { rowSpan: layout.rows || 1, colSpan: layout.cols || 1 };
     }
@@ -431,27 +408,34 @@ export const Minimap = memo(function Minimap({
     return { row: rows, col: 0, rowSpan, colSpan };
   }, [computeDropPosition, findFirstFit, rows]);
 
-  const focusedLayout = useMemo(() => {
-    if (!focusedVG) return null;
-    return LAYOUTS[focusedVG.layoutId] || LAYOUTS.single;
-  }, [focusedVG]);
-
-  const focusedCells = useMemo(() => {
-    if (!focusedVG?.position || !focusedLayout) return [];
-    const padding = Math.max(4, Math.round(cellSize * 0.08));
-    const internalGap = Math.max(2, Math.round(cellSize * 0.06));
-    const width = focusedVG.position.colSpan * cellSize + (focusedVG.position.colSpan - 1) * renderGap;
-    const height = focusedVG.position.rowSpan * cellSize + (focusedVG.position.rowSpan - 1) * renderGap;
-    const innerW = width - padding * 2;
-    const innerH = height - padding * 2;
-    const filledCount = focusedSlots ? focusedSlots.filter(Boolean).length : 0;
-    return getInternalCells(focusedLayout, innerW, innerH, filledCount, { padding, gap: internalGap });
-  }, [focusedVG?.position, focusedLayout, cellSize, renderGap, focusedSlots]);
+  const gridCells = useMemo(() => {
+    const cells = [];
+    for (let row = 0; row < gridRows; row += 1) {
+      for (let col = 0; col < gridCols; col += 1) {
+        const isActive = row < rows && col < cols;
+        const x = col * renderPitch + 0.5;
+        const y = row * renderPitch + 0.5;
+        cells.push(
+          <rect
+            key={`cell-${row}-${col}`}
+            x={x}
+            y={y}
+            width={Math.max(0, cellSize - 1)}
+            height={Math.max(0, cellSize - 1)}
+            rx={cellRadius}
+            ry={cellRadius}
+            className={`minimap__grid-cell ${isActive ? '' : 'minimap__grid-cell--extra'}`}
+          />
+        );
+      }
+    }
+    return cells;
+  }, [cellRadius, cellSize, cols, gridCols, gridRows, renderPitch, rows]);
 
   return (
     <div
       ref={containerRef}
-      className={`minimap ${panning.isDragging ? 'minimap--dragging' : ''} ${panning.canPan ? 'minimap--pannable' : ''} ${isDragOver ? 'minimap--drop-target' : ''}`}
+      className={`minimap ${panning.isDragging ? 'minimap--dragging' : ''} ${panning.canPan ? 'minimap--pannable' : ''} ${isDragOver ? 'minimap--drop-target' : ''} ${isFocused ? 'minimap--focused' : ''}`}
       style={{
         '--cell-size': `${cellSize}px`,
         '--grid-gap': `${renderGap}px`,
@@ -497,7 +481,7 @@ export const Minimap = memo(function Minimap({
       }}
       {...panning.panProps}
     >
-      {showGridLabels && (
+      {showGridLabels && !isFocused && (
         <div className="minimap__labels">
           <div
             className="minimap__labels-corner"
@@ -521,8 +505,8 @@ export const Minimap = memo(function Minimap({
               style={{ transform: `translateX(${-panning.panOffset.x}px)` }}
             >
               {Array.from({ length: gridCols }).map((_, col) => {
-                const isMajor = (col + 1) % 5 === 0;
-                const isActive = col < cols;
+                  const isMajor = (col + 1) % 5 === 0;
+                  const isActive = col < cols;
   return (
                   <div
                     key={`col-${col}`}
@@ -530,11 +514,11 @@ export const Minimap = memo(function Minimap({
                     style={{
                       width: cellSize,
                       color: isMajor
-                        ? '#f59e0b'
+                        ? 'var(--minimap-label-major)'
                         : isActive
-                          ? 'rgba(148, 163, 184, 0.7)'
-                          : 'rgba(71, 85, 105, 0.5)',
-                      fontWeight: isMajor ? 600 : 400,
+                          ? 'var(--minimap-label-active)'
+                          : 'var(--minimap-label-inactive)',
+                      fontWeight: isMajor ? 600 : 500,
                     }}
                   >
                     {colToLetter(col)}
@@ -556,20 +540,20 @@ export const Minimap = memo(function Minimap({
               style={{ transform: `translateY(${-panning.panOffset.y}px)` }}
             >
               {Array.from({ length: gridRows }).map((_, row) => {
-                const isMajor = (row + 1) % 5 === 0;
-                const isActive = row < rows;
-                return (
-                  <div
+                  const isMajor = (row + 1) % 5 === 0;
+                  const isActive = row < rows;
+                  return (
+                    <div
                     key={`row-${row}`}
                     className="minimap__row-header"
                     style={{
                       height: cellSize,
                       color: isMajor
-                        ? '#f59e0b'
+                        ? 'var(--minimap-label-major)'
                         : isActive
-                          ? 'rgba(148, 163, 184, 0.7)'
-                          : 'rgba(71, 85, 105, 0.5)',
-                      fontWeight: isMajor ? 600 : 400,
+                          ? 'var(--minimap-label-active)'
+                          : 'var(--minimap-label-inactive)',
+                      fontWeight: isMajor ? 600 : 500,
                     }}
                   >
                     {row + 1}
@@ -591,16 +575,7 @@ export const Minimap = memo(function Minimap({
       >
         {/* Field grid disabled to match spec (cleaner grid) */}
         {/* Link lines (Links mode, VG sub-tab) */}
-        {mapMode === MAP_MODES.LINKS && showVGs && (
-          <LinkLines
-            links={vgLinks}
-            getVGCenter={getVGCenter}
-            highlightedLinkId={highlightedLinkId}
-            onLinkClick={onLinkClick}
-            showLabels={showGridLabels}
-            labelOffset={headerSize}
-          />
-        )}
+        {/* Link lines removed — Links mode consolidated */}
 
         {/* Grid with labels */}
         <div
@@ -621,54 +596,22 @@ export const Minimap = memo(function Minimap({
               }}
             >
               <svg
-                className="minimap__grid-lines"
+                className="minimap__grid-cells"
                 width={gridWidth}
                 height={gridHeight}
                 viewBox={`0 0 ${gridWidth} ${gridHeight}`}
                 aria-hidden="true"
-                shapeRendering="crispEdges"
               >
-                {Array.from({ length: gridCols + 1 }).map((_, i) => {
-                  const x = i * renderPitch + 0.5;
-                  const isMajor = i > 0 && i % majorEvery === 0;
-                  return (
-                    <line
-                      key={`v-${i}`}
-                      x1={x}
-                      y1={0}
-                      x2={x}
-                      y2={gridHeight}
-                      stroke={isMajor ? majorLineColor : minorLineColor}
-                      strokeWidth={isMajor ? 1 : 0.5}
-                      strokeOpacity={isMajor ? 0.55 : 0.4}
-                    />
-                  );
-                })}
-                {Array.from({ length: gridRows + 1 }).map((_, i) => {
-                  const y = i * renderPitch + 0.5;
-                  const isMajor = i > 0 && i % majorEvery === 0;
-                  return (
-                    <line
-                      key={`h-${i}`}
-                      x1={0}
-                      y1={y}
-                      x2={gridWidth}
-                      y2={y}
-                      stroke={isMajor ? majorLineColor : minorLineColor}
-                      strokeWidth={isMajor ? 1 : 0.5}
-                      strokeOpacity={isMajor ? 0.55 : 0.4}
-                    />
-                  );
-                })}
+                {gridCells}
                 <rect
                   x={0.5}
                   y={0.5}
-                  width={cols * renderPitch}
-                  height={rows * renderPitch}
+                  width={canvasWidth}
+                  height={canvasHeight}
                   fill="none"
-                  stroke={canvasOutlineColor}
                   strokeWidth={1}
-                  strokeDasharray="4 2"
+                  strokeDasharray="5 3"
+                  className="minimap__grid-outline"
                 />
               </svg>
 
@@ -688,13 +631,12 @@ export const Minimap = memo(function Minimap({
                 {showVGs && viewGroups.map(vg => {
                   if (!vg.position) return null;
                   const isSelected = selectedVGId === vg.id;
-                  const isGhosted = mapMode === MAP_MODES.LINKS &&
-                    highlightedLinkId &&
-                    !highlightedLinkVGs.has(vg.id);
+                  const isGhosted = false; // Links mode removed
                   const isSubtle = showViews && showVGs;
                   const isFocused = focusedVG?.id === vg.id;
                   const allowInternals = mapMode === MAP_MODES.LAYOUT && showInternals;
                   const isDimmedByFocus = !!focusedVG && focusedVG.id !== vg.id;
+                  const isDimmedBySearch = dimmedVGIds?.has(vg.id) ?? false;
 
                   return (
                     <VGBlock
@@ -716,7 +658,7 @@ export const Minimap = memo(function Minimap({
                       isBeingMoved={movingVG?.vg?.id === vg.id}
                       onRemove={isEditMode ? onRemoveVG : undefined}
                       changeStatus={getChangeStatus(vg.id)}
-                      dimmed={isDimmedByFocus}
+                      dimmed={isDimmedByFocus || isDimmedBySearch}
                     />
                   );
                 })}
@@ -745,7 +687,7 @@ export const Minimap = memo(function Minimap({
                       top: ghost.position.row * renderPitch,
                       width: (ghost.position.colSpan || 1) * cellSize + ((ghost.position.colSpan || 1) - 1) * renderGap,
                       height: (ghost.position.rowSpan || 1) * cellSize + ((ghost.position.rowSpan || 1) - 1) * renderGap,
-                      '--ghost-color': ghost.color || '#94a3b8',
+                      '--ghost-color': ghost.color || 'var(--color-text-muted)',
                     }}
                   />
                 ))}
@@ -765,26 +707,6 @@ export const Minimap = memo(function Minimap({
                   />
                 ))}
 
-                {focusedVG?.position && focusedCells.length > 0 && (
-                  <VGFocusedView
-                    focusedVG={focusedVG}
-                    focusedSlots={focusedSlots}
-                    cells={focusedCells}
-                    cellSize={cellSize}
-                    renderGap={renderGap}
-                    onRename={onFocusedVGRename}
-                    onSlotDrop={onFocusedVGSlotDrop}
-                    onSlotClear={onFocusedVGSlotClear}
-                    onBackToCanvas={onBackFromFocus}
-                    parseDragPayload={parseDragPayload}
-                    isViewPayload={isViewPayload}
-                    quickOps={quickOps}
-                    onCellDragComplete={onCellDragComplete}
-                    onCellAssign={onCellAssign}
-                    onTargetingResolve={onTargetingResolve}
-                  />
-                )}
-
                 {/* View Cells (View mode) */}
                 {showViews && flattenedViews.map(view => (
                   <ViewCell
@@ -799,7 +721,7 @@ export const Minimap = memo(function Minimap({
 
                 {/* Viewport indicators */}
                 {showViewports && (
-                  mapMode === MAP_MODES.NAVIGATE ||
+                  mapMode === MAP_MODES.VIEWPORTS ||
                   mapMode === MAP_MODES.LAYOUT ||
                   mapMode === MAP_MODES.TEAM
                 ) && viewports.map(vp => (
@@ -809,12 +731,13 @@ export const Minimap = memo(function Minimap({
                     cellSize={cellSize}
                     gap={renderGap}
                     isSelected={selectedViewportId === vp.id}
+                    onViewportMove={onViewportMove}
                   />
                 ))}
 
                 {/* Collaborator viewport indicators */}
                 {showCollaborators && (
-                  mapMode === MAP_MODES.NAVIGATE ||
+                  mapMode === MAP_MODES.VIEWPORTS ||
                   mapMode === MAP_MODES.TEAM
                 ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => (
                   <CollaboratorIndicator
@@ -827,6 +750,17 @@ export const Minimap = memo(function Minimap({
                 ))}
               </div>
             </div>
+
+            {/* Expansion gutters at grid edges */}
+            {onExpandCanvas && (
+              <ExpansionGutter
+                gridWidth={canvasWidth}
+                gridHeight={canvasHeight}
+                cellSize={cellSize}
+                onExpand={onExpandCanvas}
+                isEditMode={isEditMode}
+              />
+            )}
 
             {/* Cursor indicators (overlaid on grid) */}
             {showCursors && mapMode === MAP_MODES.TEAM && (
@@ -842,12 +776,35 @@ export const Minimap = memo(function Minimap({
                 ))}
               </div>
             )}
-          </div>
         </div>
       </div>
+    </div>
+
+    {focusedVG && (
+      <VGFocusedView
+        focusedVG={focusedVG}
+        focusedSlots={focusedSlots}
+        focusedLayout={focusedLayout}
+        containerWidth={containerWidth || 300}
+        containerHeight={containerHeight || 300}
+        onSlotDrop={onFocusedVGSlotDrop}
+        onSlotClear={onFocusedVGSlotClear}
+        onBackToCanvas={onBackFromFocus}
+        parseDragPayload={parseDragPayload}
+        isViewPayload={isViewPayload}
+        quickOps={quickOps}
+        onCellDragComplete={onCellDragComplete}
+        onCellAssign={onCellAssign}
+        onTargetingResolve={onTargetingResolve}
+        onApplyTemplate={onApplyTemplate}
+        onMergeCells={onMergeCells}
+        onSplitCell={onSplitCell}
+        onOpenEditor={onOpenEditor}
+      />
+    )}
 
       {/* Panning indicator */}
-      {panning.canPan && (
+      {panning.canPan && !isFocused && (
         <div className="minimap__pan-hint">
           <Icon name="move" size={12} />
           Drag to pan

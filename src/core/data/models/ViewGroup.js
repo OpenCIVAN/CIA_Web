@@ -347,12 +347,8 @@ export class ViewGroup extends EventEmitter {
         this.link = config.link ? ViewGroupLinkConfig.fromJSON(config.link) : null;
 
         // Canvas position (where on the workspace canvas grid)
-        this.canvasPosition = config.canvasPosition || {
-            row: 0,
-            col: 0,
-            rowSpan: 1,
-            colSpan: 1,
-        };
+        // null means VG has not been placed on the canvas yet
+        this.canvasPosition = config.canvasPosition || null;
 
         // Ownership & sharing
         this.ownerId = config.ownerId || null;
@@ -655,7 +651,7 @@ export class ViewGroup extends EventEmitter {
     }
 
     getCanvasPosition() {
-        return { ...this.canvasPosition };
+        return this.canvasPosition ? { ...this.canvasPosition } : null;
     }
 
     // =========================================================================
@@ -761,7 +757,7 @@ export class ViewGroup extends EventEmitter {
             layoutId: data.layout_id || data.layoutId,
             slots: data.slots || [],
             link: data.link,
-            canvasPosition: data.canvas_position || data.canvasPosition || { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
+            canvasPosition: data.canvas_position || data.canvasPosition || null,
             ownerId: data.owner_id || data.ownerId,
             ownerName: data.owner_name || data.ownerName,
             workspaceId: data.workspace_id || data.workspaceId,

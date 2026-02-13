@@ -1,7 +1,7 @@
 # Canvas Map Panel Architecture Clarification (UPDATED)
 
-**Last Updated:** January 28, 2025
-**Status:** NEW ARCHITECTURE IN EFFECT
+**Last Updated:** February 12, 2026
+**Status:** NEW ARCHITECTURE IN EFFECT — Old LayoutPanel/NavigatorTab removed
 
 ---
 
@@ -54,8 +54,8 @@ function CanvasMapPanel() {
 - Located in `LeftPanel/tabs/` and `RightPanel/tabs/`
 - Rendered via tab registries
 - Can pop out to floating panels
-- **Status:** Existing panels still use this, will migrate over time
-- **Examples:** NavigatorTab, FilesTab, DatasetsTab (legacy)
+- **Status:** Remaining tabs (Files, Datasets, Tools, Annotations, Bookmarks, Cursors) still use this
+- **Removed:** NavigatorTab, LayoutTab (deleted Feb 2026 — absorbed into CanvasMapPanel)
 
 ### 2. NEW: PanelShell Floating Panels ✅
 - Located in `panels/PanelShell/`
@@ -243,10 +243,12 @@ function CanvasMapContent({ sizeMode }) {
 | Panel | Current | Target | Status |
 |-------|---------|--------|--------|
 | Canvas Map | CanvasMapPanel (PanelShell) | CanvasMapPanel (PanelShell) | ✅ Complete |
-| Navigator | LeftPanel tab | CanvasMapPanel (PanelShell) | ✅ Merged into Canvas Map |
+| Navigator | ~~LeftPanel tab~~ Deleted | CanvasMapPanel (PanelShell) | ✅ Merged & old tab deleted (Feb 2026) |
+| Layout | ~~LeftPanel tab~~ Deleted | CanvasMapPanel (PanelShell) | ✅ Absorbed & old tab deleted (Feb 2026) |
+| Views | ~~LeftPanel tab~~ Deleted | CanvasMapPanel (PanelShell) | ✅ Absorbed & old tab removed from registry |
+| Instance Tools | VGEditorPanel (PanelShell) | VGEditorPanel (PanelShell) | ✅ Complete |
 | Files | LeftPanel tab | PanelShell | ⏳ Planned |
 | Datasets | LeftPanel tab | PanelShell | ⏳ Planned |
-| Instance Tools | FloatingPanel | InstanceToolsPanel (PanelShell) | 🔄 In Progress |
 | Chat | RightPanel tab | PanelShell COMPACT | ⏳ Planned |
 | People | RightPanel tab | PanelShell COMPACT | ⏳ Planned |
 
@@ -295,5 +297,5 @@ For full design context, see project knowledge:
 
 ---
 
-*Document updated: January 28, 2025*
+*Document updated: February 12, 2026*
 *Architecture: PanelShell floating-first*

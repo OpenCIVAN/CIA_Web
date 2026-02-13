@@ -3,8 +3,6 @@
 // CSS Grid layout with separated activity bars and panel content
 
 import React, { useMemo, cloneElement, useCallback, isValidElement, useContext } from 'react';
-import { LayoutPanelProvider } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
-import { LayoutPanel } from '@UI/react/components/panels/LayoutPanel';
 import { CanvasWorkspace } from '@UI/react/components/workspace';
 import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
 import { usePanelState } from '@UI/react/hooks/usePanelState';

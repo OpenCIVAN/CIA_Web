@@ -29,8 +29,6 @@ export { useMinimapCellSize } from './hooks/useMinimapCellSize';
 export {
   MAP_MODES,
   MODE_CONFIG,
-  DISPLAY_MODES,
-  LINKS_SUB_TABS,
   COLLABORATE_SUB_TABS,
   LAYOUTS,
   VIEW_TYPES,
@@ -58,8 +56,8 @@ export {
   Minimap,
   QuickNavToolbar,
   CompanionPanel,
-  NavigatePanel,
+  ViewportsPanel,
   LayoutPanel,
-  LinksPanel,
   TeamPanel,
+  VGContextBar,
 } from './components';

@@ -13,6 +13,21 @@
 import React, { memo, useState } from 'react';
 import { tokens } from '@UI/react/styles/tokens';
 
+const COLOR_VARS = {
+  bgSecondary: 'var(--color-bg-secondary)',
+  bgTertiary: 'var(--color-bg-tertiary)',
+  borderDefault: 'var(--color-border-default)',
+  borderSubtle: 'var(--color-border-subtle)',
+  glassMedium: 'var(--color-glass-medium)',
+  textPrimary: 'var(--color-text-primary)',
+  textSecondary: 'var(--color-text-secondary)',
+  textMuted: 'var(--color-text-muted)',
+  accentBlue: 'var(--color-accent-blue)',
+  accentCyan: 'var(--color-accent-cyan)',
+  accentAmber: 'var(--color-accent-amber)',
+  accentAmberSoft: 'rgba(var(--color-accent-amber-rgb), 0.2)',
+};
+
 /**
  * SquareDPad - SVG-based D-Pad navigation control
  *
@@ -42,14 +57,14 @@ export const SquareDPad = memo(function SquareDPad({
   const [activeQuadrant, setActiveQuadrant] = useState(null);
 
   const getQuadrantColor = (quadrant) => {
-    if (activeQuadrant === quadrant) return tokens.colors.accent.cyan;
-    if (hoveredQuadrant === quadrant) return tokens.colors.accent.blue;
-    return tokens.colors.glass.medium;
+    if (activeQuadrant === quadrant) return COLOR_VARS.accentCyan;
+    if (hoveredQuadrant === quadrant) return COLOR_VARS.accentBlue;
+    return COLOR_VARS.glassMedium;
   };
 
   const getIconColor = (quadrant) => {
     if (hoveredQuadrant === quadrant || activeQuadrant === quadrant) return 'white';
-    return tokens.colors.text.muted;
+    return COLOR_VARS.textMuted;
   };
 
   const handleClick = (direction) => {
@@ -126,8 +141,8 @@ export const SquareDPad = memo(function SquareDPad({
         width={size - 2}
         height={size - 2}
         rx={cornerRadius}
-        fill={tokens.colors.bg.tertiary}
-        stroke={tokens.colors.border.default}
+        fill={COLOR_VARS.bgTertiary}
+        stroke={COLOR_VARS.borderDefault}
         strokeWidth={1}
       />
 
@@ -137,7 +152,7 @@ export const SquareDPad = memo(function SquareDPad({
           <polygon
             points={q.points}
             fill={getQuadrantColor(q.id)}
-            stroke={tokens.colors.border.subtle}
+            stroke={COLOR_VARS.borderSubtle}
             strokeWidth={0.5}
             style={{ cursor: 'pointer' }}
             onMouseEnter={() => setHoveredQuadrant(q.id)}
@@ -168,8 +183,8 @@ export const SquareDPad = memo(function SquareDPad({
         width={centerSize}
         height={centerSize}
         rx={4}
-        fill={isAtHome ? `${tokens.colors.accent.amber}30` : tokens.colors.bg.secondary}
-        stroke={isAtHome ? tokens.colors.accent.amber : tokens.colors.border.default}
+        fill={isAtHome ? COLOR_VARS.accentAmberSoft : COLOR_VARS.bgSecondary}
+        stroke={isAtHome ? COLOR_VARS.accentAmber : COLOR_VARS.borderDefault}
         strokeWidth={1.5}
         style={{ cursor: 'pointer' }}
         onClick={onGoHome}
@@ -181,7 +196,7 @@ export const SquareDPad = memo(function SquareDPad({
         y={cy + 1}
         textAnchor="middle"
         dominantBaseline="middle"
-        fill={isAtHome ? tokens.colors.accent.amber : tokens.colors.text.primary}
+        fill={isAtHome ? COLOR_VARS.accentAmber : COLOR_VARS.textPrimary}
         fontSize={Math.max(11, size * 0.16)}
         fontWeight="700"
         fontFamily="monospace"
@@ -217,10 +232,10 @@ export const SimpleDPad = memo(function SimpleDPad({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: tokens.colors.glass.medium,
-    border: `1px solid ${tokens.colors.border.subtle}`,
+    background: COLOR_VARS.glassMedium,
+    border: `1px solid ${COLOR_VARS.borderSubtle}`,
     borderRadius: tokens.radius.sm,
-    color: tokens.colors.text.secondary,
+    color: COLOR_VARS.textSecondary,
     cursor: 'pointer',
     padding: 0,
     transition: 'all 0.15s ease',
@@ -228,9 +243,9 @@ export const SimpleDPad = memo(function SimpleDPad({
 
   const homeStyle = {
     ...btnStyle,
-    background: isAtHome ? `${tokens.colors.accent.amber}30` : tokens.colors.glass.medium,
-    color: isAtHome ? tokens.colors.accent.amber : tokens.colors.text.muted,
-    border: isAtHome ? `1px solid ${tokens.colors.accent.amber}` : btnStyle.border,
+    background: isAtHome ? COLOR_VARS.accentAmberSoft : COLOR_VARS.glassMedium,
+    color: isAtHome ? COLOR_VARS.accentAmber : COLOR_VARS.textMuted,
+    border: isAtHome ? `1px solid ${COLOR_VARS.accentAmber}` : btnStyle.border,
   };
 
   // Simple chevron SVG paths

@@ -1,0 +1,445 @@
+/**
+ * VGActionBar styles
+ * Unified breadcrumb + quick ops bar for focused VG mode
+ */
+
+@use "theme" as *;
+
+// ─── Main bar ───────────────────────────────────────────────────────────────
+
+.vg-action-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  flex-shrink: 0;
+
+  background: color-mix(in srgb, var(--vg-color) 15%, $color-bg-secondary);
+  border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 30%, transparent);
+  animation: vg-action-bar-slide-down 0.2s $ease-out-expo;
+
+  user-select: none;
+
+  // ── Left: breadcrumb ───────────────────────────────────────────────────
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+  }
+
+  &__back-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    background: $color-bg-tertiary;
+    color: $color-text-secondary;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
+
+    &:hover {
+      background: $color-bg-secondary;
+      color: $color-text-primary;
+    }
+  }
+
+  &__sep {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__vg-identity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: $radius-xs;
+    flex-shrink: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    border-radius: $radius-sm;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    transition: background $transition-fast;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: color-mix(in srgb, var(--vg-color) 12%, transparent);
+    }
+  }
+
+  &__rename-icon {
+    opacity: 0;
+    color: $color-text-tertiary;
+    transition: opacity $transition-fast;
+
+    .vg-action-bar__name:hover & {
+      opacity: 0.7;
+    }
+  }
+
+  &__name-input {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    font-family: inherit;
+    padding: 2px 4px;
+    border: 1px solid color-mix(in srgb, var(--vg-color) 50%, transparent);
+    border-radius: $radius-sm;
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+    outline: none;
+    min-width: 60px;
+    max-width: 160px;
+
+    &:focus {
+      border-color: var(--vg-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--vg-color) 20%, transparent);
+    }
+  }
+
+  // ── Spacer ─────────────────────────────────────────────────────────────
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // ── Right: quick ops ───────────────────────────────────────────────────
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+  }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+
+    & + & {
+      border-left: 1px solid $color-border-subtle;
+    }
+
+    &--actions {
+      gap: 2px;
+    }
+  }
+
+  // ── Template button ────────────────────────────────────────────────────
+
+  &__template-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+    }
+  }
+
+  // ── Action buttons (merge, split, edit) ────────────────────────────────
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &--merge {
+      color: $color-accent-amber;
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+      }
+    }
+
+    &--split {
+      color: $color-accent-purple;
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+      }
+    }
+
+    &--edit {
+      color: $color-accent-cyan;
+
+      &:hover {
+        background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
+      }
+    }
+
+    &--disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ─── Size-mode compact adjustments ──────────────────────────────────────────
+
+.canvas-map-v2[data-size-mode="compact"] {
+  .vg-action-bar {
+    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-xs;
+  }
+
+  .vg-action-bar__group {
+    padding: 0 4px;
+  }
+}
+
+// ─── Slide-down entrance animation ──────────────────────────────────────────
+
+@keyframes vg-action-bar-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ─── Template Picker popover ────────────────────────────────────────────────
+
+.template-picker {
+  min-width: 180px;
+  max-width: 240px;
+  padding: 8px;
+
+  background: $color-glass-panel;
+  backdrop-filter: blur(12px);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  &__section {
+    & + & {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid $color-border-subtle;
+    }
+  }
+
+  &__section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-tertiary;
+    margin-bottom: 4px;
+  }
+
+  &__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-primary;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+    }
+
+    &--current {
+      background: color-mix(in srgb, $color-accent-cyan 10%, transparent);
+    }
+  }
+
+  &__item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__item-label {
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__item-dims {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-tertiary;
+  }
+
+  &__item-badge {
+    font-size: 8px;
+    font-weight: 600;
+    color: $color-accent-amber;
+    background: color-mix(in srgb, $color-accent-amber 12%, transparent);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+}
+
+// ─── Dimension Controls ─────────────────────────────────────────────────────
+
+.dim-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  font-family: $font-family-mono;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  &--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  &__group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  &__divider {
+    color: $color-text-tertiary;
+    opacity: 0.6;
+    font-size: 10px;
+    margin: 0 2px;
+  }
+
+  &__label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: $color-text-tertiary;
+    min-width: 24px;
+    font-family: $font-family-base;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid $color-border-subtle;
+    border-radius: 3px;
+    background: transparent;
+    color: $color-text-secondary;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, $color-glass-medium 60%, transparent);
+      border-color: $color-border-default;
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+
+  &__value {
+    min-width: 12px;
+    text-align: center;
+    color: $color-text-primary;
+    font-weight: 600;
+  }
+
+  &__sep {
+    color: $color-text-tertiary;
+    margin: 0 1px;
+  }
+
+  &__ref {
+    font-size: 8px;
+    color: $color-text-tertiary;
+    margin-left: 3px;
+    opacity: 0.7;
+  }
+
+  &__plus-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  &__picker-popup {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    padding: 4px;
+    background: $color-glass-panel;
+    backdrop-filter: blur(12px);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+}

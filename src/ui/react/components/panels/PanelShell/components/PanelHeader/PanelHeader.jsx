@@ -27,6 +27,7 @@ import './PanelHeader.scss';
  * @property {() => void} [onMinimize] - Minimize handler
  * @property {() => void} [onClose] - Close handler
  * @property {React.ReactNode} [headerActions] - Optional header actions
+ * @property {React.ReactNode} [headerContent] - Optional custom header content (replaces title)
  */
 
 export function PanelHeader({
@@ -43,6 +44,7 @@ export function PanelHeader({
   onMinimize,
   onClose,
   headerActions,
+  headerContent,
 }) {
   const isFull = chrome === CHROME_LEVELS.FULL;
   const isCompact = chrome === CHROME_LEVELS.COMPACT;
@@ -66,10 +68,16 @@ export function PanelHeader({
         <Icon name={icon} size={14} />
       </span>
 
-      {/* Title */}
-      <span className="panel-header__title">
-        {title}
-      </span>
+      {/* Title / Custom Content */}
+      {headerContent ? (
+        <div className="panel-header__content">
+          {headerContent}
+        </div>
+      ) : (
+        <span className="panel-header__title">
+          {title}
+        </span>
+      )}
 
       {/* Size indicator (dev mode, FULL only) */}
       {isFull && isDev && (

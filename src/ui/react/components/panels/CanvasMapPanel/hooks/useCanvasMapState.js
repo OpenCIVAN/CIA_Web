@@ -10,7 +10,6 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   MAP_MODES,
   MODE_CONFIG,
-  LINKS_SUB_TABS,
   COLLABORATE_SUB_TABS,
   LAYOUTS,
   MINIMAP_CONSTANTS,
@@ -83,7 +82,8 @@ export function useCanvasMapState({
   callbacks = {},
 } = {}) {
   const normalizeMapMode = useCallback((mode) => {
-    if (mode === MAP_MODES.LINKS) return MAP_MODES.LAYOUT;
+    // Map legacy localStorage values to current modes
+    if (mode === 'navigate' || mode === 'links') return MAP_MODES.VIEWPORTS;
     return MODE_CONFIG[mode] ? mode : MAP_MODES.LAYOUT;
   }, []);
   // -------------------------------------------------------------------------
@@ -174,7 +174,6 @@ export function useCanvasMapState({
   );
 
   // Sub-tabs
-  const [linksSubTab, setLinksSubTab] = useState(LINKS_SUB_TABS.VG);
   const [collaborateSubTab, setCollaborateSubTab] = useState(COLLABORATE_SUB_TABS.ME);
 
   // Debug: Show implicit (SOLO) ViewGroups
@@ -513,7 +512,6 @@ export function useCanvasMapState({
     toolbarPosition,
     companionSide,
     collaboratorCursorVisibility,
-    linksSubTab,
     collaborateSubTab,
     showImplicitVGs,
     selectedVGId,
@@ -540,7 +538,6 @@ export function useCanvasMapState({
     setCompanionOpen,
     setCompanionTab,
     setToolbarPosition,
-    setLinksSubTab,
     setCollaborateSubTab,
     setSearchQuery,
     setSortOrder,

@@ -2,16 +2,20 @@
  * @file VGFocusedView.jsx
  * @description Container component for the focused VG overlay.
  *
- * Composes VGFocusHeader + FocusedCell grid.
+ * Composes focused overlay grid + quick ops toolbar.
  * Phase 4: adds pointer-based drag, right-click context menu,
  * targeting visuals, and DragGhost rendering.
  */
 
-import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { VGFocusHeader } from './VGFocusHeader';
+import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { DropdownPortal, useDropdown } from '@UI/react/components/atoms/DropdownPortal';
 import { FocusedCell } from './FocusedCell';
 import { CellContextMenu } from './CellContextMenu';
 import { DragGhost } from './DragGhost';
+import { TemplatePicker } from '../QuickOps/TemplatePicker';
+import { LAYOUTS } from '../../utils/constants';
+import { getInternalCells } from '../../hooks/useInternalCellLayout';
 
 const DRAG_THRESHOLD = 4;
 
@@ -19,10 +23,9 @@ const DRAG_THRESHOLD = 4;
  * @param {Object} props
  * @param {Object} props.focusedVG - The focused ViewGroup
  * @param {Array} props.focusedSlots - Slot data array (view per cell index)
- * @param {Array} props.cells - Cell layout array from getInternalCells
- * @param {number} props.cellSize - Cell size in pixels
- * @param {number} props.renderGap - Gap between cells
- * @param {Function} props.onRename - Rename callback
+ * @param {Object} props.focusedLayout - Layout definition
+ * @param {number} props.containerWidth - Minimap container width
+ * @param {number} props.containerHeight - Minimap container height
  * @param {Function} props.onSlotDrop - Slot drop callback (slotIndex, payload)
  * @param {Function} props.onSlotClear - Slot clear callback (slotIndex)
  * @param {Function} props.onBackToCanvas - Exit focus callback
@@ -33,14 +36,16 @@ const DRAG_THRESHOLD = 4;
  * @param {Function} props.onCellAssign - Assignment handler (cellIndex)
  * @param {Function} props.onTargetingResolve - Targeting resolve handler (targetCellIndex)
  * @param {Function} props.onSplitCell - Split cell handler (cellIndex)
+ * @param {Function} props.onApplyTemplate - Apply layout template (layoutId)
+ * @param {Function} props.onMergeCells - Merge selected cells (array)
+ * @param {Function} props.onOpenEditor - Open VG editor
  */
 export const VGFocusedView = memo(function VGFocusedView({
   focusedVG,
   focusedSlots,
-  cells,
-  cellSize,
-  renderGap,
-  onRename,
+  focusedLayout,
+  containerWidth,
+  containerHeight,
   onSlotDrop,
   onSlotClear,
   onBackToCanvas,
@@ -51,10 +56,50 @@ export const VGFocusedView = memo(function VGFocusedView({
   onCellAssign,
   onTargetingResolve,
   onSplitCell,
+  onApplyTemplate,
+  onMergeCells,
+  onOpenEditor,
 }) {
+  const templateDropdown = useDropdown();
   const [focusedDropIndex, setFocusedDropIndex] = useState(null);
   const dragStartRef = useRef(null);
   const cellRectsRef = useRef([]);
+
+  const layout = focusedLayout || (focusedVG ? (LAYOUTS[focusedVG.layoutId] || LAYOUTS.single) : LAYOUTS.single);
+
+  const stageDims = useMemo(() => {
+    const safeWidth = Math.max(0, containerWidth || 0);
+    const safeHeight = Math.max(0, containerHeight || 0);
+    const minSide = Math.max(120, Math.min(safeWidth, safeHeight));
+    const basePadding = Math.max(12, Math.round(minSide * 0.06));
+    const toolbarHeight = 52;
+    const availableWidth = Math.max(0, safeWidth - basePadding * 2);
+    const availableHeight = Math.max(0, safeHeight - basePadding * 2 - toolbarHeight);
+    const maxGridWidth = Math.min(availableWidth, 360);
+    const maxGridHeight = Math.min(availableHeight, 360);
+    const aspect = (layout?.cols || 1) / (layout?.rows || 1);
+    let gridWidth = maxGridWidth;
+    let gridHeight = maxGridWidth / aspect;
+    if (gridHeight > maxGridHeight) {
+      gridHeight = maxGridHeight;
+      gridWidth = gridHeight * aspect;
+    }
+    return {
+      padding: basePadding,
+      gridWidth: Math.max(0, gridWidth),
+      gridHeight: Math.max(0, gridHeight),
+    };
+  }, [containerWidth, containerHeight, layout?.cols, layout?.rows]);
+
+  const cells = useMemo(() => {
+    if (!layout || stageDims.gridWidth <= 0 || stageDims.gridHeight <= 0) return [];
+    const filledCount = focusedSlots ? focusedSlots.filter(Boolean).length : 0;
+    const innerPadding = Math.max(8, Math.round(Math.min(stageDims.gridWidth, stageDims.gridHeight) * 0.06));
+    const cellGap = Math.max(6, Math.round(Math.min(stageDims.gridWidth, stageDims.gridHeight) * 0.04));
+    const innerW = Math.max(0, stageDims.gridWidth - innerPadding * 2);
+    const innerH = Math.max(0, stageDims.gridHeight - innerPadding * 2);
+    return getInternalCells(layout, innerW, innerH, filledCount, { padding: innerPadding, gap: cellGap });
+  }, [layout, stageDims.gridWidth, stageDims.gridHeight, focusedSlots]);
 
   // ── External drag-drop (from CompanionPanel) ────────────────────────────
   const handleCellDragOver = useCallback((e, cellIndex) => {
@@ -219,6 +264,25 @@ export const VGFocusedView = memo(function VGFocusedView({
     onCellAssign?.(cellIndex);
   }, [quickOps, onTargetingResolve, onCellAssign]);
 
+  const canMerge = quickOps?.isRectangularSelection && (quickOps?.selectedCells?.size || 0) > 1;
+  const canSplit = quickOps?.hasMergedCellSelected && (quickOps?.selectedCells?.size || 0) === 1;
+  const handleMerge = useCallback(() => {
+    if (!canMerge) return;
+    const indices = Array.from(quickOps.selectedCells);
+    onMergeCells?.(indices);
+  }, [canMerge, quickOps?.selectedCells, onMergeCells]);
+
+  const handleSplit = useCallback(() => {
+    if (!canSplit) return;
+    const cellIndex = Array.from(quickOps.selectedCells)[0];
+    onSplitCell?.(cellIndex);
+  }, [canSplit, quickOps?.selectedCells, onSplitCell]);
+
+  const handleApplyTemplate = useCallback((layoutId) => {
+    onApplyTemplate?.(layoutId);
+    templateDropdown.close();
+  }, [onApplyTemplate, templateDropdown]);
+
   // ── Keyboard: arrow key navigation between cells ───────────────────────
   const gridRef = useRef(null);
 
@@ -236,11 +300,7 @@ export const VGFocusedView = memo(function VGFocusedView({
       return;
     }
 
-    // Determine grid columns from layout
-    const layoutCols = focusedVG?.layoutId
-      ? (cells.length > 0 ? Math.round(Math.sqrt(cells.length)) : 1)
-      : 1;
-    // Better: compute from cell positions
+    // Determine grid columns from cell positions
     const colSet = new Set(cells.map(c => c.col !== undefined ? c.col : 0));
     const gridCols = colSet.size || 1;
 
@@ -255,92 +315,151 @@ export const VGFocusedView = memo(function VGFocusedView({
     }
   }, [cells, focusedVG?.layoutId]);
 
-  const pos = focusedVG?.position;
-  if (!pos) return null;
-
-  const overlayWidth = pos.colSpan * cellSize + (pos.colSpan - 1) * renderGap;
-  const overlayHeight = pos.rowSpan * cellSize + (pos.rowSpan - 1) * renderGap;
-  const renderPitch = cellSize + renderGap;
-
   const { targeting, dragState } = quickOps || {};
 
   return (
     <div
       className="minimap__focused-overlay"
-      style={{
-        left: pos.col * renderPitch,
-        top: pos.row * renderPitch,
-        width: overlayWidth,
-        height: overlayHeight,
-        '--vg-color': focusedVG.color,
-      }}
+      style={{ '--vg-color': focusedVG.color }}
     >
-      <VGFocusHeader
-        focusedVG={focusedVG}
-        onBackToCanvas={onBackToCanvas}
-        onRename={onRename}
-      />
+      <div className="minimap__focused-stage" style={{ padding: stageDims.padding }}>
+        <div
+          className="minimap__focused-grid"
+          ref={gridRef}
+          role="grid"
+          aria-label={`${focusedVG.name || 'ViewGroup'} cells`}
+          onKeyDown={handleGridKeyDown}
+          style={{
+            width: stageDims.gridWidth,
+            height: stageDims.gridHeight,
+          }}
+        >
+          {cells.map((cell, i) => {
+            const view = focusedSlots?.[i] || null;
+            const isDropTarget = focusedDropIndex === i;
+            const isSelected = quickOps?.selectedCells?.has(i) || false;
 
-      <div
-        className="minimap__focused-cells"
-        ref={gridRef}
-        role="grid"
-        aria-label={`${focusedVG.name || 'ViewGroup'} cells`}
-        onKeyDown={handleGridKeyDown}
-      >
-        {cells.map((cell, i) => {
-          const view = focusedSlots?.[i] || null;
-          const isDropTarget = focusedDropIndex === i;
-          const isSelected = quickOps?.selectedCells?.has(i) || false;
+            // Drag visual states
+            const isDragSource = dragState?.sourceCellIndex === i;
+            const isDragTarget = dragState && !isDragSource && i !== dragState.sourceCellIndex;
 
-          // Drag visual states
-          const isDragSource = dragState?.sourceCellIndex === i;
-          const isDragTarget = dragState && !isDragSource && i !== dragState.sourceCellIndex;
-
-          // Targeting visual states
-          let isTargetingValid = false;
-          let isTargetingPulse = false;
-          if (targeting && i !== targeting.sourceCellIndex) {
-            if (targeting.action === 'swap') {
-              isTargetingValid = !!view;
-              isTargetingPulse = !!view;
-            } else {
-              // move or clone — target must be empty
-              isTargetingValid = !view;
+            // Targeting visual states
+            let isTargetingValid = false;
+            let isTargetingPulse = false;
+            if (targeting && i !== targeting.sourceCellIndex) {
+              if (targeting.action === 'swap') {
+                isTargetingValid = !!view;
+                isTargetingPulse = !!view;
+              } else {
+                // move or clone — target must be empty
+                isTargetingValid = !view;
+              }
             }
-          }
 
-          // Assigning state
-          const isAssigning = quickOps?.assigningCellIndex === i;
+            // Assigning state
+            const isAssigning = quickOps?.assigningCellIndex === i;
 
-          return (
-            <FocusedCell
-              key={i}
-              ref={(el) => setCellRef(i, el)}
-              cell={cell}
-              view={view}
-              vgColor={focusedVG.color}
-              isSelected={isSelected}
-              isDropTarget={isDropTarget}
-              isDragSource={isDragSource}
-              isDragTarget={isDragTarget}
-              isTargetingValid={isTargetingValid}
-              isTargetingPulse={isTargetingPulse}
-              isAssigning={isAssigning}
-              onClick={(e) => handleCellClick(i, e)}
-              onDragOver={(e) => handleCellDragOver(e, i)}
-              onDragLeave={handleCellDragLeave}
-              onDrop={(e) => handleCellDrop(e, i)}
-              onClearView={() => onSlotClear?.(i)}
-              onContextMenu={(e) => handleContextMenu(i, view, cell.isMerged || false, e)}
-              onPointerDown={view ? (e) => handleCellPointerDown(i, view, e) : undefined}
-              onAssign={() => handleAssignEmpty(i)}
-              targeting={!!targeting}
-              animationDelay={i * 30}
-            />
-          );
-        })}
+            return (
+              <FocusedCell
+                key={i}
+                ref={(el) => setCellRef(i, el)}
+                cell={cell}
+                view={view}
+                vgColor={focusedVG.color}
+                isSelected={isSelected}
+                isDropTarget={isDropTarget}
+                isDragSource={isDragSource}
+                isDragTarget={isDragTarget}
+                isTargetingValid={isTargetingValid}
+                isTargetingPulse={isTargetingPulse}
+                isAssigning={isAssigning}
+                onClick={(e) => handleCellClick(i, e)}
+                onDragOver={(e) => handleCellDragOver(e, i)}
+                onDragLeave={handleCellDragLeave}
+                onDrop={(e) => handleCellDrop(e, i)}
+                onClearView={() => onSlotClear?.(i)}
+                onContextMenu={(e) => handleContextMenu(i, view, cell.isMerged || false, e)}
+                onPointerDown={view ? (e) => handleCellPointerDown(i, view, e) : undefined}
+                onAssign={() => handleAssignEmpty(i)}
+                targeting={!!targeting}
+                animationDelay={i * 30}
+              />
+            );
+          })}
+        </div>
       </div>
+
+      <div className="minimap__focused-toolbar">
+        <button
+          type="button"
+          className="minimap__focused-toolbar-btn minimap__focused-toolbar-btn--back"
+          onClick={onBackToCanvas}
+          disabled={!onBackToCanvas}
+        >
+          <Icon name="chevronLeft" size={12} />
+          <span>Canvas</span>
+        </button>
+        <div className="minimap__focused-toolbar-sep" />
+        <button
+          type="button"
+          className="minimap__focused-toolbar-btn minimap__focused-toolbar-btn--template"
+          ref={templateDropdown.triggerRef}
+          onClick={templateDropdown.toggle}
+          disabled={!onApplyTemplate}
+          aria-expanded={templateDropdown.open}
+          aria-haspopup
+        >
+          <Icon name="layoutGrid" size={12} />
+          <span>Template</span>
+          <Icon name="chevronDown" size={10} />
+        </button>
+        <div className="minimap__focused-toolbar-sep" />
+        <button
+          type="button"
+          className={`minimap__focused-toolbar-icon ${canMerge ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
+          onClick={handleMerge}
+          disabled={!canMerge}
+          title={canMerge ? 'Merge cells' : 'Select a rectangle to merge'}
+        >
+          <Icon name="combine" size={12} />
+        </button>
+        <button
+          type="button"
+          className={`minimap__focused-toolbar-icon ${canSplit ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
+          onClick={handleSplit}
+          disabled={!canSplit}
+          title={canSplit ? 'Split cell' : 'Select a merged cell to split'}
+        >
+          <Icon name="layers" size={12} />
+        </button>
+        <div className="minimap__focused-toolbar-sep" />
+        <button
+          type="button"
+          className="minimap__focused-toolbar-btn minimap__focused-toolbar-btn--editor"
+          onClick={onOpenEditor}
+          disabled={!onOpenEditor}
+        >
+          <Icon name="pencil" size={12} />
+          <span>Editor</span>
+        </button>
+      </div>
+
+      <DropdownPortal
+        open={templateDropdown.open}
+        onClose={templateDropdown.close}
+        triggerRef={templateDropdown.triggerRef}
+        position="top"
+        align="center"
+        offset={8}
+      >
+        <TemplatePicker
+          currentLayout={focusedVG.layoutId || 'single'}
+          currentRows={focusedVG.position?.rowSpan || layout.rows}
+          currentCols={focusedVG.position?.colSpan || layout.cols}
+          onApply={handleApplyTemplate}
+          onClose={templateDropdown.close}
+        />
+      </DropdownPortal>
 
       {/* Context menu portal */}
       {quickOps?.contextMenu && (

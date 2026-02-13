@@ -47,10 +47,12 @@
   z-index: 10001; // Above dropdowns and modals
   max-width: 250px;
   padding: 6px 10px;
-  background: $color-bg-elevated;
-  border: 1px solid $color-border-default;
+  background: $color-glass-panel;
+  border: 1px solid $color-border-glow;
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: $shadow-glass;
+  backdrop-filter: $blur-strong;
+  -webkit-backdrop-filter: $blur-strong;
   font-size: 12px;
   line-height: 1.4;
   color: $color-text-primary;
@@ -100,8 +102,8 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: $color-bg-elevated;
-  border: 1px solid $color-border-default;
+  background: $color-glass-panel;
+  border: 1px solid $color-border-glow;
   transform: rotate(45deg);
   pointer-events: none;
 

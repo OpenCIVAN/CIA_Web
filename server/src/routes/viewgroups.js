@@ -96,7 +96,7 @@ router.get('/', async (req, res, next) => {
         // Get views for each ViewGroup
         const viewGroups = await Promise.all(result.rows.map(async (vg) => {
             const viewsResult = await pool.query(
-                `SELECT vc.id, vc.name, vc.view_type, vc.dataset_id
+                `SELECT vc.id, vc.name, vc.dataset_id
                  FROM view_configurations vc
                  WHERE vc.view_group_id = $1
                  ORDER BY vc.created_at`,
@@ -118,7 +118,7 @@ router.get('/', async (req, res, next) => {
                 color: vg.color,
                 layoutId: vg.layout_id,
                 slots: vg.slots || [],
-                canvasPosition: vg.canvas_position || { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
+                canvasPosition: vg.canvas_position || null,
                 ownerId: vg.owner_id,
                 ownerEmail: vg.owner_email,
                 visibility: vg.visibility,
@@ -127,7 +127,6 @@ router.get('/', async (req, res, next) => {
                 views: viewsResult.rows.map(v => ({
                     id: v.id,
                     name: v.name,
-                    viewType: v.view_type,
                     datasetId: v.dataset_id,
                 })),
                 link: linksResult.rows.length > 0 ? {
@@ -179,7 +178,7 @@ router.get('/:id', async (req, res, next) => {
 
         // Get views in this ViewGroup
         const viewsResult = await pool.query(
-            `SELECT vc.id, vc.name, vc.view_type, vc.dataset_id
+            `SELECT vc.id, vc.name, vc.dataset_id
              FROM view_configurations vc
              WHERE vc.view_group_id = $1
              ORDER BY vc.created_at`,
@@ -201,7 +200,7 @@ router.get('/:id', async (req, res, next) => {
             color: vg.color,
             layoutId: vg.layout_id,
             slots: vg.slots || [],
-            canvasPosition: vg.canvas_position || { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
+            canvasPosition: vg.canvas_position || null,
             ownerId: vg.owner_id,
             ownerEmail: vg.owner_email,
             visibility: vg.visibility,
@@ -209,7 +208,6 @@ router.get('/:id', async (req, res, next) => {
             views: viewsResult.rows.map(v => ({
                 id: v.id,
                 name: v.name,
-                viewType: v.view_type,
                 datasetId: v.dataset_id,
             })),
             link: linksResult.rows.length > 0 ? {
@@ -255,7 +253,7 @@ router.post('/', async (req, res, next) => {
             name = 'New Group',
             layoutId = 'single',
             color = '#a855f7',
-            canvasPosition = { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
+            canvasPosition = null,
             visibility = 'group',
             isExplicit = true,
             slots = [],
@@ -531,7 +529,7 @@ router.post('/:id/duplicate', async (req, res, next) => {
                 name || `${original.name} (Copy)`,
                 original.layout_id,
                 original.color,
-                JSON.stringify(original.canvas_position || { row: 0, col: 0, rowSpan: 1, colSpan: 1 }),
+                JSON.stringify(original.canvas_position || null),
                 JSON.stringify(original.slots || []),
                 user.id,
                 original.visibility,

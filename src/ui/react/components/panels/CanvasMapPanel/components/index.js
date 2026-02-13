@@ -32,7 +32,7 @@ export {
 } from "../../CompanionPanel";
 
 // QuickOps
-export { VGQuickOpsToolbar } from './QuickOps';
+export { VGActionBar, VGContextBar } from './QuickOps';
 
 // EditModeBar
 export { EditModeBar } from "./EditModeBar/EditModeBar";
@@ -42,10 +42,8 @@ export { CanvasMapBottomPanel } from "./BottomPanel/CanvasMapBottomPanel";
 
 // ContextualPanels
 export {
-  NavigatePanel,
   ViewportsPanel,
   LayoutPanel,
-  LinksPanel,
   TeamPanel,
   MeSubTab,
   TeamSubTab,

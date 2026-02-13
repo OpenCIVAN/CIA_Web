@@ -80,6 +80,38 @@
     flex: 1;
   }
 
+  &__edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border-subtle;
+    background: transparent;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__edit-btn--active {
+    border-color: color-mix(in srgb, $color-accent-cyan 60%, transparent);
+    color: $color-accent-cyan;
+    background: color-mix(in srgb, $color-accent-cyan 18%, transparent);
+  }
+
   &__editing-badge {
     display: inline-flex;
     align-items: center;
@@ -127,6 +159,13 @@
     .map-toolbar__btn {
       width: 22px;
       height: 22px;
+    }
+
+    .map-toolbar__edit-btn {
+      height: 22px;
+      padding: 0 8px;
+      font-size: 9px;
+      gap: 4px;
     }
 
     .map-toolbar__zoom-value {

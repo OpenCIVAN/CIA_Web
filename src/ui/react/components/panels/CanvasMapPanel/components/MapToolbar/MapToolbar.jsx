@@ -1,24 +1,16 @@
 /**
  * @file MapToolbar.jsx
- * @description Mode-specific toolbar for Canvas Map Panel
+ * @description Slim toolbar for Canvas Map Panel V2
  *
- * Shows different controls based on current mode:
- * - Navigate: Zoom, grid labels, display mode, viewports, collaborators, bookmarks
- * - Layout: Zoom, grid labels, display mode, internals, snap, add/merge/split
- * - Links: Zoom, VG/View sub-tabs, create/break link
- * - Collaborate: Zoom, Me/Team sub-tabs, cursors toggle
+ * Always shows: Zoom controls + Fit
+ * Contextual toggles: Viewports, Internals, Bookmarks, Cursors
+ * Remote collaboration: Lock badge + draft toggle
  */
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
-import { AdaptiveTooltip } from '@UI/react/components/atoms/AdaptiveTooltip';
-import {
-  MAP_MODES,
-  LINKS_SUB_TABS,
-  COLLABORATE_SUB_TABS,
-} from '../../utils/constants';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import './MapToolbar.scss';
 
 /**
@@ -51,9 +43,9 @@ const ToolbarBtn = memo(function ToolbarBtn({
   if (!title) return button;
 
   return (
-    <AdaptiveTooltip content={title} placement="bottom" delay={400}>
+    <Tooltip content={title} placement="bottom" delay={400}>
       {button}
-    </AdaptiveTooltip>
+    </Tooltip>
   );
 });
 
@@ -68,60 +60,31 @@ const Separator = memo(function Separator() {
  * MapToolbar - Mode-specific controls
  */
 export const MapToolbar = memo(function MapToolbar({
-  mapMode,
-  showViews,
-  showVGs,
   minimapZoom,
   showViewports,
-  showCollaborators,
   showBookmarks,
   showInternals,
-  linksSubTab,
-  setLinksSubTab,
-  collaborateSubTab,
-  setCollaborateSubTab,
-  onlineCollaboratorsCount,
+  showCursors,
 
   // Handlers
   onZoomIn,
   onZoomOut,
   onResetView,
   toggleShowViewports,
-  toggleShowCollaborators,
   toggleShowBookmarks,
   toggleShowInternals,
-  toggleShowViews,
-  toggleShowVGs,
-
-  // Action handlers
-  onAddVG,
-  onMergeVG,
-  onSplitVG,
-  onCreateLink,
-  onBreakLink,
-
-  // Edit mode (transactional editing)
-  isEditMode = false,
-  onEditLayout,
-  onCommit,
-  onDiscard,
-  pendingChangeCount = 0,
-
-  // Debug: implicit VGs
-  showImplicitVGs,
-  toggleShowImplicitVGs,
+  toggleShowCursors,
 
   // Remote collaboration
   remoteLock,
+  isEditMode = false,
   hasRemoteDraft,
   showRemoteDraft,
   toggleShowRemoteDraft,
+  onEditLayout,
 
   sizeMode = 'standard',
 }) {
-  const isCompact = sizeMode === 'compact';
-  const showLabels = !isCompact;
-
   return (
     <div className="map-toolbar" data-size-mode={sizeMode}>
       {/* Zoom controls - always visible */}
@@ -129,153 +92,40 @@ export const MapToolbar = memo(function MapToolbar({
       <span className="map-toolbar__zoom-value">{minimapZoom}%</span>
       <ToolbarBtn icon="zoomIn" onClick={onZoomIn} title="Zoom in" />
       {onResetView && (
-        <ToolbarBtn icon="aspectRatio" onClick={onResetView} title="Reset view" />
+        <ToolbarBtn icon="aspectRatio" onClick={onResetView} title="Fit to canvas" />
       )}
 
       <Separator />
 
-      {/* View layer toggles */}
+      {/* Layer toggles — always available */}
       <ToolbarBtn
-        icon="viewGroup"
-        active={showVGs}
-        onClick={toggleShowVGs}
-        title="ViewGroups"
+        icon="iframe"
+        active={showViewports}
+        onClick={toggleShowViewports}
+        title="Viewports"
+        activeColor="var(--accent-cyan)"
+      />
+      <ToolbarBtn
+        icon="grid3x3"
+        active={showInternals}
+        onClick={toggleShowInternals}
+        title="Internals"
+        activeColor="var(--accent-green)"
+      />
+      <ToolbarBtn
+        icon="bookmark"
+        active={showBookmarks}
+        onClick={toggleShowBookmarks}
+        title="Bookmarks"
+        activeColor="var(--accent-amber)"
+      />
+      <ToolbarBtn
+        icon="users"
+        active={showCursors}
+        onClick={toggleShowCursors}
+        title="Show cursors"
         activeColor="var(--accent-purple)"
       />
-      <ToolbarBtn
-        icon="view"
-        active={showViews}
-        onClick={toggleShowViews}
-        title="Views"
-        activeColor="var(--accent-blue)"
-      />
-      {toggleShowImplicitVGs && (
-        <ToolbarBtn
-          icon="eye"
-          active={showImplicitVGs}
-          onClick={toggleShowImplicitVGs}
-          title={showImplicitVGs ? "Hide implicit VGs" : "Show implicit VGs (debug)"}
-          activeColor="var(--accent-amber)"
-        />
-      )}
-
-      <Separator />
-
-      {/* Mode-specific controls */}
-      {(mapMode === MAP_MODES.NAVIGATE || mapMode === MAP_MODES.LAYOUT) && (
-        <ToolbarBtn
-          icon="iframe"
-          active={showViewports}
-          onClick={toggleShowViewports}
-          title="Viewports"
-          activeColor="var(--accent-cyan)"
-        />
-      )}
-
-      {mapMode === MAP_MODES.NAVIGATE && (
-        <>
-          <ToolbarBtn
-            icon="users"
-            active={showCollaborators}
-            onClick={toggleShowCollaborators}
-            title="Collaborators"
-            activeColor="var(--accent-green)"
-          />
-          <ToolbarBtn
-            icon="bookmark"
-            active={showBookmarks}
-            onClick={toggleShowBookmarks}
-            title="Bookmarks"
-            activeColor="var(--accent-amber)"
-          />
-        </>
-      )}
-
-      {mapMode === MAP_MODES.LAYOUT && (
-        <>
-          <ToolbarBtn
-            icon="grid3x3"
-            active={showInternals}
-            onClick={toggleShowInternals}
-            title="Internal layouts"
-            activeColor="var(--accent-green)"
-          />
-          <Separator />
-          {isEditMode ? (
-            <>
-              <span className="map-toolbar__editing-badge">EDITING</span>
-              {pendingChangeCount > 0 && (
-                <span className="map-toolbar__pending-count">{pendingChangeCount}</span>
-              )}
-              <ToolbarBtn
-                icon="check"
-                onClick={onCommit}
-                title="Commit changes"
-                disabled={pendingChangeCount === 0}
-                activeColor="var(--accent-green)"
-                active
-              />
-              <ToolbarBtn
-                icon="close"
-                onClick={onDiscard}
-                title="Discard changes"
-                activeColor="var(--accent-red)"
-                active
-              />
-            </>
-          ) : (
-            <>
-              {onEditLayout && (
-                <ToolbarBtn icon="pencil" onClick={onEditLayout} title="Edit Layout" />
-              )}
-              {!isCompact && (
-                <>
-                  <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
-                  <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
-                  <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
-                </>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {mapMode === MAP_MODES.LINKS && (
-        <>
-          <ToggleGroup
-            options={[
-              { value: LINKS_SUB_TABS.VG, label: showLabels ? 'VG' : undefined, icon: 'package' },
-              { value: LINKS_SUB_TABS.VIEW, label: showLabels ? 'View' : undefined, icon: 'layers' },
-            ]}
-            value={linksSubTab}
-            onChange={setLinksSubTab}
-            variant="segmented"
-            size="sm"
-          />
-          {!isCompact && (
-            <>
-              <Separator />
-              <ToolbarBtn icon="link2" onClick={onCreateLink} title="Create link" />
-              <ToolbarBtn icon="unlink2" onClick={onBreakLink} title="Break link" />
-            </>
-          )}
-        </>
-      )}
-
-      {mapMode === MAP_MODES.TEAM && (
-        <>
-          <ToggleGroup
-            options={[
-              { value: COLLABORATE_SUB_TABS.ME, label: showLabels ? 'Me' : undefined },
-              { value: COLLABORATE_SUB_TABS.TEAM, label: showLabels ? `Team (${onlineCollaboratorsCount})` : undefined },
-            ]}
-            value={collaborateSubTab}
-            onChange={setCollaborateSubTab}
-            variant="segmented"
-            size="sm"
-          />
-        </>
-      )}
 
       {/* Remote lock badge */}
       {remoteLock && !isEditMode && (
@@ -298,7 +148,16 @@ export const MapToolbar = memo(function MapToolbar({
 
       <div className="map-toolbar__spacer" />
 
-      {isCompact && <ToolbarBtn icon="moreHorizontal" title="More options" />}
+      <button
+        type="button"
+        className={`map-toolbar__edit-btn ${isEditMode ? 'map-toolbar__edit-btn--active' : ''}`}
+        onClick={onEditLayout}
+        disabled={!onEditLayout}
+        title={isEditMode ? 'Editing layout' : 'Edit layout'}
+      >
+        <Icon name="pencil" size={12} />
+        <span>{isEditMode ? 'Editing' : 'Edit'}</span>
+      </button>
     </div>
   );
 });

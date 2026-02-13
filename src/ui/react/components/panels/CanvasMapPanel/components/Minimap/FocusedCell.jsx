@@ -55,6 +55,7 @@ export const FocusedCell = memo(forwardRef(function FocusedCell({
   animationDelay = 0,
 }, ref) {
   const viewType = view?.type ? (VIEW_TYPES[view.type] || null) : null;
+  const metaLabel = view?.datasetName || viewType?.name || view?.type || null;
 
   const className = [
     'minimap__focused-cell',
@@ -112,9 +113,9 @@ export const FocusedCell = memo(forwardRef(function FocusedCell({
           <span className="minimap__focused-cell-name">
             {view.name || 'View'}
           </span>
-          {view.datasetName && (
-            <span className="minimap__focused-cell-dataset">
-              {view.datasetName}
+          {metaLabel && (
+            <span className="minimap__focused-cell-meta">
+              {metaLabel}
             </span>
           )}
           {!targeting && (
@@ -141,7 +142,7 @@ export const FocusedCell = memo(forwardRef(function FocusedCell({
           }}
         >
           <Icon name="plus" size={12} />
-          {targeting ? 'Target' : 'Drop view'}
+          {targeting ? 'Target' : 'Empty'}
         </button>
       )}
     </div>

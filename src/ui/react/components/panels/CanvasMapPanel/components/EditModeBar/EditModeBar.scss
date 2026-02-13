@@ -9,11 +9,23 @@
   align-items: center;
   justify-content: space-between;
   gap: $spacing-sm;
+  row-gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   background: color-mix(in srgb, $color-accent-amber 12%, $color-bg-secondary);
   border-top: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
   border-bottom: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
   flex-shrink: 0;
+  flex-wrap: wrap;
+  container-type: inline-size;
+  container-name: edit-mode-bar;
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
 
   &__status {
     display: flex;
@@ -22,6 +34,8 @@
     color: $color-accent-amber;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   &__label {
@@ -40,6 +54,7 @@
     color: $color-text-secondary;
     font-size: $font-size-xs;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 
     &--warning {
       color: $color-accent-red;
@@ -51,6 +66,11 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: 1 1 260px;
+    min-width: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    row-gap: 4px;
   }
 
   &__btn {
@@ -65,6 +85,7 @@
     cursor: pointer;
     transition: all $transition-fast;
     background: transparent;
+    white-space: nowrap;
 
     &:disabled {
       opacity: 0.4;
@@ -109,6 +130,66 @@
       &:hover:not(:disabled) {
         background: color-mix(in srgb, $color-accent-red 25%, transparent);
       }
+    }
+  }
+
+  &__btn-label {
+    line-height: 1;
+  }
+}
+
+@container edit-mode-bar (max-width: 720px) {
+  .edit-mode-bar__actions {
+    gap: 4px;
+  }
+
+  .edit-mode-bar__btn {
+    padding: 2px 6px;
+  }
+
+  .edit-mode-bar__btn:not(.edit-mode-bar__btn--commit):not(.edit-mode-bar__btn--discard)
+    .edit-mode-bar__btn-label {
+    display: none;
+  }
+}
+
+@container edit-mode-bar (max-width: 560px) {
+  .edit-mode-bar__actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .edit-mode-bar__btn--commit .edit-mode-bar__btn-label,
+  .edit-mode-bar__btn--discard .edit-mode-bar__btn-label {
+    display: none;
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (max-width: 720px) {
+    .edit-mode-bar__actions {
+      gap: 4px;
+    }
+
+    .edit-mode-bar__btn {
+      padding: 2px 6px;
+    }
+
+    .edit-mode-bar__btn:not(.edit-mode-bar__btn--commit):not(.edit-mode-bar__btn--discard)
+      .edit-mode-bar__btn-label {
+      display: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .edit-mode-bar__actions {
+      flex-basis: 100%;
+      justify-content: flex-start;
+    }
+
+    .edit-mode-bar__btn--commit .edit-mode-bar__btn-label,
+    .edit-mode-bar__btn--discard .edit-mode-bar__btn-label {
+      display: none;
     }
   }
 }

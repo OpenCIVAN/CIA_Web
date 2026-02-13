@@ -190,10 +190,10 @@ export const DimensionControls = memo(function DimensionControls({
     : '';
 
   return (
-    <div className="dim-controls">
-      {/* Row 1: Internal grid */}
-      <div className="dim-controls__row">
-        <span className="dim-controls__label">Internal:</span>
+    <div className="dim-controls dim-controls--inline">
+      {/* Internal group */}
+      <div className="dim-controls__group">
+        <span className="dim-controls__label">INT</span>
         <button
           type="button"
           className="dim-controls__btn"
@@ -227,9 +227,11 @@ export const DimensionControls = memo(function DimensionControls({
         >+</button>
       </div>
 
-      {/* Row 2: Footprint */}
-      <div className="dim-controls__row">
-        <span className="dim-controls__label">Footprint:</span>
+      <span className="dim-controls__divider">|</span>
+
+      {/* Footprint group */}
+      <div className="dim-controls__group">
+        <span className="dim-controls__label">FTP</span>
         <button
           type="button"
           className="dim-controls__btn"

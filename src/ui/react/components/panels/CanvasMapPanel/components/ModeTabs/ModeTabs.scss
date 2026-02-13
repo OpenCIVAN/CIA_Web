@@ -13,10 +13,11 @@
   &__tab {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 3px;
-    padding: 9px 6px 10px;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 8px;
     border: none;
     background: transparent;
     color: $color-text-muted;
@@ -60,7 +61,7 @@
   // Compact mode - icon only
   &[data-size-mode="compact"] {
     .mode-tabs__tab {
-      padding: 7px 4px 8px;
+      padding: 6px 4px;
     }
   }
 

@@ -11,11 +11,12 @@
  * - Understand linking relationships between VGs and Views
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { PanelShell, CHROME_LEVELS, usePanelShell } from '@UI/react/components/panels/PanelShell';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { COMPANION_PANEL_ID } from '@UI/react/components/panels/CompanionPanel';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
+import { WorkspaceSelector } from '@UI/react/components/molecules/WorkspaceSelector/WorkspaceSelector';
 import { CanvasMapContent } from './CanvasMapContent';
 
 // Panel ID constant for external access
@@ -51,6 +52,15 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
     togglePanel(COMPANION_PANEL_ID);
   }, [togglePanel]);
 
+  const handleEditToggle = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('cia:canvas-map-edit'));
+  }, []);
+
+  const currentWorkspace = useMemo(() => {
+    if (!workspaceId || !workspaces?.length) return null;
+    return workspaces.find(ws => ws.id === workspaceId) || { id: workspaceId, name: workspaceId.slice(0, 8) };
+  }, [workspaceId, workspaces]);
+
   // Listen for toggle event (keyboard shortcut 'm')
   useEffect(() => {
     const handleToggle = () => {
@@ -85,19 +95,50 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
   return (
     <PanelShell
       panelId={CANVAS_MAP_PANEL_ID}
-      title="Canvas"
+      title="Canvas Map"
       icon="map"
       chrome={CHROME_LEVELS.FULL}
       color="#3b82f6"
-      headerActions={(
-        <button
-          className="panel-header__button"
-          onClick={handleCompanionToggle}
-          title={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
-          type="button"
+      renderHeaderContent={() => (
+        <div
+          className="canvas-map-header"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
-          <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
-        </button>
+          <span className="canvas-map-header__title">Canvas Map</span>
+          <span className="canvas-map-header__separator">·</span>
+          {currentWorkspace && (
+            <WorkspaceSelector
+              workspace={currentWorkspace}
+              workspaces={workspaces || []}
+              onSelect={(ws) => onOpenWorkspace?.(ws.id)}
+              hideLabel
+            />
+          )}
+          {!currentWorkspace && (
+            <span className="canvas-map-header__workspace-empty">No workspace</span>
+          )}
+        </div>
+      )}
+      headerActions={(
+        <>
+          <button
+            className="panel-header__button"
+            onClick={handleEditToggle}
+            title="Edit layout"
+            type="button"
+          >
+            <Icon name="pencil" size={12} />
+          </button>
+          <button
+            className="panel-header__button"
+            onClick={handleCompanionToggle}
+            title={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
+            type="button"
+          >
+            <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
+          </button>
+        </>
       )}
       defaultWidth={380}
       defaultHeight={600}

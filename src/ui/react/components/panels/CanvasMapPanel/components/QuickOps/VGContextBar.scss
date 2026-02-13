@@ -1,0 +1,166 @@
+/**
+ * VGContextBar styles
+ * Context bar shown below minimap for selected/focused VG
+ */
+
+@use "theme" as *;
+
+.vg-context-stack {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.vg-context-stack--solo {
+  .vg-context-bar {
+    border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 25%, transparent);
+  }
+}
+
+.vg-context-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  flex-shrink: 0;
+
+  background: color-mix(in srgb, var(--vg-color) 12%, $color-bg-secondary);
+  border-top: 1px solid color-mix(in srgb, var(--vg-color) 25%, transparent);
+  border-bottom: 0;
+  animation: vg-context-bar-slide-up 0.2s $ease-out-expo;
+
+  user-select: none;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: $radius-xs;
+    flex-shrink: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    border-radius: $radius-sm;
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    transition: background $transition-fast;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: color-mix(in srgb, var(--vg-color) 12%, transparent);
+    }
+  }
+
+  &__rename-icon {
+    opacity: 0;
+    color: $color-text-tertiary;
+    transition: opacity $transition-fast;
+
+    .vg-context-bar__name:hover & {
+      opacity: 0.7;
+    }
+  }
+
+  &__name-input {
+    font-size: var(--font-size-sm);
+    font-weight: $font-weight-semibold;
+    font-family: inherit;
+    padding: 2px 4px;
+    border: 1px solid color-mix(in srgb, var(--vg-color) 50%, transparent);
+    border-radius: $radius-sm;
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+    outline: none;
+    min-width: 60px;
+    max-width: 140px;
+
+    &:focus {
+      border-color: var(--vg-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--vg-color) 20%, transparent);
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--vg-color) 15%, transparent);
+      color: $color-text-primary;
+    }
+
+    &--danger {
+      color: $color-accent-red;
+
+      &:hover {
+        background: color-mix(in srgb, $color-accent-red 15%, transparent);
+      }
+    }
+
+    &--close {
+      color: $color-text-muted;
+      margin-left: $spacing-xs;
+
+      &:hover {
+        background: $color-glass-medium;
+        color: $color-text-primary;
+      }
+    }
+  }
+
+  &__dimensions {
+    display: flex;
+    align-items: center;
+    padding: 4px $spacing-sm $spacing-xs;
+    background: color-mix(in srgb, var(--vg-color) 8%, $color-bg-secondary);
+    border-top: 1px solid color-mix(in srgb, var(--vg-color) 20%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 20%, transparent);
+  }
+}
+
+@keyframes vg-context-bar-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

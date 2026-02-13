@@ -6,7 +6,6 @@ import { LeftPanel } from './index';
 import { FilesPanelContent } from './tabs/FilesTab';
 import { DatasetsPanelContent } from './tabs/DatasetsTab';
 import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
-import { LayoutPanelContent } from './tabs/LayoutTab';
 import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
 import { BookmarksFiltersPanelContent } from './tabs/BookmarksFiltersTab';
@@ -180,17 +179,7 @@ export const InstanceToolsTab = {
     },
 };
 
-export const LayoutTab = {
-    render: () => <LayoutPanelContent workspaceId="ws-1" />,
-    decorators: [TabDecorator],
-    parameters: {
-        docs: {
-            description: {
-                story: 'Layout tab with infinite canvas navigator, view mode controls, arrangement grid, and workspace member visibility.',
-            },
-        },
-    },
-};
+// LayoutTab story removed — LayoutPanel superseded by CanvasMapPanel
 
 export const AnnotationsTab = {
     render: () => <AnnotationsPanelContent workspaceId="ws-1" />,

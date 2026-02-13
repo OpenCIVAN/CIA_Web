@@ -55,9 +55,9 @@
   }
 
   // Mode-specific color theming
-  &--navigate {
-    --mode-color: #{$color-accent-blue};
-    --mode-color-rgb: var(--color-accent-blue-rgb);
+  &--viewports {
+    --mode-color: #{$color-accent-cyan};
+    --mode-color-rgb: var(--color-accent-cyan-rgb);
   }
 
   &--layout {
@@ -65,15 +65,22 @@
     --mode-color-rgb: var(--color-accent-green-rgb);
   }
 
-  &--links {
-    --mode-color: #{$color-accent-purple};
-    --mode-color-rgb: var(--color-accent-purple-rgb);
-  }
-
   &--team {
     --mode-color: #{$color-accent-amber};
     --mode-color-rgb: var(--color-accent-amber-rgb);
   }
+
+  // Compact WorkspaceSelector in header
+  .panel-header__actions .workspace-selector {
+    max-width: 120px;
+    font-size: $font-size-xs;
+
+    .workspace-selector__trigger {
+      padding: 2px 6px;
+      font-size: $font-size-xs;
+    }
+  }
+
 
   // -------------------------------------------------------------------------
   // Main Layout
@@ -102,7 +109,7 @@
   &__minimap-row {
     display: flex;
     align-items: stretch;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     background: $color-bg-canvas;
   }
 
@@ -161,54 +168,6 @@
   }
 
   // -------------------------------------------------------------------------
-  // Breadcrumb (focused VG navigation)
-  // -------------------------------------------------------------------------
-  &__breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    background: color-mix(in srgb, var(--vg-color) 15%, $color-bg-secondary);
-    border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 30%, transparent);
-    animation: breadcrumb-slide-down 0.2s $ease-out-expo;
-  }
-
-  &__breadcrumb-back {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    background: $color-bg-tertiary;
-    color: $color-text-secondary;
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-bg-secondary;
-      color: $color-text-primary;
-    }
-  }
-
-  &__breadcrumb-sep {
-    color: $color-text-muted;
-  }
-
-  &__breadcrumb-current {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  &__breadcrumb-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: $radius-xs;
-  }
-
-  // -------------------------------------------------------------------------
   // Minimap Container - Takes 55% of available space
   // -------------------------------------------------------------------------
   &__minimap-container {
@@ -219,68 +178,9 @@
     position: relative;
   }
 
-  &__focus-toolbar-wrapper {
-    position: absolute;
-    top: $spacing-sm;
-    right: $spacing-sm;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-    z-index: 6;
-    pointer-events: none;
-  }
-
-  &__focus-toolbar-name {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    background: color-mix(in srgb, var(--vg-color) 16%, $color-glass-panel);
-    border: 1px solid color-mix(in srgb, var(--vg-color) 40%, transparent);
-    border-radius: $radius-md;
-    color: $color-text-primary;
-    font-size: 10px;
-    font-weight: $font-weight-semibold;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  &__focus-toolbar {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px;
-    background: color-mix(in srgb, var(--vg-color) 18%, $color-glass-panel);
-    border: 1px solid color-mix(in srgb, var(--vg-color) 45%, transparent);
-    border-radius: $radius-md;
-    box-shadow: var(--shadow-md);
-    pointer-events: auto;
-  }
-
-  &__focus-btn {
-    border: 0;
-    background: $color-glass-panel;
-    color: $color-text-primary;
-    width: 28px;
-    height: 28px;
-    border-radius: $radius-sm;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-glass-medium;
-    }
-
-    &--danger {
-      color: $color-accent-red;
-    }
+  // Amber top-border on minimap during edit mode
+  &[data-edit-mode] .canvas-map-v2__minimap-container {
+    border-top: 2px solid $color-accent-amber;
   }
 
   // -------------------------------------------------------------------------
@@ -366,10 +266,6 @@
   // Size Mode Responsive Adjustments
   // -------------------------------------------------------------------------
   &[data-size-mode="compact"] {
-    .canvas-map-v2__breadcrumb {
-      padding: $spacing-xs $spacing-sm;
-    }
-
     // Minimap takes more space in compact mode
     .canvas-map-v2__minimap-container {
       min-height: 120px;
@@ -423,18 +319,51 @@
   }
 }
 
-// ─── Transition animations (Phase 5: Polish) ─────────────────────────────────
-
-@keyframes breadcrumb-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 // Note: Component styles are imported directly in their respective JSX files
 // This file only contains the main panel layout styles
+
+// ---------------------------------------------------------------------------
+// Panel Header Content (Canvas Map)
+// ---------------------------------------------------------------------------
+
+.canvas-map-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.canvas-map-header__title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.canvas-map-header__separator {
+  color: $color-text-muted;
+  margin-top: -1px;
+}
+
+.canvas-map-header__workspace-empty {
+  font-size: 10px;
+  color: $color-text-muted;
+  white-space: nowrap;
+}
+
+.canvas-map-header .workspace-selector {
+  max-width: 200px;
+}
+
+.canvas-map-header .workspace-selector__trigger {
+  min-width: 0;
+  padding: 2px 6px;
+  gap: 6px;
+  border-radius: $radius-sm;
+}
+
+.canvas-map-header .workspace-selector__name {
+  font-size: 11px;
+}

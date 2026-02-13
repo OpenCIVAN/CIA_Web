@@ -9,7 +9,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TabButton } from '@UI/react/components/molecules';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
-import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
 import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
 import { DwellIndicator } from '@UI/react/components/atoms/DwellIndicator';
 import './LeftPanel.scss';
@@ -78,9 +77,6 @@ export function LeftActivityBar() {
     const handlePeekEnd = useCallback((tabId) => {
         endPeek?.('left');
     }, [endPeek]);
-
-    // Navigator state from context
-    const { isFloating: navigatorOpen, toggleNavigator } = useNavigatorButton();
 
     // Track scratchpad and canvasOps state via events
     const [scratchpadOpen, setScratchpadOpen] = useState(false);
@@ -159,17 +155,8 @@ export function LeftActivityBar() {
             {/* Spacer pushes bottom items down */}
             <div className="left-panel__activity-spacer" />
 
-            {/* Bottom items: Nav, Notes, Ops */}
+            {/* Bottom items: Notes, Ops */}
             <div className="left-panel__activity-bottom">
-                <TabButton
-                    icon="map"
-                    label="Navigator"
-                    color="teal"
-                    variant="etched"
-                    iconOnly
-                    active={navigatorOpen}
-                    onClick={toggleNavigator}
-                />
                 <TabButton
                     icon="stickyNote"
                     label="Notes"

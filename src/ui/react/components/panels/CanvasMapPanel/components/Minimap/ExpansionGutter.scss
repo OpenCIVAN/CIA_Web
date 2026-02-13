@@ -1,0 +1,56 @@
+/**
+ * ExpansionGutter styles
+ * Hover zones at grid edges for canvas expansion
+ */
+
+@use "theme" as *;
+
+.expansion-gutter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 3;
+
+  &__zone {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    color: $color-accent-teal;
+
+    &:hover {
+      opacity: 1;
+      background: color-mix(in srgb, $color-accent-teal 8%, transparent);
+      border: 1px dashed $color-accent-teal;
+    }
+
+    &--top {
+      top: calc(var(--gutter-size) * -1);
+      left: 0;
+      border-radius: $radius-sm $radius-sm 0 0;
+    }
+
+    &--bottom {
+      left: 0;
+      border-radius: 0 0 $radius-sm $radius-sm;
+    }
+
+    &--left {
+      top: 0;
+      left: calc(var(--gutter-size) * -1);
+      border-radius: $radius-sm 0 0 $radius-sm;
+    }
+
+    &--right {
+      top: 0;
+      border-radius: 0 $radius-sm $radius-sm 0;
+    }
+  }
+}

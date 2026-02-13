@@ -13,7 +13,7 @@ export { LinkItem } from './LinkItem';
 export { FloatingDPad } from './FloatingDPad';
 
 // Re-export from atoms (consolidated)
-export { AdaptiveTooltip } from '@UI/react/components/atoms/AdaptiveTooltip';
+export { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 // Re-export from molecules (consolidated)
 export { SquareDPad, SimpleDPad } from '@UI/react/components/molecules/DPadNav';

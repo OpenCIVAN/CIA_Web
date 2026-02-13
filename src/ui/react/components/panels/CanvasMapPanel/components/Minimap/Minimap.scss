@@ -15,6 +15,10 @@
   --label-bg: #{$color-bg-primary};
   --label-border: #{$color-border-default};
   --fade-color: #{$color-bg-primary};
+  --minimap-label-major: #{$color-text-secondary};
+  --minimap-label-active: #{$color-text-tertiary};
+  --minimap-label-inactive: #{$color-text-muted};
+  --minimap-outline-color: #{color-mix(in srgb, $color-border-subtle 70%, transparent)};
 
   position: relative;
   flex: 1;
@@ -107,6 +111,7 @@
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
     color: $color-accent-amber;
+    text-align: center;
 
     &:not(:last-child) {
       margin-right: var(--grid-gap);
@@ -148,13 +153,14 @@
   &__row-header {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    padding-right: $spacing-xs;
+    justify-content: center;
+    padding-right: 0;
     font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
     color: $color-accent-amber;
     min-width: var(--header-size);
+    text-align: center;
 
     &:not(:last-child) {
       margin-bottom: var(--grid-gap);
@@ -168,12 +174,29 @@
     overflow: hidden;
   }
 
-  &__grid-lines {
+  &__grid-cells {
     position: absolute;
     top: 0;
     left: 0;
     z-index: 1;
     pointer-events: none;
+  }
+
+  &__grid-cell {
+    fill: color-mix(in srgb, $color-glass-light 55%, transparent);
+    stroke: color-mix(in srgb, $color-border-subtle 65%, transparent);
+    stroke-width: 0.7;
+  }
+
+  &__grid-cell--extra {
+    fill: color-mix(in srgb, $color-glass-light 20%, transparent);
+    stroke: color-mix(in srgb, $color-border-subtle 40%, transparent);
+    opacity: 0.5;
+  }
+
+  &__grid-outline {
+    stroke: var(--minimap-outline-color);
+    opacity: 0.6;
   }
 
   &__grid-content {
@@ -198,60 +221,32 @@
 
   &__focused-overlay {
     position: absolute;
-    z-index: 6;
-    // Allow pointer events to pass through to grid for panning,
-    // but children with pointer-events: auto (cells, header) remain interactive
-    pointer-events: none;
-    // Ensure background taps reach minimap for panning
-    touch-action: none;
-    // Phase 5: zoom-in entrance animation
-    animation: focus-zoom-in 0.25s $ease-out-expo;
-    transform-origin: center center;
-  }
-
-  &__focused-header {
-    position: absolute;
-    top: -26px;
-    left: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    background: color-mix(in srgb, var(--vg-color) 18%, $color-glass-panel);
-    border: 1px solid color-mix(in srgb, var(--vg-color) 50%, transparent);
-    border-radius: $radius-md;
-    pointer-events: auto;
-    box-shadow: var(--shadow-md);
-    // Phase 5: slide-down entrance
-    animation: focus-header-in 0.2s $ease-out-expo;
-  }
-
-  &__focused-name {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    border: 0;
-    color: $color-text-primary;
-    font-size: 11px;
-    font-weight: $font-weight-semibold;
-    cursor: pointer;
-  }
-
-  &__focused-name-input {
-    background: $color-glass-panel;
-    border: 1px solid color-mix(in srgb, var(--vg-color) 60%, transparent);
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-size: 11px;
-    padding: 2px 6px;
-    min-width: 120px;
-  }
-
-  &__focused-cells {
-    position: absolute;
     inset: 0;
-    pointer-events: none;
+    z-index: 6;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    background: color-mix(in srgb, $color-bg-primary 82%, transparent);
+    backdrop-filter: blur(6px);
+    animation: focus-zoom-in 0.25s $ease-out-expo;
+  }
+
+  &__focused-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__focused-grid {
+    position: relative;
+    border-radius: $radius-lg;
+    background: $color-glass-panel;
+    border: 1px solid $color-border-subtle;
+    box-shadow: $shadow-glass-lg;
+    overflow: hidden;
   }
 
   &__focused-cell {
@@ -265,12 +260,11 @@
     text-align: center;
     pointer-events: auto;
     color: $color-text-muted;
-    font-size: 9px;
+    font-size: clamp(9px, 1.8vw, 12px);
     gap: 4px;
-    padding: 4px;
+    padding: 6px;
     overflow: hidden;
-    // Inherit grab cursor from minimap for panning
-    cursor: inherit;
+    cursor: pointer;
     // Phase 5: staggered entrance animation
     animation: cell-fade-in 0.2s ease backwards;
     // Phase 5: smooth state transitions
@@ -290,7 +284,7 @@
   }
 
   &__focused-cell-name {
-    font-size: 9px;
+    font-size: clamp(9px, 1.8vw, 12px);
     line-height: 1.2;
     max-width: 100%;
     overflow: hidden;
@@ -303,7 +297,7 @@
     align-items: center;
     gap: 4px;
     color: $color-text-muted;
-    font-size: 9px;
+    font-size: clamp(9px, 1.8vw, 12px);
     background: transparent;
     border: 0;
     cursor: pointer;
@@ -403,9 +397,11 @@
     align-items: center;
   }
 
-  &__focused-cell-dataset {
-    font-size: 8px;
+  &__focused-cell-meta {
+    font-size: clamp(8px, 1.4vw, 10px);
     color: $color-text-muted;
+    font-family: $font-family-mono;
+    letter-spacing: 0.2px;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -431,6 +427,98 @@
       color: $color-accent-red;
       background: $color-glass-strong;
     }
+  }
+
+  &__focused-toolbar {
+    margin: 0 $spacing-md $spacing-md;
+    padding: 5px 6px;
+    border-radius: $radius-lg;
+    background: $color-glass-strong;
+    border: 1px solid $color-border-subtle;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+    box-shadow: $shadow-glass-lg;
+    align-self: center;
+    flex-wrap: nowrap;
+    max-width: min(320px, 100%);
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      height: 0;
+      width: 0;
+    }
+  }
+
+  &__focused-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border-subtle;
+    background: $color-glass-medium;
+    color: $color-text-secondary;
+    font-size: 8.5px;
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-strong;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__focused-toolbar-btn--editor {
+    border-color: color-mix(in srgb, $color-accent-cyan 35%, transparent);
+    background: color-mix(in srgb, $color-accent-cyan 18%, $color-glass-medium);
+    color: $color-accent-cyan;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__focused-toolbar-btn--back {
+    border-color: $color-border-subtle;
+    background: $color-glass-medium;
+    color: $color-text-secondary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__focused-toolbar-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: $radius-sm;
+    border: 1px solid transparent;
+    background: transparent;
+    color: $color-text-secondary;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &--disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
+  &__focused-toolbar-sep {
+    width: 1px;
+    height: 18px;
+    background: $color-border-subtle;
   }
 
   &__grid-paper {
@@ -709,9 +797,9 @@
 
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 6px;
 
   &:hover {
     background: color-mix(in srgb, var(--vg-color) 35%, transparent);
@@ -751,18 +839,28 @@
     .vg-block__name {
       opacity: 0.6;
       font-size: 8px;
+      background: transparent;
+      border: 0;
+      color: color-mix(in srgb, var(--vg-color) 70%, $color-text-muted);
     }
   }
 
   &__name {
-    font-size: 9px;
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-size: 10px;
     font-weight: $font-weight-semibold;
-    color: var(--vg-color);
+    color: $color-text-primary;
     text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 100%;
+    max-width: calc(100% - 12px);
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, var(--vg-color) 18%, $color-bg-primary);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 45%, transparent);
   }
 
   &__internals {
@@ -945,12 +1043,15 @@
     position: absolute;
     top: 3px;
     left: 3px;
-    font-size: 8px;
+    font-size: 9px;
     font-weight: $font-weight-semibold;
-    color: white;
-    background: var(--accent-cyan);
-    padding: 2px 5px;
-    border-radius: 3px;
+    color: var(--accent-cyan);
+    background: color-mix(in srgb, var(--accent-cyan) 20%, $color-bg-primary);
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 65%, transparent);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
 }
 

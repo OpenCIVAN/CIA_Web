@@ -285,18 +285,18 @@ const BREAKPOINTS = {
 
 ## Panel Architecture Summary
 
-| Panel | Type | Chrome | Layout | Content |
-|-------|------|--------|--------|---------|
-| **Canvas Control** | Floating (persistent) | FULL | Tabbed (modes) | Minimap + mode controls |
-| **Instance Tools** | Floating (contextual) | FULL | Tabbed | Controls/Layers/Links + Widgets |
-| **Link Manager** | Floating (on-demand) | FULL | Standard | All link groups |
-| **Files** | Left panel tab | - | Standard | Project files |
-| **Datasets** | Left panel tab | - | Standard | Workspace datasets |
-| **Annotations** | Left panel tab | - | Standard | Workspace annotations |
-| **People** | Right panel tab | - | Standard | Presence, viewports |
-| **Chat** | Right panel tab | - | Standard | Room chat |
-| **Voice** | Right panel tab | - | Standard | Room voice |
-| **Settings** | Right panel tab | - | Standard | User/workspace settings |
+| Panel | Type | Chrome | Layout | Content | Status |
+|-------|------|--------|--------|---------|--------|
+| **Canvas Control** | PanelShell (persistent) | FULL | Tabbed (modes) | Minimap + mode controls | ✅ Implemented |
+| **Instance Tools** | PanelShell (contextual) | FULL | Tabbed | Controls/Layers/Links + Widgets | ✅ Implemented |
+| **Link Manager** | Floating (on-demand) | FULL | Standard | All link groups | ⏳ Not started |
+| **Files** | Left panel tab | - | Standard | Project files | ⏳ Still in LeftPanel |
+| **Datasets** | Left panel tab | - | Standard | Workspace datasets | ⏳ Still in LeftPanel |
+| **Annotations** | Left panel tab | - | Standard | Workspace annotations | ⏳ Still in LeftPanel |
+| **People** | Right panel tab | - | Standard | Presence, viewports | ⏳ Still in RightPanel |
+| **Chat** | Right panel tab | - | Standard | Room chat | ⏳ Still in RightPanel |
+| **Voice** | Right panel tab | - | Standard | Room voice | ⏳ Still in RightPanel |
+| **Settings** | Right panel tab | - | Standard | User/workspace settings | ⏳ Still in RightPanel |
 
 ---
 
@@ -326,13 +326,42 @@ const BREAKPOINTS = {
 
 ---
 
+## Implementation Status (Updated February 2026)
+
+| Component | Design Status | Implementation Status |
+|-----------|--------------|----------------------|
+| **PanelShell** (FULL/COMPACT/MINIMAL) | ✅ Complete | ✅ Implemented — `panels/PanelShell/` |
+| **Canvas Control** (CanvasMapPanel) | ✅ Complete | ✅ Implemented — `panels/CanvasMapPanel/` with Navigate/Layout/Links/Collaborate modes |
+| **Instance Tools** (VGEditorPanel) | ✅ Complete | ✅ Implemented — `panels/VGEditor/` with Controls/Layers/Links tabs |
+| **Navigator tab** (old LeftPanel) | N/A | ✅ Deleted — absorbed into CanvasMapPanel |
+| **Layout tab** (old LeftPanel) | N/A | ✅ Deleted — absorbed into CanvasMapPanel |
+| **Views tab** (old LeftPanel) | N/A | ✅ Removed from registry — absorbed into CanvasMapPanel |
+| **FloatingCanvasNavigator** | N/A | ✅ Deleted — superseded by CanvasMapPanel |
+| **LayoutPanel UI** (subtabs, components) | N/A | ✅ Deleted — context/logic hooks retained for consumers |
+| **Unified Filter System** | ✅ Complete | ✅ Implemented — `useUnifiedFilter` hook + `FilterToolbar` |
+| **Link Manager** | Design needed | ⏳ Not started |
+| **Files/Datasets → PanelShell** | Design needed | ⏳ Still in LeftPanel tabs |
+| **Chat/People → PanelShell** | Design needed | ⏳ Still in RightPanel tabs |
+
+### Key Cleanup (February 2026)
+
+The LayoutPanel extraction cleaned up ~16,000 lines of legacy code:
+
+- **Deleted:** NavigatorTab, LayoutTab, ViewsTab (from LeftPanel registry)
+- **Deleted:** LayoutPanel.jsx, FloatingCanvasNavigator, CanvasNavigator, SpawnSizePicker, all subtabs
+- **Kept:** `LayoutPanelContext.js` and `LayoutPanel.logic.js` (still consumed by `useViewContextLogic` and `PopoutButtons`)
+- **Moved:** Layout constants (`BUILTIN_LAYOUTS`, `VIEW_TYPES`) to `src/ui/react/constants/layouts.js`
+
+---
+
 ## Open Questions / Next Steps
 
 1. **VG siblings visibility** - Is "In: Brain Analysis (3 views)" enough, or show sibling list in Instance Tools?
 2. **Link Manager design** - Need to prototype the global link manager floating panel
 3. **VG Builder** - Need detailed design for explicit VG creation in Layout mode
 4. **Template system** - How templates are saved, organized, shared
-5. **API contracts** - Define TypeScript interfaces for PanelShell, panel registration, dock groups
+5. ~~**API contracts** - Define TypeScript interfaces for PanelShell, panel registration, dock groups~~ ✅ PanelShell API implemented
+6. **LayoutPanelContext deprecation** - Migrate remaining consumers (`useViewContextLogic`, `PopoutButtons`) to direct store access, then delete
 
 ---
 
@@ -404,3 +433,4 @@ I'd like to continue with [API contracts / Link Manager design / VG Builder / im
 ---
 
 *Memory log created: January 28, 2025*
+*Updated: February 12, 2026 — Added implementation status, cleanup summary*

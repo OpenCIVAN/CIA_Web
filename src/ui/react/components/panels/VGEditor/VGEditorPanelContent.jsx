@@ -23,7 +23,7 @@
 import React, { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useVGEditor } from '@UI/react/context/VGEditorContext';
-import { BUILTIN_LAYOUTS, VIEW_TYPES, getLayoutCapacity, getLayoutById } from '../LeftPanel/tabs/LayoutTab/constants/layouts';
+import { BUILTIN_LAYOUTS, VIEW_TYPES, getLayoutCapacity, getLayoutById } from '@UI/react/constants/layouts';
 import { viewConfigurationManager } from '@Core/data/managers/ViewConfigurationManager';
 import { toast } from '@UI/react/store/toastStore';
 import './VGEditorPanel.scss';

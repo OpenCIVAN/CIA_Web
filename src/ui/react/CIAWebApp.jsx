@@ -62,7 +62,6 @@ import { UnifiedCompanionPanelShell } from "@UI/react/components/panels/Companio
 import { CanvasMapPanel } from "@UI/react/components/panels/CanvasMapPanel";
 import { VGEditorPanelManager } from "@UI/react/components/panels/VGEditor";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
-import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
 import { VRAccessibilityProvider } from "@UI/react/context/VRAccessibilityContext";
 import { AdaptiveProvider, useAdaptive } from "@UI/react/context/AdaptiveContext";
@@ -573,7 +572,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   // Flow direction is derived from canvas, with local state for immediate UI feedback
   const [localFlowDirection, setLocalFlowDirection] = useState("row");
   const flowDirection = canvas?.flowDirection || localFlowDirection;
-  const [isEditMode, setIsEditMode] = useState(false);
   const [activeTool, setActiveTool] = useState("select");
   const [openPopouts, setOpenPopouts] = useState([]);
 
@@ -1091,15 +1089,6 @@ export function CIAWebApp({ username, userId, projectId }) {
     setActiveTool(tool);
     // Dispatch event for canvas to listen to
     window.dispatchEvent(new CustomEvent('canvas:toolChange', { detail: { tool } }));
-  }, []);
-
-  const handleToggleEditMode = useCallback(() => {
-    setIsEditMode((prev) => {
-      const newMode = !prev;
-      // Dispatch event for canvas to listen to
-      window.dispatchEvent(new CustomEvent('canvas:editModeChange', { detail: { editMode: newMode } }));
-      return newMode;
-    });
   }, []);
 
   const handleFlowDirectionChange = useCallback((direction) => {
@@ -1755,8 +1744,6 @@ export function CIAWebApp({ username, userId, projectId }) {
             >
               {/* Floating panels rendered inside LayoutContext */}
               <AllFloatingPanels workspaceId={currentWorkspaceId} />
-              <FloatingCanvasNavigator />
-
               {/* Canvas Map Panel (PanelShell floating panel) */}
               <CanvasMapPanel
                 workspaceId={currentWorkspaceId}

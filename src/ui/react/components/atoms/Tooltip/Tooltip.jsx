@@ -238,6 +238,7 @@ function Tooltip({
     className = '',
     testId
 }) {
+    const childProps = isValidElement(children) ? children.props : {};
     // Get global settings from provider
     const { delayDuration, disableHoverableContent, onTooltipOpen, onTooltipClose } = useTooltipContext();
 
@@ -342,21 +343,41 @@ function Tooltip({
 
     if (trigger === 'hover') {
         eventHandlers = {
-            onMouseEnter: handleShow,
-            onMouseLeave: () => {
-                if (!isInteractive) {
-                    handleHide();
-                } else {
-                    hide();
-                }
+            onMouseEnter: (e) => {
+                handleShow();
+                childProps.onMouseEnter?.(e);
             },
-            onFocus: handleShow,
-            onBlur: () => {
+            onMouseLeave: (e) => {
                 if (!isInteractive) {
                     handleHide();
                 } else {
                     hide();
                 }
+                childProps.onMouseLeave?.(e);
+            },
+            onPointerEnter: (e) => {
+                handleShow();
+                childProps.onPointerEnter?.(e);
+            },
+            onPointerLeave: (e) => {
+                if (!isInteractive) {
+                    handleHide();
+                } else {
+                    hide();
+                }
+                childProps.onPointerLeave?.(e);
+            },
+            onFocus: (e) => {
+                handleShow();
+                childProps.onFocus?.(e);
+            },
+            onBlur: (e) => {
+                if (!isInteractive) {
+                    handleHide();
+                } else {
+                    hide();
+                }
+                childProps.onBlur?.(e);
             }
         };
     } else if (trigger === 'click') {
@@ -375,8 +396,14 @@ function Tooltip({
         };
     } else if (trigger === 'focus') {
         eventHandlers = {
-            onFocus: handleShow,
-            onBlur: handleHide
+            onFocus: (e) => {
+                handleShow();
+                childProps.onFocus?.(e);
+            },
+            onBlur: (e) => {
+                handleHide();
+                childProps.onBlur?.(e);
+            }
         };
     }
 

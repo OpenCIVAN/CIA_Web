@@ -227,7 +227,6 @@ const DEFAULT_WINDOW_SIZE = { width: 860, height: 620 };
 const DEFAULT_WINDOW_OFFSET = { x: 140, y: 120 };
 const WINDOW_OFFSET_STEP = 32;
 const DEFAULT_TOOL_STATE = {
-    editMode: false,
     activeTool: 'select',
     mergeMode: false,
     flowDirection: 'row',
@@ -513,6 +512,9 @@ function CanvasWorkspaceInner({
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
+    // Ref for edit mode snapshot data — avoids TDZ since useViewGroups/useCanvas
+    // are called later but handleEditModeChange is defined earlier
+    const editModeDataRef = useRef({ visibleViewGroups: [], canvas: null });
 
     // Floating panel state
     const [leftPanelOpen, setLeftPanelOpen] = useState(false);
@@ -533,8 +535,8 @@ function CanvasWorkspaceInner({
     const [floatingPosition, setFloatingPosition] = useState({ x: 100, y: 100 });
     const [floatingSize, setFloatingSize] = useState({ width: 800, height: 600 });
 
-    // Header bar state (edit mode, tools, flow)
-    const [editMode, setEditMode] = useState(DEFAULT_TOOL_STATE.editMode);
+    // Header bar state (edit mode derived from transaction store, tools, flow)
+    const editMode = useCanvasHistory((s) => s.mode === 'transactional');
     const [activeTool, setActiveTool] = useState(DEFAULT_TOOL_STATE.activeTool);
     const [mergeMode, setMergeMode] = useState(DEFAULT_TOOL_STATE.mergeMode);
     const [flowDirection, setFlowDirection] = useState(DEFAULT_TOOL_STATE.flowDirection);
@@ -912,7 +914,6 @@ function CanvasWorkspaceInner({
     useEffect(() => {
         if (!activeWorkspaceKey) return;
         const storedState = workspaceToolState[activeWorkspaceKey] || DEFAULT_TOOL_STATE;
-        setEditMode(storedState.editMode);
         setActiveTool(storedState.activeTool);
         setMergeMode(storedState.mergeMode);
         setFlowDirection(storedState.flowDirection);
@@ -924,20 +925,18 @@ function CanvasWorkspaceInner({
             const previous = prev[activeWorkspaceKey] || DEFAULT_TOOL_STATE;
             const next = {
                 ...previous,
-                editMode,
                 activeTool,
                 mergeMode,
                 flowDirection,
             };
             const isSame =
-                previous.editMode === next.editMode &&
                 previous.activeTool === next.activeTool &&
                 previous.mergeMode === next.mergeMode &&
                 previous.flowDirection === next.flowDirection;
             if (isSame) return prev;
             return { ...prev, [activeWorkspaceKey]: next };
         });
-    }, [activeWorkspaceKey, activeTool, editMode, flowDirection, mergeMode]);
+    }, [activeWorkspaceKey, activeTool, flowDirection, mergeMode]);
 
     useEffect(() => {
         if (workspaceViewMode !== 'tabs') return;
@@ -1030,13 +1029,37 @@ function CanvasWorkspaceInner({
         currentRoom,
     ]);
 
-    // Dispatch edit mode changes to CanvasGrid
-    const handleEditModeChange = useCallback((newEditMode, targetCanvasId = activeCanvasId) => {
-        setEditMode(newEditMode);
-        if (!targetCanvasId) return;
-        window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
-            detail: { editMode: newEditMode, canvasId: targetCanvasId }
-        }));
+    // Dispatch edit mode changes — delegates to canvasTransactionStore
+    const handleEditModeChange = useCallback(async (newEditMode, targetCanvasId = activeCanvasId) => {
+        if (newEditMode) {
+            // Enter edit mode via the transaction store (snapshot + lock)
+            const { visibleViewGroups: vgs, canvas: currentCanvas } = editModeDataRef.current;
+            const snapshot = {
+                viewGroups: (vgs || []).map((vg) => ({
+                    id: vg.id,
+                    name: vg.name,
+                    color: vg.color,
+                    position: vg.getCanvasPosition?.() || vg.canvasPosition || null,
+                })),
+                canvasDimensions: {
+                    rows: currentCanvas?.dimensions?.rows || 3,
+                    cols: currentCanvas?.dimensions?.cols || 3,
+                },
+            };
+            const { getUser } = await import('@Services/authService.js');
+            const user = getUser();
+            const userName = user?.name || user?.email || 'Unknown';
+
+            const { enterEditMode } = useCanvasHistory.getState();
+            await enterEditMode(snapshot, {
+                canvasId: targetCanvasId,
+                userName,
+            });
+            return;
+        }
+        // Exiting: commit via store (store dispatches the event)
+        const { commitTransaction } = useCanvasHistory.getState();
+        await commitTransaction();
     }, [activeCanvasId]);
 
     // Dispatch tool changes to CanvasGrid
@@ -1367,6 +1390,9 @@ function CanvasWorkspaceInner({
         selectViewGroup,
         goToViewGroup,
     } = useViewGroups(currentWorkspaceId || projectId);
+
+    // Keep ref in sync for handleEditModeChange (defined earlier, avoids TDZ)
+    editModeDataRef.current = { visibleViewGroups, canvas };
 
     const { isLinked: isViewGroupLinked } = useViewGroupLinks(activeViewGroupId);
     const formattedViewGroups = useMemo(() => (

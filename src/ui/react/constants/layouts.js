@@ -1,8 +1,10 @@
 /**
  * @file layouts.js
- * @description Constants for Layout Tab V4.6
+ * @description Shared layout constants used across the application.
  *
  * Defines built-in layouts, ViewGroup colors, and view types.
+ * Originally from LeftPanel/tabs/LayoutTab/constants/layouts.js,
+ * moved to shared location during LayoutPanel cleanup.
  */
 
 // =============================================================================
@@ -17,11 +19,11 @@ export const BUILTIN_LAYOUTS = [
     { id: 'single', name: 'Single', rows: 1, cols: 1 },
     { id: 'side-by-side', name: 'Side by Side', rows: 1, cols: 2 },
     { id: 'stacked', name: 'Stacked', rows: 2, cols: 1 },
-    { id: '2x2', name: '2×2 Grid', rows: 2, cols: 2 },
+    { id: '2x2', name: '2\u00d72 Grid', rows: 2, cols: 2 },
     { id: '1+2', name: '1 + 2', rows: 2, cols: 2, merged: 'left' },
     { id: '2+1', name: '2 + 1', rows: 2, cols: 2, merged: 'right' },
     { id: '3-up', name: '3-up', rows: 1, cols: 3 },
-    { id: '3x3', name: '3×3 Grid', rows: 3, cols: 3 },
+    { id: '3x3', name: '3\u00d73 Grid', rows: 3, cols: 3 },
 ];
 
 // =============================================================================

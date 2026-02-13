@@ -41,6 +41,7 @@ import './PanelShell.scss';
  * @property {boolean} [minimizable] - Whether panel is minimizable (defaults based on chrome)
  * @property {boolean} [closable=true] - Whether panel is closable
  * @property {React.ReactNode} [headerActions] - Optional header action buttons (rendered before chrome buttons)
+ * @property {(props: {width: number, height: number, sizeMode: string}) => React.ReactNode} [renderHeaderContent] - Optional custom header content renderer
  * @property {() => void} [onClose] - Close callback
  * @property {() => void} [onMinimize] - Minimize callback
  * @property {(width: number, height: number) => void} [onResize] - Resize callback
@@ -71,6 +72,7 @@ export function PanelShell({
   onMove,
   onFocus,
   headerActions,
+  renderHeaderContent,
 }) {
   const { tokens, isVR } = useAdaptive();
   const panelRef = useRef(null);
@@ -175,6 +177,10 @@ export function PanelShell({
     return children;
   };
 
+  const headerContent = renderHeaderContent
+    ? renderHeaderContent({ width, height, sizeMode })
+    : null;
+
   // Build class names
   const classNames = [
     'panel-shell',
@@ -219,6 +225,7 @@ export function PanelShell({
           onMinimize={handleMinimize}
           onClose={handleClose}
           headerActions={headerActions}
+          headerContent={headerContent}
         />
       )}
 

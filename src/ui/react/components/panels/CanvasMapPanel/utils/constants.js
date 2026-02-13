@@ -7,9 +7,8 @@
  * Map operation modes
  */
 export const MAP_MODES = {
-  NAVIGATE: 'navigate',
+  VIEWPORTS: 'viewports',
   LAYOUT: 'layout',
-  LINKS: 'links',
   TEAM: 'team',
 };
 
@@ -17,8 +16,8 @@ export const MAP_MODES = {
  * Mode metadata for UI rendering
  */
 export const MODE_CONFIG = {
-  [MAP_MODES.NAVIGATE]: {
-    id: MAP_MODES.NAVIGATE,
+  [MAP_MODES.VIEWPORTS]: {
+    id: MAP_MODES.VIEWPORTS,
     name: 'Viewports',
     icon: 'frame',
     color: 'cyan',
@@ -38,22 +37,6 @@ export const MODE_CONFIG = {
     color: 'amber',
     description: 'See teammates',
   },
-};
-
-/**
- * Display modes for minimap
- */
-export const DISPLAY_MODES = {
-  VG: 'vg',
-  VIEW: 'view',
-};
-
-/**
- * Sub-tab options for Links mode
- */
-export const LINKS_SUB_TABS = {
-  VG: 'vg',
-  VIEW: 'view',
 };
 
 /**
@@ -108,10 +91,12 @@ export const MINIMAP_CONSTANTS = {
   MAX_ZOOM: 200,
   ZOOM_STEP: 25,
   GRID_GAP: 4,
-  HEADER_SIZE: 24,
+  HEADER_SIZE: 20,
   SCROLL_PADDING: 0,
   EXTRA_GRID_CELLS: 2,
   PAN_PADDING_CELLS: 1,
+  PAN_PADDING_NEG_CELLS: 0.5,
+  PAN_PADDING_POS_CELLS: 3.5,
 };
 
 /**

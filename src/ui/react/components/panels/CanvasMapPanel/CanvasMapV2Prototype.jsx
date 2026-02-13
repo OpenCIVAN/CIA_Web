@@ -11,7 +11,7 @@ import { MapToolbar } from './components/MapToolbar';
 import { Minimap } from './components/Minimap';
 import { QuickNavToolbar } from './components/QuickNavToolbar';
 import { CompanionPanel } from './components/CompanionPanel';
-import { NavigatePanel, LayoutPanel, LinksPanel, TeamPanel } from './components/ContextualPanels';
+import { ViewportsPanel, LayoutPanel, TeamPanel } from './components/ContextualPanels';
 import { MAP_MODES, SIZE_MODE_BREAKPOINTS } from './utils/constants';
 import { getVGDisplayName } from './utils/gridUtils';
 import './CanvasMapPanel.scss';
@@ -391,18 +391,11 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
         </div>
 
         <div className="canvas-map-v2__panel" style={{ minHeight: contextualHeight }}>
-          {state.mapMode === MAP_MODES.NAVIGATE && !state.focusedVGId && (
-            <NavigatePanel
-              bookmarks={MOCK_BOOKMARKS}
-              filteredBookmarks={state.filteredBookmarks}
-              searchQuery={state.searchQuery}
-              setSearchQuery={state.setSearchQuery}
-              onGoHome={handleGoHome}
-              onSetHome={handleSetHome}
-              onFitAll={handleFitAll}
-              onAddBookmark={handleAddBookmark}
-              onBookmarkClick={(bookmark) => console.log('Bookmark', bookmark)}
-              onBookmarkDelete={(id) => console.log('Delete bookmark', id)}
+          {state.mapMode === MAP_MODES.VIEWPORTS && !state.focusedVGId && (
+            <ViewportsPanel
+              viewports={MOCK_VIEWPORTS}
+              selectedViewportId={state.selectedViewportId}
+              onViewportClick={state.handleViewportClick}
               sizeMode={effectiveSizeMode}
             />
           )}
@@ -423,19 +416,6 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
               onVGDoubleClick={state.handleVGDoubleClick}
               onVGRestore={(id) => console.log('Restore', id)}
               onAddVG={handleAddVG}
-              sizeMode={effectiveSizeMode}
-            />
-          )}
-
-          {state.mapMode === MAP_MODES.LINKS && (
-            <LinksPanel
-              linksSubTab={state.linksSubTab}
-              vgLinks={minimapVgLinks}
-              viewLinks={[]}
-              viewGroups={filteredActiveViewGroups}
-              allViews={allViews}
-              highlightedLinkId={state.highlightedLinkId}
-              onLinkClick={state.handleLinkClick}
               sizeMode={effectiveSizeMode}
             />
           )}

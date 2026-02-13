@@ -221,6 +221,12 @@ export const useCanvasHistory = create((set, get) => ({
     });
 
     get()._broadcastDraft();
+
+    // Bridge to CanvasGrid via legacy event
+    window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
+      detail: { editMode: true, canvasId: options.canvasId },
+    }));
+
     return { success: true };
   },
 
@@ -250,6 +256,12 @@ export const useCanvasHistory = create((set, get) => ({
         savePoints: [],
       });
       get()._broadcastDraft(); // Clear remote draft
+
+      // Bridge to CanvasGrid via legacy event
+      window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
+        detail: { editMode: false, canvasId: serverLock?.canvasId },
+      }));
+
       toast.info('No changes to commit');
       return;
     }
@@ -317,6 +329,12 @@ export const useCanvasHistory = create((set, get) => ({
     });
 
     get()._broadcastDraft(); // Clear remote draft
+
+    // Bridge to CanvasGrid via legacy event
+    window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
+      detail: { editMode: false, canvasId: serverLock?.canvasId },
+    }));
+
     toast.success(`Committed ${ops.length} change${ops.length !== 1 ? 's' : ''}`);
   },
 
@@ -357,6 +375,12 @@ export const useCanvasHistory = create((set, get) => ({
     }));
 
     get()._broadcastDraft(); // Clear remote draft
+
+    // Bridge to CanvasGrid via legacy event
+    window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
+      detail: { editMode: false, canvasId: serverLock?.canvasId },
+    }));
+
     toast.info('Changes discarded');
   },
 

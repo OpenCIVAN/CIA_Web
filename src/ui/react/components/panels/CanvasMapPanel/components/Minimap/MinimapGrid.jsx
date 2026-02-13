@@ -91,10 +91,10 @@ export const MinimapGrid = memo(function MinimapGrid({
                 data-row={row}
                 data-col={col}
               >
-                {isHome && mapMode === MAP_MODES.NAVIGATE && (
+                {isHome && mapMode === MAP_MODES.VIEWPORTS && (
                   <Icon name="home" size={10} className="minimap-grid__home-icon" />
                 )}
-                {bookmark && mapMode === MAP_MODES.NAVIGATE && showBookmarks && (
+                {bookmark && mapMode === MAP_MODES.VIEWPORTS && showBookmarks && (
                   <Icon
                     name={bookmark.isStarred ? 'star' : 'bookmark'}
                     size={10}

@@ -27,6 +27,7 @@ export const VGListItem = memo(function VGListItem({
   displayName,
   isSelected,
   isInactive = false,
+  isInViewport = false,
   onClick,
   onDoubleClick,
   onRestore,
@@ -50,14 +51,21 @@ export const VGListItem = memo(function VGListItem({
         }
       }}
     >
-      {/* Layout Preview */}
-      <LayoutMiniPreview
-        layoutId={vg.layoutId}
-        color={vg.color}
-        filledCount={viewCount}
-        size={18}
-        layouts={LAYOUTS}
-      />
+      {/* Layout Preview with active indicator */}
+      <div className={`vg-list-item__preview ${isInViewport ? 'vg-list-item__preview--active' : ''}`}>
+        <LayoutMiniPreview
+          layoutId={vg.layoutId}
+          color={vg.color}
+          filledCount={viewCount}
+          size={18}
+          layouts={LAYOUTS}
+        />
+      </div>
+
+      {/* Star icon */}
+      {vg.isStarred && (
+        <Icon name="star" size={10} className="vg-list-item__star" />
+      )}
 
       {/* Name */}
       <span className="vg-list-item__name">{name}</span>

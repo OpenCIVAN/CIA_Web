@@ -70,22 +70,7 @@ export const LEFT_PANEL_TABS = [
     //     group: 'visualization',
     //     contentComponent: 'ViewsPanelContent',
     // },
-    {
-        id: 'layout',
-        icon: 'layoutGrid',
-        label: 'Layout',
-        color: 'green',
-        group: 'visualization',
-        contentComponent: 'LayoutPanelContent',
-    },
-    {
-        id: 'navigator',
-        icon: 'compass',
-        label: 'Navigator',
-        color: 'teal',
-        group: 'visualization',
-        contentComponent: 'NavigatorPanelContent',
-    },
+    // NOTE: 'layout' and 'navigator' tabs removed — superseded by CanvasMapPanel (PanelShell)
     {
         id: 'tools',
         icon: 'wrench',
@@ -127,7 +112,7 @@ export const LEFT_PANEL_TABS = [
 /**
  * Dividers appear after these tabs (per spec Section 2)
  */
-export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'navigator', 'bookmarks'];
+export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'tools', 'bookmarks'];
 
 /**
  * Keyboard shortcuts for tabs (per spec Section 13)
@@ -138,12 +123,12 @@ export const LEFT_PANEL_SHORTCUTS = {
     d: 'datasets',
     v: 'views',
     i: 'tools',
-    l: 'layout',
-    n: 'navigator',
     a: 'annotations',
     'shift+b': 'bookmarks',
     c: 'cursors',
-    // m: 'canvasmap' - migrated to CanvasMapPanel (PanelShell)
+    // l: 'layout' — removed, superseded by CanvasMapPanel
+    // n: 'navigator' — removed, superseded by CanvasMapPanel
+    // m: 'canvasmap' — migrated to CanvasMapPanel (PanelShell)
 };
 
 // =============================================================================
