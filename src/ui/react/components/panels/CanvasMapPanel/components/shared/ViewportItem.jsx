@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { formatRangeRef } from '../../utils/gridUtils';
 
 /**
@@ -63,29 +64,33 @@ export const ViewportItem = memo(function ViewportItem({
 
       {/* Actions */}
       {!isPrimary && onSetPrimary && (
-        <button
-          className="viewport-item__action"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetPrimary(viewport.id);
-          }}
-          title="Set as primary"
-        >
-          <Icon name="star" size={10} />
-        </button>
+        <Tooltip content="Set as primary" placement="top" delay={300}>
+          <button
+            className="viewport-item__action"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetPrimary(viewport.id);
+            }}
+            aria-label="Set as primary"
+          >
+            <Icon name="star" size={10} />
+          </button>
+        </Tooltip>
       )}
 
       {!isPrimary && onDelete && (
-        <button
-          className="viewport-item__action viewport-item__action--delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(viewport.id);
-          }}
-          title="Delete viewport"
-        >
-          <Icon name="x" size={10} />
-        </button>
+        <Tooltip content="Delete viewport" placement="top" delay={300}>
+          <button
+            className="viewport-item__action viewport-item__action--delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(viewport.id);
+            }}
+            aria-label="Delete viewport"
+          >
+            <Icon name="x" size={10} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

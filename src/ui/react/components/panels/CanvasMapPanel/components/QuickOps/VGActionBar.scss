@@ -250,7 +250,7 @@
   backdrop-filter: blur(12px);
   border: 1px solid $color-border-subtle;
   border-radius: $radius-md;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: $shadow-glass;
 
   &__section {
     & + & {
@@ -440,6 +440,6 @@
     backdrop-filter: blur(12px);
     border: 1px solid $color-border-subtle;
     border-radius: $radius-sm;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: $shadow-sm;
   }
 }

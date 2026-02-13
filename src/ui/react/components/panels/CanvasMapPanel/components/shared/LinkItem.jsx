@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 /**
  * Link type icons mapping
@@ -78,16 +79,18 @@ export const LinkItem = memo(function LinkItem({
       </div>
 
       {onDelete && (
-        <button
-          className="link-item__delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(link.id);
-          }}
-          title="Delete link"
-        >
-          <Icon name="unlink2" size={12} />
-        </button>
+        <Tooltip content="Delete link" placement="top" delay={300}>
+          <button
+            className="link-item__delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(link.id);
+            }}
+            aria-label="Delete link"
+          >
+            <Icon name="unlink2" size={12} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

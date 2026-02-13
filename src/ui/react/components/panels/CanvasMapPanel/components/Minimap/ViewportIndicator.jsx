@@ -78,7 +78,6 @@ export const ViewportIndicator = memo(function ViewportIndicator({
         '--vp-height': `${size.rows * cellSize + (size.rows - 1) * gap}px`,
         cursor: onViewportMove ? (isDragging ? 'grabbing' : 'grab') : 'default',
       }}
-      title={`${viewport.name} viewport`}
       onPointerDown={onViewportMove ? handlePointerDown : undefined}
     >
       <span className="viewport-indicator__label">{viewport.name}</span>

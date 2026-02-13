@@ -407,10 +407,22 @@ function Tooltip({
         };
     }
 
+    const setTriggerRef = useCallback((node) => {
+        triggerRef.current = node;
+        if (!isValidElement(children)) return;
+        const childRef = children.ref;
+        if (!childRef) return;
+        if (typeof childRef === 'function') {
+            childRef(node);
+        } else if (typeof childRef === 'object') {
+            childRef.current = node;
+        }
+    }, [children, triggerRef]);
+
     // Clone trigger element with props
     const triggerElement = isValidElement(children)
         ? cloneElement(children, {
-            ref: triggerRef,
+            ref: setTriggerRef,
             'aria-describedby': isVisible ? tooltipId : undefined,
             ...eventHandlers
         })

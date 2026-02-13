@@ -12,7 +12,19 @@
 
 import React, { memo, useState, useCallback, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { tokens } from '@UI/react/styles/tokens';
+
+const COLOR_VARS = {
+  accentPrimaryRgb: 'var(--color-accent-primary-rgb)',
+  accentAmber: 'var(--color-accent-amber)',
+  bgBase: 'var(--color-bg-base)',
+  bgPrimary: 'var(--color-bg-primary)',
+  bgSecondary: 'var(--color-bg-secondary)',
+  borderSubtle: 'var(--color-border-subtle)',
+  glassPanel: 'var(--color-glass-panel)',
+  textPrimary: 'var(--color-text-primary)',
+  textMuted: 'var(--color-text-muted)',
+  shadowGlassLg: 'var(--shadow-glass-lg)',
+};
 
 /**
  * FloatingDPad - Circular draggable D-Pad navigation control
@@ -94,10 +106,10 @@ export const FloatingDPad = memo(function FloatingDPad({
     position: 'absolute',
     inset: wedgeInset,
     borderRadius: '50%',
-    border: '1px solid rgba(96, 165, 250, 0.18)',
-    background: 'linear-gradient(160deg, rgba(96, 165, 250, 0.22), rgba(10, 16, 28, 0.65))',
-    color: 'rgba(248, 250, 252, 0.95)',
-    textShadow: '0 1px 6px rgba(15, 23, 42, 0.8)',
+    border: `1px solid rgba(${COLOR_VARS.accentPrimaryRgb}, 0.18)`,
+    background: `linear-gradient(160deg, rgba(${COLOR_VARS.accentPrimaryRgb}, 0.22), color-mix(in srgb, ${COLOR_VARS.glassPanel} 70%, transparent))`,
+    color: COLOR_VARS.textPrimary,
+    textShadow: `0 1px 6px color-mix(in srgb, ${COLOR_VARS.bgBase} 70%, transparent)`,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -133,9 +145,9 @@ export const FloatingDPad = memo(function FloatingDPad({
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.18), rgba(2, 6, 16, 0.92))',
-        border: '1px solid rgba(96, 165, 250, 0.2)',
-        boxShadow: '0 0 0 2px rgba(15, 23, 42, 0.6), 0 12px 24px rgba(0, 0, 0, 0.5)',
+        background: `radial-gradient(circle at 30% 30%, rgba(${COLOR_VARS.accentPrimaryRgb}, 0.18), color-mix(in srgb, ${COLOR_VARS.bgBase} 92%, transparent))`,
+        border: `1px solid rgba(${COLOR_VARS.accentPrimaryRgb}, 0.2)`,
+        boxShadow: `0 0 0 2px color-mix(in srgb, ${COLOR_VARS.bgBase} 60%, transparent), ${COLOR_VARS.shadowGlassLg}`,
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -151,8 +163,8 @@ export const FloatingDPad = memo(function FloatingDPad({
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
-          border: '1px solid rgba(96, 165, 250, 0.18)',
-          boxShadow: 'inset 0 0 0 1px rgba(2, 6, 16, 0.65)',
+          border: `1px solid rgba(${COLOR_VARS.accentPrimaryRgb}, 0.18)`,
+          boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${COLOR_VARS.bgBase} 70%, transparent)`,
           pointerEvents: 'none',
         }}
       />
@@ -174,7 +186,7 @@ export const FloatingDPad = memo(function FloatingDPad({
             size={iconSize}
             style={{
               transform: `translate(${dir.translateX || 0}px, ${dir.translateY || 0}px)`,
-              color: 'rgba(248, 250, 252, 0.95)',
+              color: COLOR_VARS.textPrimary,
             }}
           />
         </button>
@@ -189,7 +201,7 @@ export const FloatingDPad = memo(function FloatingDPad({
           left: '50%',
           width: 1,
           transform: 'translateX(-0.5px)',
-          background: 'rgba(5, 8, 16, 0.6)',
+          background: `color-mix(in srgb, ${COLOR_VARS.bgBase} 80%, transparent)`,
           pointerEvents: 'none',
         }}
       />
@@ -201,7 +213,7 @@ export const FloatingDPad = memo(function FloatingDPad({
           top: '50%',
           height: 1,
           transform: 'translateY(-0.5px)',
-          background: 'rgba(5, 8, 16, 0.6)',
+          background: `color-mix(in srgb, ${COLOR_VARS.bgBase} 80%, transparent)`,
           pointerEvents: 'none',
         }}
       />
@@ -214,28 +226,29 @@ export const FloatingDPad = memo(function FloatingDPad({
           width: centerSize,
           height: centerSize,
           borderRadius: '50%',
-          border: '1px solid rgba(96, 165, 250, 0.45)',
-          background: 'radial-gradient(circle at 35% 35%, rgba(96, 165, 250, 0.4), rgba(8, 14, 24, 0.95))',
-          color: tokens.colors.accent.amber,
+          border: `1px solid rgba(${COLOR_VARS.accentPrimaryRgb}, 0.45)`,
+          background: `radial-gradient(circle at 35% 35%, rgba(${COLOR_VARS.accentPrimaryRgb}, 0.4), color-mix(in srgb, ${COLOR_VARS.bgPrimary} 85%, transparent))`,
+          color: COLOR_VARS.accentAmber,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 600,
-          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 0 18px rgba(59, 130, 246, 0.45)',
+          boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${COLOR_VARS.textPrimary} 20%, transparent), 0 0 18px rgba(${COLOR_VARS.accentPrimaryRgb}, 0.45)`,
           zIndex: 2,
           padding: 0,
         }}
         aria-label="Go to home position"
       >
         {centerContent || (
-          <Icon name="home" size={iconSize} style={{ color: tokens.colors.accent.amber }} />
+          <Icon name="home" size={iconSize} style={{ color: COLOR_VARS.accentAmber }} />
         )}
       </button>
 
       {/* Drag handle */}
       {showHandle && onPositionChange && (
         <div
+          onPointerDown={handleDragStart}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
           style={{
@@ -245,9 +258,9 @@ export const FloatingDPad = memo(function FloatingDPad({
             width: handleSize,
             height: handleSize,
             borderRadius: '50%',
-            background: tokens.colors.bg.secondary,
-            border: `1px solid ${tokens.colors.border.subtle}`,
-            color: tokens.colors.text.muted,
+            background: COLOR_VARS.bgSecondary,
+            border: `1px solid ${COLOR_VARS.borderSubtle}`,
+            color: COLOR_VARS.textMuted,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

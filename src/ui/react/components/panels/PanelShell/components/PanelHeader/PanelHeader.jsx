@@ -9,6 +9,7 @@
 
 import React from 'react';
 import Icon from '@UI/react/components/atoms/Icon/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { CHROME_LEVELS } from '../../constants';
 import './PanelHeader.scss';
 
@@ -49,6 +50,7 @@ export function PanelHeader({
   const isFull = chrome === CHROME_LEVELS.FULL;
   const isCompact = chrome === CHROME_LEVELS.COMPACT;
   const isDev = process.env.NODE_ENV === 'development';
+  const minimizeLabel = minimized ? 'Expand' : (isFull ? 'Minimize' : 'Collapse');
 
   return (
     <div
@@ -102,47 +104,53 @@ export function PanelHeader({
         )}
         {/* Minimize/Collapse */}
         {minimizable && (
-          <button
-            className="panel-header__button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMinimize?.();
-            }}
-            title={minimized ? 'Expand' : (isFull ? 'Minimize' : 'Collapse')}
-            type="button"
-          >
-            <Icon
-              name={minimized ? 'chevronDown' : (isFull ? 'minus' : 'chevronUp')}
-              size={12}
-            />
-          </button>
+          <Tooltip content={minimizeLabel} placement="bottom" delay={400}>
+            <button
+              className="panel-header__button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMinimize?.();
+              }}
+              type="button"
+              aria-label={minimizeLabel}
+            >
+              <Icon
+                name={minimized ? 'chevronDown' : (isFull ? 'minus' : 'chevronUp')}
+                size={12}
+              />
+            </button>
+          </Tooltip>
         )}
 
         {/* Dock button (FULL only, placeholder for future) */}
         {isFull && (
-          <button
-            className="panel-header__button"
-            onClick={(e) => e.stopPropagation()}
-            title="Dock"
-            type="button"
-          >
-            <Icon name="layout" size={12} />
-          </button>
+          <Tooltip content="Dock" placement="bottom" delay={400}>
+            <button
+              className="panel-header__button"
+              onClick={(e) => e.stopPropagation()}
+              type="button"
+              aria-label="Dock"
+            >
+              <Icon name="layout" size={12} />
+            </button>
+          </Tooltip>
         )}
 
         {/* Close */}
         {closable && (
-          <button
-            className="panel-header__button panel-header__button--close"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose?.();
-            }}
-            title="Close"
-            type="button"
-          >
-            <Icon name="x" size={12} />
-          </button>
+          <Tooltip content="Close" placement="bottom" delay={400}>
+            <button
+              className="panel-header__button panel-header__button--close"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose?.();
+              }}
+              type="button"
+              aria-label="Close"
+            >
+              <Icon name="x" size={12} />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

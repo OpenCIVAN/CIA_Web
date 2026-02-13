@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { LayoutMiniPreview } from '@UI/react/components/molecules/LayoutMiniPreview';
 import { getVGDisplayName, formatRangeRef } from '../../utils/gridUtils';
@@ -92,16 +93,18 @@ export const VGListItem = memo(function VGListItem({
 
       {/* Restore button for inactive VGs */}
       {isInactive && onRestore && (
-        <button
-          className="vg-list-item__restore"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRestore(vg.id);
-          }}
-          title="Restore to canvas"
-        >
-          <Icon name="rotateCcw" size={12} />
-        </button>
+        <Tooltip content="Restore to canvas" placement="top" delay={300}>
+          <button
+            className="vg-list-item__restore"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRestore(vg.id);
+            }}
+            aria-label="Restore to canvas"
+          >
+            <Icon name="rotateCcw" size={12} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

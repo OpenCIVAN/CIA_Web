@@ -26,6 +26,7 @@ function loadShowImplicitVGs() {
   } catch { return false; }
 }
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
 import { useViewGroups } from '@UI/react/hooks/useViewGroups';
@@ -2174,13 +2175,15 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           )}
 
           {/* Resize handle between minimap and bottom content */}
-          <div
-            className="canvas-map-v2__resize-handle"
-            onPointerDown={handleResizePointerDown}
-            title="Drag to resize minimap"
-          >
-            <div className="canvas-map-v2__resize-grip" />
-          </div>
+          <Tooltip content="Drag to resize minimap" placement="top" delay={300}>
+            <div
+              className="canvas-map-v2__resize-handle"
+              onPointerDown={handleResizePointerDown}
+              aria-label="Drag to resize minimap"
+            >
+              <div className="canvas-map-v2__resize-grip" />
+            </div>
+          </Tooltip>
 
 
         <CanvasMapBottomPanel

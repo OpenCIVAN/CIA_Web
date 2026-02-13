@@ -85,6 +85,8 @@ export const MapToolbar = memo(function MapToolbar({
 
   sizeMode = 'standard',
 }) {
+  const editTooltip = isEditMode ? 'Editing layout' : 'Edit layout';
+
   return (
     <div className="map-toolbar" data-size-mode={sizeMode}>
       {/* Zoom controls - always visible */}
@@ -129,10 +131,12 @@ export const MapToolbar = memo(function MapToolbar({
 
       {/* Remote lock badge */}
       {remoteLock && !isEditMode && (
-        <span className="map-toolbar__lock-badge" title={`${remoteLock.lockedByName || 'Someone'} is editing`}>
-          <Icon name="lock" size={12} />
-          <span>{remoteLock.lockedByName || 'Locked'}</span>
-        </span>
+        <Tooltip content={`${remoteLock.lockedByName || 'Someone'} is editing`} placement="bottom" delay={400}>
+          <span className="map-toolbar__lock-badge" aria-label={`${remoteLock.lockedByName || 'Someone'} is editing`}>
+            <Icon name="lock" size={12} />
+            <span>{remoteLock.lockedByName || 'Locked'}</span>
+          </span>
+        </Tooltip>
       )}
 
       {/* Draft layer toggle (visible when someone else is editing) */}
@@ -148,16 +152,18 @@ export const MapToolbar = memo(function MapToolbar({
 
       <div className="map-toolbar__spacer" />
 
-      <button
-        type="button"
-        className={`map-toolbar__edit-btn ${isEditMode ? 'map-toolbar__edit-btn--active' : ''}`}
-        onClick={onEditLayout}
-        disabled={!onEditLayout}
-        title={isEditMode ? 'Editing layout' : 'Edit layout'}
-      >
-        <Icon name="pencil" size={12} />
-        <span>{isEditMode ? 'Editing' : 'Edit'}</span>
-      </button>
+      <Tooltip content={editTooltip} placement="bottom" delay={400}>
+        <button
+          type="button"
+          className={`map-toolbar__edit-btn ${isEditMode ? 'map-toolbar__edit-btn--active' : ''}`}
+          onClick={onEditLayout}
+          disabled={!onEditLayout}
+          aria-label={editTooltip}
+        >
+          <Icon name="pencil" size={12} />
+          <span>{isEditMode ? 'Editing' : 'Edit'}</span>
+        </button>
+      </Tooltip>
     </div>
   );
 });

@@ -71,3 +71,8 @@ export const STORAGE_KEY = 'ciaPanelShellState';
  * Base z-index for panels
  */
 export const BASE_Z_INDEX = 1000;
+
+/**
+ * Max z-index for panels — must stay below modal backdrop (1040)
+ */
+export const MAX_Z_INDEX = 1039;

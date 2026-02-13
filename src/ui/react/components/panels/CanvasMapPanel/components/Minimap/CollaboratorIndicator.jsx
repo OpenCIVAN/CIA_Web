@@ -34,7 +34,6 @@ export const CollaboratorIndicator = memo(function CollaboratorIndicator({
         height: `${viewport.rows * cellSize + (viewport.rows - 1) * gap}px`,
         '--collab-color': color,
       }}
-      title={`${name}${isBroadcasting ? ' (Broadcasting)' : ''}`}
     >
       {/* Avatar badge */}
       <div className="collaborator-indicator__avatar">

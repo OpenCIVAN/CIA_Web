@@ -13,6 +13,7 @@
 
 import React, { memo, useState, useCallback, useEffect } from "react";
 import { Icon, getIconComponent } from "@UI/react/components/atoms/Icon";
+import { Tooltip } from "@UI/react/components/atoms/Tooltip";
 import { Button } from "@UI/react/components/atoms/Button";
 import { UserAvatar } from "@UI/react/components/atoms/UserAvatar";
 import { vrManager } from "@Core/vr/VRManager.js";
@@ -197,14 +198,15 @@ function VRSessionPanel({
             </div>
             <div className="vr-session-panel__nav-modes">
               {NAVIGATION_MODES.map((mode) => (
-                <button
-                  key={mode.id}
-                  className={`vr-session-panel__nav-mode ${navigationMode === mode.id ? "vr-session-panel__nav-mode--active" : ""}`}
-                  onClick={() => handleNavigationModeChange(mode.id)}
-                  title={mode.label}
-                >
-                  <Icon name={mode.icon} size={14} />
-                </button>
+                <Tooltip key={mode.id} content={mode.label} placement="top" delay={400}>
+                  <button
+                    className={`vr-session-panel__nav-mode ${navigationMode === mode.id ? "vr-session-panel__nav-mode--active" : ""}`}
+                    onClick={() => handleNavigationModeChange(mode.id)}
+                    aria-label={mode.label}
+                  >
+                    <Icon name={mode.icon} size={14} />
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </div>
@@ -215,14 +217,20 @@ function VRSessionPanel({
               <span>Scale</span>
               <span className="vr-session-panel__scale-value">{formatScale(vrScale)}</span>
             </div>
-            <button
-              className="vr-session-panel__visibility-toggle"
-              onClick={handleScaleVisibilityToggle}
-              title={scaleVisibility === "my-scale" ? "View at your scale" : "View at world scale"}
+            <Tooltip
+              content={scaleVisibility === "my-scale" ? "View at your scale" : "View at world scale"}
+              placement="top"
+              delay={400}
             >
-              <Icon name={scaleVisibility === "my-scale" ? "user" : "globe"} size={14} />
-              <span>{scaleVisibility === "my-scale" ? "My Scale" : "World Scale"}</span>
-            </button>
+              <button
+                className="vr-session-panel__visibility-toggle"
+                onClick={handleScaleVisibilityToggle}
+                aria-label={scaleVisibility === "my-scale" ? "View at your scale" : "View at world scale"}
+              >
+                <Icon name={scaleVisibility === "my-scale" ? "user" : "globe"} size={14} />
+                <span>{scaleVisibility === "my-scale" ? "My Scale" : "World Scale"}</span>
+              </button>
+            </Tooltip>
           </div>
 
           {/* Participants */}
@@ -342,7 +350,11 @@ const ParticipantRow = memo(function ParticipantRow({
         <span className="vr-session-panel__participant-name">
           {participant.userName}
           {isCurrentUser && <span className="vr-session-panel__you">(you)</span>}
-          {isOwner && <Icon name="crown" size={10} className="vr-session-panel__owner-badge" title="Session owner" />}
+          {isOwner && (
+            <Tooltip content="Session owner" placement="top" delay={400}>
+              <Icon name="crown" size={10} className="vr-session-panel__owner-badge" aria-label="Session owner" />
+            </Tooltip>
+          )}
         </span>
         <span className="vr-session-panel__participant-mode">
           <Icon name={modeInfo.icon} size={10} />

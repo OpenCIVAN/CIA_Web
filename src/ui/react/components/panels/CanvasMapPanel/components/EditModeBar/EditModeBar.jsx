@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import './EditModeBar.scss';
 
 /**
@@ -60,64 +61,69 @@ export const EditModeBar = memo(function EditModeBar({
 
       <div className="edit-mode-bar__actions">
         {onUndo && (
-          <button
-            type="button"
-            className="edit-mode-bar__btn edit-mode-bar__btn--undo"
-            onClick={onUndo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-            aria-label="Undo"
-          >
-            <Icon name="undo" size={12} />
-            <span className="edit-mode-bar__btn-label">Undo</span>
-          </button>
+          <Tooltip content="Undo (Ctrl+Z)" placement="top" delay={300}>
+            <button
+              type="button"
+              className="edit-mode-bar__btn edit-mode-bar__btn--undo"
+              onClick={onUndo}
+              disabled={!canUndo}
+              aria-label="Undo"
+            >
+              <Icon name="undo" size={12} />
+              <span className="edit-mode-bar__btn-label">Undo</span>
+            </button>
+          </Tooltip>
         )}
         {onRedo && (
-          <button
-            type="button"
-            className="edit-mode-bar__btn edit-mode-bar__btn--redo"
-            onClick={onRedo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
-            aria-label="Redo"
-          >
-            <Icon name="redo" size={12} />
-            <span className="edit-mode-bar__btn-label">Redo</span>
-          </button>
+          <Tooltip content="Redo (Ctrl+Shift+Z)" placement="top" delay={300}>
+            <button
+              type="button"
+              className="edit-mode-bar__btn edit-mode-bar__btn--redo"
+              onClick={onRedo}
+              disabled={!canRedo}
+              aria-label="Redo"
+            >
+              <Icon name="redo" size={12} />
+              <span className="edit-mode-bar__btn-label">Redo</span>
+            </button>
+          </Tooltip>
         )}
         {onExtend && (
+          <Tooltip content="Extend editing time" placement="top" delay={300}>
+            <button
+              type="button"
+              className="edit-mode-bar__btn edit-mode-bar__btn--extend"
+              onClick={onExtend}
+              aria-label="Extend editing time"
+            >
+              <Icon name="clock" size={12} />
+              <span className="edit-mode-bar__btn-label">Extend</span>
+            </button>
+          </Tooltip>
+        )}
+        <Tooltip content="Discard all changes" placement="top" delay={300}>
           <button
             type="button"
-            className="edit-mode-bar__btn edit-mode-bar__btn--extend"
-            onClick={onExtend}
-            title="Extend editing time"
-            aria-label="Extend editing time"
+            className="edit-mode-bar__btn edit-mode-bar__btn--discard"
+            onClick={onDiscard}
+            aria-label="Discard all changes"
           >
-            <Icon name="clock" size={12} />
-            <span className="edit-mode-bar__btn-label">Extend</span>
+            <Icon name="close" size={12} />
+            <span className="edit-mode-bar__btn-label">Discard</span>
           </button>
-        )}
-        <button
-          type="button"
-          className="edit-mode-bar__btn edit-mode-bar__btn--discard"
-          onClick={onDiscard}
-          title="Discard all changes"
-          aria-label="Discard all changes"
-        >
-          <Icon name="close" size={12} />
-          <span className="edit-mode-bar__btn-label">Discard</span>
-        </button>
-        <button
-          type="button"
-          className="edit-mode-bar__btn edit-mode-bar__btn--commit"
-          onClick={onCommit}
-          disabled={!hasChanges}
-          title={hasChanges ? 'Commit all changes' : 'No changes to commit'}
-          aria-label="Commit all changes"
-        >
-          <Icon name="check" size={12} />
-          <span className="edit-mode-bar__btn-label">Commit</span>
-        </button>
+        </Tooltip>
+        <Tooltip content={hasChanges ? 'Commit all changes' : 'No changes to commit'} placement="top" delay={300}>
+          <button
+            type="button"
+            className="edit-mode-bar__btn edit-mode-bar__btn--commit"
+            onClick={onCommit}
+            disabled={!hasChanges}
+            aria-label="Commit all changes"
+          >
+            <Icon name="check" size={12} />
+            <span className="edit-mode-bar__btn-label">Commit</span>
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

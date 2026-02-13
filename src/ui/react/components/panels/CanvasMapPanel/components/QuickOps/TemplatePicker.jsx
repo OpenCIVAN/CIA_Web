@@ -5,6 +5,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { LayoutThumbnail } from '@UI/react/components/atoms/LayoutThumbnail';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { LAYOUTS } from '../../utils/constants';
 
 /**
@@ -47,34 +48,39 @@ export const TemplatePicker = memo(function TemplatePicker({
   const renderEntry = (entry) => {
     const isCurrent = entry.id === currentLayout;
     const needsResize = entry.rows > currentRows || entry.cols > currentCols;
+    const displayName = entry.id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const tooltip = `${displayName} — ${entry.rows}×${entry.cols} grid (${entry.rows * entry.cols} cells)${
+      isCurrent ? ' (current)' : ''
+    }${needsResize ? ' ⚠ Requires resize' : ''}`;
 
     return (
-      <button
-        key={entry.id}
-        type="button"
-        className={`template-picker__item ${isCurrent ? 'template-picker__item--current' : ''}`}
-        onClick={() => onApply(entry.id)}
-        title={`${entry.id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} — ${entry.rows}×${entry.cols} grid (${entry.rows * entry.cols} cells)${isCurrent ? ' (current)' : ''}${needsResize ? ' ⚠ Requires resize' : ''}`}
-      >
-        <LayoutThumbnail
-          layout={entry}
-          size="md"
-          highlighted={isCurrent}
-        />
-        <div className="template-picker__item-info">
-          <span className="template-picker__item-label">
-            {entry.id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-          </span>
-          <span className="template-picker__item-dims">
-            {entry.rows}×{entry.cols}
-          </span>
-          {needsResize && (
-            <span className="template-picker__item-badge">
-              Resize
+      <Tooltip key={entry.id} content={tooltip} placement="top" delay={400}>
+        <button
+          type="button"
+          className={`template-picker__item ${isCurrent ? 'template-picker__item--current' : ''}`}
+          onClick={() => onApply(entry.id)}
+          aria-label={tooltip}
+        >
+          <LayoutThumbnail
+            layout={entry}
+            size="md"
+            highlighted={isCurrent}
+          />
+          <div className="template-picker__item-info">
+            <span className="template-picker__item-label">
+              {displayName}
             </span>
-          )}
-        </div>
-      </button>
+            <span className="template-picker__item-dims">
+              {entry.rows}×{entry.cols}
+            </span>
+            {needsResize && (
+              <span className="template-picker__item-badge">
+                Resize
+              </span>
+            )}
+          </div>
+        </button>
+      </Tooltip>
     );
   };
 

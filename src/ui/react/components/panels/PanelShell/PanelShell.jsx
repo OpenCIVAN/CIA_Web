@@ -14,7 +14,7 @@
 import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { usePanelShell } from './PanelShellContext';
-import { CHROME_LEVELS, SIZE_MODES, DEFAULT_BREAKPOINTS, DEFAULT_DIMENSIONS } from './constants';
+import { CHROME_LEVELS, SIZE_MODES, DEFAULT_BREAKPOINTS, DEFAULT_DIMENSIONS, MAX_Z_INDEX } from './constants';
 import { PanelHeader } from './components/PanelHeader';
 import { PanelResizeHandle } from './components/PanelResizeHandle';
 import { usePanelDrag } from './hooks/usePanelDrag';
@@ -107,7 +107,7 @@ export function PanelShell({
   const width = panelState?.size?.width || defaultWidth;
   const height = panelState?.size?.height || defaultHeight;
   const position = panelState?.position || { x: 100, y: 100 };
-  const zIndex = panelState?.zIndex || 1000;
+  const zIndex = Math.min(panelState?.zIndex || 1000, MAX_Z_INDEX);
   const minimized = panelState?.minimized || false;
 
   // Calculate size mode based on breakpoints

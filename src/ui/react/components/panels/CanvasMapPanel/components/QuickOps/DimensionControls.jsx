@@ -4,6 +4,7 @@
  */
 
 import React, { memo, useState, useCallback, useMemo } from 'react';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { DirectionPicker } from '@UI/react/components/atoms/DirectionPicker';
 import { formatRangeRef } from '../../utils/gridUtils';
 import { LAYOUTS } from '../../utils/constants';
@@ -189,42 +190,46 @@ export const DimensionControls = memo(function DimensionControls({
     ? `Blocked${expansion.conflicts.right ? ` by ${expansion.conflicts.right}` : ''}`
     : '';
 
+  const TipButton = ({ content, children, ...props }) => (
+    <Tooltip content={content} placement="top" delay={300}>
+      <button type="button" aria-label={content} {...props}>
+        {children}
+      </button>
+    </Tooltip>
+  );
+
   return (
     <div className="dim-controls dim-controls--inline">
       {/* Internal group */}
       <div className="dim-controls__group">
         <span className="dim-controls__label">INT</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={internalRows <= MIN_DIM}
           onClick={handleInternalRowMinus}
-          title="Decrease rows"
-        >−</button>
+          content="Decrease rows"
+        >−</TipButton>
         <span className="dim-controls__value">{internalRows}</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={internalRows >= MAX_DIM}
           onClick={handleInternalRowPlus}
-          title="Increase rows"
-        >+</button>
+          content="Increase rows"
+        >+</TipButton>
         <span className="dim-controls__sep">×</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={internalCols <= MIN_DIM}
           onClick={handleInternalColMinus}
-          title="Decrease columns"
-        >−</button>
+          content="Decrease columns"
+        >−</TipButton>
         <span className="dim-controls__value">{internalCols}</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={internalCols >= MAX_DIM}
           onClick={handleInternalColPlus}
-          title="Increase columns"
-        >+</button>
+          content="Increase columns"
+        >+</TipButton>
       </div>
 
       <span className="dim-controls__divider">|</span>
@@ -232,22 +237,20 @@ export const DimensionControls = memo(function DimensionControls({
       {/* Footprint group */}
       <div className="dim-controls__group">
         <span className="dim-controls__label">FTP</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={footprintRows <= 1}
           onClick={handleFootprintRowMinus}
-          title="Shrink row span"
-        >−</button>
+          content="Shrink row span"
+        >−</TipButton>
         <span className="dim-controls__value">{footprintRows}</span>
         <div className="dim-controls__plus-wrapper">
-          <button
-            type="button"
+          <TipButton
             className="dim-controls__btn"
             disabled={rowPlusDisabled}
             onClick={handleFootprintRowPlus}
-            title={rowConflictTip || 'Expand row span'}
-          >+</button>
+            content={rowConflictTip || 'Expand row span'}
+          >+</TipButton>
           {showRowPicker && (
             <div className="dim-controls__picker-popup">
               <DirectionPicker
@@ -259,22 +262,20 @@ export const DimensionControls = memo(function DimensionControls({
           )}
         </div>
         <span className="dim-controls__sep">×</span>
-        <button
-          type="button"
+        <TipButton
           className="dim-controls__btn"
           disabled={footprintCols <= 1}
           onClick={handleFootprintColMinus}
-          title="Shrink col span"
-        >−</button>
+          content="Shrink col span"
+        >−</TipButton>
         <span className="dim-controls__value">{footprintCols}</span>
         <div className="dim-controls__plus-wrapper">
-          <button
-            type="button"
+          <TipButton
             className="dim-controls__btn"
             disabled={colPlusDisabled}
             onClick={handleFootprintColPlus}
-            title={colConflictTip || 'Expand col span'}
-          >+</button>
+            content={colConflictTip || 'Expand col span'}
+          >+</TipButton>
           {showColPicker && (
             <div className="dim-controls__picker-popup">
               <DirectionPicker

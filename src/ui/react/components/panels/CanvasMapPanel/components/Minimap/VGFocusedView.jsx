@@ -9,6 +9,7 @@
 
 import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { DropdownPortal, useDropdown } from '@UI/react/components/atoms/DropdownPortal';
 import { FocusedCell } from './FocusedCell';
 import { CellContextMenu } from './CellContextMenu';
@@ -414,24 +415,28 @@ export const VGFocusedView = memo(function VGFocusedView({
           <Icon name="chevronDown" size={10} />
         </button>
         <div className="minimap__focused-toolbar-sep" />
-        <button
-          type="button"
-          className={`minimap__focused-toolbar-icon ${canMerge ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
-          onClick={handleMerge}
-          disabled={!canMerge}
-          title={canMerge ? 'Merge cells' : 'Select a rectangle to merge'}
-        >
-          <Icon name="combine" size={12} />
-        </button>
-        <button
-          type="button"
-          className={`minimap__focused-toolbar-icon ${canSplit ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
-          onClick={handleSplit}
-          disabled={!canSplit}
-          title={canSplit ? 'Split cell' : 'Select a merged cell to split'}
-        >
-          <Icon name="layers" size={12} />
-        </button>
+        <Tooltip content={canMerge ? 'Merge cells' : 'Select a rectangle to merge'} placement="top" delay={300}>
+          <button
+            type="button"
+            className={`minimap__focused-toolbar-icon ${canMerge ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
+            onClick={handleMerge}
+            disabled={!canMerge}
+            aria-label={canMerge ? 'Merge cells' : 'Select a rectangle to merge'}
+          >
+            <Icon name="combine" size={12} />
+          </button>
+        </Tooltip>
+        <Tooltip content={canSplit ? 'Split cell' : 'Select a merged cell to split'} placement="top" delay={300}>
+          <button
+            type="button"
+            className={`minimap__focused-toolbar-icon ${canSplit ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
+            onClick={handleSplit}
+            disabled={!canSplit}
+            aria-label={canSplit ? 'Split cell' : 'Select a merged cell to split'}
+          >
+            <Icon name="layers" size={12} />
+          </button>
+        </Tooltip>
         <div className="minimap__focused-toolbar-sep" />
         <button
           type="button"

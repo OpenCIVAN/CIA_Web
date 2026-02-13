@@ -18,6 +18,7 @@ import { ViewportIndicator } from './ViewportIndicator';
 import { CollaboratorIndicator } from './CollaboratorIndicator';
 import { CursorIndicator } from './CursorIndicator';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
 import { MAP_MODES, MINIMAP_CONSTANTS, LAYOUTS } from '../../utils/constants';
@@ -128,7 +129,7 @@ export const Minimap = memo(function Minimap({
     showLabels: showGridLabels,
   });
 
-  const { cellSize, headerSize } = sizing;
+  const { cellSize, headerWidth, headerHeight, labelFontSize } = sizing;
   const renderGap = MINIMAP_CONSTANTS.GRID_GAP;
   const renderPitch = cellSize + renderGap;
   const gridExtra = MINIMAP_CONSTANTS.EXTRA_GRID_CELLS ?? 2;
@@ -139,7 +140,8 @@ export const Minimap = memo(function Minimap({
   const canvasWidth = cols * cellSize + (cols - 1) * renderGap;
   const canvasHeight = rows * cellSize + (rows - 1) * renderGap;
   const scrollPadding = MINIMAP_CONSTANTS.SCROLL_PADDING * 2;
-  const labelOffset = showGridLabels ? headerSize : 0;
+  const labelOffsetX = showGridLabels ? headerWidth : 0;
+  const labelOffsetY = showGridLabels ? headerHeight : 0;
   const isFocused = !!focusedVG;
   const cellRadius = Math.max(3, Math.round(cellSize * 0.16));
 
@@ -148,8 +150,8 @@ export const Minimap = memo(function Minimap({
 
   const panEnabled = !focusedVG && (sizing.needsPanning || MINIMAP_CONSTANTS.PAN_PADDING_CELLS > 0);
   const panning = useMinimapPanning({
-    contentWidth: gridWidth + labelOffset + scrollPadding,
-    contentHeight: gridHeight + labelOffset + scrollPadding,
+    contentWidth: gridWidth + labelOffsetX + scrollPadding,
+    contentHeight: gridHeight + labelOffsetY + scrollPadding,
     viewportWidth: containerWidth || 300,
     viewportHeight: containerHeight || 300,
     enabled: panEnabled,
@@ -248,8 +250,8 @@ export const Minimap = memo(function Minimap({
       const rect = containerRef.current.getBoundingClientRect();
       const localX = e.clientX - rect.left;
       const localY = e.clientY - rect.top;
-      const contentX = localX - MINIMAP_CONSTANTS.SCROLL_PADDING - (showGridLabels ? headerSize : 0) + panning.panOffset.x;
-      const contentY = localY - MINIMAP_CONSTANTS.SCROLL_PADDING - (showGridLabels ? headerSize : 0) + panning.panOffset.y;
+      const contentX = localX - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffsetX + panning.panOffset.x;
+      const contentY = localY - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffsetY + panning.panOffset.y;
 
       const rawCol = Math.floor(contentX / renderPitch);
       const rawRow = Math.floor(contentY / renderPitch);
@@ -286,7 +288,7 @@ export const Minimap = memo(function Minimap({
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
-  }, [isEditMode, onMoveVG, showGridLabels, headerSize, panning.panOffset.x, panning.panOffset.y, renderPitch, cols, rows]);
+  }, [isEditMode, onMoveVG, labelOffsetX, labelOffsetY, panning.panOffset.x, panning.panOffset.y, renderPitch, cols, rows]);
 
   // ── Compute change status for each VG (draft indicators) ─────────────
   const getChangeStatus = useCallback((vgId) => {
@@ -345,8 +347,8 @@ export const Minimap = memo(function Minimap({
     const rect = containerRef.current.getBoundingClientRect();
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
-    const contentX = localX - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffset + panning.panOffset.x;
-    const contentY = localY - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffset + panning.panOffset.y;
+    const contentX = localX - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffsetX + panning.panOffset.x;
+    const contentY = localY - MINIMAP_CONSTANTS.SCROLL_PADDING - labelOffsetY + panning.panOffset.y;
 
     if (!Number.isFinite(contentX) || !Number.isFinite(contentY)) return null;
 
@@ -360,7 +362,7 @@ export const Minimap = memo(function Minimap({
     const col = clamp(rawCol, 0, maxCol);
     const row = clamp(rawRow, 0, maxRow);
     return { row, col, rowSpan, colSpan };
-  }, [cols, labelOffset, panning.panOffset.x, panning.panOffset.y, renderPitch, resolveSpanForData, rows]);
+  }, [cols, labelOffsetX, labelOffsetY, panning.panOffset.x, panning.panOffset.y, renderPitch, resolveSpanForData, rows]);
 
   const rectsOverlap = useCallback((a, b) => (
     a.row < b.row + b.rowSpan
@@ -439,7 +441,9 @@ export const Minimap = memo(function Minimap({
       style={{
         '--cell-size': `${cellSize}px`,
         '--grid-gap': `${renderGap}px`,
-        '--header-size': `${headerSize}px`,
+        '--header-width': `${headerWidth}px`,
+        '--header-height': `${headerHeight}px`,
+        '--label-font-size': `${labelFontSize}px`,
         '--scroll-padding': `${MINIMAP_CONSTANTS.SCROLL_PADDING}px`,
       }}
       onDragEnter={(e) => {
@@ -486,8 +490,8 @@ export const Minimap = memo(function Minimap({
           <div
             className="minimap__labels-corner"
             style={{
-              width: headerSize,
-              height: headerSize,
+              width: headerWidth,
+              height: headerHeight,
               top: MINIMAP_CONSTANTS.SCROLL_PADDING,
               left: MINIMAP_CONSTANTS.SCROLL_PADDING,
             }}
@@ -495,24 +499,27 @@ export const Minimap = memo(function Minimap({
           <div
             className="minimap__labels-top"
             style={{
-              left: MINIMAP_CONSTANTS.SCROLL_PADDING + headerSize,
+              left: MINIMAP_CONSTANTS.SCROLL_PADDING + headerWidth,
               top: MINIMAP_CONSTANTS.SCROLL_PADDING,
               width: gridWidth,
             }}
           >
             <div
               className="minimap__labels-top-inner"
-              style={{ transform: `translateX(${-panning.panOffset.x}px)` }}
+              style={{
+                transform: `translateX(${-panning.panOffset.x}px)`,
+                gridTemplateColumns: `repeat(${gridCols}, ${cellSize}px)`,
+                columnGap: `${renderGap}px`,
+              }}
             >
               {Array.from({ length: gridCols }).map((_, col) => {
-                  const isMajor = (col + 1) % 5 === 0;
-                  const isActive = col < cols;
-  return (
+                const isMajor = (col + 1) % 5 === 0;
+                const isActive = col < cols;
+                return (
                   <div
                     key={`col-${col}`}
                     className="minimap__col-header"
                     style={{
-                      width: cellSize,
                       color: isMajor
                         ? 'var(--minimap-label-major)'
                         : isActive
@@ -531,23 +538,26 @@ export const Minimap = memo(function Minimap({
             className="minimap__labels-left"
             style={{
               left: MINIMAP_CONSTANTS.SCROLL_PADDING,
-              top: MINIMAP_CONSTANTS.SCROLL_PADDING + headerSize,
+              top: MINIMAP_CONSTANTS.SCROLL_PADDING + headerHeight,
               height: gridHeight,
             }}
           >
             <div
               className="minimap__labels-left-inner"
-              style={{ transform: `translateY(${-panning.panOffset.y}px)` }}
+              style={{
+                transform: `translateY(${-panning.panOffset.y}px)`,
+                gridTemplateRows: `repeat(${gridRows}, ${cellSize}px)`,
+                rowGap: `${renderGap}px`,
+              }}
             >
               {Array.from({ length: gridRows }).map((_, row) => {
-                  const isMajor = (row + 1) % 5 === 0;
-                  const isActive = row < rows;
-                  return (
-                    <div
+                const isMajor = (row + 1) % 5 === 0;
+                const isActive = row < rows;
+                return (
+                  <div
                     key={`row-${row}`}
                     className="minimap__row-header"
                     style={{
-                      height: cellSize,
                       color: isMajor
                         ? 'var(--minimap-label-major)'
                         : isActive
@@ -579,12 +589,12 @@ export const Minimap = memo(function Minimap({
 
         {/* Grid with labels */}
         <div
-          className="minimap__container"
-          style={{
-            paddingLeft: labelOffset,
-            paddingTop: labelOffset,
-          }}
-        >
+            className="minimap__container"
+            style={{
+            paddingLeft: labelOffsetX,
+            paddingTop: labelOffsetY,
+            }}
+          >
           {/* Main grid area */}
           <div className="minimap__grid-area">
             {/* Grid cells */}
@@ -703,7 +713,6 @@ export const Minimap = memo(function Minimap({
                       width: (ghost.originalPosition.colSpan || 1) * cellSize + ((ghost.originalPosition.colSpan || 1) - 1) * renderGap,
                       height: (ghost.originalPosition.rowSpan || 1) * cellSize + ((ghost.originalPosition.rowSpan || 1) - 1) * renderGap,
                     }}
-                    title={`Original position of ${ghost.name || ghost.id}`}
                   />
                 ))}
 
@@ -724,30 +733,102 @@ export const Minimap = memo(function Minimap({
                   mapMode === MAP_MODES.VIEWPORTS ||
                   mapMode === MAP_MODES.LAYOUT ||
                   mapMode === MAP_MODES.TEAM
-                ) && viewports.map(vp => (
-                  <ViewportIndicator
-                    key={vp.id}
-                    viewport={vp}
-                    cellSize={cellSize}
-                    gap={renderGap}
-                    isSelected={selectedViewportId === vp.id}
-                    onViewportMove={onViewportMove}
-                  />
-                ))}
+                ) && viewports.map(vp => {
+                  if (!vp.position) return null;
+                  const vpLeft = vp.position.col * renderPitch;
+                  const vpTop = vp.position.row * renderPitch;
+                  const vpWidth = vp.size.cols * cellSize + (vp.size.cols - 1) * renderGap;
+                  const tooltip = `${vp.name} viewport`;
+                  const overlayWidth = Math.min(84, Math.max(24, vpWidth));
+
+                  return (
+                    <React.Fragment key={vp.id}>
+                      <Tooltip content={tooltip} placement="top" delay={400}>
+                        <div
+                          className="minimap__overlay-hit minimimap__overlay-hit--viewport"
+                          style={{
+                            left: vpLeft + 4,
+                            top: vpTop + 2,
+                            width: overlayWidth,
+                            height: 18,
+                          }}
+                          aria-label={tooltip}
+                        />
+                      </Tooltip>
+                      <ViewportIndicator
+                        viewport={vp}
+                        cellSize={cellSize}
+                        gap={renderGap}
+                        isSelected={selectedViewportId === vp.id}
+                        onViewportMove={onViewportMove}
+                      />
+                    </React.Fragment>
+                  );
+                })}
 
                 {/* Collaborator viewport indicators */}
                 {showCollaborators && (
                   mapMode === MAP_MODES.VIEWPORTS ||
                   mapMode === MAP_MODES.TEAM
-                ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => (
-                  <CollaboratorIndicator
-                    key={collab.id}
-                    collaborator={collab}
-                    cellSize={cellSize}
-                    gap={renderGap}
-                    showName={mapMode === MAP_MODES.TEAM}
-                  />
-                ))}
+                ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => {
+                  const vp = collab.viewport;
+                  if (!vp) return null;
+                  const collabLeft = vp.col * renderPitch;
+                  const collabTop = vp.row * renderPitch;
+                  const collabWidth = vp.cols * cellSize + (vp.cols - 1) * renderGap;
+                  const tooltip = `${collab.name}${collab.isBroadcasting ? ' (Broadcasting)' : ''}`;
+                  const overlayLeft = Math.max(0, collabLeft + collabWidth - 28);
+                  const overlayTop = Math.max(0, collabTop - 10);
+
+                  return (
+                    <React.Fragment key={collab.id}>
+                      <Tooltip content={tooltip} placement="top" delay={400}>
+                        <div
+                          className="minimap__overlay-hit minimimap__overlay-hit--collab"
+                          style={{
+                            left: overlayLeft,
+                            top: overlayTop,
+                            width: 24,
+                            height: 16,
+                          }}
+                          aria-label={tooltip}
+                        />
+                      </Tooltip>
+                      <CollaboratorIndicator
+                        collaborator={collab}
+                        cellSize={cellSize}
+                        gap={renderGap}
+                        showName={mapMode === MAP_MODES.TEAM}
+                      />
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Cursor tooltip anchors */}
+                {showCursors && mapMode === MAP_MODES.TEAM && collaboratorsWithCursors.map(collab => {
+                  const cursor = collab.cursor;
+                  if (!cursor) return null;
+                  const cursorLeft = cursor.col * renderPitch + (cursor.colOffset || 0) * cellSize;
+                  const cursorTop = cursor.row * renderPitch + (cursor.rowOffset || 0) * cellSize;
+                  const tooltip = collab.name;
+                  const overlayLeft = Math.max(0, cursorLeft - 6);
+                  const overlayTop = Math.max(0, cursorTop - 6);
+
+                  return (
+                    <Tooltip key={`cursor-tooltip-${collab.id}`} content={tooltip} placement="top" delay={400}>
+                      <div
+                        className="minimap__overlay-hit minimimap__overlay-hit--cursor"
+                        style={{
+                          left: overlayLeft,
+                          top: overlayTop,
+                          width: 16,
+                          height: 16,
+                        }}
+                        aria-label={tooltip}
+                      />
+                    </Tooltip>
+                  );
+                })}
               </div>
             </div>
 

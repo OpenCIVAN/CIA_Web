@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TabButton } from '@UI/react/components/molecules';
 import { Icon } from '@UI/react/components/atoms';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
@@ -68,16 +69,19 @@ function CompactVoiceControls({
 }) {
     if (!inVoice) {
         // Not in voice - show join button (or joining indicator)
+        const joinLabel = isJoining ? 'Connecting...' : 'Join Voice';
         return (
             <div className="right-panel__voice-controls">
-                <button
-                    className={`right-panel__voice-btn right-panel__voice-btn--join ${isJoining ? 'right-panel__voice-btn--joining' : ''}`}
-                    onClick={onJoinLeave}
-                    title={isJoining ? 'Connecting...' : 'Join Voice'}
-                    disabled={isJoining}
-                >
-                    <Icon name={isJoining ? 'loader' : 'headsetMic'} size={18} />
-                </button>
+                <Tooltip content={joinLabel} placement="left" delay={400}>
+                    <button
+                        className={`right-panel__voice-btn right-panel__voice-btn--join ${isJoining ? 'right-panel__voice-btn--joining' : ''}`}
+                        onClick={onJoinLeave}
+                        disabled={isJoining}
+                        aria-label={joinLabel}
+                    >
+                        <Icon name={isJoining ? 'loader' : 'headsetMic'} size={18} />
+                    </button>
+                </Tooltip>
                 {isJoining && (
                     <span className="right-panel__voice-status">Joining...</span>
                 )}
@@ -89,40 +93,48 @@ function CompactVoiceControls({
     return (
         <div className="right-panel__voice-controls right-panel__voice-controls--connected">
             {/* Mute toggle */}
-            <button
-                className={`right-panel__voice-btn ${isMuted ? 'right-panel__voice-btn--muted' : ''}`}
-                onClick={onToggleMute}
-                title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
-            >
-                <Icon name={isMuted ? 'micOff' : 'mic'} size={18} />
-            </button>
+            <Tooltip content={isMuted ? 'Unmute (M)' : 'Mute (M)'} placement="left" delay={400}>
+                <button
+                    className={`right-panel__voice-btn ${isMuted ? 'right-panel__voice-btn--muted' : ''}`}
+                    onClick={onToggleMute}
+                    aria-label={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+                >
+                    <Icon name={isMuted ? 'micOff' : 'mic'} size={18} />
+                </button>
+            </Tooltip>
 
             {/* Deafen toggle */}
-            <button
-                className={`right-panel__voice-btn ${isDeafened ? 'right-panel__voice-btn--muted' : ''}`}
-                onClick={onToggleDeafen}
-                title={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'}
-            >
-                <Icon name={isDeafened ? 'headsetOff' : 'headset'} size={18} />
-            </button>
+            <Tooltip content={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'} placement="left" delay={400}>
+                <button
+                    className={`right-panel__voice-btn ${isDeafened ? 'right-panel__voice-btn--muted' : ''}`}
+                    onClick={onToggleDeafen}
+                    aria-label={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'}
+                >
+                    <Icon name={isDeafened ? 'headsetOff' : 'headset'} size={18} />
+                </button>
+            </Tooltip>
 
             {/* Settings button */}
-            <button
-                className="right-panel__voice-btn"
-                onClick={onOpenSettings}
-                title="Voice Settings"
-            >
-                <Icon name="settings" size={18} />
-            </button>
+            <Tooltip content="Voice Settings" placement="left" delay={400}>
+                <button
+                    className="right-panel__voice-btn"
+                    onClick={onOpenSettings}
+                    aria-label="Voice Settings"
+                >
+                    <Icon name="settings" size={18} />
+                </button>
+            </Tooltip>
 
             {/* Leave button */}
-            <button
-                className="right-panel__voice-btn right-panel__voice-btn--leave"
-                onClick={onJoinLeave}
-                title="Leave Voice"
-            >
-                <Icon name="leaveVoice" size={18} />
-            </button>
+            <Tooltip content="Leave Voice" placement="left" delay={400}>
+                <button
+                    className="right-panel__voice-btn right-panel__voice-btn--leave"
+                    onClick={onJoinLeave}
+                    aria-label="Leave Voice"
+                >
+                    <Icon name="leaveVoice" size={18} />
+                </button>
+            </Tooltip>
         </div>
     );
 }

@@ -10,7 +10,7 @@ import { usePanelShell } from './PanelShellContext';
 import { usePanelDrag } from './hooks/usePanelDrag';
 import { usePanelResize } from './hooks/usePanelResize';
 import { usePanelPosition } from './hooks/usePanelPosition';
-import { CHROME_LEVELS, SIZE_MODES, DEFAULT_BREAKPOINTS, DEFAULT_DIMENSIONS } from './constants';
+import { CHROME_LEVELS, SIZE_MODES, DEFAULT_BREAKPOINTS, DEFAULT_DIMENSIONS, MAX_Z_INDEX } from './constants';
 
 /**
  * @typedef {Object} UsePanelShellLogicOptions
@@ -85,7 +85,7 @@ export function usePanelShellLogic({
   const width = panelState?.size?.width || defaultWidth;
   const height = panelState?.size?.height || defaultHeight;
   const position = panelState?.position || { x: 100, y: 100 };
-  const zIndex = panelState?.zIndex || 1000;
+  const zIndex = Math.min(panelState?.zIndex || 1000, MAX_Z_INDEX);
   const minimized = panelState?.minimized || false;
   const isOpen = panelState?.isOpen || false;
 

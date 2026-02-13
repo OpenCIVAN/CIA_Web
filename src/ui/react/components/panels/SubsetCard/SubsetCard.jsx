@@ -6,6 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { subsetManager } from '@Core/data/managers/SubsetManager.js';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import './SubsetCard.scss';
 
 /**
@@ -89,9 +90,11 @@ export function SubsetCard({
                             {subset.placementIds.length} view
                             {subset.placementIds.length !== 1 ? 's' : ''}
                         </span>
-                        <span className="subset-card__visibility" title={subset.visibility}>
-                            {getVisibilityIcon()}
-                        </span>
+                        <Tooltip content={subset.visibility} placement="top" delay={400}>
+                            <span className="subset-card__visibility" aria-label={subset.visibility}>
+                                {getVisibilityIcon()}
+                            </span>
+                        </Tooltip>
                     </span>
                 </div>
                 <div className="subset-card__toggle">
@@ -145,27 +148,33 @@ export function SubsetCard({
                         )}
 
                         <div className="subset-card__more-actions">
-                            <button
-                                className="subset-card__btn subset-card__btn--icon"
-                                onClick={() => setIsEditing(true)}
-                                title="Rename"
-                            >
-                                <Icon name="edit" size={14} />
-                            </button>
-                            <button
-                                className="subset-card__btn subset-card__btn--icon"
-                                onClick={() => setShowShareMenu(!showShareMenu)}
-                                title="Share"
-                            >
-                                {getVisibilityIcon()}
-                            </button>
-                            <button
-                                className="subset-card__btn subset-card__btn--icon subset-card__btn--danger"
-                                onClick={handleDelete}
-                                title="Delete"
-                            >
-                                <Icon name="trash" size={14} />
-                            </button>
+                            <Tooltip content="Rename" placement="top" delay={400}>
+                                <button
+                                    className="subset-card__btn subset-card__btn--icon"
+                                    onClick={() => setIsEditing(true)}
+                                    aria-label="Rename"
+                                >
+                                    <Icon name="edit" size={14} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Share" placement="top" delay={400}>
+                                <button
+                                    className="subset-card__btn subset-card__btn--icon"
+                                    onClick={() => setShowShareMenu(!showShareMenu)}
+                                    aria-label="Share"
+                                >
+                                    {getVisibilityIcon()}
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Delete" placement="top" delay={400}>
+                                <button
+                                    className="subset-card__btn subset-card__btn--icon subset-card__btn--danger"
+                                    onClick={handleDelete}
+                                    aria-label="Delete"
+                                >
+                                    <Icon name="trash" size={14} />
+                                </button>
+                            </Tooltip>
                         </div>
                     </div>
 

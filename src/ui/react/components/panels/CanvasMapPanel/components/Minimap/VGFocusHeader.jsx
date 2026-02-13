@@ -7,6 +7,7 @@
 
 import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { LAYOUTS } from '../../utils/constants';
 import { getVGDisplayName, formatRangeRef } from '../../utils/gridUtils';
 
@@ -103,18 +104,20 @@ export const VGFocusHeader = memo(function VGFocusHeader({ focusedVG, onBackToCa
           }}
         />
       ) : (
-        <button
-          type="button"
-          className="minimap__focused-name"
-          title="Click to rename ViewGroup"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsRenaming(true);
-          }}
-        >
-          {focusedVG?.name || getVGDisplayName(focusedVG)}
-          <Icon name="pencil" size={12} />
-        </button>
+        <Tooltip content="Click to rename ViewGroup" placement="bottom" delay={300}>
+          <button
+            type="button"
+            className="minimap__focused-name"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsRenaming(true);
+            }}
+            aria-label="Click to rename ViewGroup"
+          >
+            {focusedVG?.name || getVGDisplayName(focusedVG)}
+            <Icon name="pencil" size={12} />
+          </button>
+        </Tooltip>
       )}
 
       {/* Dimension badges */}

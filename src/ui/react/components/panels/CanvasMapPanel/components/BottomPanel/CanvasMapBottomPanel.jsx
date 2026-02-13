@@ -5,6 +5,7 @@
 
 import React, { memo, useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { FilterToolbar } from '@UI/react/components/organisms/FilterToolbar';
 import { SquareDPad } from '@UI/react/components/molecules/DPadNav';
 import { tokens } from '@UI/react/styles/tokens';
@@ -219,28 +220,29 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
             { icon: 'bookmark', label: 'Bookmarks', onClick: onAddBookmark },
             { icon: 'settings', label: 'Settings', onClick: onOpenSettings, disabled: !onOpenSettings },
           ].map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={action.onClick}
-              title={action.label}
-              disabled={action.disabled}
-              style={{
-                height: 24,
-                width: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: tokens.radius.sm,
-                border: `1px solid ${COLOR_VARS.borderSubtle}`,
-                background: 'transparent',
-                color: COLOR_VARS.textMuted,
-                cursor: action.disabled ? 'not-allowed' : 'pointer',
-                opacity: action.disabled ? 0.4 : 1,
-              }}
-            >
-              <Icon name={action.icon} size={12} />
-            </button>
+            <Tooltip key={action.label} content={action.label} placement="top" delay={300}>
+              <button
+                type="button"
+                onClick={action.onClick}
+                disabled={action.disabled}
+                aria-label={action.label}
+                style={{
+                  height: 24,
+                  width: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: tokens.radius.sm,
+                  border: `1px solid ${COLOR_VARS.borderSubtle}`,
+                  background: 'transparent',
+                  color: COLOR_VARS.textMuted,
+                  cursor: action.disabled ? 'not-allowed' : 'pointer',
+                  opacity: action.disabled ? 0.4 : 1,
+                }}
+              >
+                <Icon name={action.icon} size={12} />
+              </button>
+            </Tooltip>
           ))}
         </div>
         <div style={{ flex: 1 }} />

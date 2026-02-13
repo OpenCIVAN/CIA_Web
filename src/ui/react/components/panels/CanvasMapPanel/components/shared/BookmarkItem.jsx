@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { formatCellRef } from '../../utils/gridUtils';
 
 /**
@@ -48,29 +49,37 @@ export const BookmarkItem = memo(function BookmarkItem({
       </span>
 
       {onStar && (
-        <button
-          className="bookmark-item__star"
-          onClick={(e) => {
-            e.stopPropagation();
-            onStar(bookmark.id);
-          }}
-          title={bookmark.isStarred ? 'Remove from favorites' : 'Add to favorites'}
+        <Tooltip
+          content={bookmark.isStarred ? 'Remove from favorites' : 'Add to favorites'}
+          placement="top"
+          delay={300}
         >
-          <Icon name={bookmark.isStarred ? 'starOff' : 'star'} size={12} />
-        </button>
+          <button
+            className="bookmark-item__star"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStar(bookmark.id);
+            }}
+            aria-label={bookmark.isStarred ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Icon name={bookmark.isStarred ? 'starOff' : 'star'} size={12} />
+          </button>
+        </Tooltip>
       )}
 
       {onDelete && (
-        <button
-          className="bookmark-item__delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(bookmark.id);
-          }}
-          title="Delete bookmark"
-        >
-          <Icon name="x" size={12} />
-        </button>
+        <Tooltip content="Delete bookmark" placement="top" delay={300}>
+          <button
+            className="bookmark-item__delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(bookmark.id);
+            }}
+            aria-label="Delete bookmark"
+          >
+            <Icon name="x" size={12} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

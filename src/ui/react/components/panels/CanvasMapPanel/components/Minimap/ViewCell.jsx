@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { VIEW_TYPES } from '../../utils/constants';
 import { formatCellRef } from '../../utils/gridUtils';
 
@@ -28,31 +29,34 @@ export const ViewCell = memo(function ViewCell({
   const showName = cellSize >= 50;
   const left = (view.canvasCol || 0) * (cellSize + gap);
   const top = (view.canvasRow || 0) * (cellSize + gap);
+  const tooltip = `${view.name} - ${formatCellRef(view.canvasRow, view.canvasCol)} - ${viewType.name}`;
 
   return (
-    <div
-      className={`view-cell ${isSelected ? 'view-cell--selected' : ''}`}
-      style={{
-        left,
-        top,
-        '--view-color': view.vgColor || `var(--accent-${viewType.color})`,
-      }}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      title={`${view.name}\n${formatCellRef(view.canvasRow, view.canvasCol)}\n${viewType.name}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
-    >
-      <Icon name={viewType.icon} size={cellSize > 36 ? 16 : 12} className="view-cell__icon" />
-      {showName && (
-        <span className="view-cell__name">{view.name}</span>
-      )}
-    </div>
+    <Tooltip content={tooltip} placement="top" delay={400}>
+      <div
+        className={`view-cell ${isSelected ? 'view-cell--selected' : ''}`}
+        style={{
+          left,
+          top,
+          '--view-color': view.vgColor || `var(--accent-${viewType.color})`,
+        }}
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        aria-label={tooltip}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+      >
+        <Icon name={viewType.icon} size={cellSize > 36 ? 16 : 12} className="view-cell__icon" />
+        {showName && (
+          <span className="view-cell__name">{view.name}</span>
+        )}
+      </div>
+    </Tooltip>
   );
 });
 

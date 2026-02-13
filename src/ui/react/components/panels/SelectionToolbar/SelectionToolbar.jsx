@@ -4,6 +4,7 @@
 // Provides quick actions for selection without needing the panel
 
 import React from 'react';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useSubsets } from '@UI/react/hooks/useCanvas.js';
 import './SelectionToolbar.scss';
 
@@ -31,21 +32,25 @@ export function SelectionToolbar({ canvasId, onCreateClick }) {
             <div className="selection-toolbar__divider" />
 
             <div className="selection-toolbar__actions">
-                <button
-                    className="selection-toolbar__btn selection-toolbar__btn--secondary"
-                    onClick={() => exitSelectionMode(true)}
-                    title="Cancel selection"
-                >
-                    Cancel
-                </button>
-                <button
-                    className="selection-toolbar__btn selection-toolbar__btn--primary"
-                    onClick={onCreateClick}
-                    disabled={selectedIds.length === 0}
-                    title="Create focus group from selection"
-                >
-                    Create Group ({selectedIds.length})
-                </button>
+                <Tooltip content="Cancel selection" placement="top" delay={400}>
+                    <button
+                        className="selection-toolbar__btn selection-toolbar__btn--secondary"
+                        onClick={() => exitSelectionMode(true)}
+                        aria-label="Cancel selection"
+                    >
+                        Cancel
+                    </button>
+                </Tooltip>
+                <Tooltip content="Create focus group from selection" placement="top" delay={400}>
+                    <button
+                        className="selection-toolbar__btn selection-toolbar__btn--primary"
+                        onClick={onCreateClick}
+                        disabled={selectedIds.length === 0}
+                        aria-label="Create focus group from selection"
+                    >
+                        Create Group ({selectedIds.length})
+                    </button>
+                </Tooltip>
             </div>
 
             <div className="selection-toolbar__hint">

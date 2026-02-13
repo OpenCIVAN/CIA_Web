@@ -36,7 +36,6 @@ export const CursorIndicator = memo(function CursorIndicator({
         '--cursor-color': color,
         transform: `translate(${x}px, ${y}px)`,
       }}
-      title={name}
     >
       {/* Cursor pointer */}
       <svg

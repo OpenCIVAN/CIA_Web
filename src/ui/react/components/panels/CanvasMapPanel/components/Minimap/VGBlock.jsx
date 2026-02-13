@@ -12,6 +12,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { LAYOUTS } from '../../utils/constants';
 import { getVGDisplayName } from '../../utils/gridUtils';
 import { getInternalCells } from '../../hooks/useInternalCellLayout';
@@ -95,34 +96,35 @@ export const VGBlock = memo(function VGBlock({
   const changeStatusClass = changeStatus ? `vg-block--${changeStatus}` : '';
 
   return (
-    <div
-      className={`vg-block
-        ${isSelected ? 'vg-block--selected' : ''}
-        ${isGhosted ? 'vg-block--ghosted' : ''}
-        ${!isExplicit ? 'vg-block--implicit' : ''}
-        ${subtle ? 'vg-block--subtle' : ''}
-        ${isBeingMoved ? 'vg-block--moving' : ''}
-        ${isEditMode ? 'vg-block--edit-mode' : ''}
-        ${dimmed ? 'vg-block--dimmed' : ''}
-        ${changeStatusClass}`}
-      style={style}
-      draggable={effectiveDraggable}
-      onDragStart={effectiveDraggable ? onDragStart : undefined}
-      onDragEnd={effectiveDraggable ? onDragEnd : undefined}
-      onPointerDown={handlePointerDown}
-      onClick={subtle ? undefined : onClick}
-      onDoubleClick={onDoubleClick}
-      role={subtle ? undefined : 'button'}
-      tabIndex={subtle ? -1 : 0}
-      title={`${name} (${position.rowSpan}x${position.colSpan})`}
-      onKeyDown={subtle ? undefined : (e) => {
-        if (e.key === 'Enter') onClick?.();
-        if (e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
-    >
+    <Tooltip content={`${name} (${position.rowSpan}x${position.colSpan})`} placement="top" delay={300}>
+      <div
+        className={`vg-block
+          ${isSelected ? 'vg-block--selected' : ''}
+          ${isGhosted ? 'vg-block--ghosted' : ''}
+          ${!isExplicit ? 'vg-block--implicit' : ''}
+          ${subtle ? 'vg-block--subtle' : ''}
+          ${isBeingMoved ? 'vg-block--moving' : ''}
+          ${isEditMode ? 'vg-block--edit-mode' : ''}
+          ${dimmed ? 'vg-block--dimmed' : ''}
+          ${changeStatusClass}`}
+        style={style}
+        draggable={effectiveDraggable}
+        onDragStart={effectiveDraggable ? onDragStart : undefined}
+        onDragEnd={effectiveDraggable ? onDragEnd : undefined}
+        onPointerDown={handlePointerDown}
+        onClick={subtle ? undefined : onClick}
+        onDoubleClick={onDoubleClick}
+        role={subtle ? undefined : 'button'}
+        tabIndex={subtle ? -1 : 0}
+        aria-label={`${name} (${position.rowSpan}x${position.colSpan})`}
+        onKeyDown={subtle ? undefined : (e) => {
+          if (e.key === 'Enter') onClick?.();
+          if (e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+      >
       {/* Name label */}
       <span className="vg-block__name">{name}</span>
 
@@ -135,17 +137,19 @@ export const VGBlock = memo(function VGBlock({
 
       {/* Remove button in edit mode */}
       {isEditMode && onRemove && (
-        <button
-          type="button"
-          className="vg-block__remove-btn"
-          title="Remove from canvas"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(vg.id);
-          }}
-        >
-          <Icon name="close" size={10} />
-        </button>
+        <Tooltip content="Remove from canvas" placement="top" delay={300}>
+          <button
+            type="button"
+            className="vg-block__remove-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(vg.id);
+            }}
+            aria-label="Remove from canvas"
+          >
+            <Icon name="close" size={10} />
+          </button>
+        </Tooltip>
       )}
 
       {/* Internal layout grid */}
@@ -166,6 +170,7 @@ export const VGBlock = memo(function VGBlock({
         </div>
       )}
     </div>
+    </Tooltip>
   );
 });
 

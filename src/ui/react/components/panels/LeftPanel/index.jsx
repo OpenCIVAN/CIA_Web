@@ -18,6 +18,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 // Import tab config and renderer from the SINGLE SOURCE OF TRUTH
 import {
@@ -70,16 +71,17 @@ function ActivityBar({
 
                     return (
                         <React.Fragment key={tab.id}>
-                            <button
-                                className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
-                                data-color={tab.color}
-                                onClick={() => handleTabClick(tab.id)}
-                                title={tab.label}
-                                aria-label={tab.label}
-                                aria-selected={isActive}
-                            >
-                                <Icon name={iconName} size={18} />
-                            </button>
+                            <Tooltip content={tab.label} placement="right" delay={400}>
+                                <button
+                                    className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
+                                    data-color={tab.color}
+                                    onClick={() => handleTabClick(tab.id)}
+                                    aria-label={tab.label}
+                                    aria-selected={isActive}
+                                >
+                                    <Icon name={iconName} size={18} />
+                                </button>
+                            </Tooltip>
                             {showDivider && (
                                 <div className="left-panel__activity-divider" />
                             )}
@@ -91,14 +93,19 @@ function ActivityBar({
             <div className="left-panel__activity-spacer" />
 
             {/* Toggle panel button at bottom */}
-            <button
-                className="left-panel__activity-btn left-panel__toggle-btn"
-                onClick={onTogglePanel}
-                title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
-                aria-label={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
+            <Tooltip
+                content={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
+                placement="right"
+                delay={400}
             >
-                {isPanelOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />}
-            </button>
+                <button
+                    className="left-panel__activity-btn left-panel__toggle-btn"
+                    onClick={onTogglePanel}
+                    aria-label={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
+                >
+                    {isPanelOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />}
+                </button>
+            </Tooltip>
         </div>
     );
 }

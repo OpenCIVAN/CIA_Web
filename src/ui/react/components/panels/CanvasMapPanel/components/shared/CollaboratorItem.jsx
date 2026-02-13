@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { formatCellRef } from '../../utils/gridUtils';
 
@@ -81,24 +82,28 @@ export const CollaboratorItem = memo(function CollaboratorItem({
         )}
 
         {onLocate && isOnline && viewport && (
-          <button
-            className="collaborator-item__action"
-            onClick={() => onLocate(collaborator.id)}
-            title={`Go to ${name}'s location`}
-          >
-            <Icon name="crosshair" size={12} />
-          </button>
+          <Tooltip content={`Go to ${name}'s location`} placement="top" delay={300}>
+            <button
+              className="collaborator-item__action"
+              onClick={() => onLocate(collaborator.id)}
+              aria-label={`Go to ${name}'s location`}
+            >
+              <Icon name="crosshair" size={12} />
+            </button>
+          </Tooltip>
         )}
 
         {onFollow && isOnline && viewport && (
-          <button
-            className="collaborator-item__follow"
-            onClick={() => onFollow(collaborator.id)}
-            title={`Follow ${name}`}
-          >
-            <Icon name="userPlus" size={12} />
-            Follow
-          </button>
+          <Tooltip content={`Follow ${name}`} placement="top" delay={300}>
+            <button
+              className="collaborator-item__follow"
+              onClick={() => onFollow(collaborator.id)}
+              aria-label={`Follow ${name}`}
+            >
+              <Icon name="userPlus" size={12} />
+              Follow
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

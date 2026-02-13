@@ -106,11 +106,12 @@
   overflow-y: auto;
 
   // Glassmorphism
-  background: rgba(25, 25, 30, 0.95);
-  backdrop-filter: blur(16px);
+  background: $color-glass-panel;
+  backdrop-filter: $backdrop-glass-medium;
+  -webkit-backdrop-filter: $backdrop-glass-medium;
   border: 1px solid $color-border-medium;
   border-radius: $radius-md;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: $shadow-glass-lg;
 
   z-index: $z-dropdown;
   padding: $spacing-xs;
@@ -184,7 +185,7 @@
   text-align: left;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: $color-hover-bg;
   }
 
   &--active {

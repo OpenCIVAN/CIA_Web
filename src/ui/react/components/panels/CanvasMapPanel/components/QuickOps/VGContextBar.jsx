@@ -8,6 +8,7 @@
 
 import React, { memo, useRef, useCallback, useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { LayoutThumbnail } from '@UI/react/components/atoms/LayoutThumbnail';
 import { DimensionControls } from './DimensionControls';
 import { LAYOUTS } from '../../utils/constants';
@@ -80,6 +81,11 @@ export const VGContextBar = memo(function VGContextBar({
   // Selected mode: simpler context bar
   const displayName = activeVG.name || getVGDisplayName(activeVG);
   const layout = LAYOUTS[activeVG.layoutId] || LAYOUTS.single;
+  const ActionTooltip = ({ content, children }) => (
+    <Tooltip content={content} placement="top" delay={300}>
+      {children}
+    </Tooltip>
+  );
 
   return (
     <div
@@ -115,15 +121,17 @@ export const VGContextBar = memo(function VGContextBar({
             }}
           />
         ) : (
-          <button
-            type="button"
-            className="vg-context-bar__name"
-            title="Click to rename"
-            onClick={() => setIsRenaming(true)}
-          >
-            <span style={{ color: activeVG.color }}>{displayName}</span>
-            <Icon name="pencil" size={10} className="vg-context-bar__rename-icon" />
-          </button>
+          <ActionTooltip content="Click to rename">
+            <button
+              type="button"
+              className="vg-context-bar__name"
+              onClick={() => setIsRenaming(true)}
+              aria-label="Click to rename"
+            >
+              <span style={{ color: activeVG.color }}>{displayName}</span>
+              <Icon name="pencil" size={10} className="vg-context-bar__rename-icon" />
+            </button>
+          </ActionTooltip>
         )}
         <LayoutThumbnail layout={layout} size="sm" />
         </div>
@@ -132,56 +140,68 @@ export const VGContextBar = memo(function VGContextBar({
 
         <div className="vg-context-bar__actions">
           {!isFocused && (
+            <ActionTooltip content="Edit ViewGroup">
+              <button
+                type="button"
+                className="vg-context-bar__action-btn"
+                onClick={() => onEditVG?.(activeVG)}
+                aria-label="Edit ViewGroup"
+              >
+                <Icon name="pencil" size={14} />
+              </button>
+            </ActionTooltip>
+          )}
+          <ActionTooltip content="Duplicate">
             <button
               type="button"
               className="vg-context-bar__action-btn"
-              onClick={() => onEditVG?.(activeVG)}
-              title="Edit ViewGroup"
+              onClick={() => onDuplicate?.(activeVG.id)}
+              aria-label="Duplicate"
             >
-              <Icon name="pencil" size={14} />
+              <Icon name="copy" size={14} />
             </button>
-          )}
-          <button
-            type="button"
-            className="vg-context-bar__action-btn"
-            onClick={() => onDuplicate?.(activeVG.id)}
-            title="Duplicate"
-          >
-            <Icon name="copy" size={14} />
-          </button>
-          <button
-            type="button"
-            className="vg-context-bar__action-btn"
-            onClick={() => onSaveTemplate?.('personal')}
-            title="Save template"
-          >
-            <Icon name="save" size={14} />
-          </button>
-          <button
-            type="button"
-            className="vg-context-bar__action-btn"
-            onClick={() => onSaveTemplate?.('project')}
-            title="Share template"
-          >
-            <Icon name="share" size={14} />
-          </button>
-          <button
-            type="button"
-            className="vg-context-bar__action-btn vg-context-bar__action-btn--danger"
-            onClick={() => onDelete?.(activeVG.id)}
-            title="Delete"
-          >
-            <Icon name="trash" size={14} />
-          </button>
-          {!isFocused && (
+          </ActionTooltip>
+          <ActionTooltip content="Save template">
             <button
               type="button"
-              className="vg-context-bar__action-btn vg-context-bar__action-btn--close"
-              onClick={onDeselect}
-              title="Deselect"
+              className="vg-context-bar__action-btn"
+              onClick={() => onSaveTemplate?.('personal')}
+              aria-label="Save template"
             >
-              <Icon name="close" size={14} />
+              <Icon name="save" size={14} />
             </button>
+          </ActionTooltip>
+          <ActionTooltip content="Share template">
+            <button
+              type="button"
+              className="vg-context-bar__action-btn"
+              onClick={() => onSaveTemplate?.('project')}
+              aria-label="Share template"
+            >
+              <Icon name="share" size={14} />
+            </button>
+          </ActionTooltip>
+          <ActionTooltip content="Delete">
+            <button
+              type="button"
+              className="vg-context-bar__action-btn vg-context-bar__action-btn--danger"
+              onClick={() => onDelete?.(activeVG.id)}
+              aria-label="Delete"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </ActionTooltip>
+          {!isFocused && (
+            <ActionTooltip content="Deselect">
+              <button
+                type="button"
+                className="vg-context-bar__action-btn vg-context-bar__action-btn--close"
+                onClick={onDeselect}
+                aria-label="Deselect"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </ActionTooltip>
           )}
         </div>
       </div>

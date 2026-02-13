@@ -10,6 +10,7 @@
 
 import React, { memo, useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
@@ -143,9 +144,11 @@ export const LayoutPanel = memo(function LayoutPanel({
         actions={
           <>
             <Badge count={viewGroups.length} size="sm" />
-            <button className="contextual-panel__icon-btn" onClick={onAddVG} title="Add VG">
-              <Icon name="plus" size={14} />
-            </button>
+            <Tooltip content="Add VG" placement="bottom" delay={300}>
+              <button className="contextual-panel__icon-btn" onClick={onAddVG} aria-label="Add VG">
+                <Icon name="plus" size={14} />
+              </button>
+            </Tooltip>
           </>
         }
         sizeMode={sizeMode}
@@ -212,19 +215,20 @@ export const LayoutPanel = memo(function LayoutPanel({
             { id: '2x2', label: '2x2', layoutId: '2x2' },
             { id: 'main-side', label: 'Main+Side', layoutId: '1+2' },
           ].map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              className="layout-panel__template-btn"
-              onClick={() => onAddVG?.(template.layoutId)}
-              draggable
-              onDragStart={(event) => handleTemplateDragStart(event, template)}
-              onDragEnd={handleTemplateDragEnd}
-              title="Drag to canvas"
-            >
-              <Icon name="layoutGrid" size={12} />
-              <span>{template.label}</span>
-            </button>
+            <Tooltip key={template.id} content="Drag to canvas" placement="top" delay={300}>
+              <button
+                type="button"
+                className="layout-panel__template-btn"
+                onClick={() => onAddVG?.(template.layoutId)}
+                draggable
+                onDragStart={(event) => handleTemplateDragStart(event, template)}
+                onDragEnd={handleTemplateDragEnd}
+                aria-label="Drag to canvas"
+              >
+                <Icon name="layoutGrid" size={12} />
+                <span>{template.label}</span>
+              </button>
+            </Tooltip>
           ))}
         </div>
       </PanelSection>

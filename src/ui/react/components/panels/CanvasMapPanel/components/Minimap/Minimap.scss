@@ -80,7 +80,7 @@
   &__labels-top {
     position: absolute;
     display: flex;
-    height: var(--header-size);
+    height: var(--header-height);
     background: var(--label-bg);
     border-bottom: 1px solid var(--label-border);
     overflow: visible;
@@ -99,23 +99,22 @@
   }
 
   &__labels-top-inner {
-    display: flex;
+    display: grid;
     height: 100%;
+    width: 100%;
   }
 
   &__col-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
+    height: 100%;
+    font-size: var(--label-font-size, 10px);
+    line-height: 1;
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
     color: $color-accent-amber;
     text-align: center;
-
-    &:not(:last-child) {
-      margin-right: var(--grid-gap);
-    }
   }
 
   &__grid-area {
@@ -127,7 +126,7 @@
     position: absolute;
     display: flex;
     flex-direction: column;
-    width: var(--header-size);
+    width: var(--header-width);
     background: var(--label-bg);
     border-right: 1px solid var(--label-border);
     overflow: visible;
@@ -146,8 +145,9 @@
   }
 
   &__labels-left-inner {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    width: 100%;
+    height: 100%;
   }
 
   &__row-header {
@@ -155,16 +155,14 @@
     align-items: center;
     justify-content: center;
     padding-right: 0;
-    font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
+    width: 100%;
+    font-size: var(--label-font-size, 10px);
+    line-height: 1;
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
     color: $color-accent-amber;
-    min-width: var(--header-size);
+    min-width: var(--header-width);
     text-align: center;
-
-    &:not(:last-child) {
-      margin-bottom: var(--grid-gap);
-    }
   }
 
   &__grid {
@@ -206,6 +204,15 @@
     width: 100%;
     height: 100%;
     z-index: 3;
+  }
+
+  &__overlay-hit {
+    position: absolute;
+    background: transparent;
+    border-radius: 6px;
+    pointer-events: auto;
+    cursor: help;
+    z-index: 200;
   }
 
   &__drop-target {

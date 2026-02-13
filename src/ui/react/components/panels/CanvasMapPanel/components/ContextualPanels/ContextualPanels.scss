@@ -551,7 +551,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: $color-border-default;
   }
 
   &--starred &__icon {
@@ -626,7 +626,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: $color-border-default;
   }
 
   &--selected {
@@ -1030,7 +1030,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: $color-border-default;
   }
 
   &--highlighted {

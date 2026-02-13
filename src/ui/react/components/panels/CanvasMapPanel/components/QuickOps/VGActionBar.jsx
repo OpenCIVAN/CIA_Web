@@ -9,6 +9,7 @@ import React, { memo, useRef, useCallback, useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { LayoutThumbnail } from '@UI/react/components/atoms/LayoutThumbnail';
 import { DropdownPortal, useDropdown } from '@UI/react/components/atoms/DropdownPortal';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { TemplatePicker } from './TemplatePicker';
 import { DimensionControls } from './DimensionControls';
 import { LAYOUTS } from '../../utils/constants';
@@ -160,18 +161,20 @@ export const VGActionBar = memo(function VGActionBar({
               }}
             />
           ) : (
-            <button
-              type="button"
-              className="vg-action-bar__name"
-              title="Click to rename ViewGroup"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsRenaming(true);
-              }}
-            >
-              <span style={{ color: focusedVG.color }}>{displayName}</span>
-              <Icon name="pencil" size={10} className="vg-action-bar__rename-icon" />
-            </button>
+            <Tooltip content="Click to rename ViewGroup" placement="top" delay={400}>
+              <button
+                type="button"
+                className="vg-action-bar__name"
+                aria-label="Rename ViewGroup"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsRenaming(true);
+                }}
+              >
+                <span style={{ color: focusedVG.color }}>{displayName}</span>
+                <Icon name="pencil" size={10} className="vg-action-bar__rename-icon" />
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -183,18 +186,20 @@ export const VGActionBar = memo(function VGActionBar({
       <div className="vg-action-bar__right">
         {/* Template picker */}
         <div className="vg-action-bar__group">
-          <button
-            type="button"
-            className="vg-action-bar__template-btn"
-            ref={templateDropdown.triggerRef}
-            onClick={templateDropdown.toggle}
-            aria-expanded={templateDropdown.open}
-            aria-haspopup
-            title="Change layout template"
-          >
-            <LayoutThumbnail layout={layout} size="sm" highlighted />
-            <Icon name="chevronDown" size={12} />
-          </button>
+          <Tooltip content="Change layout template" placement="top" delay={400}>
+            <button
+              type="button"
+              className="vg-action-bar__template-btn"
+              ref={templateDropdown.triggerRef}
+              onClick={templateDropdown.toggle}
+              aria-expanded={templateDropdown.open}
+              aria-haspopup
+              aria-label="Change layout template"
+            >
+              <LayoutThumbnail layout={layout} size="sm" highlighted />
+              <Icon name="chevronDown" size={12} />
+            </button>
+          </Tooltip>
           <DropdownPortal
             open={templateDropdown.open}
             onClose={templateDropdown.close}
@@ -227,32 +232,38 @@ export const VGActionBar = memo(function VGActionBar({
 
         {/* Merge / Split / Edit */}
         <div className="vg-action-bar__group vg-action-bar__group--actions">
-          <button
-            type="button"
-            className={`vg-action-bar__action-btn vg-action-bar__action-btn--merge ${canMerge ? '' : 'vg-action-bar__action-btn--disabled'}`}
-            disabled={!canMerge}
-            onClick={handleMerge}
-            title={mergeTooltip}
-          >
-            <Icon name="combine" size={14} />
-          </button>
-          <button
-            type="button"
-            className={`vg-action-bar__action-btn vg-action-bar__action-btn--split ${canSplit ? '' : 'vg-action-bar__action-btn--disabled'}`}
-            disabled={!canSplit}
-            onClick={handleSplit}
-            title={splitTooltip}
-          >
-            <Icon name="layers" size={14} />
-          </button>
-          <button
-            type="button"
-            className="vg-action-bar__action-btn vg-action-bar__action-btn--edit"
-            onClick={onOpenEditor}
-            title="Open VG Editor"
-          >
-            <Icon name="pencil" size={14} />
-          </button>
+          <Tooltip content={mergeTooltip} placement="top" delay={400}>
+            <button
+              type="button"
+              className={`vg-action-bar__action-btn vg-action-bar__action-btn--merge ${canMerge ? '' : 'vg-action-bar__action-btn--disabled'}`}
+              disabled={!canMerge}
+              onClick={handleMerge}
+              aria-label={mergeTooltip}
+            >
+              <Icon name="combine" size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content={splitTooltip} placement="top" delay={400}>
+            <button
+              type="button"
+              className={`vg-action-bar__action-btn vg-action-bar__action-btn--split ${canSplit ? '' : 'vg-action-bar__action-btn--disabled'}`}
+              disabled={!canSplit}
+              onClick={handleSplit}
+              aria-label={splitTooltip}
+            >
+              <Icon name="layers" size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Open VG Editor" placement="top" delay={400}>
+            <button
+              type="button"
+              className="vg-action-bar__action-btn vg-action-bar__action-btn--edit"
+              onClick={onOpenEditor}
+              aria-label="Open VG Editor"
+            >
+              <Icon name="pencil" size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

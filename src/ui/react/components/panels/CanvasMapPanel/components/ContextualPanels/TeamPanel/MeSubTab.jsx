@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
@@ -57,9 +58,11 @@ export const MeSubTab = memo(function MeSubTab({
         actions={
           <>
             <Badge count={viewports.length} size="sm" />
-            <button className="contextual-panel__icon-btn" onClick={onAddViewport} title="New viewport">
-              <Icon name="plus" size={14} />
-            </button>
+            <Tooltip content="New viewport" placement="bottom" delay={300}>
+              <button className="contextual-panel__icon-btn" onClick={onAddViewport} aria-label="New viewport">
+                <Icon name="plus" size={14} />
+              </button>
+            </Tooltip>
           </>
         }
         sizeMode={sizeMode}
@@ -115,14 +118,15 @@ export const MeSubTab = memo(function MeSubTab({
           <span className="team-subtab__status-label">Color</span>
           <div className="team-subtab__color-picker">
             {CURSOR_COLORS.map(color => (
-              <button
-                key={color}
-                className={`team-subtab__color-btn ${myCursorColor === color ? 'team-subtab__color-btn--active' : ''}`}
-                style={{ '--color': color }}
-                onClick={() => onChangeCursorColor?.(color)}
-                title={`Set cursor color to ${color}`}
-                type="button"
-              />
+              <Tooltip key={color} content={`Set cursor color to ${color}`} placement="top" delay={300}>
+                <button
+                  className={`team-subtab__color-btn ${myCursorColor === color ? 'team-subtab__color-btn--active' : ''}`}
+                  style={{ '--color': color }}
+                  onClick={() => onChangeCursorColor?.(color)}
+                  aria-label={`Set cursor color to ${color}`}
+                  type="button"
+                />
+              </Tooltip>
             ))}
           </div>
         </div>

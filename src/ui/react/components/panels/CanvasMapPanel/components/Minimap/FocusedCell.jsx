@@ -8,6 +8,7 @@
 
 import React, { memo, forwardRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { VIEW_TYPES } from '../../utils/constants';
 
 /**
@@ -119,17 +120,19 @@ export const FocusedCell = memo(forwardRef(function FocusedCell({
             </span>
           )}
           {!targeting && (
-            <button
-              type="button"
-              className="minimap__focused-cell-remove"
-              title="Remove view"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClearView?.();
-              }}
-            >
-              <Icon name="close" size={10} />
-            </button>
+            <Tooltip content="Remove view" placement="top" delay={300}>
+              <button
+                type="button"
+                className="minimap__focused-cell-remove"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClearView?.();
+                }}
+                aria-label="Remove view"
+              >
+                <Icon name="close" size={10} />
+              </button>
+            </Tooltip>
           )}
         </>
       ) : (

@@ -13,6 +13,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { PanelSection } from '../shared';
 import { formatRangeRef } from '../../utils/gridUtils';
 import './ContextualPanels.scss';
@@ -82,9 +83,11 @@ export const ViewportsPanel = memo(function ViewportsPanel({
                     {!isCompact && 'Focus'}
                   </Button>
                   {followingLabel ? (
-                    <span className="viewports-panel__chip" title={`Following ${followingLabel}`}>
-                      {followingLabel}
-                    </span>
+                    <Tooltip content={`Following ${followingLabel}`} placement="top" delay={400}>
+                      <span className="viewports-panel__chip">
+                        {followingLabel}
+                      </span>
+                    </Tooltip>
                   ) : (
                     <Button
                       variant="ghost"

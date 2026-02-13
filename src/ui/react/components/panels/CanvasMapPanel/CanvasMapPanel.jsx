@@ -14,6 +14,7 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
 import { PanelShell, CHROME_LEVELS, usePanelShell } from '@UI/react/components/panels/PanelShell';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { COMPANION_PANEL_ID } from '@UI/react/components/panels/CompanionPanel';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
 import { WorkspaceSelector } from '@UI/react/components/molecules/WorkspaceSelector/WorkspaceSelector';
@@ -122,22 +123,30 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
       )}
       headerActions={(
         <>
-          <button
-            className="panel-header__button"
-            onClick={handleEditToggle}
-            title="Edit layout"
-            type="button"
+          <Tooltip content="Edit layout" placement="bottom" delay={400}>
+            <button
+              className="panel-header__button"
+              onClick={handleEditToggle}
+              type="button"
+              aria-label="Edit layout"
+            >
+              <Icon name="pencil" size={12} />
+            </button>
+          </Tooltip>
+          <Tooltip
+            content={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
+            placement="bottom"
+            delay={400}
           >
-            <Icon name="pencil" size={12} />
-          </button>
-          <button
-            className="panel-header__button"
-            onClick={handleCompanionToggle}
-            title={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
-            type="button"
-          >
-            <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
-          </button>
+            <button
+              className="panel-header__button"
+              onClick={handleCompanionToggle}
+              type="button"
+              aria-label={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
+            >
+              <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
+            </button>
+          </Tooltip>
         </>
       )}
       defaultWidth={380}

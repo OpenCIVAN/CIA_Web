@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { STORAGE_KEY, BASE_Z_INDEX } from './constants';
+import { STORAGE_KEY, BASE_Z_INDEX, MAX_Z_INDEX } from './constants';
 
 // =============================================================================
 // CONTEXT
@@ -47,6 +47,24 @@ export function PanelShellProvider({ children }) {
   const [panels, setPanels] = useState({});
   const [topZIndex, setTopZIndex] = useState(BASE_Z_INDEX);
 
+  /**
+   * Get the next z-index, normalizing all panels if we'd exceed MAX_Z_INDEX.
+   * Returns { nextZ, normalizedPanels } — normalizedPanels is null if no reset needed.
+   */
+  const getNextZIndex = useCallback((currentPanels, currentTop) => {
+    const nextZ = currentTop + 1;
+    if (nextZ <= MAX_Z_INDEX) return { nextZ, normalizedPanels: null };
+
+    // Normalize: reassign z-indices preserving relative order
+    const entries = Object.entries(currentPanels);
+    const sorted = entries.slice().sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0));
+    const normalizedPanels = {};
+    sorted.forEach(([id, panel], i) => {
+      normalizedPanels[id] = { ...panel, zIndex: BASE_Z_INDEX + i };
+    });
+    return { nextZ: BASE_Z_INDEX + entries.length, normalizedPanels };
+  }, []);
+
   // Load saved state from localStorage
   useEffect(() => {
     try {
@@ -55,12 +73,12 @@ export function PanelShellProvider({ children }) {
         const parsed = JSON.parse(saved);
         if (parsed.panels) {
           setPanels(parsed.panels);
-          // Restore top z-index
+          // Restore top z-index, clamped to MAX_Z_INDEX
           const maxZ = Object.values(parsed.panels).reduce(
             (max, p) => Math.max(max, p.zIndex || BASE_Z_INDEX),
             BASE_Z_INDEX
           );
-          setTopZIndex(maxZ);
+          setTopZIndex(Math.min(maxZ, MAX_Z_INDEX));
         }
       }
     } catch (e) {
@@ -83,23 +101,24 @@ export function PanelShellProvider({ children }) {
   const openPanel = useCallback((panelId, config = {}) => {
     setPanels(prev => {
       const existing = prev[panelId];
-      const newZIndex = topZIndex + 1;
+      const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
+      const base = normalizedPanels || prev;
 
+      setTopZIndex(nextZ);
       return {
-        ...prev,
+        ...base,
         [panelId]: {
           id: panelId,
           isOpen: true,
           position: config.position || existing?.position || { x: 100, y: 100 },
           size: config.size || existing?.size || { width: 320, height: 400 },
-          zIndex: newZIndex,
+          zIndex: nextZ,
           minimized: false,
           ...config,
         },
       };
     });
-    setTopZIndex(z => z + 1);
-  }, [topZIndex]);
+  }, [topZIndex, getNextZIndex]);
 
   /**
    * Close a panel (keeps state for reopening)
@@ -124,22 +143,23 @@ export function PanelShellProvider({ children }) {
         };
       }
       // Opening panel
-      const newZIndex = topZIndex + 1;
-      setTopZIndex(z => z + 1);
+      const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
+      const base = normalizedPanels || prev;
+      setTopZIndex(nextZ);
       return {
-        ...prev,
+        ...base,
         [panelId]: {
           id: panelId,
           isOpen: true,
           position: existing?.position || config.position || { x: 100, y: 100 },
           size: existing?.size || config.size || { width: 320, height: 400 },
-          zIndex: newZIndex,
+          zIndex: nextZ,
           minimized: false,
           ...config,
         },
       };
     });
-  }, [topZIndex]);
+  }, [topZIndex, getNextZIndex]);
 
   /**
    * Update panel position
@@ -173,14 +193,15 @@ export function PanelShellProvider({ children }) {
   const bringToFront = useCallback((panelId) => {
     setPanels(prev => {
       if (!prev[panelId]) return prev;
-      const newZIndex = topZIndex + 1;
+      const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
+      const base = normalizedPanels || prev;
+      setTopZIndex(nextZ);
       return {
-        ...prev,
-        [panelId]: { ...prev[panelId], zIndex: newZIndex },
+        ...base,
+        [panelId]: { ...base[panelId], zIndex: nextZ },
       };
     });
-    setTopZIndex(z => z + 1);
-  }, [topZIndex]);
+  }, [topZIndex, getNextZIndex]);
 
   /**
    * Toggle panel minimized state
