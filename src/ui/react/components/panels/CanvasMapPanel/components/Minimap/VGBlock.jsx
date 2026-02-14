@@ -112,8 +112,8 @@ export const VGBlock = memo(function VGBlock({
         onDragStart={effectiveDraggable ? onDragStart : undefined}
         onDragEnd={effectiveDraggable ? onDragEnd : undefined}
         onPointerDown={handlePointerDown}
-        onClick={subtle ? undefined : onClick}
-        onDoubleClick={onDoubleClick}
+        onClick={subtle ? undefined : (e) => { e.stopPropagation(); onClick?.(); }}
+        onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}
         role={subtle ? undefined : 'button'}
         tabIndex={subtle ? -1 : 0}
         aria-label={`${name} (${position.rowSpan}x${position.colSpan})`}

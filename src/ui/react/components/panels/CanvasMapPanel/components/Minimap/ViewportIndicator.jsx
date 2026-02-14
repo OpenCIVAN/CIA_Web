@@ -2,9 +2,12 @@
  * @file ViewportIndicator.jsx
  * @description Viewport overlay on minimap showing user's viewport area.
  * Supports drag-to-move with grid snapping.
+ * Only the border edge is interactive — the interior passes through to VGs below.
  */
 
-import React, { memo, useState, useCallback, useRef } from 'react';
+import React, { memo, useState, useCallback } from 'react';
+
+const EDGE_HIT_SIZE = 24; // px — width of the draggable border zone
 
 /**
  * ViewportIndicator - Draggable viewport overlay on minimap
@@ -19,14 +22,14 @@ export const ViewportIndicator = memo(function ViewportIndicator({
   const { position, size, isPrimary } = viewport;
   const [dragOffset, setDragOffset] = useState(null);
   const isDragging = dragOffset !== null;
-  const elementRef = useRef(null);
 
   const handlePointerDown = useCallback((e) => {
     if (!onViewportMove) return;
     e.preventDefault();
     e.stopPropagation();
+    const target = e.currentTarget;
     const pointerId = e.pointerId;
-    elementRef.current?.setPointerCapture(pointerId);
+    target.setPointerCapture(pointerId);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -40,7 +43,7 @@ export const ViewportIndicator = memo(function ViewportIndicator({
     const handlePointerUp = (upEvt) => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
-      try { elementRef.current?.releasePointerCapture(pointerId); } catch {}
+      try { target.releasePointerCapture(pointerId); } catch {}
 
       const dx = upEvt.clientX - startX;
       const dy = upEvt.clientY - startY;
@@ -63,10 +66,11 @@ export const ViewportIndicator = memo(function ViewportIndicator({
 
   const baseLeft = position.col * (cellSize + gap);
   const baseTop = position.row * (cellSize + gap);
+  const vpWidth = size.cols * cellSize + (size.cols - 1) * gap;
+  const vpHeight = size.rows * cellSize + (size.rows - 1) * gap;
 
   return (
     <div
-      ref={elementRef}
       className={`viewport-indicator
         ${isSelected ? 'viewport-indicator--selected' : ''}
         ${isPrimary ? 'viewport-indicator--primary' : ''}
@@ -74,12 +78,29 @@ export const ViewportIndicator = memo(function ViewportIndicator({
       style={{
         left: baseLeft + (dragOffset?.x || 0),
         top: baseTop + (dragOffset?.y || 0),
-        '--vp-width': `${size.cols * cellSize + (size.cols - 1) * gap}px`,
-        '--vp-height': `${size.rows * cellSize + (size.rows - 1) * gap}px`,
-        cursor: onViewportMove ? (isDragging ? 'grabbing' : 'grab') : 'default',
+        '--vp-width': `${vpWidth}px`,
+        '--vp-height': `${vpHeight}px`,
       }}
-      onPointerDown={onViewportMove ? handlePointerDown : undefined}
     >
+      {/* 4 edge strips — only the border zone receives pointer events */}
+      {onViewportMove && <>
+        {/* Top */}
+        <div className="viewport-indicator__edge viewport-indicator__edge--top"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          onPointerDown={handlePointerDown} />
+        {/* Bottom */}
+        <div className="viewport-indicator__edge viewport-indicator__edge--bottom"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          onPointerDown={handlePointerDown} />
+        {/* Left */}
+        <div className="viewport-indicator__edge viewport-indicator__edge--left"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          onPointerDown={handlePointerDown} />
+        {/* Right */}
+        <div className="viewport-indicator__edge viewport-indicator__edge--right"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          onPointerDown={handlePointerDown} />
+      </>}
       <span className="viewport-indicator__label">{viewport.name}</span>
     </div>
   );

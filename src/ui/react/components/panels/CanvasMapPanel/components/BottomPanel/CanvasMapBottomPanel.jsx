@@ -124,9 +124,6 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
                   alignItems: 'center',
                   gap: tokens.spacing.xs,
                   marginTop: tokens.spacing.xs,
-                  flexWrap: 'nowrap',
-                  overflowX: 'auto',
-                  paddingBottom: 2,
                 }}
               >
                 {showQuickLabel && (
@@ -134,63 +131,74 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
                     style={{
                       fontSize: tokens.fontSize.xs,
                       color: COLOR_VARS.textMuted,
-                      marginRight: tokens.spacing.xs,
                       flexShrink: 0,
                     }}
                   >
                     Quick:
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={clearQuickFilters}
+                <div
                   style={{
-                    display: 'inline-flex',
+                    flex: 1,
+                    display: 'flex',
                     alignItems: 'center',
                     gap: tokens.spacing.xs,
-                    padding: '2px 8px',
-                    borderRadius: tokens.radius.md,
-                    border: `1px solid ${isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
-                    background: isAllActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
-                    color: isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
-                    fontSize: tokens.fontSize.xs,
-                    cursor: 'pointer',
-                    flexShrink: 0,
+                    overflowX: 'auto',
+                    paddingBottom: tokens.spacing.xs,
+                    minHeight: 32,
                   }}
                 >
-                  All
-                  <span style={{ opacity: 0.75 }}>{totalVGCount}</span>
-                </button>
-                {quickFilterDefs.map((def) => {
-                  const isActive = filter?.quickFilters?.includes(def.id);
-                  const count = quickFilterCounts?.[def.id];
-                  return (
-                    <button
-                      key={def.id}
-                      type="button"
-                      onClick={() => filter?.toggleQuickFilter?.(def.id)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: tokens.spacing.xs,
-                        padding: '2px 8px',
-                        borderRadius: tokens.radius.md,
-                        border: `1px solid ${isActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
-                        background: isActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
-                        color: isActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
-                        fontSize: tokens.fontSize.xs,
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        opacity: count === 0 ? 0.4 : 1,
-                      }}
-                    >
-                      {def.label}
-                      {typeof count === 'number' && (
-                        <span style={{ opacity: 0.75 }}>{count}</span>
-                      )}
-                    </button>
-                  );
-                })}
+                  <button
+                    type="button"
+                    onClick={clearQuickFilters}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: tokens.spacing.xs,
+                      padding: '2px 8px',
+                      borderRadius: tokens.radius.md,
+                      border: `1px solid ${isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
+                      background: isAllActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
+                      color: isAllActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
+                      fontSize: tokens.fontSize.xs,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    All
+                    <span style={{ opacity: 0.75 }}>{totalVGCount}</span>
+                  </button>
+                  {quickFilterDefs.map((def) => {
+                    const isActive = filter?.quickFilters?.includes(def.id);
+                    const count = quickFilterCounts?.[def.id];
+                    return (
+                      <button
+                        key={def.id}
+                        type="button"
+                        onClick={() => filter?.toggleQuickFilter?.(def.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: tokens.spacing.xs,
+                          padding: '2px 8px',
+                          borderRadius: tokens.radius.md,
+                          border: `1px solid ${isActive ? COLOR_VARS.accentCyan : COLOR_VARS.borderSubtle}`,
+                          background: isActive ? COLOR_VARS.accentCyanSoft : COLOR_VARS.glassSubtle,
+                          color: isActive ? COLOR_VARS.accentCyan : COLOR_VARS.textMuted,
+                          fontSize: tokens.fontSize.xs,
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          opacity: count === 0 ? 0.4 : 1,
+                        }}
+                      >
+                        {def.label}
+                        {typeof count === 'number' && (
+                          <span style={{ opacity: 0.75 }}>{count}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

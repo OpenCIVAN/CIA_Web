@@ -27,7 +27,7 @@ import { CompanionPanel } from './CompanionPanel';
  */
 const TAB_CONFIGS = {
   'vg-editor': ['datasets', 'views', 'viewGroups'],
-  'canvas-map': ['viewGroups', 'templates'],
+  'canvas-map': ['datasets', 'views', 'viewGroups', 'templates'],
   idle: ['datasets', 'views'],
 };
 

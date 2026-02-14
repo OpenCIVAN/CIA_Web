@@ -5,14 +5,42 @@
  * Handles panel positions, sizes, z-index, and persistence.
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { STORAGE_KEY, BASE_Z_INDEX, MAX_Z_INDEX } from './constants';
+import { authService } from '@Services/authService';
 
 // =============================================================================
 // CONTEXT
 // =============================================================================
 
 const PanelShellContext = createContext(null);
+
+const hasOverlap = (aPos, aSize, bPos, bSize) => {
+  if (!aPos || !aSize || !bPos || !bSize) return false;
+  return !(
+    aPos.x + aSize.width <= bPos.x ||
+    aPos.x >= bPos.x + bSize.width ||
+    aPos.y + aSize.height <= bPos.y ||
+    aPos.y >= bPos.y + bSize.height
+  );
+};
+
+const computeSpawnPosition = (panelId, desired, size, panels, offset) => {
+  let position = { ...desired };
+  const attempts = 5;
+  for (let i = 0; i < attempts; i += 1) {
+    const conflict = Object.entries(panels).some(([id, panel]) => {
+      if (id === panelId || !panel.isOpen) return false;
+      return hasOverlap(position, size, panel.position, panel.size || size);
+    });
+    if (!conflict) return position;
+    position = {
+      x: position.x + offset,
+      y: position.y + offset,
+    };
+  }
+  return position;
+};
 
 /**
  * Hook to access PanelShell context
@@ -43,9 +71,46 @@ export function usePanelShell() {
 /**
  * Provider for PanelShell state management
  */
+// Read localStorage synchronously so panels (including meta) are available
+// before any child useEffects fire (e.g. PanelShell calling openPanel).
+function loadInitialPanels() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.panels) return parsed.panels;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return {};
+}
+
+function loadInitialZIndex(panels) {
+  return Object.values(panels).reduce(
+    (max, p) => Math.max(max, p.zIndex || BASE_Z_INDEX),
+    BASE_Z_INDEX
+  );
+}
+
 export function PanelShellProvider({ children }) {
-  const [panels, setPanels] = useState({});
-  const [topZIndex, setTopZIndex] = useState(BASE_Z_INDEX);
+  const [panels, setPanels] = useState(() => loadInitialPanels());
+  const [topZIndex, setTopZIndex] = useState(() => {
+    const initial = loadInitialPanels();
+    return Math.min(loadInitialZIndex(initial), MAX_Z_INDEX);
+  });
+  const [remoteReady, setRemoteReady] = useState(false);
+  const panelsRef = useRef(panels);
+  const remoteSaveTimeout = useRef(null);
+  const SPAWN_OFFSET = 32;
+  const touchedPanelsRef = useRef(new Set());
+  const markPanelTouched = useCallback((panelId) => {
+    if (!panelId) return;
+    touchedPanelsRef.current.add(panelId);
+  }, []);
+  const resetTouchedPanels = useCallback(() => {
+    touchedPanelsRef.current.clear();
+  }, []);
 
   /**
    * Get the next z-index, normalizing all panels if we'd exceed MAX_Z_INDEX.
@@ -65,35 +130,93 @@ export function PanelShellProvider({ children }) {
     return { nextZ: BASE_Z_INDEX + entries.length, normalizedPanels };
   }, []);
 
-  // Load saved state from localStorage
+  // Fetch remote state and deep-merge (preserving local meta)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.panels) {
-          setPanels(parsed.panels);
-          // Restore top z-index, clamped to MAX_Z_INDEX
-          const maxZ = Object.values(parsed.panels).reduce(
+    let isActive = true;
+    (async () => {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        const authHeader = await authService.getAuthHeader().catch(() => null);
+        if (authHeader) headers.Authorization = authHeader;
+        const res = await fetch('/api/canvas-map/state', { headers, credentials: 'include' });
+        if (!res.ok) throw res;
+        const remote = await res.json();
+        if (!isActive) return;
+        if (remote?.panels && touchedPanelsRef.current.size === 0) {
+          // Deep-merge: preserve local meta when remote doesn't have it
+          setPanels((prev) => {
+            const merged = { ...prev };
+            for (const [id, remotePanel] of Object.entries(remote.panels)) {
+              const local = prev[id];
+              merged[id] = {
+                ...remotePanel,
+                meta: { ...(local?.meta || {}), ...(remotePanel.meta || {}) },
+              };
+            }
+            return merged;
+          });
+          const maxZ = Object.values(remote.panels).reduce(
             (max, p) => Math.max(max, p.zIndex || BASE_Z_INDEX),
             BASE_Z_INDEX
           );
-          setTopZIndex(Math.min(maxZ, MAX_Z_INDEX));
+          setTopZIndex((prevMax) => Math.max(prevMax, Math.min(maxZ, MAX_Z_INDEX)));
+          resetTouchedPanels();
+        }
+      } catch (e) {
+        // swallow fetch failures
+      } finally {
+        if (isActive) {
+          setRemoteReady(true);
         }
       }
-    } catch (e) {
-      console.warn('Failed to load panel state:', e);
-    }
+    })();
+    return () => {
+      isActive = false;
+    };
   }, []);
 
-  // Save state on change (debounced would be better for performance)
+  // Save state locally and (when ready) persist to the server.
   useEffect(() => {
+    panelsRef.current = panels;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ panels }));
     } catch (e) {
       console.warn('Failed to save panel state:', e);
     }
   }, [panels]);
+
+  useEffect(() => {
+    if (!remoteReady) return;
+    if (remoteSaveTimeout.current) {
+      clearTimeout(remoteSaveTimeout.current);
+    }
+    remoteSaveTimeout.current = setTimeout(async () => {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        const authHeader = await authService.getAuthHeader().catch(() => null);
+        if (authHeader) headers.Authorization = authHeader;
+        await fetch('/api/canvas-map/state', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ panels: panelsRef.current }),
+        });
+      } catch (e) {
+        // suppress network errors
+      }
+    }, 500);
+    return () => {
+      if (remoteSaveTimeout.current) {
+        clearTimeout(remoteSaveTimeout.current);
+      }
+    };
+  }, [panels, remoteReady]);
+
+  useEffect(() => () => {
+    if (remoteSaveTimeout.current) {
+      clearTimeout(remoteSaveTimeout.current);
+    }
+  }, []);
 
   /**
    * Open a panel with optional configuration
@@ -103,17 +226,23 @@ export function PanelShellProvider({ children }) {
       const existing = prev[panelId];
       const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
       const base = normalizedPanels || prev;
+      const desiredPosition = config.position || existing?.position || { x: 100, y: 100 };
+      const size = config.size || existing?.size || { width: 320, height: 400 };
+      const safePosition = computeSpawnPosition(panelId, desiredPosition, size, prev, SPAWN_OFFSET);
+      const meta = existing?.meta || config.meta || {};
 
       setTopZIndex(nextZ);
+      markPanelTouched(panelId);
       return {
         ...base,
         [panelId]: {
           id: panelId,
           isOpen: true,
-          position: config.position || existing?.position || { x: 100, y: 100 },
-          size: config.size || existing?.size || { width: 320, height: 400 },
+          position: safePosition,
+          size,
           zIndex: nextZ,
           minimized: false,
+          meta,
           ...config,
         },
       };
@@ -145,16 +274,21 @@ export function PanelShellProvider({ children }) {
       // Opening panel
       const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
       const base = normalizedPanels || prev;
+      const desiredPosition = existing?.position || config.position || { x: 100, y: 100 };
+      const size = existing?.size || config.size || { width: 320, height: 400 };
+      const safePosition = computeSpawnPosition(panelId, desiredPosition, size, prev, SPAWN_OFFSET);
+      const meta = existing?.meta || config.meta || {};
       setTopZIndex(nextZ);
       return {
         ...base,
         [panelId]: {
           id: panelId,
           isOpen: true,
-          position: existing?.position || config.position || { x: 100, y: 100 },
-          size: existing?.size || config.size || { width: 320, height: 400 },
+          position: safePosition,
+          size,
           zIndex: nextZ,
           minimized: false,
+          meta,
           ...config,
         },
       };
@@ -167,12 +301,13 @@ export function PanelShellProvider({ children }) {
   const updatePosition = useCallback((panelId, position) => {
     setPanels(prev => {
       if (!prev[panelId]) return prev;
+      markPanelTouched(panelId);
       return {
         ...prev,
         [panelId]: { ...prev[panelId], position },
       };
     });
-  }, []);
+  }, [markPanelTouched]);
 
   /**
    * Update panel size
@@ -180,12 +315,13 @@ export function PanelShellProvider({ children }) {
   const updateSize = useCallback((panelId, size) => {
     setPanels(prev => {
       if (!prev[panelId]) return prev;
+      markPanelTouched(panelId);
       return {
         ...prev,
         [panelId]: { ...prev[panelId], size },
       };
     });
-  }, []);
+  }, [markPanelTouched]);
 
   /**
    * Bring panel to front (highest z-index)
@@ -196,12 +332,13 @@ export function PanelShellProvider({ children }) {
       const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
       const base = normalizedPanels || prev;
       setTopZIndex(nextZ);
+      markPanelTouched(panelId);
       return {
         ...base,
         [panelId]: { ...base[panelId], zIndex: nextZ },
       };
     });
-  }, [topZIndex, getNextZIndex]);
+  }, [topZIndex, getNextZIndex, markPanelTouched]);
 
   /**
    * Toggle panel minimized state
@@ -215,6 +352,20 @@ export function PanelShellProvider({ children }) {
       };
     });
   }, []);
+
+  const updatePanelMeta = useCallback((panelId, metaUpdates) => {
+    setPanels(prev => {
+      if (!prev[panelId]) return prev;
+      markPanelTouched(panelId);
+      return {
+        ...prev,
+        [panelId]: {
+          ...prev[panelId],
+          meta: { ...(prev[panelId].meta || {}), ...(metaUpdates || {}) },
+        },
+      };
+    });
+  }, [markPanelTouched]);
 
   /**
    * Get panel state by ID
@@ -246,6 +397,7 @@ export function PanelShellProvider({ children }) {
     updateSize,
     bringToFront,
     toggleMinimize,
+    updatePanelMeta,
     getPanelState,
     isPanelOpen,
     getOpenPanels,

@@ -25,6 +25,29 @@ function loadShowImplicitVGs() {
     return stored ? JSON.parse(stored) : false;
   } catch { return false; }
 }
+
+// LocalStorage helpers for custom viewports persistence
+const VIEWPORTS_KEY = 'cia:canvas-map:customViewports';
+const SELECTED_VP_KEY = 'cia:canvas-map:selectedViewportId';
+function loadCustomViewports() {
+  try {
+    const stored = localStorage.getItem(VIEWPORTS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+function saveCustomViewports(viewports) {
+  try { localStorage.setItem(VIEWPORTS_KEY, JSON.stringify(viewports)); } catch { /* ignore */ }
+}
+function loadSelectedViewportId() {
+  try { return localStorage.getItem(SELECTED_VP_KEY) || null; } catch { return null; }
+}
+function saveSelectedViewportId(id) {
+  try { localStorage.setItem(SELECTED_VP_KEY, id || ''); } catch { /* ignore */ }
+}
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
@@ -34,6 +57,8 @@ import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence';
 import { useBookmarks } from '@UI/react/hooks/useBookmarks';
 import { useCanvas } from '@UI/react/hooks/useCanvas';
 import { useListFilter } from '@UI/react/hooks/useListFilter';
+import { dispatchNavigateTo, VIEWPORT_EVENTS } from '@UI/react/hooks/useViewportSync';
+import { workspaceManager as instanceWorkspaceManager } from '@Core/instances/workspaceManager';
 
 // V2 Components
 import { MapToolbar } from './components/MapToolbar';
@@ -90,6 +115,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   width,
   height,
   sizeMode: panelSizeMode,
+  panelState,
+  onUpdatePanelMeta,
   // Footer props (for no-workspace state)
   workspaces: workspacesProp,
   onOpenWorkspace,
@@ -104,6 +131,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   // Minimap resize (drag handle between minimap and bottom panel)
   const [minimapHeightOverride, setMinimapHeightOverride] = useState(null);
   const resizeDragRef = useRef(null);
+  const minimapHeightOverrideRef = useRef(null);
 
   // Local state for showing implicit VGs (debug feature)
   const [showImplicitVGs, setShowImplicitVGs] = useState(loadShowImplicitVGs);
@@ -120,7 +148,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   // ---------------------------------------------------------------------------
 
   // Canvas data
-  const { canvas, viewport, setCanvasSize } = useCanvas();
+  const { canvas, viewport, setCanvasSize, addPlacement } = useCanvas();
 
   // ViewGroups
   const {
@@ -205,10 +233,23 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }), [canvas]);
 
   // Transform ViewGroups to expected structure
-  // Use rawViewGroups when showImplicitVGs is enabled, otherwise visibleViewGroups
+  // Always include implicit VGs that are placed on the canvas (have canvasPosition),
+  // even when showImplicitVGs is off. This ensures views dragged onto the canvas
+  // appear on the minimap as their auto-created solo ViewGroups.
+  const sourceVGs = useMemo(() => {
+    if (showImplicitVGs) return rawViewGroups || [];
+    const visible = new Set((visibleViewGroups || []).map(vg => vg.id));
+    const merged = [...(visibleViewGroups || [])];
+    for (const vg of (rawViewGroups || [])) {
+      if (visible.has(vg.id)) continue;
+      const pos = vg.getCanvasPosition?.() || vg.canvasPosition;
+      if (pos && pos.row !== undefined) merged.push(vg);
+    }
+    return merged;
+  }, [showImplicitVGs, rawViewGroups, visibleViewGroups]);
+
   const viewGroups = useMemo(() => {
-    const sourceVGs = showImplicitVGs ? rawViewGroups : visibleViewGroups;
-    return (sourceVGs || []).map(vg => {
+    return sourceVGs.map(vg => {
       const canvasPosition = vg.getCanvasPosition?.()
         || vg.canvasPosition
         || vg.position
@@ -255,7 +296,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         link: vg.link,
       });
     });
-  }, [showImplicitVGs, rawViewGroups, visibleViewGroups]);
+  }, [sourceVGs]);
 
   useEffect(() => {
     if (!setCanvasSize) return;
@@ -396,8 +437,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }];
   }, [viewport]);
 
-  const [customViewports, setCustomViewports] = useState([]);
-  const [selectedViewportId, setSelectedViewportId] = useState(null);
+  const [customViewports, setCustomViewports] = useState(() => loadCustomViewports() || []);
+  const [selectedViewportId, setSelectedViewportId] = useState(() => loadSelectedViewportId());
   const [workspaceLabel, setWorkspaceLabel] = useState(null);
 
   useEffect(() => {
@@ -406,6 +447,35 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     setSelectedViewportId((prev) => prev ?? viewports[0]?.id ?? null);
   }, [viewports]);
 
+  // Listen for canvas viewport changes and update the primary viewport indicator.
+  // We use a direct listener instead of useViewportSyncListener because the minimap
+  // is a global panel (no paneId) and needs to accept events from any/focused pane.
+  useEffect(() => {
+    const handleViewportChanged = (e) => {
+      const { viewport: vp, canvasId: eventPaneId } = e.detail;
+      if (!vp) return;
+      // Accept events from the focused pane, or any pane if none is focused
+      if (eventPaneId) {
+        const focusedPaneId = instanceWorkspaceManager?.getFocusedPaneId?.();
+        if (focusedPaneId && eventPaneId !== focusedPaneId) return;
+      }
+      setCustomViewports((prev) =>
+        prev.map((v) =>
+          v.isPrimary
+            ? { ...v, position: { row: vp.row, col: vp.col }, size: { rows: vp.rows, cols: vp.cols } }
+            : v
+        )
+      );
+    };
+    window.addEventListener(VIEWPORT_EVENTS.VIEWPORT_CHANGED, handleViewportChanged);
+    return () => window.removeEventListener(VIEWPORT_EVENTS.VIEWPORT_CHANGED, handleViewportChanged);
+  }, []);
+
+  // Persist customViewports and selectedViewportId to localStorage
+  useEffect(() => {
+    if (customViewports.length > 0) saveCustomViewports(customViewports);
+  }, [customViewports]);
+  useEffect(() => { saveSelectedViewportId(selectedViewportId); }, [selectedViewportId]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -640,13 +710,27 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const [followingUser, setFollowingUser] = useState(null);
 
   // ---------------------------------------------------------------------------
+  // Viewport navigation helper — includes focused paneId so CanvasGrid accepts it
+  // ---------------------------------------------------------------------------
+  const navigateCanvas = useCallback((row, col) => {
+    const paneId = instanceWorkspaceManager?.getFocusedPaneId?.() || null;
+    dispatchNavigateTo(row, col, paneId);
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // Action Handlers (placeholder implementations)
   // ---------------------------------------------------------------------------
 
   const handleGoHome = useCallback(() => {
-    console.log('Go to home position');
-    // TODO: Implement navigation to home position
-  }, []);
+    setCustomViewports((prev) =>
+      prev.map((vp) =>
+        vp.id === selectedViewportId
+          ? { ...vp, position: { ...vp.position, row: 0, col: 0 } }
+          : vp
+      )
+    );
+    navigateCanvas(0, 0);
+  }, [selectedViewportId, navigateCanvas]);
 
   const handleSetHome = useCallback(() => {
     console.log('Set home position');
@@ -909,7 +993,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         };
       })
     );
-  }, []);
+    navigateCanvas(toRow, toCol);
+  }, [navigateCanvas]);
 
   const handleAdjustRows = useCallback((delta) => {
     if (!delta) return;
@@ -988,6 +1073,19 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         if (syncViewGroupNow) {
           await syncViewGroupNow(targetVG.id);
         }
+        // Create canvas placements for the VG's views
+        const vgViews = targetVG.getViews?.() || targetVG.slots || targetVG.views || [];
+        const validViews = vgViews.filter(s => s && (s.viewId || s.id));
+        if (addPlacement && validViews.length > 0) {
+          for (let i = 0; i < validViews.length && i < rowSpan * colSpan; i++) {
+            const r = placeRow + Math.floor(i / colSpan);
+            const c = placeCol + (i % colSpan);
+            const viewId = validViews[i].viewId || validViews[i].id;
+            try {
+              await addPlacement({ row: r, col: c, rowSpan: 1, colSpan: 1, content: { type: 'view', viewConfigurationId: viewId } });
+            } catch (e) { /* view may already be placed */ }
+          }
+        }
       } catch (err) {
         console.error('Failed to place ViewGroup:', err);
       }
@@ -1036,7 +1134,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         console.error('Failed to create ViewGroup from template:', err);
       }
     }
-  }, [rawViewGroups, createViewGroup, updateViewGroup, activeViewGroups, canvasData, setCanvasSize, syncViewGroupNow]);
+  }, [rawViewGroups, createViewGroup, updateViewGroup, activeViewGroups, canvasData, setCanvasSize, syncViewGroupNow, addPlacement]);
 
   const handleVGDoubleClick = useCallback((vgId) => {
     state.handleVGDoubleClick(vgId);
@@ -1170,8 +1268,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
     if (!delta) return;
 
-    setCustomViewports((prev) =>
-      prev.map((vp) => {
+    setCustomViewports((prev) => {
+      const updated = prev.map((vp) => {
         if (vp.id !== selectedViewportId) return vp;
         const nextRow = Math.max(0, vp.position.row + delta.row);
         const nextCol = Math.max(0, vp.position.col + delta.col);
@@ -1185,9 +1283,12 @@ export const CanvasMapContent = memo(function CanvasMapContent({
             col: Math.min(nextCol, maxCol),
           },
         };
-      })
-    );
-  }, [canvasData.cols, canvasData.rows, selectedViewportId]);
+      });
+      const moved = updated.find((vp) => vp.id === selectedViewportId);
+      if (moved) navigateCanvas(moved.position.row, moved.position.col);
+      return updated;
+    });
+  }, [canvasData.cols, canvasData.rows, selectedViewportId, navigateCanvas]);
 
   const handleViewportClick = useCallback((viewportId) => {
     setSelectedViewportId(viewportId);
@@ -2108,6 +2209,17 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const contextualHeight = Math.max(80, contentHeight - minimapHeight);
   const densityMode = isShort || isCompact ? 'dense' : 'standard';
 
+  // Restore saved minimap share on mount or when contentHeight changes (but not during drag)
+  useEffect(() => {
+    if (resizeDragRef.current) return; // Don't override during active drag
+    const savedShare = panelState?.meta?.minimapShare;
+    if (savedShare != null && contentHeight > 0) {
+      const desired = Math.max(60, Math.min(contentHeight - 80, contentHeight * savedShare));
+      setMinimapHeightOverride(desired);
+      minimapHeightOverrideRef.current = desired;
+    }
+  }, [contentHeight, panelState?.meta?.minimapShare]);
+
   // Resize handle handlers
   const handleResizePointerDown = useCallback((e) => {
     e.preventDefault();
@@ -2118,24 +2230,25 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     const handleMove = (moveEvt) => {
       if (!resizeDragRef.current) return;
       const delta = moveEvt.clientY - resizeDragRef.current.startY;
-      const newHeight = resizeDragRef.current.startHeight + delta;
-      setMinimapHeightOverride(Math.max(60, Math.min(contentHeight - 80, newHeight)));
+      const newHeight = Math.max(60, Math.min(contentHeight - 80, resizeDragRef.current.startHeight + delta));
+      setMinimapHeightOverride(newHeight);
+      minimapHeightOverrideRef.current = newHeight;
     };
 
     const handleUp = () => {
+      const finalHeight = minimapHeightOverrideRef.current;
       resizeDragRef.current = null;
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
+      if (contentHeight > 0 && finalHeight != null) {
+        const ratio = finalHeight / contentHeight;
+        onUpdatePanelMeta?.({ minimapShare: Math.max(0, Math.min(1, ratio)) });
+      }
     };
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
-  }, [minimapHeight, contentHeight]);
-
-  // Reset override when panel resizes
-  useEffect(() => {
-    setMinimapHeightOverride(null);
-  }, [height]);
+  }, [minimapHeight, contentHeight, onUpdatePanelMeta]);
 
   // Calculate minimap container dimensions (after minimapHeight is calculated)
   const quickNavWidth = state.toolbarPosition ? QUICK_NAV_WIDTH : 0;
@@ -2293,6 +2406,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   onBackFromFocus={state.handleBackFromFocus}
                   onVGClick={state.handleVGClick}
                   onVGDoubleClick={handleVGDoubleClick}
+                  onDeselect={() => { state.setSelectedVGId(null); state.handleBackFromFocus(); }}
                   onDropItem={handleCanvasDrop}
                   containerWidth={minimapWidth}
                   containerHeight={minimapInnerHeight}

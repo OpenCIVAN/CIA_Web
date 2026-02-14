@@ -6,7 +6,7 @@
  * Height: 58px total (18px section labels + 40px content)
  */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Button, Icon, IconButton } from '@UI/react/components/atoms';
 import { WorkspaceTab } from './WorkspaceTab';
@@ -81,6 +81,8 @@ const WorkspaceBar = memo(function WorkspaceBar({
         toggleBreakout,
         closeAll,
     } = useManagerDropdowns();
+
+    const createBtnRef = useRef(null);
 
     const handleSelectWorkspace = useCallback((workspaceId) => {
         onSelectWorkspace?.(workspaceId);
@@ -162,6 +164,7 @@ const WorkspaceBar = memo(function WorkspaceBar({
                             className={`workspace-bar__new-btn ${showCreatePopover ? 'workspace-bar__new-btn--active' : ''}`}
                             onClick={toggleCreatePopover}
                             title="New Workspace"
+                            ref={createBtnRef}
                         >
                             <Icon name="plus" size={14} />
                         </button>
@@ -171,6 +174,7 @@ const WorkspaceBar = memo(function WorkspaceBar({
                             workspaces={workspaces}
                             onCreateWorkspace={onCreateWorkspace}
                             onOpenWorkspace={onOpenWorkspace}
+                            triggerRef={createBtnRef}
                         />
                     </div>
                 </div>

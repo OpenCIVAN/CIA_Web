@@ -68,11 +68,11 @@ export const DEFAULT_DIMENSIONS = {
 export const STORAGE_KEY = 'ciaPanelShellState';
 
 /**
- * Base z-index for panels
+ * Base z-index for panels (reserve layer below dropdown/popover tokens)
  */
-export const BASE_Z_INDEX = 1000;
+export const BASE_Z_INDEX = 850;
 
 /**
- * Max z-index for panels — must stay below modal backdrop (1040)
+ * Max z-index for panels — keep below dropdowns/modals (z-dropdown ≈ 1000, z-modal backdrop ≈ 1040)
  */
-export const MAX_Z_INDEX = 1039;
+export const MAX_Z_INDEX = 990;

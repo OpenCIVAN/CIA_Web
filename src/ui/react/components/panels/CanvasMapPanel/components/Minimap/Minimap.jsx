@@ -56,6 +56,7 @@ export const Minimap = memo(function Minimap({
   // Handlers
   onVGClick,
   onVGDoubleClick,
+  onDeselect,
   onDropItem,
   onFocusedVGSlotDrop,
   onFocusedVGSlotClear,
@@ -649,7 +650,9 @@ export const Minimap = memo(function Minimap({
                 />
               </svg>
 
-              <div className="minimap__grid-content">
+              <div className="minimap__grid-content" onClick={() => {
+                if (!panning.didPanRef.current) onDeselect?.();
+              }}>
                 {dropTarget && (
                   <div
                     className="minimap__drop-target"

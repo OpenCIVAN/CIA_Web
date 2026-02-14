@@ -230,6 +230,7 @@ const contentRouter = require("./routes/content");
 
 // User preferences routes
 const userPreferencesRouter = require("./routes/userPreferences");
+const canvasMapStateRouter = require("./routes/canvasMapState");
 
 const folderRoutes = require("./routes/folders");
 const starRoutes = require("./routes/stars");
@@ -287,6 +288,7 @@ app.use("/api/placements", optionalAuth, canvasesRouter);
 
 // User preferences endpoints
 app.use("/api/users/preferences", optionalAuth, userPreferencesRouter);
+app.use("/api/canvas-map", optionalAuth, canvasMapStateRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
 

@@ -43,6 +43,7 @@ export function useMinimapPanning({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
+  const didPanRef = useRef(false);
 
   // Calculate pan bounds with extended padding (V2Spec: ~3 cells beyond bounds)
   // This allows users to access obstructed areas
@@ -89,6 +90,7 @@ export function useMinimapPanning({
 
     dragStartRef.current = { x: clientX, y: clientY };
     panStartRef.current = { ...panOffset };
+    didPanRef.current = false;
     setIsDragging(true);
 
     // Prevent default to avoid text selection
@@ -112,6 +114,9 @@ export function useMinimapPanning({
       panStartRef.current.y + deltaY
     );
 
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+      didPanRef.current = true;
+    }
     setPanOffset(newPan);
   }, [isDragging, clampPan]);
 
@@ -182,6 +187,7 @@ export function useMinimapPanning({
     // State
     panOffset,
     isDragging,
+    didPanRef,
     canPan,
     minPanX,
     maxPanX,

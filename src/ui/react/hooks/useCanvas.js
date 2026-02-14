@@ -17,6 +17,7 @@ import {
   VIEWPORT_SIZE_EVENT,
   getInitialViewportState,
   dispatchViewportSizeChanged,
+  saveViewportPosition,
 } from "./viewportState.js";
 import { canvasHistory } from "@UI/react/store/canvasHistoryStore";
 
@@ -56,8 +57,13 @@ export function useCanvas(canvasId = null) {
   );
   const [isConnected, setIsConnected] = useState(canvasManager.isConnected());
 
-  // Viewport state (local, not persisted)
+  // Viewport state (persisted position + size)
   const [viewport, setViewport] = useState(getInitialViewportState);
+
+  // Persist viewport position when it changes
+  useEffect(() => {
+    saveViewportPosition({ row: viewport.row, col: viewport.col });
+  }, [viewport.row, viewport.col]);
 
   // Resolve canvas ID - use provided canvasId or fall back to activeCanvasId
   const resolvedCanvasId = canvasId || activeCanvasId;

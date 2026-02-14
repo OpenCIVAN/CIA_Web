@@ -541,7 +541,7 @@ function CanvasWorkspaceInner({
     const [mergeMode, setMergeMode] = useState(DEFAULT_TOOL_STATE.mergeMode);
     const [flowDirection, setFlowDirection] = useState(DEFAULT_TOOL_STATE.flowDirection);
     const [showCoordinates, setShowCoordinates] = useState(false);
-    const [showViewGroupBorders, setShowViewGroupBorders] = useState(false);
+    const [showViewGroupBorders, setShowViewGroupBorders] = useState(true);
     const [closedWorkspaceIds, setClosedWorkspaceIds] = useState([]);
     // Tile maximized state - use prop if provided, otherwise local state
     const [localTileMaximizedId, setLocalTileMaximizedId] = useState(null);

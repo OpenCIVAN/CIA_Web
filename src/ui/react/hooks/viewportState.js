@@ -229,6 +229,73 @@ export function clearViewportSize() {
 }
 
 // =============================================================================
+// VIEWPORT POSITION PERSISTENCE
+// =============================================================================
+
+/**
+ * LocalStorage key for persisting viewport position (row/col scroll offset)
+ * @constant {string}
+ */
+export const VIEWPORT_POSITION_STORAGE_KEY = "cia-viewport-position";
+
+/**
+ * Load saved viewport position from localStorage
+ * @returns {{ row: number, col: number } | null}
+ */
+export function loadViewportPosition() {
+  try {
+    const saved = localStorage.getItem(VIEWPORT_POSITION_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        typeof parsed.row === "number" &&
+        typeof parsed.col === "number" &&
+        !isNaN(parsed.row) &&
+        !isNaN(parsed.col) &&
+        parsed.row >= 0 &&
+        parsed.col >= 0
+      ) {
+        return { row: parsed.row, col: parsed.col };
+      }
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[viewportState] Failed to load viewport position:", e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Save viewport position to localStorage
+ * @param {{ row: number, col: number }} pos
+ * @returns {boolean}
+ */
+export function saveViewportPosition(pos) {
+  if (
+    !pos ||
+    typeof pos.row !== "number" ||
+    typeof pos.col !== "number" ||
+    isNaN(pos.row) ||
+    isNaN(pos.col)
+  ) {
+    return false;
+  }
+  try {
+    localStorage.setItem(
+      VIEWPORT_POSITION_STORAGE_KEY,
+      JSON.stringify({ row: pos.row, col: pos.col })
+    );
+    return true;
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[viewportState] Failed to save viewport position:", e);
+    }
+    return false;
+  }
+}
+
+// =============================================================================
 // EVENT HELPERS
 // =============================================================================
 
@@ -334,9 +401,10 @@ export function getInitialViewportSize() {
  */
 export function getInitialViewportState() {
   const size = loadViewportSize() ?? DEFAULT_VIEWPORT_SIZE;
+  const position = loadViewportPosition();
   return {
-    row: 0,
-    col: 0,
+    row: position?.row ?? 0,
+    col: position?.col ?? 0,
     rows: size.rows,
     cols: size.cols,
   };

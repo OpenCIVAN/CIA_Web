@@ -1084,7 +1084,7 @@
   border: 2px solid var(--accent-cyan);
   border-radius: $radius-md;
   background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
-  pointer-events: none;
+  pointer-events: none; // Interior passes through to VGs below
   z-index: 50;
 
   &--primary {
@@ -1094,6 +1094,57 @@
 
   &--selected {
     border-width: 3px;
+  }
+
+  // Edge strips — 4 rectangles forming a draggable border frame
+  &__edge {
+    position: absolute;
+    pointer-events: auto;
+    touch-action: none;
+    background: transparent;
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+    }
+
+    &--top {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 24px;
+      border-radius: inherit;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    &--bottom {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 24px;
+      border-radius: inherit;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    &--left {
+      top: 24px;
+      left: 0;
+      bottom: 24px;
+      width: 24px;
+    }
+
+    &--right {
+      top: 24px;
+      right: 0;
+      bottom: 24px;
+      width: 24px;
+    }
+  }
+
+  &--dragging &__edge {
+    background: color-mix(in srgb, var(--accent-cyan) 25%, transparent);
   }
 
   &__label {
@@ -1109,6 +1160,7 @@
     border: 1px solid color-mix(in srgb, var(--accent-cyan) 65%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    pointer-events: auto;
   }
 }
 

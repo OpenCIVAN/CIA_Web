@@ -13,9 +13,7 @@
 .companion-panel {
   display: flex;
   flex-direction: column;
-  width: 240px;
-  min-width: 200px;
-  max-width: 320px;
+  width: 100%;
   flex: 1;
   min-height: 0;
   background: $color-glass-frosted;
@@ -28,8 +26,7 @@
               inset 1px 0 0 rgba(255, 255, 255, 0.05);
 
   &[data-size-mode="compact"] {
-    width: 200px;
-    min-width: 180px;
+    // Inherits width: 100% from parent PanelShell
   }
 
   // Left side positioning

@@ -3,11 +3,12 @@
  * @description Popover for creating new workspaces or opening existing ones
  */
 
-import React, { memo, useRef, useEffect } from 'react';
+import React, { memo, useRef, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '@UI/react/components/atoms';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { CREATE_OPTIONS, WORKSPACE_TYPES, useWorkspaceSearch } from './CanvasTabsBar.logic';
+import { createPortal } from 'react-dom';
 
 /**
  * CreateOpenPopover - Create new or open existing workspace
@@ -18,10 +19,12 @@ const CreateOpenPopover = memo(function CreateOpenPopover({
     workspaces,
     onCreateWorkspace,
     onOpenWorkspace,
+    triggerRef,
 }) {
     const popoverRef = useRef(null);
     const closedWorkspaces = workspaces.filter(w => !w.isOpen);
     const { searchQuery, setSearchQuery, filteredWorkspaces } = useWorkspaceSearch(closedWorkspaces);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
 
     // Close on outside click
     useEffect(() => {
@@ -37,7 +40,31 @@ const CreateOpenPopover = memo(function CreateOpenPopover({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen, onClose]);
 
+    useEffect(() => {
+        if (!isOpen || !triggerRef?.current) return;
+
+        const updatePosition = () => {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPosition({
+                top: rect.bottom + 8,
+                left: rect.left,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen, triggerRef]);
+
     if (!isOpen) return null;
+
+    const portalTarget = typeof document !== 'undefined' ? document.body : null;
+    if (!portalTarget) return null;
 
     const handleCreate = (optionId) => {
         onCreateWorkspace?.(optionId);
@@ -49,8 +76,17 @@ const CreateOpenPopover = memo(function CreateOpenPopover({
         onClose();
     };
 
-    return (
-        <div ref={popoverRef} className="create-open-popover">
+    const popover = (
+        <div
+            ref={popoverRef}
+            className="create-open-popover"
+            style={{
+                position: 'fixed',
+                top: position.top,
+                left: position.left,
+                zIndex: 1200,
+            }}
+        >
             {/* Create New Section */}
             <div className="create-open-popover__section">
                 <div className="create-open-popover__header">Create New</div>
@@ -136,6 +172,8 @@ const CreateOpenPopover = memo(function CreateOpenPopover({
             </div>
         </div>
     );
+
+    return createPortal(popover, portalTarget);
 });
 
 CreateOpenPopover.propTypes = {
@@ -149,6 +187,7 @@ CreateOpenPopover.propTypes = {
     })).isRequired,
     onCreateWorkspace: PropTypes.func,
     onOpenWorkspace: PropTypes.func,
+    triggerRef: PropTypes.shape({ current: PropTypes.any }),
 };
 
 export { CreateOpenPopover };
