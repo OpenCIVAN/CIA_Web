@@ -21,3 +21,16 @@
 ✓ VR/WebXR support  
 ✓ Server-authoritative architecture  
 ✓ Light theme optimized for readability
+
+## License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+Permissions:
+- ✅ Commercial use
+- ✅ Modification
+- ✅ Distribution
+- ✅ Private use
+
+Conditions:
+- ⚠️ Include license and copyright notice
