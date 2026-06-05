@@ -8,6 +8,7 @@ import {
   VoiceConnectionState,
 } from "@Services/voice/voiceRoomService.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
+import { getUserName } from "@Collaboration/presence/userManagement.js";
 
 /**
  * useCanvasViewport - Manages canvas position/viewport state
@@ -88,7 +89,7 @@ export function useCanvasViewport({
 export function useVoiceControls({
   roomId,
   roomName = "Main Room",
-  userName = "Anonymous",
+  userName = null,
   onJoinVoice,
   onLeaveVoice,
 } = {}) {
@@ -98,6 +99,9 @@ export function useVoiceControls({
   );
   const [muted, setMuted] = useState(voiceRoomService.isMuted);
   const [deafened, setDeafened] = useState(voiceRoomService.isDeafened);
+  const [currentRoomId, setCurrentRoomId] = useState(
+    voiceRoomService.getCurrentRoom()
+  );
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -105,40 +109,83 @@ export function useVoiceControls({
   const inVoice = connectionState === VoiceConnectionState.CONNECTED;
   const isConnecting = connectionState === VoiceConnectionState.CONNECTING;
 
+  useEffect(() => {
+    voiceRoomService.initialize();
+  }, []);
+
   // Subscribe to voice service state changes
   useEffect(() => {
     const unsubConnection = voiceRoomService.onConnectionChange((state) => {
       setConnectionState(state);
       setIsJoining(false);
+      setCurrentRoomId(
+        state === VoiceConnectionState.CONNECTED
+          ? voiceRoomService.getCurrentRoom()
+          : null
+      );
     });
+    const unsubLocalState = voiceRoomService.onLocalStateChange((state) => {
+      setMuted(state.isMuted);
+      setDeafened(state.isDeafened);
+    });
+    setMuted(voiceRoomService.isMuted);
+    setDeafened(voiceRoomService.isDeafened);
 
     return () => {
       unsubConnection();
+      unsubLocalState();
     };
   }, []);
 
   // Join voice in current room
-  const joinVoice = useCallback(async () => {
+  const joinVoice = useCallback(async (targetRoomId) => {
     if (isJoining || inVoice) return;
 
     setIsJoining(true);
     try {
-      const voiceRoomName = roomId ? `room-${roomId}` : "main-room";
-      await voiceRoomService.joinRoom(voiceRoomName, userName);
+      const voiceRoomName = targetRoomId || roomId || "main";
+      const displayName = userName || getUserName() || "Anonymous";
+      await voiceRoomService.joinRoom(voiceRoomName, displayName);
+      setCurrentRoomId(voiceRoomName);
 
       presenceSystem.updateVoiceState({
         inVoice: true,
         isMuted: voiceRoomService.isMuted,
-        roomId: roomId,
+        roomId: voiceRoomName,
       });
 
-      setMuted(voiceRoomService.isMuted);
-      onJoinVoice?.();
+      onJoinVoice?.(voiceRoomName);
     } catch (error) {
       console.error("Failed to join voice:", error);
       setIsJoining(false);
     }
   }, [roomId, userName, isJoining, inVoice, onJoinVoice]);
+
+  const switchChannel = useCallback(async (targetRoomId) => {
+    if (!targetRoomId || isJoining) return;
+
+    if (!inVoice) {
+      await joinVoice(targetRoomId);
+      return;
+    }
+
+    setIsJoining(true);
+    try {
+      const displayName = userName || getUserName() || "Anonymous";
+      await voiceRoomService.joinRoom(targetRoomId, displayName);
+      setCurrentRoomId(targetRoomId);
+
+      presenceSystem.updateVoiceState({
+        inVoice: true,
+        isMuted: voiceRoomService.isMuted,
+        roomId: targetRoomId,
+      });
+    } catch (error) {
+      console.error("Failed to switch voice channel:", error);
+    } finally {
+      setIsJoining(false);
+    }
+  }, [inVoice, isJoining, joinVoice, userName]);
 
   // Leave voice
   const leaveVoice = useCallback(async () => {
@@ -150,8 +197,7 @@ export function useVoiceControls({
       roomId: null,
     });
 
-    setMuted(true);
-    setDeafened(false);
+    setCurrentRoomId(null);
     onLeaveVoice?.();
   }, [onLeaveVoice]);
 
@@ -160,7 +206,6 @@ export function useVoiceControls({
     if (!inVoice) return;
 
     const newMuted = await voiceRoomService.toggleMute();
-    setMuted(newMuted);
 
     presenceSystem.updateVoiceState({
       inVoice: true,
@@ -172,8 +217,7 @@ export function useVoiceControls({
   const toggleDeafen = useCallback(() => {
     if (!inVoice) return;
 
-    const newDeafened = voiceRoomService.toggleDeafen();
-    setDeafened(newDeafened);
+    voiceRoomService.toggleDeafen();
   }, [inVoice]);
 
   const toggleRoomDropdown = useCallback(() => {
@@ -186,11 +230,13 @@ export function useVoiceControls({
     isJoining,
     muted,
     deafened,
-    currentRoom: roomName,
+    currentRoom: currentRoomId || roomName,
+    currentRoomId,
     showRoomDropdown,
     connectionState,
     joinVoice,
     leaveVoice,
+    switchChannel,
     toggleMute,
     toggleDeafen,
     toggleRoomDropdown,

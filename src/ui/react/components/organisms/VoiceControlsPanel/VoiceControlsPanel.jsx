@@ -485,7 +485,7 @@ function VoiceControlsPanel({
             {/* Deafen with output device selector */}
             <div ref={outputGroupRef} className="voice-controls-panel__control-group">
                 <ControlButton
-                    icon={isDeafened ? 'headsetOff' : 'headset'}
+                    icon={isDeafened ? 'volumeOff' : 'volume'}
                     label={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'}
                     active={!isDeafened}
                     muted={isDeafened}

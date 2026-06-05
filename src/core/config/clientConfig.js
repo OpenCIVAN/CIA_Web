@@ -82,6 +82,9 @@ export const config = Object.freeze({
   /** Whether we're in development mode */
   isDevelopment: resolveValue("isDevelopment", "__DEV__", true),
 
+  /** Whether to wrap the React app in StrictMode */
+  reactStrictMode: resolveValue("reactStrictMode", "__REACT_STRICT_MODE__", false),
+
   /** Whether to enable debug logging */
   debugEnabled: resolveValue("debugEnabled", "__DEBUG__", true),
 

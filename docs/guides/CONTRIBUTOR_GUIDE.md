@@ -1425,6 +1425,8 @@ CIA.getInstance("id"); // Inspect an instance
 - Check: Is token server running? `http://localhost:3002/health`
 - Check: For HTTPS demos, are you using the frontend proxy paths? Token requests should go through `/voice-token`, and LiveKit signaling should use `/rtc`.
 - Check: Did you start both services with `./scripts/start-livekit.sh`?
+- Check: Did you refresh the app after starting/restarting the voice services?
+- Check: For same-browser demos, are the tabs using separate LiveKit participant identities? The current dev voice service does this automatically with a per-tab session id.
 - Check: Did you allow microphone permissions?
 - Check: Are both users in the same room?
 

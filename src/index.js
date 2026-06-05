@@ -9,6 +9,7 @@ import { app as log } from "@Utils/logger.js";
 import { startupLogger, isStartupProfilingEnabled } from "@Utils/startupLogger.js";
 import { Bootstrap } from "@UI/react/components/auth/Bootstrap";
 import { setLoggerFunction } from "@kitware/vtk.js/macros";
+import { config } from "@Core/config/clientConfig.js";
 
 // Import global styles
 import "@UI/react/styles/global.scss";
@@ -158,11 +159,8 @@ async function initializeApp() {
       window.updateLoadingStatus("Starting UI...");
     }
     const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <Bootstrap />
-      </React.StrictMode>
-    );
+    const app = <Bootstrap />;
+    root.render(config.reactStrictMode ? <React.StrictMode>{app}</React.StrictMode> : app);
 
     log.info("Foundation: React application rendered");
     log.debug("Bootstrap layer will handle user setup and Phase 2");

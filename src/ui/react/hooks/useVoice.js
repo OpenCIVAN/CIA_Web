@@ -100,6 +100,11 @@ export function useVoice(options = {}) {
       }
     });
 
+    const unsubLocalState = voiceRoomService.onLocalStateChange((state) => {
+      setIsMuted(state.isMuted);
+      setIsDeafened(state.isDeafened);
+    });
+
     // Subscribe to participant updates
     const unsub2 = voiceRoomService.onParticipantUpdate((participant) => {
       setParticipants((prev) => {
@@ -140,7 +145,15 @@ export function useVoice(options = {}) {
     });
 
     // Store unsubscribe functions
-    unsubscribeRefs.current = [unsub1, unsub2, unsub3, unsub4, unsub5, unsub6];
+    unsubscribeRefs.current = [
+      unsub1,
+      unsubLocalState,
+      unsub2,
+      unsub3,
+      unsub4,
+      unsub5,
+      unsub6,
+    ];
 
     // Sync initial state
     setConnectionState(voiceRoomService.getConnectionState());
@@ -220,7 +233,6 @@ export function useVoice(options = {}) {
   const toggleMute = useCallback(async () => {
     try {
       const newState = await voiceRoomService.toggleMute();
-      setIsMuted(newState);
       return newState;
     } catch (err) {
       log.error("Failed to toggle mute:", err);
@@ -234,7 +246,6 @@ export function useVoice(options = {}) {
    */
   const toggleDeafen = useCallback(() => {
     const newState = voiceRoomService.toggleDeafen();
-    setIsDeafened(newState);
     return newState;
   }, []);
 

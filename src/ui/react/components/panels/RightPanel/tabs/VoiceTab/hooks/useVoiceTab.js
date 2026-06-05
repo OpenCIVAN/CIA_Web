@@ -87,6 +87,11 @@ export function useVoiceTab(options = {}) {
       }
     });
 
+    const unsubLocalState = voiceRoomService.onLocalStateChange((state) => {
+      setMuted(state.isMuted);
+      setDeafened(state.isDeafened);
+    });
+
     // Subscribe to participant updates
     const unsubParticipant = voiceRoomService.onParticipantUpdate(() => {
       setParticipants(voiceRoomService.getParticipants());
@@ -108,9 +113,12 @@ export function useVoiceTab(options = {}) {
 
     // Sync initial state
     setParticipants(voiceRoomService.getParticipants());
+    setMuted(voiceRoomService.isMuted);
+    setDeafened(voiceRoomService.isDeafened);
 
     return () => {
       unsubConnection();
+      unsubLocalState();
       unsubParticipant();
       unsubJoined();
       unsubLeft();
@@ -164,7 +172,6 @@ export function useVoiceTab(options = {}) {
         setIsPTTActive(false);
         // Mute when spacebar released
         voiceRoomService.setMuted(true);
-        setMuted(true);
       }
     };
 
@@ -246,7 +253,6 @@ export function useVoiceTab(options = {}) {
       const userName = getUserName() || "Anonymous User";
       const roomId = currentChannel || channels[0]?.id || "main";
       await voiceRoomService.joinRoom(roomId, userName);
-      setMuted(voiceRoomService.isMuted);
       toast.success(
         `Joined ${channels.find((c) => c.id === roomId)?.name || roomId}`
       );
@@ -261,13 +267,11 @@ export function useVoiceTab(options = {}) {
   }, []);
 
   const handleToggleMute = useCallback(async () => {
-    const newMuted = await voiceRoomService.toggleMute();
-    setMuted(newMuted);
+    await voiceRoomService.toggleMute();
   }, []);
 
   const handleToggleDeafen = useCallback(() => {
-    const newDeafened = voiceRoomService.toggleDeafen();
-    setDeafened(newDeafened);
+    voiceRoomService.toggleDeafen();
   }, []);
 
   const handleChannelSelect = useCallback(
@@ -307,12 +311,10 @@ export function useVoiceTab(options = {}) {
       // When switching to PTT, mute by default (user holds space to talk)
       if (newMode === VOICE_MODES.PTT && isConnected) {
         voiceRoomService.setMuted(true);
-        setMuted(true);
         toast.info("Push-to-Talk enabled. Hold SPACE to transmit.");
       } else if (newMode === VOICE_MODES.VAD && isConnected) {
         // When switching to VAD, unmute
         voiceRoomService.setMuted(false);
-        setMuted(false);
         toast.info("Voice Activity Detection enabled.");
       }
 

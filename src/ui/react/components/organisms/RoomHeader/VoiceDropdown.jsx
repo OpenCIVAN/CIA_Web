@@ -70,7 +70,7 @@ const VoiceDropdown = memo(function VoiceDropdown({
                     onClose();
                 }}
             >
-                <Icon name="phoneOff" size={14} />
+                <Icon name="leaveVoice" size={14} />
                 <span>Leave Voice</span>
             </button>
         </div>

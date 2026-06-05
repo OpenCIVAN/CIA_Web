@@ -146,7 +146,7 @@ const VoiceSection = memo(function VoiceSection({
                                             onCloseDropdowns();
                                         }}
                                     >
-                                        <Icon name="phoneOff" size={12} />
+                                        <Icon name="leaveVoice" size={12} />
                                         Leave Voice
                                     </button>
                                 </div>
@@ -181,7 +181,7 @@ const VoiceSection = memo(function VoiceSection({
                         onClick={onLeaveVoice}
                         title="Leave Voice"
                     >
-                        <Icon name="phoneOff" size={14} />
+                        <Icon name="leaveVoice" size={14} />
                     </button>
                 </div>
             ) : (

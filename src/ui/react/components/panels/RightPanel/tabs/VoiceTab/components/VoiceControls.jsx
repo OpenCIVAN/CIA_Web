@@ -70,7 +70,7 @@ export function VoiceControls({
             />
 
             <IconButton
-                icon={deafened ? 'headphoneOff' : 'headphones'}
+                icon={deafened ? 'volumeOff' : 'volume'}
                 onClick={onToggleDeafen}
                 tooltip={deafened ? 'Undeafen' : 'Deafen'}
                 active={deafened}
@@ -80,7 +80,7 @@ export function VoiceControls({
             />
 
             <IconButton
-                icon="phoneOff"
+                icon="leaveVoice"
                 onClick={onLeave}
                 tooltip="Leave Voice"
                 size="md"

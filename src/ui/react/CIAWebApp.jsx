@@ -81,7 +81,6 @@ import { DatasetSelectorModal } from "@UI/react/components/modals/DatasetSelecto
 // =============================================================================
 // TOAST NOTIFICATIONS
 // =============================================================================
-import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { toast } from "@UI/react/store/toastStore";
 
 // =============================================================================
@@ -189,6 +188,22 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, []);
 
   const [workspaceRoomId, setWorkspaceRoomId] = useState(null);
+  const {
+    currentRoom,
+    currentRoomId,
+    currentRoomName,
+    availableRooms,
+    roomMembers,
+    isLoading: isLoadingRooms,
+    switchRoom,
+    createRoom,
+  } = useRoomIndicator({
+    projectId,
+    userId,
+    onRoomChange: (roomId, roomName) => {
+      log.info("Room changed to:", roomName);
+    },
+  });
 
   // ===========================================================================
   // WORKSPACE STATE
@@ -613,7 +628,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // VOICE CONTROLS
   // ===========================================================================
-  const voice = useVoiceControls();
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
 
   // ===========================================================================
@@ -664,21 +678,10 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [deleteViewTarget, setDeleteViewTarget] = useState(null); // { id, name } or null
   const [datasetSelectorTarget, setDatasetSelectorTarget] = useState(null); // { row, col } or null
 
-  const {
-    currentRoom,
-    currentRoomId,
-    currentRoomName,
-    availableRooms,
-    roomMembers,
-    isLoading: isLoadingRooms,
-    switchRoom,
-    createRoom,
-  } = useRoomIndicator({
-    projectId,
-    userId,
-    onRoomChange: (roomId, roomName) => {
-      log.info("Room changed to:", roomName);
-    },
+  const voice = useVoiceControls({
+    roomId: currentRoomId,
+    roomName: currentRoomName,
+    userName: username,
   });
 
   useEffect(() => {
@@ -978,9 +981,12 @@ export function CIAWebApp({ username, userId, projectId }) {
   // Derive voice room ID (voice.currentRoom is a name; match to room ID)
   const voiceRoomId = useMemo(() => {
     if (!voice.inVoice) return null;
-    // If voice is connected but no explicit channel, assume current room
-    return currentRoomId || null;
-  }, [voice.inVoice, currentRoomId]);
+    const currentVoiceRoom = voice.currentRoomId || voice.currentRoom;
+    if (!currentVoiceRoom) return currentRoomId || null;
+
+    const matchingRoom = roomHeaderRooms.find((room) => room.id === currentVoiceRoom);
+    return matchingRoom?.id || currentVoiceRoom;
+  }, [voice.inVoice, voice.currentRoomId, voice.currentRoom, roomHeaderRooms, currentRoomId]);
 
   // ===========================================================================
   // CALLBACKS - HEADER
@@ -1712,7 +1718,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                     pinnedRoomIds={pinnedRoomIds}
                     onSelectRoom={handleRoomSelect}
                     onJoinVoice={(roomId) => {
-                      if (roomId) handleChangeVoiceChannel(roomId);
+                      if (roomId) voice.switchChannel?.(roomId);
                       else voice.joinVoice?.();
                     }}
                     onJoinBreakout={handleJoinBreakout}
@@ -1959,9 +1965,6 @@ export function CIAWebApp({ username, userId, projectId }) {
               targetRow={datasetSelectorTarget?.row ?? 0}
               targetCol={datasetSelectorTarget?.col ?? 0}
             />
-
-            {/* Toast Notifications */}
-            <ToastContainer />
 
             {/* VR Wrist Menu - renders only in VR mode */}
             <VRWristMenu showInDesktop={false} />

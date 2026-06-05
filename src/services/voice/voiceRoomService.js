@@ -48,8 +48,10 @@ class VoiceRoomService {
     // Current state
     this.connectionState = VoiceConnectionState.DISCONNECTED;
     this.currentRoomName = null;
-    this.isMuted = true; // Start muted by default
+    this.isMuted = false;
     this.isDeafened = false;
+    this._isInitialized = false;
+    this._initializePromise = null;
 
     // Participants (including self)
     this.participants = new Map();
@@ -57,6 +59,7 @@ class VoiceRoomService {
     // Event listeners
     this._listeners = {
       connectionChange: new Set(),
+      localStateChange: new Set(),
       participantUpdate: new Set(),
       participantJoined: new Set(),
       participantLeft: new Set(),
@@ -70,7 +73,7 @@ class VoiceRoomService {
     this.config = {
       tokenServerUrl: voiceUrls.tokenServerUrl,
       livekitUrl: voiceUrls.livekitUrl,
-      autoMuteOnJoin: true,
+      autoMuteOnJoin: false,
       reconnectAttempts: 3,
     };
 
@@ -110,6 +113,23 @@ class VoiceRoomService {
    * @returns {Promise<boolean>}
    */
   async initialize() {
+    if (this._isInitialized) {
+      return true;
+    }
+
+    if (this._initializePromise) {
+      return this._initializePromise;
+    }
+
+    this._initializePromise = this._initialize();
+    try {
+      return await this._initializePromise;
+    } finally {
+      this._initializePromise = null;
+    }
+  }
+
+  async _initialize() {
     log.debug("VoiceRoomService initializing...");
 
     // Check for browser support
@@ -129,6 +149,7 @@ class VoiceRoomService {
     }
 
     log.info("VoiceRoomService initialized");
+    this._isInitialized = true;
     return true;
   }
 
@@ -184,21 +205,58 @@ class VoiceRoomService {
 
   _getDevUserHeaders(fallbackName) {
     const user = this._getDevUser();
+    const participantIdentity = this._getParticipantIdentity(user.id);
     return {
       "x-user-id": user.id,
       "x-user-email": user.email,
       "x-user-name": user.name || fallbackName || "CIA Admin",
+      "x-voice-participant-id": participantIdentity,
     };
   }
 
   _getDevUserBody(fallbackName) {
     if (!this._isDevBypass()) return {};
     const user = this._getDevUser();
+    const participantIdentity = this._getParticipantIdentity(user.id);
     return {
       userId: user.id,
       userEmail: user.email,
       userName: user.name || fallbackName || "CIA Admin",
+      participantIdentity,
     };
+  }
+
+  _getParticipantIdentity(userId) {
+    const baseUserId = userId || "voice-user";
+    return `${baseUserId}:${this._getVoiceClientId()}`;
+  }
+
+  _getVoiceClientId() {
+    if (this._voiceClientId) return this._voiceClientId;
+
+    const storageKey = "cia:voice-client-id";
+    let clientId = null;
+
+    try {
+      clientId = window.sessionStorage?.getItem(storageKey);
+      if (!clientId) {
+        clientId = this._createClientId();
+        window.sessionStorage?.setItem(storageKey, clientId);
+      }
+    } catch (error) {
+      log.warn("Unable to persist voice client id:", error.message);
+      clientId = this._createClientId();
+    }
+
+    this._voiceClientId = clientId;
+    return clientId;
+  }
+
+  _createClientId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 
   /**
@@ -252,12 +310,13 @@ class VoiceRoomService {
         await this.room.localParticipant.setMicrophoneEnabled(true);
         this.isMuted = false;
       }
+      this._emitLocalStateChange();
 
       // Add self to participants
       this._updateParticipant(this.room.localParticipant, true);
 
-      // Add existing participants
-      this.room.participants.forEach((participant) => {
+      // Add existing remote participants.
+      this._getRemoteParticipants().forEach((participant) => {
         this._updateParticipant(participant, false);
       });
 
@@ -271,6 +330,7 @@ class VoiceRoomService {
       );
     } catch (error) {
       log.error("Failed to join room:", error);
+      await this._cleanupFailedJoin();
       this._setConnectionState(VoiceConnectionState.ERROR);
       this._emit("error", error);
       throw error;
@@ -300,6 +360,7 @@ class VoiceRoomService {
     this.currentRoomName = null;
     this.isMuted = true;
     this.isDeafened = false;
+    this._emitLocalStateChange();
 
     this._setConnectionState(VoiceConnectionState.DISCONNECTED);
 
@@ -326,6 +387,7 @@ class VoiceRoomService {
     this._updateParticipant(this.room.localParticipant, true);
 
     log.debug(`Microphone ${this.isMuted ? "muted" : "unmuted"}`);
+    this._emitLocalStateChange();
     return this.isMuted;
   }
 
@@ -334,8 +396,9 @@ class VoiceRoomService {
    * @param {boolean} muted - Mute state
    */
   async setMuted(muted) {
-    if (this.isMuted === muted) return;
+    if (this.isMuted === muted) return this.isMuted;
     await this.toggleMute();
+    return this.isMuted;
   }
 
   /**
@@ -351,6 +414,7 @@ class VoiceRoomService {
     });
 
     log.debug(`Audio ${this.isDeafened ? "deafened" : "undeafened"}`);
+    this._emitLocalStateChange();
     return this.isDeafened;
   }
 
@@ -466,6 +530,38 @@ class VoiceRoomService {
     });
   }
 
+  _getRemoteParticipants() {
+    if (!this.room) return [];
+
+    if (this.room.remoteParticipants instanceof Map) {
+      return Array.from(this.room.remoteParticipants.values());
+    }
+
+    if (this.room.participants instanceof Map) {
+      return Array.from(this.room.participants.values());
+    }
+
+    if (this.room.participants && typeof this.room.participants === "object") {
+      return Object.values(this.room.participants);
+    }
+
+    return [];
+  }
+
+  async _cleanupFailedJoin() {
+    if (!this.room) return;
+
+    try {
+      await this.room.disconnect();
+    } catch (disconnectError) {
+      log.warn("Failed to clean up voice room after join error:", disconnectError.message);
+    }
+
+    this.room = null;
+    this.currentRoomName = null;
+    this.participants.clear();
+  }
+
   /**
    * Attach audio track to DOM
    * @private
@@ -563,6 +659,14 @@ class VoiceRoomService {
   }
 
   /**
+   * Subscribe to local mute/deafen state changes
+   */
+  onLocalStateChange(callback) {
+    this._listeners.localStateChange.add(callback);
+    return () => this._listeners.localStateChange.delete(callback);
+  }
+
+  /**
    * Subscribe to participant updates
    */
   onParticipantUpdate(callback) {
@@ -617,6 +721,13 @@ class VoiceRoomService {
       this.connectionState = state;
       this._emit("connectionChange", state);
     }
+  }
+
+  _emitLocalStateChange() {
+    this._emit("localStateChange", {
+      isMuted: this.isMuted,
+      isDeafened: this.isDeafened,
+    });
   }
 
   // =========================================================================

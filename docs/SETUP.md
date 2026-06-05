@@ -312,7 +312,10 @@ curl -k -X POST https://localhost:8081/voice-token/token \
   --data '{"roomName":"smoke","userName":"CIA Admin"}'
 ```
 
-Test: open the app in two tabs, click **Join Voice Chat** in both, grant microphone access — you should hear a slight echo between tabs.
+Test: open the app in two tabs or windows after the voice services are running,
+click **Join Voice Chat** in both, and grant microphone access. Each tab gets a
+separate LiveKit participant identity, and the mic starts unmuted once
+permission is granted, so you should hear a slight echo between tabs.
 
 ---
 

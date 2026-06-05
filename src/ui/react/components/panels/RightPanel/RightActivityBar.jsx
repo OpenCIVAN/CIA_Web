@@ -110,7 +110,7 @@ function CompactVoiceControls({
                     onClick={onToggleDeafen}
                     aria-label={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'}
                 >
-                    <Icon name={isDeafened ? 'headsetOff' : 'headset'} size={18} />
+                    <Icon name={isDeafened ? 'volumeOff' : 'volume'} size={18} />
                 </button>
             </Tooltip>
 

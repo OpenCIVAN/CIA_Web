@@ -21,16 +21,18 @@ app.use(express.json());
 
 async function requireAuth(req, res, next) {
   if (DEV_BYPASS_AUTH) {
+    const userId =
+      req.get("x-user-id") ||
+      req.body?.userId ||
+      "00000000-0000-0000-0000-000000000002";
     req.user = {
-      id:
-        req.get("x-user-id") ||
-        req.body?.userId ||
-        "00000000-0000-0000-0000-000000000002",
+      id: userId,
       name: req.get("x-user-name") || req.body?.userName || "CIA Admin",
       email:
         req.get("x-user-email") ||
         req.body?.userEmail ||
         "admin@cia-web.local",
+      voiceIdentity: getScopedVoiceIdentity(req, userId),
     };
     return next();
   }
@@ -43,11 +45,27 @@ async function requireAuth(req, res, next) {
   try {
     const token = authHeader.substring(7);
     req.user = await verifyJwtToken(token);
+    req.user.voiceIdentity = getScopedVoiceIdentity(req, req.user.id);
     return next();
   } catch (error) {
     log.warn("Token server auth failed:", error.message);
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+function getScopedVoiceIdentity(req, userId) {
+  const requestedIdentity =
+    req.get("x-voice-participant-id") || req.body?.participantIdentity;
+
+  if (
+    typeof requestedIdentity === "string" &&
+    requestedIdentity.startsWith(`${userId}:`) &&
+    /^[a-zA-Z0-9:_@.+-]{1,160}$/.test(requestedIdentity)
+  ) {
+    return requestedIdentity;
+  }
+
+  return userId;
 }
 
 // ⚠️ WARNING: These are development-only credentials!
@@ -73,7 +91,7 @@ app.post("/token", requireAuth, async (req, res) => {
     log.debug("Using API Key:", LIVEKIT_API_KEY);
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: req.user?.id || effectiveName,
+      identity: req.user?.voiceIdentity || req.user?.id || effectiveName,
       name: effectiveName, // Also set display name
     });
 

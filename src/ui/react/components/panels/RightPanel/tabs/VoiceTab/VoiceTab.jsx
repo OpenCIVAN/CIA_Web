@@ -67,7 +67,7 @@ function PTTIndicator({ isActive, voiceMode }) {
 
     return (
         <div className={`ptt-indicator ${isActive ? 'ptt-indicator--active' : ''}`}>
-            <Icon name={isActive ? 'radio' : 'radioReceiver'} size={14} />
+            <Icon name="radio" size={14} />
             <span>{isActive ? 'Transmitting...' : 'Hold SPACE to talk'}</span>
         </div>
     );
@@ -226,7 +226,7 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                                     disabled={voiceMode === VOICE_MODES.PTT}
                                 />
                                 <Button
-                                    icon="headphones"
+                                    icon={deafened ? 'volumeOff' : 'volume'}
                                     variant={deafened ? 'danger' : 'secondary'}
                                     onClick={handleToggleDeafen}
                                     title={deafened ? 'Undeafen (D)' : 'Deafen (D)'}
@@ -245,7 +245,7 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                                 />
                             </div>
                             <Button
-                                icon="phoneOff"
+                                icon="leaveVoice"
                                 variant="danger"
                                 onClick={handleLeave}
                                 title="Leave Voice"

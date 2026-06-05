@@ -152,6 +152,9 @@ curl -k -X POST https://localhost:8081/voice-token/token \
 ```
 
 Then open the Voice tab, click **Join Voice**, and grant microphone permission.
+For a local collaborator demo, open the app in two tabs or windows after the
+voice services are running. Each tab gets a separate LiveKit participant
+identity, and the mic starts unmuted once permission is granted.
 
 ### 8. Accept SSL Warning
 
