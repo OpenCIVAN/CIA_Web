@@ -8,7 +8,10 @@ import {
   getDatasetManager,
   getViewConfigurationManager,
 } from "@Init/appInitializer.js";
-import { onCameraChange } from "@Collaboration/yjs/yjsObservers.js";
+import {
+  onCameraChange,
+  onViewVisualStateChange,
+} from "@Collaboration/yjs/yjsObservers.js";
 import {
   instance as log,
   logInfo,
@@ -68,6 +71,8 @@ class WorkspaceManager {
     this._initialized = false;
     this.listeners = new Set();
     this._colorIndex = 0; // Track color assignment
+    this._lastRealtimeCameraUpdate = new Map();
+    this._pendingRealtimeCameraUpdates = new Map();
 
     // Per-pane active instance tracking (for tile mode)
     // Pane = a viewport into a canvas. Same canvas can have multiple panes.
@@ -101,6 +106,11 @@ class WorkspaceManager {
     onCameraChange(({ viewId, camera, userId }) => {
       if (camera) {
         this._handleYjsCameraUpdate(viewId, camera, userId);
+      }
+    });
+    onViewVisualStateChange(({ viewId, toolState, userId }) => {
+      if (toolState) {
+        this._handleYjsVisualStateUpdate(viewId, toolState, userId);
       }
     });
     log.debug("Y.js camera sync listener registered (real-time)");
@@ -155,23 +165,58 @@ class WorkspaceManager {
    * @private
    */
   _handleYjsCameraUpdate(viewId, camera, sourceUserId) {
+    this._lastRealtimeCameraUpdate.set(viewId, Date.now());
+
     // Find all instances viewing this view
     for (const [instanceId, instance] of this.instances) {
       if (instance.viewConfigId !== viewId) continue;
       if (!instance.handler || !instance.instanceData) continue;
 
+      const pending = this._pendingRealtimeCameraUpdates.get(instanceId) || {};
+      pending.camera = camera;
+      pending.sourceUserId = sourceUserId || "remote";
+
+      if (!pending.frameId) {
+        pending.frameId = requestAnimationFrame(() => {
+          this._pendingRealtimeCameraUpdates.delete(instanceId);
+
+          try {
+            if (typeof instance.handler.applySharedState === "function") {
+              instance.handler.applySharedState(
+                instance.instanceData,
+                { camera: pending.camera },
+                pending.sourceUserId
+              );
+            }
+          } catch (error) {
+            log.error(
+              `Failed to apply Y.js camera to instance ${instanceId}:`,
+              error
+            );
+          }
+        });
+      }
+
+      this._pendingRealtimeCameraUpdates.set(instanceId, pending);
+    }
+  }
+
+  _handleYjsVisualStateUpdate(viewId, toolState, sourceUserId) {
+    for (const [instanceId, instance] of this.instances) {
+      if (instance.viewConfigId !== viewId) continue;
+      if (!instance.handler || !instance.instanceData) continue;
+
       try {
-        // Call handler's applySharedState for immediate camera update
         if (typeof instance.handler.applySharedState === "function") {
           instance.handler.applySharedState(
             instance.instanceData,
-            { camera },
+            { toolState },
             sourceUserId || "remote"
           );
         }
       } catch (error) {
         log.error(
-          `Failed to apply Y.js camera to instance ${instanceId}:`,
+          `Failed to apply Y.js visual state to instance ${instanceId}:`,
           error
         );
       }
@@ -199,12 +244,33 @@ class WorkspaceManager {
         // Build state object from view
         const state = {};
 
-        if (view.camera) {
+        const lastRealtimeUpdate =
+          this._lastRealtimeCameraUpdate.get(viewId) || 0;
+        const realtimeIsActive = Date.now() - lastRealtimeUpdate < 1000;
+
+        if (view.camera && !realtimeIsActive) {
           state.camera = view.camera;
         }
 
         if (view.colorMaps) {
           state.colorMaps = view.colorMaps;
+        }
+
+        const sharedVisualization = view.widgets?.find(
+          (widget) =>
+            widget.id === "vtk-shared-state" ||
+            widget.type === "vtk-shared-state"
+        );
+        if (sharedVisualization?.state) {
+          const serializedSharedState = JSON.stringify(
+            sharedVisualization.state
+          );
+          if (
+            instance.instanceData._lastPublishedToolState !==
+            serializedSharedState
+          ) {
+            state.toolState = sharedVisualization.state;
+          }
         }
 
         // Only apply if there's state to apply

@@ -36,6 +36,14 @@ class InstanceToolsManager {
     this.instanceTools = new Map(); // instanceId -> tools
   }
 
+  _emitToolsUpdate(instanceId) {
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId, source: "local" },
+      })
+    );
+  }
+
   // ==========================================================================
   // INITIALIZATION
   // ==========================================================================
@@ -68,6 +76,10 @@ class InstanceToolsManager {
 
     this.instanceTools.set(instanceId, tools);
     log.debug(`Tools initialized for instance: ${instanceId}`);
+  }
+
+  getWidgetManager(instanceId) {
+    return this.instanceTools.get(instanceId)?.widgetManager || null;
   }
 
   // ==========================================================================
@@ -1048,6 +1060,7 @@ class InstanceToolsManager {
 
     tools.sceneObjects.actor.getProperty().setOpacity(opacity);
     tools.sceneObjects.renderWindow.render();
+    this._emitToolsUpdate(instanceId);
 
     log.trace(`Opacity set to ${opacity} for instance: ${instanceId}`);
   }
@@ -1087,6 +1100,7 @@ class InstanceToolsManager {
     // Preserve user's point/line size settings - don't auto-reset
 
     tools.sceneObjects.renderWindow.render();
+    this._emitToolsUpdate(instanceId);
 
     log.trace(`Representation set to ${mode} for instance: ${instanceId}`);
   }
@@ -1113,6 +1127,7 @@ class InstanceToolsManager {
 
     tools.sceneObjects.actor.getProperty().setPointSize(size);
     tools.sceneObjects.renderWindow.render();
+    this._emitToolsUpdate(instanceId);
 
     log.trace(`Point size set to ${size} for instance: ${instanceId}`);
   }
@@ -1136,6 +1151,7 @@ class InstanceToolsManager {
 
     tools.sceneObjects.actor.getProperty().setLineWidth(width);
     tools.sceneObjects.renderWindow.render();
+    this._emitToolsUpdate(instanceId);
 
     log.trace(`Line width set to ${width}px for instance: ${instanceId}`);
   }
@@ -1206,6 +1222,7 @@ class InstanceToolsManager {
     tools.currentColormap = preset;
 
     renderWindow.render();
+    this._emitToolsUpdate(instanceId);
     log.trace(`Color map set to ${preset} for instance: ${instanceId}`);
   }
 

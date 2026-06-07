@@ -35,8 +35,12 @@ import { vtkCleanPolyDataFeature } from "@VTK/features/VTKCleanPolyDataFeature";
 import { vtkOrientationWidget, ORIENTATION_STYLES } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
-import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
+import {
+  syncCameraToYjs,
+  syncViewVisualStateToYjs,
+} from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
+import { canvasHistory } from "@UI/react/store/canvasTransactionStore.js";
 
 // Raycasting and cursor collaboration
 import {
@@ -362,6 +366,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     vtkInstanceCursors.cleanupInstance(instanceId);
     log.debug(`Cursors cleaned up for ${instanceId}`);
+
+    instanceData._transformSyncCleanup?.();
+    instanceData._transformSyncCleanup = null;
+    instanceData._toolsSyncCleanup?.();
+    instanceData._toolsSyncCleanup = null;
+    instanceData._lastAppliedSharedToolState = null;
+    instanceData._lastPublishedToolState = null;
 
     // Clean up cursor event listeners
     if (instanceData._cursorHandlers && instanceData.container) {
@@ -770,6 +781,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Initialize instance tools (needed for widgets and rendering controls)
     // Use instanceData.sceneObjects which is now guaranteed to be set
     instanceTools.initializeTools(instanceId, instanceData.sceneObjects);
+    instanceData.widgetManager =
+      instanceTools.getWidgetManager?.(instanceId) ||
+      instanceTools.instanceTools?.get(instanceId)?.widgetManager ||
+      null;
     log.debug(`Instance tools initialized`);
 
     // Initialize orientation widget (always create it, but start enabled)
@@ -903,6 +918,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           if (savedCamera.clippingRange)
             camera.setClippingRange(...savedCamera.clippingRange);
           if (savedCamera.viewAngle) camera.setViewAngle(savedCamera.viewAngle);
+          if (savedCamera.actorTransform) {
+            if (savedCamera.actorTransform.position)
+              actor.setPosition(...savedCamera.actorTransform.position);
+            if (savedCamera.actorTransform.rotation)
+              actor.setOrientation(...savedCamera.actorTransform.rotation);
+            if (savedCamera.actorTransform.scale)
+              actor.setScale(...savedCamera.actorTransform.scale);
+          }
+          await this._applySharedToolState(
+            instanceData,
+            viewConfig?.widgets?.find(
+              (widget) =>
+                widget.id === "vtk-shared-state" ||
+                widget.type === "vtk-shared-state"
+            )?.state || savedCamera.toolState
+          );
 
           // CRITICAL: Reset clipping range after applying saved camera state
           // This ensures objects aren't clipped incorrectly when camera is at
@@ -1801,12 +1832,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // MEASUREMENT WIDGETS MENU (Following plugin pattern)
     // ========================================================================
-    const lineActive =
-      instanceTools.isWidgetActive?.(instanceId, "line") || false;
-    const angleActive =
-      instanceTools.isWidgetActive?.(instanceId, "angle") || false;
-    const planeActive =
-      instanceTools.isWidgetActive?.(instanceId, "plane") || false;
+    const measurementsState = vtkMeasurementWidgetsFeature.getState(instanceId);
+    const measurementTypes = new Set(
+      (measurementsState?.measurements || []).map(
+        (measurement) => measurement.type
+      )
+    );
+    const lineActive = measurementTypes.has("distance");
+    const angleActive = measurementTypes.has("angle");
+    const planeActive = !!vtkClippingFeature.getState(instanceId)?.enabled;
 
     tools.push({
       id: "widgets",
@@ -1827,7 +1861,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseMeasurement,
           onClick: () => {
             log.debug("Line measurement clicked");
-            instanceTools.toggleRulerMeasurement?.(instanceId);
+            vtkMeasurementWidgetsFeature.toggleMeasurement(
+              instanceId,
+              "distance"
+            );
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1840,7 +1877,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseMeasurement,
           onClick: () => {
             log.debug("Angle measurement clicked");
-            instanceTools.toggleAngleMeasurement?.(instanceId);
+            vtkMeasurementWidgetsFeature.toggleMeasurement(
+              instanceId,
+              "angle"
+            );
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1853,7 +1893,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseClipping,
           onClick: () => {
             log.debug("Clipping plane clicked");
-            instanceTools.toggleClippingPlane?.(instanceId);
+            vtkClippingFeature.toggleClipping(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1867,22 +1907,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: () => {
             log.debug("Clear all widgets clicked");
             // Check CURRENT widget state at click time, not captured values
-            const currentLineActive =
-              instanceTools.isWidgetActive?.(instanceId, "line") || false;
-            const currentAngleActive =
-              instanceTools.isWidgetActive?.(instanceId, "angle") || false;
-            const currentPlaneActive =
-              instanceTools.isWidgetActive?.(instanceId, "plane") || false;
-
-            if (currentLineActive) {
-              instanceTools.toggleRulerMeasurement?.(instanceId);
-            }
-            if (currentAngleActive) {
-              instanceTools.toggleAngleMeasurement?.(instanceId);
-            }
-            if (currentPlaneActive) {
-              instanceTools.toggleClippingPlane?.(instanceId);
-            }
+            vtkMeasurementWidgetsFeature.clearAllMeasurements(instanceId);
+            vtkClippingFeature.disableClipping(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -3787,6 +3813,18 @@ console.log('Tools:', tools);
     camera.setPosition(cameraState.position);
     camera.setFocalPoint(cameraState.focalPoint);
     camera.setViewUp(cameraState.viewUp);
+    if (cameraState.actorTransform && instanceData.sceneObjects.actor) {
+      const actor = instanceData.sceneObjects.actor;
+      if (cameraState.actorTransform.position) {
+        actor.setPosition(...cameraState.actorTransform.position);
+      }
+      if (cameraState.actorTransform.rotation) {
+        actor.setOrientation(...cameraState.actorTransform.rotation);
+      }
+      if (cameraState.actorTransform.scale) {
+        actor.setScale(...cameraState.actorTransform.scale);
+      }
+    }
     this._requestRender(instanceData, "camera-sync");
   }
 
@@ -3877,7 +3915,13 @@ console.log('Tools:', tools);
         opacity: property.getOpacity(),
         representation: property.getRepresentation(),
       };
+      state.transform = {
+        position: actor.getPosition(),
+        rotation: actor.getOrientation(),
+        scale: actor.getScale(),
+      };
     }
+    state.toolState = this._getSharedToolState(instanceData);
 
     // 🆕 ADD REDUCTION STATE: Include dimensionality reduction state
     const instanceId = instanceData.instanceId;
@@ -3891,6 +3935,639 @@ console.log('Tools:', tools);
     }
 
     return state;
+  }
+
+  _getSharedToolState(instanceData) {
+    const instanceId = instanceData.instanceId;
+    const scalar = vtkScalarColoringFeature.getState(instanceId);
+    const glyph = vtkGlyphFeature.getState(instanceId);
+    const threshold = vtkThresholdFeature.getState(instanceId);
+    const timeSeries = vtkTimeSeriesFeature.getState(instanceId);
+    const normals = vtkNormalsFeature.getState(instanceId);
+    const cutter = vtkCutterFeature.getState(instanceId);
+    const thresholdPoints = vtkThresholdPointsFeature.getState(instanceId);
+    const resliceCursor = vtkResliceCursorFeature.getState(instanceId);
+    const implicitPlane = vtkImplicitPlaneFeature.getState(instanceId);
+    const imageCropping = vtkImageCroppingFeature.getState(instanceId);
+    const cleanPolyData = vtkCleanPolyDataFeature.getState(instanceId);
+
+    return {
+      appearance: {
+        opacity: instanceTools.getOpacity(instanceId),
+        representation: instanceTools.getRepresentation(instanceId),
+        pointSize: instanceTools.getPointSize(instanceId),
+        lineWidth: instanceTools.getLineWidth(instanceId),
+      },
+      orientation: vtkOrientationWidget.getConfig(instanceId),
+      scene: vtkSceneFeature.getState(instanceId),
+      scalarColoring: scalar
+        ? {
+            enabled: scalar.enabled,
+            activeArray: scalar.activeArray,
+            activeArrayType: scalar.activeArrayType,
+            colormap: scalar.colormap,
+            scalarRangeMode: scalar.scalarRangeMode,
+            scalarRange: scalar.scalarRange,
+          }
+        : null,
+      glyph: glyph
+        ? {
+            enabled: glyph.enabled,
+            glyphType: glyph.glyphType,
+            scaleFactor: glyph.scaleFactor,
+            orientationArray: glyph.orientationArray,
+          }
+        : null,
+      volume: vtkVolumeFeature.getState(instanceId),
+      slice: vtkSliceFeature.getState(instanceId),
+      isosurface: vtkIsosurfaceFeature.getState(instanceId),
+      clipping: vtkClippingFeature.getState(instanceId),
+      threshold: threshold
+        ? {
+            enabled: threshold.enabled,
+            mode: threshold.mode,
+            minValue: threshold.minValue,
+            maxValue: threshold.maxValue,
+            selectedArray: threshold.selectedArray,
+          }
+        : null,
+      timeSeries: timeSeries
+        ? {
+            enabled: timeSeries.enabled,
+            currentStep: timeSeries.currentStep,
+            playbackMode: timeSeries.playbackMode,
+            fps: timeSeries.fps,
+          }
+        : null,
+      pbr: vtkPBRFeature.getState(instanceId),
+      transferFunction: vtkTransferFunctionFeature.getState(instanceId),
+      scalarBar: vtkScalarBarFeature.getState(instanceId),
+      normals: normals
+        ? {
+            enabled: normals.enabled,
+            computePointNormals: normals.computePointNormals,
+            computeCellNormals: normals.computeCellNormals,
+            showNormalGlyphs: normals.showNormalGlyphs,
+            glyphScale: normals.glyphScale,
+          }
+        : null,
+      cutter: cutter
+        ? {
+            enabled: cutter.enabled,
+            planeOrientation: cutter.planeOrientation,
+            planePosition: cutter.planePosition,
+            lineColor: cutter.lineColor,
+            showOriginal: cutter.showOriginal,
+          }
+        : null,
+      thresholdPoints: thresholdPoints
+        ? {
+            enabled: thresholdPoints.enabled,
+            selectedArray: thresholdPoints.selectedArray,
+            operation: thresholdPoints.operation,
+            thresholdValue: thresholdPoints.thresholdValue,
+            showFilteredOnly: thresholdPoints.showFilteredOnly,
+          }
+        : null,
+      resliceCursor: resliceCursor
+        ? {
+            enabled: resliceCursor.enabled,
+            center: resliceCursor.center,
+            showCenter: resliceCursor.showCenter,
+            keepOrthogonality: resliceCursor.keepOrthogonality,
+          }
+        : null,
+      implicitPlane: implicitPlane
+        ? {
+            enabled: implicitPlane.enabled,
+            normal: implicitPlane.normal,
+            origin: implicitPlane.origin,
+            clipEnabled: implicitPlane.clipEnabled,
+            clipInside: implicitPlane.clipInside,
+            lockNormalToCamera: implicitPlane.lockNormalToCamera,
+          }
+        : null,
+      imageCropping: imageCropping
+        ? {
+            enabled: imageCropping.enabled,
+            croppingPlanes: imageCropping.croppingPlanes,
+            showHandles: imageCropping.showHandles,
+            showFaces: imageCropping.showFaces,
+            showEdges: imageCropping.showEdges,
+        }
+        : null,
+      measurements: vtkMeasurementWidgetsFeature.getState(instanceId),
+      cleanPolyData: cleanPolyData
+        ? {
+            isCleaningActive: cleanPolyData.isCleaningActive,
+            pointMerging: cleanPolyData.pointMerging,
+            tolerance: cleanPolyData.tolerance,
+            toleranceIsAbsolute: cleanPolyData.toleranceIsAbsolute,
+            removeDegenerate: cleanPolyData.removeDegenerate,
+          }
+        : null,
+    };
+  }
+
+  async _applySharedToolState(instanceData, toolState) {
+    if (!toolState) return;
+
+    const instanceId = instanceData.instanceId;
+    const serializedToolState = JSON.stringify(toolState);
+    if (instanceData._lastAppliedSharedToolState === serializedToolState) {
+      return;
+    }
+    instanceData._lastAppliedSharedToolState = serializedToolState;
+
+    if (toolState.appearance) {
+      const appearance = toolState.appearance;
+      if (appearance.opacity !== undefined) {
+        instanceTools.setOpacity(instanceId, appearance.opacity);
+      }
+      if (appearance.representation !== undefined) {
+        instanceTools.setRepresentation(instanceId, appearance.representation);
+      }
+      if (appearance.pointSize !== undefined) {
+        instanceTools.setPointSize(instanceId, appearance.pointSize);
+      }
+      if (appearance.lineWidth !== undefined) {
+        instanceTools.setLineWidth(instanceId, appearance.lineWidth);
+      }
+    }
+
+    if (toolState.orientation) {
+      vtkOrientationWidget.updateConfig(instanceId, toolState.orientation);
+      vtkOrientationWidget.setVisible(
+        instanceId,
+        toolState.orientation.enabled !== false
+      );
+    }
+
+    if (toolState.scene) {
+      const scene = toolState.scene;
+      if (scene.backgroundPreset && scene.backgroundPreset !== "custom") {
+        vtkSceneFeature.setBackgroundPreset(
+          instanceId,
+          scene.backgroundPreset
+        );
+      } else if (scene.backgroundColorTop) {
+        vtkSceneFeature.setBackgroundColor(
+          instanceId,
+          scene.backgroundColorTop,
+          {
+            gradient: scene.useGradient,
+            bottomColor: scene.backgroundColorBottom,
+          }
+        );
+      }
+      vtkSceneFeature.setGridPlane(instanceId, scene.gridPlane || "xz");
+      vtkSceneFeature.setGridColor(
+        instanceId,
+        scene.gridColor || [0.5, 0.5, 0.5],
+        scene.gridOpacity
+      );
+      vtkSceneFeature.setGridVisible(instanceId, !!scene.showGrid);
+      vtkSceneFeature.setAxesOptions(instanceId, {
+        color: scene.axesColor,
+        showAxisLabels: scene.showAxisLabels,
+        showTickLabels: scene.showTickLabels,
+      });
+      vtkSceneFeature.setAxesVisible(instanceId, !!scene.showAxes);
+    }
+
+    const scalar = toolState.scalarColoring;
+    if (scalar) {
+      if (scalar.enabled && scalar.activeArray) {
+        vtkScalarColoringFeature.enableScalarColoring(
+          instanceId,
+          scalar.activeArray,
+          scalar.activeArrayType || "point"
+        );
+        if (scalar.colormap) {
+          vtkScalarColoringFeature.setColormap(instanceId, scalar.colormap);
+        }
+        if (scalar.scalarRange?.length === 2) {
+          vtkScalarColoringFeature.setScalarRange(
+            instanceId,
+            scalar.scalarRange[0],
+            scalar.scalarRange[1]
+          );
+        }
+      } else {
+        vtkScalarColoringFeature.disableScalarColoring(instanceId);
+      }
+    }
+
+    const glyph = toolState.glyph;
+    if (glyph) {
+      if (glyph.enabled && instanceData.polydata) {
+        vtkGlyphFeature.enableGlyphs(instanceId, instanceData.polydata, {
+          orientationArray: glyph.orientationArray,
+        });
+        if (glyph.glyphType) {
+          vtkGlyphFeature.setGlyphType(instanceId, glyph.glyphType);
+        }
+        if (glyph.scaleFactor !== undefined) {
+          vtkGlyphFeature.setScaleFactor(instanceId, glyph.scaleFactor);
+        }
+      } else {
+        vtkGlyphFeature.disableGlyphs(instanceId);
+      }
+    }
+
+    const volume = toolState.volume;
+    if (volume) {
+      if (volume.enabled && instanceData.imageData) {
+        await vtkVolumeFeature.enableVolumeRendering(
+          instanceId,
+          instanceData.imageData
+        );
+        if (volume.preset) {
+          vtkVolumeFeature.setPreset(instanceId, volume.preset);
+        }
+        if (volume.sampleDistance !== undefined) {
+          vtkVolumeFeature.setSampleDistance(
+            instanceId,
+            volume.sampleDistance
+          );
+        }
+        if (volume.opacity !== undefined) {
+          vtkVolumeFeature.setOpacity(instanceId, volume.opacity);
+        }
+        if (volume.blendMode) {
+          vtkVolumeFeature.setBlendMode(instanceId, volume.blendMode);
+        }
+        if (volume.shade !== undefined) {
+          vtkVolumeFeature.setShading(instanceId, volume.shade);
+        }
+      } else {
+        vtkVolumeFeature.disableVolumeRendering(instanceId);
+      }
+    }
+
+    const slice = toolState.slice;
+    if (slice) {
+      if (slice.enabled && instanceData.imageData) {
+        await vtkSliceFeature.enableSliceViewing(
+          instanceId,
+          instanceData.imageData
+        );
+        vtkSliceFeature.setSliceMode(instanceId, slice.sliceMode);
+        vtkSliceFeature.setSlice(instanceId, slice.sliceIndex);
+        if (
+          slice.windowWidth !== undefined &&
+          slice.windowLevel !== undefined
+        ) {
+          vtkSliceFeature.setWindowLevel(
+            instanceId,
+            slice.windowWidth,
+            slice.windowLevel
+          );
+        }
+      } else {
+        vtkSliceFeature.disableSliceViewing(instanceId);
+      }
+    }
+
+    const isosurface = toolState.isosurface;
+    if (isosurface) {
+      if (isosurface.enabled && instanceData.imageData) {
+        await vtkIsosurfaceFeature.enableIsosurface(
+          instanceId,
+          instanceData.imageData
+        );
+        vtkIsosurfaceFeature.setIsovalue(
+          instanceId,
+          isosurface.isovalue
+        );
+        vtkIsosurfaceFeature.setSurfaceColor(
+          instanceId,
+          isosurface.surfaceColor
+        );
+        vtkIsosurfaceFeature.setOpacity(instanceId, isosurface.opacity);
+      } else {
+        vtkIsosurfaceFeature.disableIsosurface(instanceId);
+      }
+    }
+
+    const clipping = toolState.clipping;
+    if (clipping) {
+      if (clipping.enabled) {
+        vtkClippingFeature.enableClipping(instanceId);
+        const current = vtkClippingFeature.getState(instanceId);
+        if (!!current?.inverted !== !!clipping.inverted) {
+          vtkClippingFeature.invertClipping(instanceId);
+        }
+        if (clipping.planePreset) {
+          vtkClippingFeature.setPlanePreset(
+            instanceId,
+            clipping.planePreset
+          );
+        }
+        if (clipping.plane) {
+          vtkClippingFeature.setPlaneData(instanceId, clipping.plane);
+        }
+      } else {
+        vtkClippingFeature.disableClipping(instanceId);
+      }
+    }
+
+    const threshold = toolState.threshold;
+    if (threshold) {
+      if (threshold.enabled) {
+        vtkThresholdFeature.enableThreshold(instanceId);
+        vtkThresholdFeature.setMode(instanceId, threshold.mode);
+        vtkThresholdFeature.setRange(
+          instanceId,
+          threshold.minValue,
+          threshold.maxValue
+        );
+      } else {
+        vtkThresholdFeature.disableThreshold(instanceId);
+      }
+    }
+
+    const timeSeries = toolState.timeSeries;
+    if (timeSeries?.enabled) {
+      vtkTimeSeriesFeature.setPlaybackMode(
+        instanceId,
+        timeSeries.playbackMode
+      );
+      vtkTimeSeriesFeature.setFPS(instanceId, timeSeries.fps);
+      vtkTimeSeriesFeature.setTimeStep(instanceId, timeSeries.currentStep);
+    }
+
+    const pbr = toolState.pbr;
+    if (pbr) {
+      if (pbr.enabled) {
+        vtkPBRFeature.enablePBR(instanceId);
+        if (pbr.preset && pbr.preset !== "custom") {
+          vtkPBRFeature.setPreset(instanceId, pbr.preset);
+        } else {
+          if (pbr.metallic !== undefined) {
+            vtkPBRFeature.setMetallic(instanceId, pbr.metallic);
+          }
+          if (pbr.roughness !== undefined) {
+            vtkPBRFeature.setRoughness(instanceId, pbr.roughness);
+          }
+          if (pbr.baseColor) {
+            vtkPBRFeature.setBaseColor(instanceId, ...pbr.baseColor);
+          }
+        }
+        if (pbr.opacity !== undefined) {
+          vtkPBRFeature.setOpacity(instanceId, pbr.opacity);
+        }
+      } else {
+        vtkPBRFeature.disablePBR(instanceId);
+      }
+    }
+
+    const transferFunction = toolState.transferFunction;
+    if (transferFunction) {
+      const volumeState =
+        vtkVolumeFeature.instanceStates?.get(instanceId) || null;
+      if (
+        transferFunction.enabled &&
+        instanceData.imageData &&
+        volumeState?.volume
+      ) {
+        vtkTransferFunctionFeature.enableTransferFunction(
+          instanceId,
+          instanceData.imageData,
+          volumeState.volume.getProperty()
+        );
+        if (transferFunction.preset) {
+          vtkTransferFunctionFeature.setPreset(
+            instanceId,
+            transferFunction.preset
+          );
+        }
+        if (
+          transferFunction.preset === "custom" &&
+          Array.isArray(transferFunction.gaussians)
+        ) {
+          vtkTransferFunctionFeature.clearGaussians(instanceId);
+          transferFunction.gaussians.forEach((gaussian) => {
+            vtkTransferFunctionFeature.addGaussian(
+              instanceId,
+              gaussian.position,
+              gaussian.height,
+              gaussian.width,
+              gaussian.xBias,
+              gaussian.yBias
+            );
+          });
+        }
+      } else {
+        vtkTransferFunctionFeature.disableTransferFunction(instanceId);
+      }
+    }
+
+    const scalarBar = toolState.scalarBar;
+    if (scalarBar) {
+      const scalarState =
+        vtkScalarColoringFeature.instanceStates?.get(instanceId) || null;
+      if (scalarBar.enabled && scalarState?.colorTransferFunction) {
+        vtkScalarBarFeature.enableScalarBar(
+          instanceId,
+          scalarState.colorTransferFunction,
+          {
+            axisLabel: scalarBar.axisLabel,
+            position: scalarBar.position,
+          }
+        );
+      } else {
+        vtkScalarBarFeature.disableScalarBar(instanceId);
+      }
+      if (scalarBar.position) {
+        vtkScalarBarFeature.setPosition(instanceId, scalarBar.position);
+      }
+      if (scalarBar.axisLabel !== undefined) {
+        vtkScalarBarFeature.setAxisLabel(instanceId, scalarBar.axisLabel);
+      }
+    }
+
+    const normals = toolState.normals;
+    if (normals) {
+      if (normals.enabled) {
+        vtkNormalsFeature.computeNormals(instanceId, {
+          computePointNormals: normals.computePointNormals,
+          computeCellNormals: normals.computeCellNormals,
+        });
+        if (normals.glyphScale !== undefined) {
+          vtkNormalsFeature.setGlyphScale(instanceId, normals.glyphScale);
+        }
+        if (normals.showNormalGlyphs) {
+          vtkNormalsFeature.showNormalGlyphs(instanceId);
+        } else {
+          vtkNormalsFeature.hideNormalGlyphs(instanceId);
+        }
+      } else {
+        vtkNormalsFeature.revertNormals(instanceId);
+      }
+    }
+
+    const cutter = toolState.cutter;
+    if (cutter) {
+      if (cutter.enabled) {
+        vtkCutterFeature.enableCutter(instanceId);
+        if (cutter.planeOrientation) {
+          vtkCutterFeature.setPlaneOrientation(
+            instanceId,
+            cutter.planeOrientation
+          );
+        }
+        if (cutter.planePosition !== undefined) {
+          vtkCutterFeature.setPlanePosition(
+            instanceId,
+            cutter.planePosition
+          );
+        }
+        if (cutter.lineColor) {
+          vtkCutterFeature.setLineColor(instanceId, cutter.lineColor);
+        }
+      } else {
+        vtkCutterFeature.disableCutter(instanceId);
+      }
+    }
+
+    const thresholdPoints = toolState.thresholdPoints;
+    if (thresholdPoints) {
+      if (thresholdPoints.selectedArray) {
+        vtkThresholdPointsFeature.selectArray(
+          instanceId,
+          thresholdPoints.selectedArray
+        );
+      }
+      if (thresholdPoints.operation) {
+        vtkThresholdPointsFeature.setOperation(
+          instanceId,
+          thresholdPoints.operation
+        );
+      }
+      if (thresholdPoints.thresholdValue !== undefined) {
+        vtkThresholdPointsFeature.setThresholdValue(
+          instanceId,
+          thresholdPoints.thresholdValue
+        );
+      }
+      const currentThresholdPoints =
+        vtkThresholdPointsFeature.getState(instanceId);
+      if (
+        currentThresholdPoints &&
+        !!currentThresholdPoints.showFilteredOnly !==
+          !!thresholdPoints.showFilteredOnly
+      ) {
+        vtkThresholdPointsFeature.toggleShowFilteredOnly(instanceId);
+      }
+      if (thresholdPoints.enabled) {
+        vtkThresholdPointsFeature.enableThreshold(instanceId);
+      } else {
+        vtkThresholdPointsFeature.disableThreshold(instanceId);
+      }
+    }
+
+    const resliceCursor = toolState.resliceCursor;
+    if (resliceCursor) {
+      if (resliceCursor.enabled && instanceData.imageData) {
+        vtkResliceCursorFeature.enableResliceCursor(
+          instanceId,
+          instanceData.imageData
+        );
+        if (resliceCursor.center) {
+          vtkResliceCursorFeature.setCenter(
+            instanceId,
+            resliceCursor.center
+          );
+        }
+        const currentReslice = vtkResliceCursorFeature.getState(instanceId);
+        if (
+          currentReslice &&
+          !!currentReslice.keepOrthogonality !==
+            !!resliceCursor.keepOrthogonality
+        ) {
+          vtkResliceCursorFeature.toggleOrthogonality(instanceId);
+        }
+      } else {
+        vtkResliceCursorFeature.disableResliceCursor(instanceId);
+      }
+    }
+
+    const implicitPlane = toolState.implicitPlane;
+    if (implicitPlane) {
+      if (implicitPlane.enabled) {
+        vtkImplicitPlaneFeature.enablePlane(instanceId);
+        const planeState =
+          vtkImplicitPlaneFeature.instanceStates?.get(instanceId) || null;
+        if (planeState?.widget) {
+          const widgetState = planeState.widget.getWidgetState();
+          if (implicitPlane.origin) {
+            planeState.origin = [...implicitPlane.origin];
+            widgetState.setOrigin(planeState.origin);
+            planeState.implicitPlane?.setOrigin(planeState.origin);
+          }
+          if (implicitPlane.normal) {
+            planeState.normal = [...implicitPlane.normal];
+            widgetState.setNormal(planeState.normal);
+            planeState.implicitPlane?.setNormal(planeState.normal);
+          }
+          if (!!planeState.clipEnabled !== !!implicitPlane.clipEnabled) {
+            vtkImplicitPlaneFeature.toggleClipping(instanceId);
+          }
+        }
+      } else {
+        vtkImplicitPlaneFeature.disablePlane(instanceId);
+      }
+    }
+
+    const imageCropping = toolState.imageCropping;
+    if (imageCropping) {
+      const volumeState =
+        vtkVolumeFeature.instanceStates?.get(instanceId) || null;
+      if (imageCropping.enabled && instanceData.imageData) {
+        vtkImageCroppingFeature.enableCropping(
+          instanceId,
+          instanceData.imageData,
+          volumeState?.volumeMapper || null
+        );
+        if (imageCropping.croppingPlanes?.length === 6) {
+          vtkImageCroppingFeature.setCroppingPlanes(
+            instanceId,
+            imageCropping.croppingPlanes
+          );
+        }
+      } else {
+        vtkImageCroppingFeature.disableCropping(instanceId);
+      }
+    }
+
+    if (toolState.measurements) {
+      vtkMeasurementWidgetsFeature.applyState(
+        instanceId,
+        toolState.measurements
+      );
+    }
+
+    const cleanPolyData = toolState.cleanPolyData;
+    if (cleanPolyData) {
+      if (cleanPolyData.isCleaningActive) {
+        vtkCleanPolyDataFeature.applyClean(instanceId, {
+          pointMerging: cleanPolyData.pointMerging,
+          tolerance: cleanPolyData.tolerance,
+          toleranceIsAbsolute: cleanPolyData.toleranceIsAbsolute,
+        });
+      } else {
+        vtkCleanPolyDataFeature.restoreOriginal(instanceId);
+      }
+    }
+
+    this._requestRender(instanceData, "remote-tools");
+    instanceData._lastPublishedToolState = serializedToolState;
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId, source: "remote" },
+      })
+    );
   }
 
   /**
@@ -3943,6 +4620,38 @@ console.log('Tools:', tools);
           property.setRepresentation(state.visualization.representation);
         }
       }
+
+      const actorTransform =
+        state.transform || state.camera?.actorTransform || null;
+      if (actorTransform && instanceData.sceneObjects.actor) {
+        const actor = instanceData.sceneObjects.actor;
+        if (actorTransform.position) {
+          actor.setPosition(...actorTransform.position);
+        }
+        if (actorTransform.rotation) {
+          actor.setOrientation(...actorTransform.rotation);
+        }
+        if (actorTransform.scale) {
+          actor.setScale(...actorTransform.scale);
+        }
+
+        window.dispatchEvent(
+          new CustomEvent("cia:transform-changed", {
+            detail: {
+              instanceId: instanceData.instanceId,
+              position: actor.getPosition(),
+              rotation: actor.getOrientation(),
+              scale: actor.getScale(),
+              source: "remote",
+            },
+          })
+        );
+      }
+
+      await this._applySharedToolState(
+        instanceData,
+        state.toolState || state.camera?.toolState
+      );
 
       // 🆕 Apply reduction state
       if (state.reduction) {
@@ -4004,7 +4713,7 @@ console.log('Tools:', tools);
   /**
    * Apply camera state from a ViewConfiguration
    */
-  applyCameraState(instanceId, cameraState) {
+  async applyCameraState(instanceId, cameraState) {
     const instanceData = this.instances.get(instanceId);
     if (!instanceData?.sceneObjects?.camera) {
       log.warn(
@@ -4033,6 +4742,30 @@ console.log('Tools:', tools);
       if (cameraState.clippingRange)
         camera.setClippingRange(...cameraState.clippingRange);
       if (cameraState.viewAngle) camera.setViewAngle(cameraState.viewAngle);
+      if (cameraState.actorTransform && instanceData.sceneObjects.actor) {
+        const actor = instanceData.sceneObjects.actor;
+        if (cameraState.actorTransform.position) {
+          actor.setPosition(...cameraState.actorTransform.position);
+        }
+        if (cameraState.actorTransform.rotation) {
+          actor.setOrientation(...cameraState.actorTransform.rotation);
+        }
+        if (cameraState.actorTransform.scale) {
+          actor.setScale(...cameraState.actorTransform.scale);
+        }
+        window.dispatchEvent(
+          new CustomEvent("cia:transform-changed", {
+            detail: {
+              instanceId,
+              position: actor.getPosition(),
+              rotation: actor.getOrientation(),
+              scale: actor.getScale(),
+              source: "remote",
+            },
+          })
+        );
+      }
+      await this._applySharedToolState(instanceData, cameraState.toolState);
 
       this._requestRender(instanceData, "apply-camera-state");
 
@@ -5000,6 +5733,153 @@ console.log('Tools:', tools);
 
     // Get the camera reference from the renderer
     const camera = renderer.getActiveCamera();
+    const CAMERA_SYNC_INTERVAL = 33; // ~30fps network sync; local VTK remains interactive
+    let lastCameraSyncAt = 0;
+    let cameraSyncPending = false;
+    let latestCameraState = null;
+    let cameraSyncTimeoutId = null;
+    let cameraSyncFrameId = null;
+    let activeToolTransaction = null;
+    let toolTransactionBeforeState = null;
+    let toolHistoryTimeoutId = null;
+
+    const serializeToolState = (toolState) =>
+      JSON.stringify(toolState || {});
+    const createToolTransaction = () =>
+      `vtk-tools-${instanceData.viewConfigId || instanceData.instanceId}-${Date.now()}`;
+    instanceData._lastPublishedToolState ||=
+      serializeToolState(this._getSharedToolState(instanceData));
+
+    const persistToolState = (toolState, metadata = {}) => {
+      if (!instanceData.viewConfigId || !toolState) return;
+
+      const userId = getUserId();
+      if (userId) {
+        syncViewVisualStateToYjs(
+          instanceData.viewConfigId,
+          userId,
+          toolState
+        );
+      }
+      getViewConfigurationManager()?.updateVisualizationState?.(
+        instanceData.viewConfigId,
+        toolState,
+        {
+          action: metadata.action || "visualization:update",
+          transactionId: metadata.transactionId || activeToolTransaction,
+          description:
+            metadata.description || "Update visualization tools/widgets",
+          changedPaths: ["widgets.vtk-shared-state"],
+        }
+      );
+      instanceData._lastPublishedToolState =
+        serializeToolState(toolState);
+    };
+
+    const applyToolStateForHistory = async (toolState, description) => {
+      this._isApplyingRemoteState = true;
+      try {
+        instanceData._lastAppliedSharedToolState = null;
+        await this._applySharedToolState(instanceData, toolState);
+        persistToolState(toolState, {
+          action: "visualization:history",
+          transactionId: createToolTransaction(),
+          description,
+        });
+      } finally {
+        this._isApplyingRemoteState = false;
+      }
+    };
+
+    const getCameraState = () => ({
+      position: camera.getPosition(),
+      focalPoint: camera.getFocalPoint(),
+      viewUp: camera.getViewUp(),
+      parallelScale: camera.getParallelScale(),
+      clippingRange: camera.getClippingRange(),
+      viewAngle: camera.getViewAngle(),
+      actorTransform: instanceData.sceneObjects?.actor
+        ? {
+            position: instanceData.sceneObjects.actor.getPosition(),
+            rotation: instanceData.sceneObjects.actor.getOrientation(),
+            scale: instanceData.sceneObjects.actor.getScale(),
+          }
+        : null,
+    });
+
+    const publishCameraState = (cameraState) => {
+      if (
+        this._isApplyingRemoteState ||
+        instanceData.isPaused ||
+        !cameraState
+      ) {
+        return;
+      }
+
+      if (instanceData.viewConfigId) {
+        // REAL-TIME: Sync to Y.js for immediate updates to other users
+        const userId = getUserId();
+        if (userId) {
+          syncCameraToYjs(instanceData.viewConfigId, userId, cameraState);
+        }
+
+        // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)
+        getViewConfigurationManager()?.updateCamera(
+          instanceData.viewConfigId,
+          cameraState
+        );
+      }
+
+      if (instanceData.stateAdapter) {
+        instanceData.stateAdapter.updateState(
+          {
+            camera: cameraState,
+          },
+          "local"
+        );
+      }
+    };
+
+    const scheduleCameraSync = () => {
+      if (this._isApplyingRemoteState || instanceData.isPaused) return;
+
+      latestCameraState = getCameraState();
+      if (cameraSyncPending) return;
+
+      const elapsed = Date.now() - lastCameraSyncAt;
+      const delay = Math.max(0, CAMERA_SYNC_INTERVAL - elapsed);
+      cameraSyncPending = true;
+
+      cameraSyncTimeoutId = setTimeout(() => {
+        cameraSyncTimeoutId = null;
+        cameraSyncFrameId = requestAnimationFrame(() => {
+          cameraSyncFrameId = null;
+          cameraSyncPending = false;
+          lastCameraSyncAt = Date.now();
+          const state = latestCameraState || getCameraState();
+          latestCameraState = null;
+          publishCameraState(state);
+        });
+      }, delay);
+    };
+
+    const flushCameraSync = () => {
+      if (this._isApplyingRemoteState || instanceData.isPaused) return;
+
+      if (cameraSyncTimeoutId) {
+        clearTimeout(cameraSyncTimeoutId);
+        cameraSyncTimeoutId = null;
+      }
+      if (cameraSyncFrameId) {
+        cancelAnimationFrame(cameraSyncFrameId);
+        cameraSyncFrameId = null;
+      }
+
+      cameraSyncPending = false;
+      latestCameraState = null;
+      lastCameraSyncAt = Date.now();
+      publishCameraState(getCameraState());
+    };
 
     // Listen for camera modifications and publish through adapter
     camera.onModified(() => {
@@ -5009,48 +5889,7 @@ console.log('Tools:', tools);
           return;
         }
 
-        if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
-          const cameraState = {
-            position: camera.getPosition(),
-            focalPoint: camera.getFocalPoint(),
-            viewUp: camera.getViewUp(),
-            parallelScale: camera.getParallelScale(),
-            clippingRange: camera.getClippingRange(),
-            viewAngle: camera.getViewAngle(),
-          };
-
-          // REAL-TIME: Sync to Y.js for immediate updates to other users
-          const userId = getUserId();
-          if (userId) {
-            syncCameraToYjs(instanceData.viewConfigId, userId, cameraState);
-          }
-
-          // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)
-          getViewConfigurationManager()?.updateCamera(
-            instanceData.viewConfigId,
-            cameraState
-          );
-        }
-
-        // Only publish if we're not applying remote state
-        if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
-          const cameraState = {
-            position: camera.getPosition(),
-            focalPoint: camera.getFocalPoint(),
-            viewUp: camera.getViewUp(),
-            parallelScale: camera.getParallelScale(),
-            clippingRange: camera.getClippingRange(),
-            viewAngle: camera.getViewAngle(),
-          };
-
-          // Publish through adapter instead of directly to Y.js
-          instanceData.stateAdapter.updateState(
-            {
-              camera: cameraState,
-            },
-            "local"
-          );
-        }
+        scheduleCameraSync();
         // Emit camera-changed event for UI sync (throttled)
         if (!this._cameraChangeThrottled) {
           this._cameraChangeThrottled = true;
@@ -5076,9 +5915,84 @@ console.log('Tools:', tools);
       }
     });
 
+    const handleLocalTransformChange = (event) => {
+      if (event.detail?.instanceId !== instanceData.instanceId) return;
+      if (event.detail?.source === "remote") return;
+    };
+    window.addEventListener(
+      "cia:transform-changed",
+      handleLocalTransformChange
+    );
+    instanceData._transformSyncCleanup = () => {
+      window.removeEventListener(
+        "cia:transform-changed",
+        handleLocalTransformChange
+      );
+    };
+
+    const handleLocalToolsChange = (event) => {
+      if (event.detail?.instanceId !== instanceData.instanceId) return;
+      if (event.detail?.source === "remote") return;
+      if (this._isApplyingRemoteState) return;
+
+      const previousSerialized =
+        instanceData._lastPublishedToolState ||
+        serializeToolState(this._getSharedToolState(instanceData));
+      const nextToolState = this._getSharedToolState(instanceData);
+      const nextSerialized = serializeToolState(nextToolState);
+      if (previousSerialized === nextSerialized) return;
+
+      if (!activeToolTransaction) {
+        activeToolTransaction = createToolTransaction();
+        toolTransactionBeforeState = previousSerialized;
+      }
+      persistToolState(nextToolState, {
+        transactionId: activeToolTransaction,
+      });
+
+      if (toolHistoryTimeoutId) {
+        clearTimeout(toolHistoryTimeoutId);
+      }
+      toolHistoryTimeoutId = setTimeout(() => {
+        const beforeState = JSON.parse(
+          toolTransactionBeforeState || previousSerialized
+        );
+        const afterState = JSON.parse(nextSerialized);
+        toolHistoryTimeoutId = null;
+        activeToolTransaction = null;
+        toolTransactionBeforeState = null;
+
+        canvasHistory.record({
+          type: "UPDATE",
+          description: "Update visualization tools/widgets",
+          undo: () =>
+            applyToolStateForHistory(
+              beforeState,
+              "Undo visualization tools/widgets"
+            ),
+          redo: () =>
+            applyToolStateForHistory(
+              afterState,
+              "Redo visualization tools/widgets"
+            ),
+        });
+      }, 350);
+
+    };
+    window.addEventListener("cia:tools-updated", handleLocalToolsChange);
+    instanceData._toolsSyncCleanup = () => {
+      if (toolHistoryTimeoutId) {
+        clearTimeout(toolHistoryTimeoutId);
+        toolHistoryTimeoutId = null;
+      }
+      window.removeEventListener("cia:tools-updated", handleLocalToolsChange);
+    };
+
     // When user stops interacting, publish the final state
     const publishStateAfterInteraction = () => {
       try {
+        flushCameraSync();
+
         // CRITICAL: Add the same defensive checks here
         if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
           // Get complete state and publish it
@@ -5237,10 +6151,10 @@ console.log('Tools:', tools);
           cursorUpdatePending = true;
           setTimeout(() => {
             cursorUpdatePending = false;
-            handleMouseMove(event);
+            lastRaycastResult = handleMouseMove(event);
           }, CURSOR_UPDATE_INTERVAL - (now - lastCursorUpdate));
         }
-        return;
+        return null;
       }
 
       lastCursorUpdate = now;
@@ -5250,12 +6164,12 @@ console.log('Tools:', tools);
 
       // Only raycast if we have data loaded
       if (!hasDataLoaded) {
-        return;
+        return null;
       }
 
       // Perform raycasting
       try {
-        const result = raycastFromScreen(
+        const result = raycastFromScreenWithFallback(
           sceneObjects,
           event.clientX,
           event.clientY,
@@ -5279,12 +6193,30 @@ console.log('Tools:', tools);
                 }
               : null
           );
+          return {
+            position: {
+              x: result.worldPosition[0],
+              y: result.worldPosition[1],
+              z: result.worldPosition[2],
+            },
+            normal: result.normal
+              ? {
+                  x: result.normal[0],
+                  y: result.normal[1],
+                  z: result.normal[2],
+                }
+              : null,
+            screenX: event.clientX,
+            screenY: event.clientY,
+          };
         } else {
           // No hit - clear world position (will fall back to screen coords)
           clearCursorWorldPosition();
+          return null;
         }
       } catch (error) {
         log.trace("Cursor raycasting error (non-critical):", error.message);
+        return null;
       }
     };
 
@@ -5304,43 +6236,7 @@ console.log('Tools:', tools);
 
     // Enhanced mouse move to store raycast result
     const handleMouseMoveWithRaycast = (event) => {
-      handleMouseMove(event);
-
-      // Store last raycast result for annotation clicks
-      // Use raycastFromScreenWithFallback for better hit detection
-      if (hasDataLoaded) {
-        try {
-          const result = raycastFromScreenWithFallback(
-            sceneObjects,
-            event.clientX,
-            event.clientY,
-            container,
-            { instanceId: instanceData.instanceId }
-          );
-          if (result.hit) {
-            lastRaycastResult = {
-              position: {
-                x: result.worldPosition[0],
-                y: result.worldPosition[1],
-                z: result.worldPosition[2],
-              },
-              normal: result.normal
-                ? {
-                    x: result.normal[0],
-                    y: result.normal[1],
-                    z: result.normal[2],
-                  }
-                : null,
-              screenX: event.clientX,
-              screenY: event.clientY,
-            };
-          } else {
-            lastRaycastResult = null;
-          }
-        } catch (e) {
-          // Ignore raycast errors
-        }
-      }
+      lastRaycastResult = handleMouseMove(event);
     };
 
     // Click handler for annotation mode

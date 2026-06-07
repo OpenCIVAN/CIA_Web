@@ -43,6 +43,7 @@ export class ViewConfigurationManager extends BaseManager {
 
     this._viewConfigs = new Map();
     this._pendingSyncs = new Map();
+    this._pendingAuditContexts = new Map();
     this._syncThrottleMs = config.syncThrottleMs || 100;
     this._presenceThrottleMs = config.presenceThrottleMs || 50;
     this._lastPresenceUpdate = new Map(); // viewId -> timestamp
@@ -780,6 +781,30 @@ export class ViewConfigurationManager extends BaseManager {
     this._syncToServer(view);
   }
 
+  updateVisualizationState(viewId, toolState, metadata = {}) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return null;
+
+    const widget = view.updateVisualizationState(toolState, {
+      userId: metadata.userId || getUserId(),
+      userName: metadata.userName || getUserName(),
+      transactionId: metadata.transactionId,
+      description: metadata.description,
+    });
+
+    this._syncToServer(view, {
+      action: "view:update",
+      operation: metadata.action || "visualization:update",
+      transactionId: metadata.transactionId || null,
+      description:
+        metadata.description || "Update visualization state",
+      changedPaths: metadata.changedPaths || [],
+    });
+    this._emit("viewUpdated", view);
+    this._dispatchViewUpdateEvent(view);
+    return widget;
+  }
+
   /**
    * Update annotation display settings
    */
@@ -1450,7 +1475,11 @@ export class ViewConfigurationManager extends BaseManager {
    * Sync view state to server (throttled)
    * v2.0: Server is source of truth, not Y.js
    */
-  _syncToServer(view) {
+  _syncToServer(view, auditContext = null) {
+    if (auditContext) {
+      this._pendingAuditContexts.set(view.id, auditContext);
+    }
+
     // Cancel any pending sync for this view
     if (this._pendingSyncs.has(view.id)) {
       clearTimeout(this._pendingSyncs.get(view.id));
@@ -1459,9 +1488,15 @@ export class ViewConfigurationManager extends BaseManager {
     // Throttle syncs to avoid excessive API calls
     const timeout = setTimeout(async () => {
       this._pendingSyncs.delete(view.id);
+      const pendingAuditContext =
+        this._pendingAuditContexts.get(view.id) || null;
+      this._pendingAuditContexts.delete(view.id);
 
       try {
         const updateData = this._clientToServerFormat(view);
+        if (pendingAuditContext) {
+          updateData.audit_context = pendingAuditContext;
+        }
         const { view: serverView } = await apiClient.put(
           `/views/${view.id}`,
           updateData

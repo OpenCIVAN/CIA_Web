@@ -17,6 +17,7 @@
 import {
   yCursors,
   yCameras,
+  yViewVisualStates,
   yAvatars,
   yViewPresence,
   yCanvasEditing,
@@ -39,6 +40,18 @@ import { sync as log } from "@Utils/logger.js";
  */
 let cursorChangeCallbacks = [];
 
+function getUserIdFromCursorKey(cursorKey) {
+  const key = String(cursorKey || "");
+  const separatorIndex = key.lastIndexOf(":");
+  return separatorIndex > -1 ? key.slice(0, separatorIndex) : key;
+}
+
+function getViewIdFromCameraKey(cameraKey) {
+  const key = String(cameraKey || "");
+  const separatorIndex = key.indexOf(":");
+  return separatorIndex > -1 ? key.slice(0, separatorIndex) : key;
+}
+
 export function onCursorChange(callback) {
   cursorChangeCallbacks.push(callback);
   return () => {
@@ -54,11 +67,13 @@ export function initializeCursorObserver() {
   yCursors.observe((event) => {
     const myId = getUserId();
 
-    event.changes.keys.forEach((change, cursorUserId) => {
+    event.changes.keys.forEach((change, cursorKey) => {
+      const cursorData = yCursors.get(cursorKey);
+      const cursorUserId =
+        cursorData?.userId || getUserIdFromCursorKey(cursorKey);
       // Skip own cursor
       if (cursorUserId === myId) return;
 
-      const cursorData = yCursors.get(cursorUserId);
       cursorChangeCallbacks.forEach((cb) => {
         try {
           cb({ action: change.action, userId: cursorUserId, data: cursorData });
@@ -161,14 +176,57 @@ export function onCameraChange(callback) {
   };
 }
 
+let visualStateChangeCallbacks = [];
+
+export function onViewVisualStateChange(callback) {
+  visualStateChangeCallbacks.push(callback);
+  return () => {
+    visualStateChangeCallbacks = visualStateChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeVisualStateObserver() {
+  log.debug("Setting up visual state observer");
+
+  yViewVisualStates.observe((event) => {
+    const myId = getUserId();
+
+    event.changes.keys.forEach((change, visualStateKey) => {
+      const visualStateData = yViewVisualStates.get(visualStateKey);
+      const viewId =
+        visualStateData?.viewId || getViewIdFromCameraKey(visualStateKey);
+
+      if (visualStateData && visualStateData.userId === myId) return;
+
+      visualStateChangeCallbacks.forEach((cb) => {
+        try {
+          cb({
+            action: change.action,
+            viewId,
+            toolState: visualStateData?.toolState,
+            userId: visualStateData?.userId,
+          });
+        } catch (error) {
+          log.error("Visual state observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  log.debug("Visual state observer initialized");
+}
+
 export function initializeCameraObserver() {
   log.debug("Setting up camera presence observer");
 
   yCameras.observe((event) => {
     const myId = getUserId();
 
-    event.changes.keys.forEach((change, viewId) => {
-      const cameraData = yCameras.get(viewId);
+    event.changes.keys.forEach((change, cameraKey) => {
+      const cameraData = yCameras.get(cameraKey);
+      const viewId = cameraData?.viewId || getViewIdFromCameraKey(cameraKey);
 
       // Skip if this is our own camera update
       if (cameraData && cameraData.userId === myId) return;
@@ -243,6 +301,7 @@ export function initializeAllObservers() {
   initializeAvatarObserver();
   initializeViewPresenceObserver();
   initializeCameraObserver(); // Real-time camera sync
+  initializeVisualStateObserver(); // Real-time filters/widgets/material sync
   initializeCanvasEditingObserver(); // Collaborative draft preview
 
   // State (datasets, views, annotations) comes from server via:

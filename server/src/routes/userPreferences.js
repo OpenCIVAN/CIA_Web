@@ -31,7 +31,7 @@ router.get("/:projectId", async (req, res, next) => {
     }
 
     const result = await pool.query(
-      `SELECT preferences FROM users WHERE id = $1`,
+      `SELECT preferences FROM users WHERE id = $1::uuid`,
       [userId]
     );
 
@@ -80,18 +80,23 @@ router.put("/:projectId", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid preferences format" });
     }
 
-    // Update preferences using jsonb_set to merge with existing
-    // This preserves other project preferences while updating this one
+    // Update preferences using nested jsonb_set to merge with existing
+    // jsonb_set can't create intermediate keys, so we ensure 'projects' exists first
     const result = await pool.query(
       `UPDATE users
        SET preferences = jsonb_set(
-         COALESCE(preferences, '{}'::jsonb),
+         jsonb_set(
+           COALESCE(preferences, '{}'::jsonb),
+           ARRAY['projects'],
+           COALESCE(preferences->'projects', '{}'::jsonb),
+           true
+         ),
          ARRAY['projects', $1],
          $2::jsonb,
          true
        ),
        updated_at = NOW()
-       WHERE id = $3
+       WHERE id = $3::uuid
        RETURNING preferences`,
       [projectId, JSON.stringify(newPreferences), userId]
     );
@@ -130,7 +135,7 @@ router.patch("/:projectId", async (req, res, next) => {
 
     // Get existing preferences
     const existing = await pool.query(
-      `SELECT preferences FROM users WHERE id = $1`,
+      `SELECT preferences FROM users WHERE id = $1::uuid`,
       [userId]
     );
 
@@ -155,17 +160,22 @@ router.patch("/:projectId", async (req, res, next) => {
         : projectPreferences.viewportPositions,
     };
 
-    // Save merged preferences
+    // Save merged preferences (nested jsonb_set ensures 'projects' key exists first)
     const result = await pool.query(
       `UPDATE users
        SET preferences = jsonb_set(
-         COALESCE(preferences, '{}'::jsonb),
+         jsonb_set(
+           COALESCE(preferences, '{}'::jsonb),
+           ARRAY['projects'],
+           COALESCE(preferences->'projects', '{}'::jsonb),
+           true
+         ),
          ARRAY['projects', $1],
          $2::jsonb,
          true
        ),
        updated_at = NOW()
-       WHERE id = $3
+       WHERE id = $3::uuid
        RETURNING preferences`,
       [projectId, JSON.stringify(mergedPreferences), userId]
     );
@@ -198,7 +208,7 @@ router.delete("/:projectId", async (req, res, next) => {
       `UPDATE users
        SET preferences = preferences #- ARRAY['projects', $1],
        updated_at = NOW()
-       WHERE id = $2
+       WHERE id = $2::uuid
        RETURNING preferences`,
       [projectId, userId]
     );

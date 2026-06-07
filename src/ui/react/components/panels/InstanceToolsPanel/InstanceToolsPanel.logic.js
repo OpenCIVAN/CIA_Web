@@ -11,6 +11,9 @@ import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
 import { instanceTools } from '@Core/instances/types/vtk/vtkInstanceTools.js';
 import { vtkOrientationWidget } from '@Core/instances/types/vtk/widgets/orientation/VTKOrientationWidget.js';
 import vtkSceneFeature from '@Core/instances/types/vtk/features/VTKSceneFeature.js';
+import { vtkSliceFeature } from '@Core/instances/types/vtk/features/VTKSliceFeature.js';
+import { vtkClippingFeature } from '@Core/instances/types/vtk/features/VTKClippingFeature.js';
+import { vtkMeasurementWidgetsFeature } from '@Core/instances/types/vtk/features/VTKMeasurementWidgetsFeature.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
 import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 
@@ -298,6 +301,78 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setRepresentation(currentRep);
     setPointSize(currentPointSize);
     setLineWidth(currentLineWidth);
+  }, [activeInstance?.instanceId]);
+
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+    const instanceId = activeInstance.instanceId;
+
+    const syncControlsFromInstance = () => {
+      const currentOpacity = instanceTools.getOpacity(instanceId);
+      const currentRep = instanceTools.getRepresentation(instanceId);
+      const currentPointSize = instanceTools.getPointSize(instanceId);
+      const currentLineWidth = instanceTools.getLineWidth(instanceId);
+      if (Number.isFinite(currentOpacity)) {
+        setOpacity(Math.round(currentOpacity * 100));
+      }
+      if (currentRep) setRepresentation(currentRep);
+      if (Number.isFinite(currentPointSize)) setPointSize(currentPointSize);
+      if (Number.isFinite(currentLineWidth)) setLineWidth(currentLineWidth);
+
+      const sliceState = vtkSliceFeature.getState(instanceId);
+      if (sliceState) {
+        const orientation = instanceTools.getSliceOrientation(instanceId);
+        const position = instanceTools.getSlicePosition(instanceId);
+        if (orientation) setSliceOrientation(orientation);
+        if (Number.isFinite(position)) setSlicePosition(position);
+        if (Array.isArray(sliceState.extent)) {
+          const axisOffset =
+            sliceState.sliceMode === "sagittal"
+              ? 0
+              : sliceState.sliceMode === "coronal"
+                ? 2
+                : 4;
+          setSliceMax(sliceState.extent[axisOffset + 1] || 0);
+        }
+        if (Number.isFinite(sliceState.windowWidth)) {
+          setWindowValue(sliceState.windowWidth);
+        }
+        if (Number.isFinite(sliceState.windowLevel)) {
+          setLevelValue(sliceState.windowLevel);
+        }
+      }
+
+      const measurementState =
+        vtkMeasurementWidgetsFeature.getState(instanceId);
+      const measurementTypes = new Set(
+        (measurementState?.measurements || []).map(
+          (measurement) => measurement.type
+        )
+      );
+      setLineWidgetActive(measurementTypes.has("distance"));
+      setAngleWidgetActive(measurementTypes.has("angle"));
+      setPlaneWidgetActive(
+        !!vtkClippingFeature.getState(instanceId)?.enabled
+      );
+
+      const colormap = instanceTools.getCurrentColormap?.(instanceId);
+      if (colormap) setCurrentColormap(colormap);
+
+      const sceneState = vtkSceneFeature.getState?.(instanceId);
+      if (sceneState?.backgroundPreset) {
+        setBackgroundPreset(sceneState.backgroundPreset);
+      }
+    };
+
+    syncControlsFromInstance();
+    const handleToolsUpdate = (event) => {
+      if (event.detail?.instanceId === instanceId) {
+        syncControlsFromInstance();
+      }
+    };
+    window.addEventListener("cia:tools-updated", handleToolsUpdate);
+    return () =>
+      window.removeEventListener("cia:tools-updated", handleToolsUpdate);
   }, [activeInstance?.instanceId]);
 
   // -------------------------------------------------------------------------
@@ -784,33 +859,53 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
 
   const handleToggleLineWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
-    instanceTools.toggleRulerMeasurement?.(activeInstance.instanceId);
-    setLineWidgetActive(prev => !prev);
+    vtkMeasurementWidgetsFeature.toggleMeasurement(
+      activeInstance.instanceId,
+      "distance"
+    );
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId: activeInstance.instanceId, source: "local" },
+      })
+    );
   }, [activeInstance?.instanceId]);
 
   const handleToggleAngleWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
-    instanceTools.toggleAngleMeasurement?.(activeInstance.instanceId);
-    setAngleWidgetActive(prev => !prev);
+    vtkMeasurementWidgetsFeature.toggleMeasurement(
+      activeInstance.instanceId,
+      "angle"
+    );
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId: activeInstance.instanceId, source: "local" },
+      })
+    );
   }, [activeInstance?.instanceId]);
 
   const handleTogglePlaneWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
-    instanceTools.toggleClippingPlane?.(activeInstance.instanceId);
-    setPlaneWidgetActive(prev => !prev);
+    vtkClippingFeature.toggleClipping(activeInstance.instanceId);
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId: activeInstance.instanceId, source: "local" },
+      })
+    );
   }, [activeInstance?.instanceId]);
 
   const handleClearAllWidgets = useCallback(() => {
     if (!activeInstance?.instanceId) return;
     const instanceId = activeInstance.instanceId;
 
-    if (lineWidgetActive) instanceTools.toggleRulerMeasurement?.(instanceId);
-    if (angleWidgetActive) instanceTools.toggleAngleMeasurement?.(instanceId);
-    if (planeWidgetActive) instanceTools.toggleClippingPlane?.(instanceId);
-
-    setLineWidgetActive(false);
-    setAngleWidgetActive(false);
-    setPlaneWidgetActive(false);
+    vtkMeasurementWidgetsFeature.clearAllMeasurements(instanceId);
+    if (planeWidgetActive) {
+      vtkClippingFeature.disableClipping(instanceId);
+    }
+    window.dispatchEvent(
+      new CustomEvent("cia:tools-updated", {
+        detail: { instanceId, source: "local" },
+      })
+    );
   }, [activeInstance?.instanceId, lineWidgetActive, angleWidgetActive, planeWidgetActive]);
 
   // -------------------------------------------------------------------------

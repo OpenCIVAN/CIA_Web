@@ -869,6 +869,35 @@ export class ViewConfiguration {
     }
   }
 
+  updateVisualizationState(toolState, metadata = {}) {
+    const widgetId = "vtk-shared-state";
+    const existing = this.widgets.find((widget) => widget.id === widgetId);
+    const nextWidget = {
+      id: widgetId,
+      type: "vtk-shared-state",
+      state: JSON.parse(JSON.stringify(toolState || {})),
+      updatedAt: Date.now(),
+      updatedBy: metadata.userId || null,
+      updatedByName: metadata.userName || null,
+      transactionId: metadata.transactionId || null,
+      description: metadata.description || "Update visualization state",
+    };
+
+    if (existing) {
+      Object.assign(existing, nextWidget);
+    } else {
+      this.widgets.push(nextWidget);
+    }
+
+    this._logAudit("visualization_state_updated", {
+      widgetId,
+      transactionId: nextWidget.transactionId,
+      description: nextWidget.description,
+    });
+    this.updatedAt = Date.now();
+    return nextWidget;
+  }
+
   updateAnnotationDisplay(updates) {
     Object.assign(this.annotationDisplay, updates);
     this._logAudit("annotation_display_updated", {

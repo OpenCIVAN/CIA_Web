@@ -181,6 +181,11 @@ export class VTKImageCroppingFeature extends FeatureInterface {
       // Set up cropping planes change callback
       widget.onCroppingPlanesChanged(() => {
         this._updateCroppingPlanes(state);
+        window.dispatchEvent(
+          new CustomEvent("cia:tools-updated", {
+            detail: { instanceId, source: "local" },
+          })
+        );
       });
 
       // Store references

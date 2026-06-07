@@ -46,6 +46,7 @@ export class VTKPlaneWidget {
       // Add to widget manager and get handle
       const handle = widgetManager.addWidget(widget);
       handle.setEnabled(true);
+      handle.setVisibility?.(true);
 
       // Create a vtkPlane for clipping
       const clipPlane = vtkPlane.newInstance();
@@ -73,6 +74,11 @@ export class VTKPlaneWidget {
       // Update clipping when plane moves
       handle.onInteractionEvent(() => {
         updateClippingPlane();
+        window.dispatchEvent(
+          new CustomEvent("cia:tools-updated", {
+            detail: { instanceId, source: "local" },
+          })
+        );
       });
 
       // Apply initial clipping
@@ -119,8 +125,8 @@ export class VTKPlaneWidget {
 
     const widgetState = widgetData.widget.getWidgetState();
     return {
-      normal: widgetState.getNormal(),
-      origin: widgetState.getOrigin(),
+      normal: Array.from(widgetState.getNormal() || []),
+      origin: Array.from(widgetState.getOrigin() || []),
     };
   }
 

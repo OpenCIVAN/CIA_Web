@@ -46,6 +46,7 @@ export const OPERATION_TYPES = {
   MERGE: { icon: 'merge', color: 'purple', label: 'Merge' },
   UNMERGE: { icon: 'layers', color: 'amber', label: 'Unmerge' },
   CANVAS_RESIZE: { icon: 'grid3x3', color: 'blue', label: 'Canvas Resize' },
+  UPDATE: { icon: 'sliders', color: 'teal', label: 'View Update' },
   BATCH: { icon: 'layers', color: 'teal', label: 'Batch' },
 };
 
@@ -675,6 +676,18 @@ export const canvasHistory = {
   record: (entry) => useCanvasHistory.getState().record(entry),
   undo: () => useCanvasHistory.getState().undo(),
   redo: () => useCanvasHistory.getState().redo(),
+  canUndo: () => {
+    const state = useCanvasHistory.getState();
+    return (
+      state.past.length > 0 && !state.isUndoing && !state.isRedoing
+    );
+  },
+  canRedo: () => {
+    const state = useCanvasHistory.getState();
+    return (
+      state.future.length > 0 && !state.isUndoing && !state.isRedoing
+    );
+  },
   clear: () => useCanvasHistory.getState().clear(),
 
   // Transaction methods

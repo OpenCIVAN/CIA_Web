@@ -47,16 +47,57 @@ const REMOTE_SMOOTHING_MAX = 0.85;
 const REFERENCE_PIXELS_PER_WORLD = 120;
 
 /**
- * Parse hex color to RGB array [0-1]
- * @param {string} hexColor - Color in hex format (#RRGGBB)
+ * Parse a CSS hex or HSL color to RGB array [0-1].
+ * @param {string} color - Color in #RRGGBB or hsl(H, S%, L%) format
  * @returns {[number, number, number]}
  */
-function hexToRgb(hexColor) {
-  const hex = hexColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16) / 255;
-  const g = parseInt(hex.substring(2, 4), 16) / 255;
-  const b = parseInt(hex.substring(4, 6), 16) / 255;
-  return [r, g, b];
+function colorToRgb(color) {
+  const value = String(color || "").trim();
+  const hexMatch = value.match(/^#([0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    return [
+      parseInt(hex.substring(0, 2), 16) / 255,
+      parseInt(hex.substring(2, 4), 16) / 255,
+      parseInt(hex.substring(4, 6), 16) / 255,
+    ];
+  }
+
+  const hslMatch = value.match(
+    /^hsl\(\s*([-.\d]+)\s*,\s*([-.\d]+)%\s*,\s*([-.\d]+)%\s*\)$/i
+  );
+  if (hslMatch) {
+    const hue = (((Number(hslMatch[1]) % 360) + 360) % 360) / 360;
+    const saturation = clamp(Number(hslMatch[2]) / 100, 0, 1);
+    const lightness = clamp(Number(hslMatch[3]) / 100, 0, 1);
+
+    if (saturation === 0) {
+      return [lightness, lightness, lightness];
+    }
+
+    const q =
+      lightness < 0.5
+        ? lightness * (1 + saturation)
+        : lightness + saturation - lightness * saturation;
+    const p = 2 * lightness - q;
+    const hueToRgb = (offset) => {
+      let channel = offset;
+      if (channel < 0) channel += 1;
+      if (channel > 1) channel -= 1;
+      if (channel < 1 / 6) return p + (q - p) * 6 * channel;
+      if (channel < 1 / 2) return q;
+      if (channel < 2 / 3) return p + (q - p) * (2 / 3 - channel) * 6;
+      return p;
+    };
+
+    return [
+      hueToRgb(hue + 1 / 3),
+      hueToRgb(hue),
+      hueToRgb(hue - 1 / 3),
+    ];
+  }
+
+  return [0.376, 0.647, 0.98];
 }
 
 function clamp(value, min, max) {
@@ -639,7 +680,11 @@ class VTKInstanceCursors {
     // Determine render mode based on available coordinates
     const hasWorld = hasWorldPosition(cursorData);
     const hasSceneObjects = !!state.sceneObjects?.renderer;
-    const mode = hasWorld && hasSceneObjects ? "actor" : "dom";
+    // Remote normalized screen coordinates are more stable than repeated
+    // surface picks while either participant rotates the camera.
+    const preferScreenOverlay = !isSelf && cursorData.normalized;
+    const mode =
+      !preferScreenOverlay && hasWorld && hasSceneObjects ? "actor" : "dom";
 
     if (!isSelf) {
       const previousMode = state.renderModes.get(userId);
@@ -698,7 +743,7 @@ class VTKInstanceCursors {
     }
 
     // Set color from user
-    const rgb = hexToRgb(color || "#60a5fa");
+    const rgb = colorToRgb(color || "#60a5fa");
     cursorActor.actor.getProperty().setColor(...rgb);
     cursorActor.actor.setVisibility(true);
 

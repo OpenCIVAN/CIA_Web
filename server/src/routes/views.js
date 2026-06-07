@@ -374,12 +374,31 @@ router.put("/:id", async (req, res, next) => {
 
     // Audit log
     if (req.audit) {
+      const auditContext = updates.audit_context || {};
       await req.audit({
-        action: "view:update",
+        action: auditContext.action || "view:update",
         entityType: "view",
         entityId: id,
-        before: { name: beforeState.name },
-        after: { name: view.name },
+        before: {
+          name: beforeState.name,
+          camera: beforeState.camera,
+          filters: beforeState.filters,
+          widgets: beforeState.widgets,
+          colorMaps: beforeState.color_maps,
+        },
+        after: {
+          name: view.name,
+          camera: view.camera,
+          filters: view.filters,
+          widgets: view.widgets,
+          colorMaps: view.color_maps,
+        },
+        details: {
+          operation: auditContext.operation || "view:update",
+          transactionId: auditContext.transactionId || null,
+          description: auditContext.description || null,
+          changedPaths: auditContext.changedPaths || [],
+        },
       });
     }
 

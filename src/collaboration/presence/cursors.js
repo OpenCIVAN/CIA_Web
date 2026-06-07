@@ -55,6 +55,16 @@ let activeViewConfigId = null;
 // Container element for the active instance (used to normalize cursor coords)
 let activeContainerElement = null;
 
+function getLocalCursorKey() {
+  return `${getUserId()}:${ydoc.clientID}`;
+}
+
+function getUserIdFromCursorKey(cursorKey) {
+  const key = String(cursorKey || "");
+  const separatorIndex = key.lastIndexOf(":");
+  return separatorIndex > -1 ? key.slice(0, separatorIndex) : key;
+}
+
 export function setActiveContainerElement(element) {
   activeContainerElement = element;
 }
@@ -111,8 +121,7 @@ export function initializeCursorTracking() {
   // Handle window focus/blur
   window.addEventListener("blur", () => {
     lastWindowActive = false;
-    notifyLocalCursorUpdate(false);
-    scheduleBroadcast(false);
+    yCursors.delete(getLocalCursorKey());
     // Clear cursor from awareness when window loses focus
     const currentState = awareness.getLocalState() || {};
     awareness.setLocalState({
@@ -129,6 +138,10 @@ export function initializeCursorTracking() {
     }
   });
 
+  window.addEventListener("pagehide", () => {
+    yCursors.delete(getLocalCursorKey());
+  });
+
   log.debug("Cursor tracking initialized");
 }
 
@@ -140,7 +153,10 @@ function broadcastCursorPosition(windowActive = true) {
   const cursorData = buildCursorData(windowActive);
   if (!cursorData) return;
 
-  yCursors.set(getUserId(), cursorData);
+  yCursors.set(getLocalCursorKey(), {
+    ...cursorData,
+    userId: getUserId(),
+  });
 
   // Also update awareness for server-side recording
   const currentState = awareness.getLocalState() || {};
@@ -640,11 +656,11 @@ export function onCursorRemove(callback) {
 // in their color, matching what others see. VTKInstanceCursors handles self-cursor
 // specially (no name label, hides native OS cursor).
 yCursors.observe((event) => {
-  event.changes.keys.forEach((change, userId) => {
+  event.changes.keys.forEach((change, cursorKey) => {
+    const cursorData = yCursors.get(cursorKey);
+    const userId = cursorData?.userId || getUserIdFromCursorKey(cursorKey);
     if (userId === getUserId()) return;
     if (change.action === "add" || change.action === "update") {
-      const cursorData = yCursors.get(userId);
-
       if (cursorData && cursorData.visible !== false) {
         // Notify all instance handlers
         cursorUpdateListeners.forEach((callback) => {

@@ -47,6 +47,10 @@ export const yCursors = ydoc.getMap("cursors");
 // Real-time camera sync for smooth collaborative viewing
 export const yCameras = ydoc.getMap("cameras");
 
+// Visual state presence: viewId/user -> { toolState, userId, lastUpdate }
+// Real-time filter/widget/material sync; persisted state still goes through server.
+export const yViewVisualStates = ydoc.getMap("viewVisualStates");
+
 // View presence: viewId -> { viewers: [userId, ...], lastUpdate }
 export const yViewPresence = ydoc.getMap("viewPresence");
 
@@ -69,6 +73,8 @@ export const yText = ydoc.getArray("chatMessages");
 // ============================================================================
 
 let _provider = null;
+const localCameraKeys = new Set();
+const localVisualStateKeys = new Set();
 
 async function waitForAccessToken(timeoutMs = 15000) {
   const existingToken = await authService.getAccessToken().catch(() => null);
@@ -201,8 +207,10 @@ export const provider = new Proxy(
  */
 export function syncCursorToYjs(userId, cursorData) {
   try {
-    yCursors.set(userId, {
+    const presenceKey = `${userId}:${ydoc.clientID}`;
+    yCursors.set(presenceKey, {
       ...cursorData,
+      userId,
       lastUpdate: Date.now(),
     });
   } catch (error) {
@@ -267,13 +275,31 @@ export function syncViewPresenceToYjs(viewId, viewers) {
  */
 export function syncCameraToYjs(viewId, userId, cameraState) {
   try {
-    yCameras.set(viewId, {
+    const presenceKey = `${viewId}:${userId}:${ydoc.clientID}`;
+    localCameraKeys.add(presenceKey);
+    yCameras.set(presenceKey, {
+      viewId,
       camera: cameraState,
       userId,
       lastUpdate: Date.now(),
     });
   } catch (error) {
     log.error("Failed to sync camera to Y.js:", error);
+  }
+}
+
+export function syncViewVisualStateToYjs(viewId, userId, toolState) {
+  try {
+    const presenceKey = `${viewId}:${userId}:${ydoc.clientID}`;
+    localVisualStateKeys.add(presenceKey);
+    yViewVisualStates.set(presenceKey, {
+      viewId,
+      toolState,
+      userId,
+      lastUpdate: Date.now(),
+    });
+  } catch (error) {
+    log.error("Failed to sync visual state to Y.js:", error);
   }
 }
 
@@ -300,12 +326,26 @@ export function syncCanvasEditingToYjs(userId, editingData) {
  * @param {string} userId - User ID to remove
  */
 export function removeUserPresenceFromYjs(userId) {
+  yCursors.delete(`${userId}:${ydoc.clientID}`);
   yCursors.delete(userId);
+  localCameraKeys.forEach((key) => yCameras.delete(key));
+  localCameraKeys.clear();
+  localVisualStateKeys.forEach((key) => yViewVisualStates.delete(key));
+  localVisualStateKeys.clear();
   yAvatars.delete(userId);
   // Remove both hand controllers
   yVRControllers.delete(`${userId}_left`);
   yVRControllers.delete(`${userId}_right`);
   log.info(`User presence removed from Y.js: ${userId}`);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => {
+    localCameraKeys.forEach((key) => yCameras.delete(key));
+    localCameraKeys.clear();
+    localVisualStateKeys.forEach((key) => yViewVisualStates.delete(key));
+    localVisualStateKeys.clear();
+  });
 }
 
 log.info("Y.js core initialized (v2.0 - presence only architecture)");

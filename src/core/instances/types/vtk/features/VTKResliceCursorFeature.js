@@ -168,6 +168,14 @@ export class VTKResliceCursorFeature extends FeatureInterface {
 
       // Set options
       widget.setKeepOrthogonality(state.keepOrthogonality);
+      widget.getWidgetState().onModified(() => {
+        state.center = widget.getWidgetState().getCenter();
+        window.dispatchEvent(
+          new CustomEvent("cia:tools-updated", {
+            detail: { instanceId, source: "local" },
+          })
+        );
+      });
 
       // Add to widget manager
       const handle = widgetManager.addWidget(widget);

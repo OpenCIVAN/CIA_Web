@@ -149,9 +149,39 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
 
     return {
       activeMeasurement: state.activeMeasurement,
-      measurements: state.measurements,
+      measurements: state.measurements.map((measurement) =>
+        this._serializeMeasurement(state, measurement)
+      ),
       widgetCount: state.widgets.size,
     };
+  }
+
+  _serializeMeasurement(state, measurement) {
+    const widget = state.widgets.get(measurement.id);
+    const widgetState = widget?.getWidgetState?.();
+    const handles = this._getWidgetHandles(widgetState, measurement.type);
+
+    return {
+      ...measurement,
+      handles: handles
+        .map((handle) => handle.getOrigin?.())
+        .filter(Boolean)
+        .map((origin) => Array.from(origin)),
+      text:
+        measurement.type === "label"
+          ? widgetState?.getText?.() || measurement.value || "Label"
+          : undefined,
+    };
+  }
+
+  _getWidgetHandles(widgetState, measurementType) {
+    if (!widgetState) return [];
+    if (measurementType === "distance") {
+      return [widgetState.getHandle1?.(), widgetState.getHandle2?.()].filter(
+        Boolean
+      );
+    }
+    return widgetState.getHandleList?.() || [];
   }
 
   // ===========================================================================
@@ -161,7 +191,7 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
   /**
    * Start a new measurement
    */
-  startMeasurement(instanceId, measurementType) {
+  startMeasurement(instanceId, measurementType, options = {}) {
     const state = this.instanceStates.get(instanceId);
     if (!state) return null;
 
@@ -179,7 +209,8 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
     }
 
     // Create unique ID for this measurement
-    const measurementId = `${measurementType}-${Date.now()}`;
+    const measurementId =
+      options.id || `${measurementType}-${Date.now()}`;
 
     try {
       const widget = typeInfo.create();
@@ -200,6 +231,7 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
       // Add to widget manager
       const handle = widgetManager.addWidget(widget);
       handle.setEnabled(true);
+      handle.setVisibility?.(true);
 
       // Set up measurement callback
       this._setupMeasurementCallback(state, measurementId, measurementType, widget);
@@ -208,8 +240,43 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
       state.widgets.set(measurementId, widget);
       state.handles.set(measurementId, handle);
       state.activeMeasurement = measurementId;
+      state.measurements.push({
+        id: measurementId,
+        type: measurementType,
+        value: options.value ?? null,
+        timestamp: options.timestamp || Date.now(),
+      });
+
+      if (Array.isArray(options.handles)) {
+        const widgetState = widget.getWidgetState();
+        if (measurementType === "angle") {
+          while (
+            widgetState.getHandleList().length < options.handles.length
+          ) {
+            widgetState.addHandle();
+          }
+        }
+        const handles = this._getWidgetHandles(
+          widgetState,
+          measurementType
+        );
+        options.handles.forEach((origin, index) => {
+          handles[index]?.setOrigin?.(...origin);
+        });
+      }
+      if (measurementType === "label" && options.text) {
+        widget.getWidgetState()?.setText?.(options.text);
+      }
+
+      const value = this._getMeasurementValue(widget, measurementType);
+      state.measurements.find(
+        (measurement) => measurement.id === measurementId
+      ).value = value;
 
       sceneObjects.renderWindow?.render();
+      if (!options.handles?.length) {
+        widgetManager.grabFocus(widget);
+      }
 
       log.debug(`Started ${measurementType} measurement: ${measurementId}`);
       return measurementId;
@@ -265,6 +332,11 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
           timestamp: Date.now(),
         });
       }
+      window.dispatchEvent(
+        new CustomEvent("cia:tools-updated", {
+          detail: { instanceId: state.instanceData.instanceId, source: "local" },
+        })
+      );
     };
 
     // Subscribe to widget state changes
@@ -284,7 +356,7 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
     switch (type) {
       case 'angle': {
         // Get angle from three handle positions
-        const handles = widgetState.getHandleList?.() || [];
+        const handles = this._getWidgetHandles(widgetState, type);
         if (handles.length >= 3) {
           const p1 = handles[0].getOrigin();
           const p2 = handles[1].getOrigin(); // vertex
@@ -309,7 +381,7 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
 
       case 'distance': {
         // Get distance from two handle positions
-        const handles = widgetState.getHandleList?.() || [];
+        const handles = this._getWidgetHandles(widgetState, type);
         if (handles.length >= 2) {
           const p1 = handles[0].getOrigin();
           const p2 = handles[1].getOrigin();
@@ -340,11 +412,7 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
     const state = this.instanceStates.get(instanceId);
     if (!state || !state.activeMeasurement) return;
 
-    const handle = state.handles.get(state.activeMeasurement);
-    if (handle) {
-      handle.setEnabled(false);
-    }
-
+    state.widgetManager.releaseFocus?.();
     state.activeMeasurement = null;
     state.sceneObjects.renderWindow?.render();
 
@@ -445,6 +513,74 @@ export class VTKMeasurementWidgetsFeature extends FeatureInterface {
     state.sceneObjects.renderWindow?.render();
 
     log.debug(`Cleared all measurements for instance: ${instanceId}`);
+  }
+
+  applyState(instanceId, sharedState) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state || !sharedState) return;
+
+    const desired = new Map(
+      (sharedState.measurements || []).map((measurement) => [
+        measurement.id,
+        measurement,
+      ])
+    );
+
+    for (const measurementId of Array.from(state.widgets.keys())) {
+      if (!desired.has(measurementId)) {
+        this.removeMeasurement(instanceId, measurementId);
+      }
+    }
+
+    for (const measurement of desired.values()) {
+      let widget = state.widgets.get(measurement.id);
+      if (!widget) {
+        this.startMeasurement(instanceId, measurement.type, measurement);
+        widget = state.widgets.get(measurement.id);
+      }
+
+      const widgetState = widget?.getWidgetState?.();
+      if (measurement.type === "angle") {
+        while (
+          widgetState.getHandleList().length <
+          (measurement.handles || []).length
+        ) {
+          widgetState.addHandle();
+        }
+      }
+      const handles = this._getWidgetHandles(
+        widgetState,
+        measurement.type
+      );
+      (measurement.handles || []).forEach((origin, index) => {
+        handles[index]?.setOrigin?.(...origin);
+      });
+      if (measurement.type === "label" && measurement.text) {
+        widgetState?.setText?.(measurement.text);
+      }
+
+      const localMeasurement = state.measurements.find(
+        (entry) => entry.id === measurement.id
+      );
+      if (localMeasurement) {
+        localMeasurement.value = measurement.value;
+        localMeasurement.timestamp = measurement.timestamp;
+      }
+    }
+
+    state.activeMeasurement = sharedState.activeMeasurement || null;
+    for (const [measurementId, handle] of state.handles) {
+      handle.setEnabled(true);
+      handle.setVisibility?.(true);
+      if (measurementId === state.activeMeasurement) {
+        const widget = state.widgets.get(measurementId);
+        if (widget) state.widgetManager.grabFocus?.(widget);
+      }
+    }
+    if (!state.activeMeasurement) {
+      state.widgetManager.releaseFocus?.();
+    }
+    state.sceneObjects.renderWindow?.render();
   }
 
   /**

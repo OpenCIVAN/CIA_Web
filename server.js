@@ -571,6 +571,7 @@ async function handleMessage(socket, room, message) {
 function handleSyncMessage(socket, room, decoder, rawMessage) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, MESSAGE_SYNC);
+  const chatLengthBefore = room.doc.getArray("chatMessages").length;
 
   const syncMessageType = syncProtocol.readSyncMessage(
     decoder,
@@ -598,8 +599,10 @@ function handleSyncMessage(socket, room, decoder, rawMessage) {
       decoding.createDecoder(new Uint8Array(rawMessage).slice(2))
     );
 
-    // Try to determine update origin from content
-    const origin = detectUpdateOrigin(room.doc, update);
+    // Presence maps are ephemeral. Only retain updates that actually append
+    // chat messages; session recording handles cursor samples separately.
+    const chatLengthAfter = room.doc.getArray("chatMessages").length;
+    const origin = chatLengthAfter > chatLengthBefore ? "chat" : "presence";
     room.storeUpdate(
       update,
       origin,
@@ -741,30 +744,6 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
 }
 
 /**
- * Detect update origin by examining what changed in the doc
- * This is heuristic - could be improved with client-side tagging
- */
-function detectUpdateOrigin(doc, update) {
-  // Check common Y.js shared types
-  // Chat typically uses an array named "chatMessages"
-  // Cursors use awareness or a map named "cursors"
-  // This is a simplified heuristic
-
-  try {
-    // Create temp doc to see what the update affects
-    const tempDoc = new Y.Doc();
-    Y.applyUpdate(tempDoc, Y.encodeStateAsUpdate(doc));
-    Y.applyUpdate(tempDoc, update);
-
-    // Check what changed
-    // (In a real implementation, you'd track this client-side)
-    return "chat"; // Default to chat for now
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Authenticate a socket using Keycloak JWT
  */
 async function authenticateSocket(socket, url) {
@@ -897,7 +876,9 @@ wss.on("connection", async (socket, req) => {
     // Remove from awareness
     awarenessProtocol.removeAwarenessStates(
       room.awareness,
-      [room.doc.clientID],
+      socket.clientId !== null && socket.clientId !== undefined
+        ? [socket.clientId]
+        : [],
       "disconnect"
     );
 

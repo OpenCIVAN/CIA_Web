@@ -202,6 +202,11 @@ export class VTKImplicitPlaneFeature extends FeatureInterface {
       // Set up plane change callback
       widgetState.onModified(() => {
         this._onPlaneChanged(state);
+        window.dispatchEvent(
+          new CustomEvent("cia:tools-updated", {
+            detail: { instanceId, source: "local" },
+          })
+        );
       });
 
       // Store references

@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { debounce } from 'lodash';
+import { apiClient, ApiError } from '@Services/apiClient.js';
 
 const API_BASE = '/api/users/preferences';
 
@@ -20,49 +21,29 @@ const API_BASE = '/api/users/preferences';
  * Fetch preferences from server
  */
 async function fetchPreferences(projectId) {
-    const response = await fetch(`${API_BASE}/${projectId}`, {
-        credentials: 'include',
-    });
-    if (!response.ok) {
-        if (response.status === 404) {
+    try {
+        const data = await apiClient.get(`${API_BASE}/${projectId}`);
+        return data?.preferences || {};
+    } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
             return {}; // No preferences yet
         }
-        throw new Error(`Failed to fetch preferences: ${response.status}`);
+        throw err;
     }
-    const data = await response.json();
-    return data.preferences || {};
 }
 
 /**
  * Save preferences to server
  */
 async function savePreferences(projectId, preferences) {
-    const response = await fetch(`${API_BASE}/${projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(preferences),
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to save preferences: ${response.status}`);
-    }
-    return response.json();
+    return apiClient.put(`${API_BASE}/${projectId}`, preferences);
 }
 
 /**
  * Partially update preferences on server
  */
 async function patchPreferences(projectId, updates) {
-    const response = await fetch(`${API_BASE}/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(updates),
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to patch preferences: ${response.status}`);
-    }
-    return response.json();
+    return apiClient.patch(`${API_BASE}/${projectId}`, updates);
 }
 
 /**
