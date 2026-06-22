@@ -1,8 +1,7 @@
-# CIA Web - Complete Development Guide
+# OpenCIVAN — Developer Guide
 
-**Last Updated**: February 10, 2026  
-**Theme**: Light (clean, minimal, high contrast)  
-**Architecture**: Module-based with Atomic Design
+**Architecture**: Module-based with Atomic Design  
+**Theme**: Light (clean, minimal, high contrast)
 
 ---
 
@@ -25,7 +24,7 @@
 
 ### Clone & Setup
 ```bash
-cd CIA_Web
+cd opencivan
 cp .env.example .env
 npm install
 ```
@@ -544,32 +543,6 @@ All these paths are configured in `webpack.config.js`:
 
 ---
 
-## Recent Changes (Feb 10, 2026)
-
-### Theme Migration: Dark → Light ✅
-- **Before**: Dark theme with blue-tinted UI chrome (#020406)
-- **After**: Clean light theme (#ffffff backgrounds, #1e293b text)
-- **Files Changed**: 7
-- **Breaking Changes**: None
-
-### Color Utilities Consolidated ✅
-- **New**: `src/utils/colorHelpers.js`
-- **Functions**: `hexToRgb()`, `rgbToHex()`, `clamp()`, `lerpColor()`
-- **Removed Duplication**: Eliminated duplicate functions from VTKInstanceCursors.js
-- **Code Saved**: ~60 lines
-
-### Services Reorganized ✅
-- **New Structure**: Grouped by feature area
-- **Updated**: `src/services/index.js`
-- **Better Organization**: Voice, Storage, Thumbnails, Auth categories
-
-### Component Exports Unified ✅
-- **New**: `src/ui/react/components/index.js`
-- **Benefit**: Cleaner imports across the app
-- **Example**: Before long path → After: `import { Button } from '@UI/react/components'`
-
----
-
 ## Running & Testing
 
 ### Start Development Server
@@ -723,7 +696,5 @@ npm run build:check
 
 ---
 
-**Last Updated**: February 10, 2026  
-**Theme**: Light (clean, high contrast)  
 **Architecture**: Module-based with Atomic Design  
-**Status**: Production Ready ✅
+**Theme**: Light (clean, high contrast)
