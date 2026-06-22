@@ -266,3 +266,13 @@ yarn.lock
 # Local Claude Code config (not for repo)
 CLAUDE.local.md
 .claude/settings.local.json
+.claude/skills/
+.claude/commands/
+.claude/memory/
+
+# Matrix runtime data (generated at runtime, not committed)
+server/matrix-data/
+
+# Generated build artifacts that are recreated by npm run build:manifests
+# Uncomment the line below if you prefer not to commit the pre-built registry:
+# server/manifests/registry.json
