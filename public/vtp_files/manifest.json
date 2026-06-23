@@ -1,0 +1,51 @@
+[
+  {
+    "id": "builtin-bones",
+    "name": "Bones",
+    "path": "/vtp_files/Bones.vtp",
+    "description": "Bone structure",
+    "sizeHint": "26 MB"
+  },
+  {
+    "id": "builtin-lung-vessels",
+    "name": "Lung Vessels",
+    "path": "/vtp_files/LungVessels.vtp",
+    "description": "Pulmonary vessel tree",
+    "sizeHint": "27 MB"
+  },
+  {
+    "id": "builtin-lungs",
+    "name": "Lungs",
+    "path": "/vtp_files/Lungs.vtp",
+    "description": "Lung surface mesh",
+    "sizeHint": "10 MB"
+  },
+  {
+    "id": "builtin-skull",
+    "name": "Skull",
+    "path": "/vtp_files/Skull.vtp",
+    "description": "Skull geometry",
+    "sizeHint": "19 MB"
+  },
+  {
+    "id": "builtin-ventricles",
+    "name": "Ventricles",
+    "path": "/vtp_files/Ventricles.vtp",
+    "description": "Cardiac ventricles",
+    "sizeHint": "16 MB"
+  },
+  {
+    "id": "builtin-disk",
+    "name": "Disk Sample",
+    "path": "/vtp_files/diskout.vtp",
+    "description": "Small test dataset",
+    "sizeHint": "472 KB"
+  },
+  {
+    "id": "builtin-earth",
+    "name": "Earth",
+    "path": "/vtp_files/earth.vtp",
+    "description": "Earth surface",
+    "sizeHint": "1.2 MB"
+  }
+]

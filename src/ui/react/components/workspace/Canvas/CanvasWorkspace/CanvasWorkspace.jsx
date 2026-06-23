@@ -472,6 +472,14 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     );
 });
 
+// Stable empty defaults — avoids creating new object/array references on every render,
+// which would invalidate useMemo/useEffect dependencies and cause infinite loops.
+const EMPTY_WORKSPACE_TABS = [];
+const EMPTY_ENSURING_IDS = {};
+const EMPTY_POSITIONS = {};
+const EMPTY_SIZES = {};
+const EMPTY_VIEWPORT_POSITIONS = {};
+
 /**
  * CanvasWorkspaceInner - Internal component with ViewStack context
  */
@@ -484,17 +492,17 @@ function CanvasWorkspaceInner({
     onRenameWorkspace,
     onDeactivateWorkspace,
     workspaceViewMode = 'tabs',
-    workspaceTabs = [],
+    workspaceTabs = EMPTY_WORKSPACE_TABS,
     activeWorkspaceId,
     onSelectWorkspace,
     onSetWorkspaceViewMode,
-    ensuringWorkspaceIds = {},
+    ensuringWorkspaceIds = EMPTY_ENSURING_IDS,
     // Server-persisted preferences
     tileMaximizedWorkspaceId,
     onMaximizeWorkspace,
-    windowPositions = {},
-    windowSizes = {},
-    viewportPositions = {},
+    windowPositions = EMPTY_POSITIONS,
+    windowSizes = EMPTY_SIZES,
+    viewportPositions = EMPTY_VIEWPORT_POSITIONS,
     onWindowPositionChange,
     onWindowSizeChange,
     onViewportPositionChange,

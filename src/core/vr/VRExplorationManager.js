@@ -19,6 +19,7 @@ import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { getViewConfigurationManager } from '@Init/appInitializer.js';
 import { getUserId, getUserName, getUserColor } from '@Collaboration/presence/userManagement.js';
 import { EventEmitter } from '@Utils/EventEmitter.js';
+import { vrAvatarSystem } from '@Core/instances/types/vtk/vr/VTKVRAvatars.js';
 
 class VRExplorationManager extends EventEmitter {
   constructor() {
@@ -141,6 +142,12 @@ class VRExplorationManager extends EventEmitter {
     // Start participant sync
     this._participantSync.start();
 
+    // Initialize avatar system
+    const avatarRenderer = vrContext.sceneObjects?.renderer;
+    if (avatarRenderer) {
+      vrAvatarSystem.initialize(avatarRenderer, session, vrContext);
+    }
+
     // Emit event
     this.emit('explorationStarted', { session, instanceId });
 
@@ -182,6 +189,7 @@ class VRExplorationManager extends EventEmitter {
 
     // Clean up sub-managers
     this._participantSync?.stop();
+    vrAvatarSystem.dispose();
     await this._toolManager?.cleanup();
     this._snapshotManager?.cleanup();
     this._controlManager?.cleanup();
@@ -399,6 +407,9 @@ class VRExplorationManager extends EventEmitter {
         rightHandPose: inputState.controllers?.right?.pose,
         vrScale: vrContext.vrScale || 1.0,
       });
+
+      // Update avatar system
+      vrAvatarSystem.update(deltaTime, inputState);
 
       // Let handler update VR rendering
       handler.updateVRExploration?.(vrContext, frame, inputState);

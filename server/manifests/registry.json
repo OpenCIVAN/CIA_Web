@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-01-29T04:16:25.855Z",
+  "generatedAt": "2026-06-23T11:38:29.517Z",
   "contractVersion": "1.0.0",
   "buildInfo": {
-    "nodeVersion": "v22.19.0",
+    "nodeVersion": "v16.20.2",
     "platform": "darwin"
   },
   "handlers": {

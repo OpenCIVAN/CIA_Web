@@ -14,7 +14,7 @@ import Modal from '@UI/react/components/modals/Modal';
 import { Icon } from '@UI/react/components/atoms';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
-import { getViewConfigurationManager, getCanvasManager } from '@Init/appInitializer.js';
+import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
 import { toast } from '@UI/react/store/toastStore';
 import './DatasetSelectorModal.scss';
 
@@ -54,38 +54,16 @@ export function DatasetSelectorModal({
         setIsPlacing(true);
 
         try {
-            const viewManager = getViewConfigurationManager();
-            const canvasManager = getCanvasManager();
-
-            if (!viewManager || !canvasManager) {
-                toast.error('Managers not available');
-                return;
-            }
-
-            // Create a new view configuration for the dataset
-            const view = await viewManager.createView(dataset.id, {
-                name: dataset.name,
-            });
-
-            if (!view) {
-                toast.error('Failed to create view');
-                return;
-            }
-
-            // Create placement on the canvas
-            canvasManager.createPlacement(
-                view.id,
-                targetRow,
-                targetCol,
-                1, // rowSpan
-                1  // colSpan
+            await viewLifecycleService.createAndPlaceView(
+                dataset.id,
+                { row: targetRow, col: targetCol },
+                { name: dataset.name }
             );
-
             toast.success(`Placed ${dataset.name} at row ${targetRow + 1}, col ${targetCol + 1}`);
             onClose();
         } catch (error) {
             console.error('Failed to place dataset:', error);
-            toast.error('Failed to place dataset');
+            toast.error(error.message || 'Failed to place dataset');
         } finally {
             setIsPlacing(false);
         }

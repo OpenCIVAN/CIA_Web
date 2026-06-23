@@ -16,6 +16,7 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
+import { loadBuiltInDatasets } from "@Services/builtInDatasets.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
 import {
@@ -263,6 +264,12 @@ export async function initializePhase1() {
     );
     log.debug("Dataset manager ready");
     logInfo("Data storage initialized");
+
+    // Load built-in sample datasets from public/vtp_files/manifest.json.
+    // Non-blocking: a missing or broken manifest never prevents app startup.
+    loadBuiltInDatasets(datasetManager).catch((err) =>
+      log.warn("Built-in datasets unavailable:", err.message)
+    );
 
     // Initialize server sync (WebSocket for real-time updates)
     try {
