@@ -40,6 +40,9 @@ import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { DatasetSelectorModal } from "@UI/react/components/modals/DatasetSelectorModal";
 import { DeleteViewDialog } from "@UI/react/components/modals/confirmations/DeleteViewDialog";
 
+// Server-side rendering overlay
+import { ServerRenderOverlay } from "@/rendering/ServerRenderOverlay.jsx";
+
 // Toast
 import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { toast } from "@UI/react/store/toastStore";
@@ -365,6 +368,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                       />
 
                       <ToastContainer />
+
+                      {/* Server-rendered VTK overlay (shown when RENDER_MODE=server and dataset selected) */}
+                      <ServerRenderOverlay />
 
                     </LayoutPanelProvider>
                   </RightPanelProvider>

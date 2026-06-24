@@ -348,6 +348,13 @@ export class ViewConfigurationManager extends BaseManager {
       viewData.ownerUserId = userId;
       viewData.ownerUserName = userName;
 
+      // Builtin datasets are not stored in the server database so dataset_id is
+      // null in the server response. Restore the original datasetId so VTK can
+      // locate the dataset in the client-side DatasetManager.
+      if (!viewData.datasetId && datasetId) {
+        viewData.datasetId = datasetId;
+      }
+
       const view = new ViewConfiguration(viewData);
 
       // Store locally

@@ -78,6 +78,7 @@ import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
 import { SubsetCardById } from '@UI/react/components/workspace/Canvas/SubsetCard';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
+import { ServerRenderedViewport } from '@/rendering/ServerRenderedViewport.jsx';
 import './CanvasCell.scss';
 
 // =============================================================================
@@ -686,6 +687,16 @@ export const CanvasCell = memo(function CanvasCell({
                                 detail: { subsetId: placement.content.subsetId }
                             }));
                         }}
+                        onClose={() => onRemove?.()}
+                    />
+                );
+
+            case PlacementContentType.SERVER_RENDER:
+                return (
+                    <ServerRenderedViewport
+                        datasetId={placement.content.datasetId}
+                        path={placement.content.path}
+                        fileType={placement.content.fileType}
                         onClose={() => onRemove?.()}
                     />
                 );

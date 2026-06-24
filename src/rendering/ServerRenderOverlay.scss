@@ -1,0 +1,43 @@
+// ServerRenderOverlay — fullscreen overlay for server-rendered VTK views
+
+.server-render-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: #0d0d0d;
+  display: flex;
+  flex-direction: column;
+  animation: srv-overlay-in 0.15s ease-out;
+
+  @keyframes srv-overlay-in {
+    from { opacity: 0; transform: scale(0.98); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
+
+    span:first-child {
+      font-weight: 600;
+    }
+  }
+
+  &__hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  // ServerRenderedViewport fills remaining space
+  .srv-vp {
+    flex: 1;
+    min-height: 0;
+  }
+}

@@ -1,7 +1,11 @@
 /**
  * @file DatasetSelectorModal.jsx
  * @description Modal for selecting a dataset to place in an empty canvas cell.
- * Shows built-in sample VTP files from public/vtp_files/ and any uploaded files.
+ *
+ * Shows three sections depending on render mode:
+ *  1. Server Datasets — from Python VTK render server (when RENDER_MODE != local)
+ *  2. Sample Datasets — built-in VTP files from public/vtp_files/ (local mode)
+ *  3. My Files       — user-uploaded datasets
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -10,10 +14,13 @@ import { Icon } from '@UI/react/components/atoms';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
+import { getDatasetManager } from '@Init/appInitializer.js';
+import { config } from '@Core/config/clientConfig.js';
 import { toast } from '@UI/react/store/toastStore';
 import './DatasetSelectorModal.scss';
 
 const MANIFEST_URL = '/vtp_files/manifest.json';
+const SERVER_DATASETS_URL = '/render-api/datasets';
 
 function cleanName(name) {
     return name ? name.replace(/\.vtp$/i, '') : name;
@@ -28,12 +35,19 @@ export function DatasetSelectorModal({
     const [searchQuery, setSearchQuery] = useState('');
     const [isPlacing, setIsPlacing] = useState(false);
     const [placingId, setPlacingId] = useState(null);
-    // Manifest entries as fallback when DatasetManager hasn't loaded built-ins yet
+
+    // Local manifest fallback (when DatasetManager hasn't loaded built-ins yet)
     const [manifestEntries, setManifestEntries] = useState(null);
 
-    const datasets = useDatasets();
+    // Server dataset state
+    const [serverDatasets, setServerDatasets] = useState(null);  // null = not fetched yet
+    const [serverLoading, setServerLoading] = useState(false);
+    const [serverOffline, setServerOffline] = useState(false);
 
-    // Split into built-in samples and user uploads
+    const datasets = useDatasets();
+    const isServerMode = config.renderMode !== 'local';
+
+    // Split local datasets into built-ins and uploads
     const builtInDatasets = useMemo(
         () => datasets.filter(d => d.id?.startsWith('builtin-')),
         [datasets]
@@ -43,21 +57,66 @@ export function DatasetSelectorModal({
         [datasets]
     );
 
-    // Fetch manifest directly as fallback if built-ins haven't loaded yet
+    // ── Fetch server datasets when modal opens (server/hybrid mode) ────────────
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || !isServerMode) return;
+        if (serverDatasets !== null) return; // Already fetched
+
+        setServerLoading(true);
+        setServerOffline(false);
+
+        console.log('[DatasetSelector] render mode:', config.renderMode);
+        console.log('[DatasetSelector] fetching server datasets from:', SERVER_DATASETS_URL);
+
+        fetch(SERVER_DATASETS_URL)
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
+                const list = Array.isArray(data) ? data : [];
+                console.log('[DatasetSelector] server datasets:', list.map(d => d.id));
+                setServerDatasets(list);
+                setServerLoading(false);
+            })
+            .catch(err => {
+                console.warn('[DatasetSelector] server datasets fetch failed:', err.message);
+                setServerDatasets([]);
+                setServerLoading(false);
+                setServerOffline(true);
+            });
+    }, [isOpen, isServerMode, serverDatasets]);
+
+    // Reset server datasets when modal closes so next open re-fetches
+    useEffect(() => {
+        if (!isOpen) {
+            setServerDatasets(null);
+            setServerOffline(false);
+        }
+    }, [isOpen]);
+
+    // ── Fetch local manifest fallback (local mode only) ───────────────────────
+    useEffect(() => {
+        if (!isOpen || isServerMode) return;
         if (builtInDatasets.length > 0) {
-            setManifestEntries(null); // DatasetManager has them — no need for fallback
+            setManifestEntries(null);
             return;
         }
         fetch(MANIFEST_URL)
             .then(r => r.ok ? r.json() : null)
             .then(entries => setManifestEntries(Array.isArray(entries) ? entries : []))
             .catch(() => setManifestEntries([]));
-    }, [isOpen, builtInDatasets.length]);
+    }, [isOpen, isServerMode, builtInDatasets.length]);
 
-    // Filter lists by search query
+    // ── Search filtering ───────────────────────────────────────────────────────
     const q = searchQuery.toLowerCase();
+
+    const filteredServer = useMemo(() =>
+        serverDatasets
+            ? (q ? serverDatasets.filter(d => d.name?.toLowerCase().includes(q)) : serverDatasets)
+            : null,
+        [serverDatasets, q]
+    );
     const filteredBuiltIns = useMemo(() =>
         q ? builtInDatasets.filter(d => cleanName(d.name)?.toLowerCase().includes(q)) : builtInDatasets,
         [builtInDatasets, q]
@@ -73,8 +132,12 @@ export function DatasetSelectorModal({
         [manifestEntries, q]
     );
 
+    // ── Click handlers ─────────────────────────────────────────────────────────
+
+    // Local VTK.js path (existing behavior — unchanged)
     const handleSelect = useCallback(async (datasetId, datasetName) => {
         if (isPlacing) return;
+        console.log('[DatasetSelector] handleSelect:', { id: datasetId, name: datasetName });
         setIsPlacing(true);
         setPlacingId(datasetId);
         try {
@@ -86,7 +149,7 @@ export function DatasetSelectorModal({
             toast.success(`Loading ${datasetName}…`);
             onClose();
         } catch (error) {
-            console.error('Failed to place dataset:', error);
+            console.error('[DatasetSelector] failed to place dataset:', error);
             const msg = error.message?.includes('No canvas')
                 ? 'Canvas is still initializing — please try again in a moment.'
                 : (error.message || 'Failed to load dataset');
@@ -97,11 +160,42 @@ export function DatasetSelectorModal({
         }
     }, [isPlacing, targetRow, targetCol, onClose]);
 
-    // Determine what to show for built-in samples
-    const showManifestFallback = builtInDatasets.length === 0 && filteredManifest && filteredManifest.length > 0;
-    const sampleItems = showManifestFallback ? null : filteredBuiltIns;
-    const isLoadingSamples = builtInDatasets.length === 0 && manifestEntries === null;
+    // Manifest fallback (registers entry in DatasetManager then uses local path)
+    const handleManifestSelect = useCallback(async (entry) => {
+        console.log('[DatasetSelector] manifest entry clicked:', entry);
+        console.log('[DatasetSelector] dataset id:', entry.id);
+        console.log('[DatasetSelector] dataset path:', entry.path);
+        const resolvedUrl = new URL(entry.path, window.location.origin).toString();
+        console.log('[DatasetSelector] resolved URL:', resolvedUrl);
 
+        const dm = getDatasetManager();
+        if (dm) {
+            dm.addBuiltInDataset(entry);
+        } else {
+            console.warn('[DatasetSelector] DatasetManager not ready — lookup may fail');
+        }
+
+        await handleSelect(entry.id, entry.name);
+    }, [handleSelect]);
+
+    // Server render path — opens fullscreen ServerRenderedViewport overlay
+    const handleServerSelect = useCallback((entry) => {
+        if (isPlacing) return;
+
+        console.log('[DatasetSelector] server dataset clicked:', entry);
+        console.log('[DatasetSelector] dataset id:', entry.id);
+        console.log('[DatasetSelector] dataset path:', entry.path);
+        console.log('[DatasetSelector] dataset type:', entry.type);
+
+        // Dispatch app-level event — the workspace listens and shows the overlay
+        window.dispatchEvent(new CustomEvent('cia:open-server-render', {
+            detail: { datasetId: entry.id, path: entry.path, fileType: entry.type, name: entry.name },
+        }));
+
+        onClose();
+    }, [isPlacing, onClose]);
+
+    // ── Button renderer ────────────────────────────────────────────────────────
     const renderDatasetButton = (id, name, meta, onClickFn) => (
         <button
             key={id}
@@ -121,6 +215,15 @@ export function DatasetSelectorModal({
         </button>
     );
 
+    // Local display flags
+    const showManifestFallback = !isServerMode &&
+        builtInDatasets.length === 0 &&
+        filteredManifest &&
+        filteredManifest.length > 0;
+    const sampleItems = showManifestFallback ? null : filteredBuiltIns;
+    const isLoadingSamples = !isServerMode && builtInDatasets.length === 0 && manifestEntries === null;
+
+    // ── Render ──────────────────────────────────────────────────────────────────
     return (
         <Modal
             isOpen={isOpen}
@@ -138,48 +241,96 @@ export function DatasetSelectorModal({
                     className="dataset-selector-modal__search"
                 />
 
-                {/* ── Sample Datasets ── */}
-                <div className="dataset-selector-modal__section-header">
-                    <Icon name="layers" size={13} />
-                    <span>Sample Datasets</span>
-                </div>
-
-                <div className="dataset-selector-modal__list">
-                    {isLoadingSamples && (
-                        <div className="dataset-selector-modal__loading">
-                            <Icon name="loader" size={16} className="spin" />
-                            <span>Loading samples…</span>
+                {/* ── Server Datasets (server / hybrid mode) ── */}
+                {isServerMode && (
+                    <>
+                        <div className="dataset-selector-modal__section-header">
+                            <Icon name="server" size={13} />
+                            <span>Server Datasets</span>
                         </div>
-                    )}
 
-                    {/* Built-ins from DatasetManager */}
-                    {sampleItems && sampleItems.length > 0 && sampleItems.map(d =>
-                        renderDatasetButton(
-                            d.id,
-                            cleanName(d.name),
-                            d.metadata?.sizeHint || d.fileType?.toUpperCase(),
-                            () => handleSelect(d.id, cleanName(d.name))
-                        )
-                    )}
+                        <div className="dataset-selector-modal__list">
+                            {serverLoading && (
+                                <div className="dataset-selector-modal__loading">
+                                    <Icon name="loader" size={16} className="spin" />
+                                    <span>Contacting render server…</span>
+                                </div>
+                            )}
 
-                    {/* Manifest fallback (DatasetManager hasn't registered them yet) */}
-                    {showManifestFallback && filteredManifest.map(entry =>
-                        renderDatasetButton(
-                            entry.id,
-                            entry.name,
-                            entry.sizeHint || entry.description,
-                            () => handleSelect(entry.id, entry.name)
-                        )
-                    )}
+                            {serverOffline && !serverLoading && (
+                                <div className="dataset-selector-modal__offline">
+                                    <Icon name="alertTriangle" size={14} />
+                                    <span>
+                                        Rendering server is not available.
+                                        Start the backend or switch to local mode.
+                                    </span>
+                                    <code>cd server/render_server &amp;&amp; uvicorn app:app --port 7000</code>
+                                </div>
+                            )}
 
-                    {/* Empty sample state */}
-                    {!isLoadingSamples && (sampleItems?.length === 0) && !showManifestFallback && (
-                        <div className="dataset-selector-modal__empty-small">
-                            No sample datasets found.
-                            Check <code>public/vtp_files/manifest.json</code>.
+                            {!serverLoading && !serverOffline && filteredServer?.map(entry =>
+                                renderDatasetButton(
+                                    entry.id,
+                                    entry.name,
+                                    `${entry.type?.toUpperCase()} · Server · ${entry.sizeMB} MB`,
+                                    () => handleServerSelect(entry)
+                                )
+                            )}
+
+                            {!serverLoading && !serverOffline && filteredServer?.length === 0 && (
+                                <div className="dataset-selector-modal__empty-small">
+                                    No datasets found on server.
+                                    Add files to <code>server/datasets/</code> or{' '}
+                                    <code>public/vtp_files/</code>.
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
+
+                {/* ── Sample Datasets (local / hybrid mode) ── */}
+                {!isServerMode && (
+                    <>
+                        <div className="dataset-selector-modal__section-header">
+                            <Icon name="layers" size={13} />
+                            <span>Sample Datasets</span>
+                        </div>
+
+                        <div className="dataset-selector-modal__list">
+                            {isLoadingSamples && (
+                                <div className="dataset-selector-modal__loading">
+                                    <Icon name="loader" size={16} className="spin" />
+                                    <span>Loading samples…</span>
+                                </div>
+                            )}
+
+                            {sampleItems && sampleItems.length > 0 && sampleItems.map(d =>
+                                renderDatasetButton(
+                                    d.id,
+                                    cleanName(d.name),
+                                    d.metadata?.sizeHint || d.fileType?.toUpperCase(),
+                                    () => handleSelect(d.id, cleanName(d.name))
+                                )
+                            )}
+
+                            {showManifestFallback && filteredManifest.map(entry =>
+                                renderDatasetButton(
+                                    entry.id,
+                                    entry.name,
+                                    entry.sizeHint || entry.description,
+                                    () => handleManifestSelect(entry)
+                                )
+                            )}
+
+                            {!isLoadingSamples && (sampleItems?.length === 0) && !showManifestFallback && (
+                                <div className="dataset-selector-modal__empty-small">
+                                    No sample datasets found.
+                                    Check <code>public/vtp_files/manifest.json</code>.
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
 
                 {/* ── Uploaded Files ── */}
                 {filteredUploads.length > 0 && (

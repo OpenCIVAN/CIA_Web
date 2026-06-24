@@ -16,6 +16,7 @@ export const PlacementContentType = {
   IMAGE: "image", // An ImageBlock (reference image)
   SUBSET: "subset", // A Subset (focus group of views)
   EMPTY: "empty", // Empty slot placeholder
+  SERVER_RENDER: "server-render", // A server-rendered VTK frame
 };
 
 /**
