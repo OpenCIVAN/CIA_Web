@@ -193,6 +193,27 @@ services:
     restart: unless-stopped
 
 
+  render-server:
+    build:
+      context: ./server/render_server
+      dockerfile: Dockerfile
+    container_name: cia-render-server
+    ports:
+      - "7001:7000"
+    volumes:
+      # Mount public VTP files as primary dataset directory (read-only)
+      - ./public/vtp_files:/app/datasets:ro
+      # Mount server/datasets/ for additional user-provided files
+      - ./server/datasets:/app/extra_datasets
+    environment:
+      DATASET_DIR: /app/datasets
+      EXTRA_DATASET_DIR: /app/extra_datasets
+      RENDER_WIDTH: ${RENDER_WIDTH:-1024}
+      RENDER_HEIGHT: ${RENDER_HEIGHT:-768}
+      MAX_SESSIONS: ${MAX_SESSIONS:-10}
+    restart: unless-stopped
+
+
   thumbnail-worker:
     build:
       context: ./workers/thumbnail-node

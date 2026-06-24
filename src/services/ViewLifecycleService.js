@@ -361,6 +361,7 @@ class ViewLifecycleService {
     }
 
     if (!dataset) {
+      console.warn('[ViewLifecycle] dataset not found after local + server lookup:', datasetId);
       throw new Error(`Dataset not found: ${datasetId}`);
     }
 

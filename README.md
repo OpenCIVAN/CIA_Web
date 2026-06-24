@@ -23,7 +23,7 @@ OpenCIVAN is an open-source platform for real-time, multi-user scientific data v
 |---|---|
 | **Visualization** | 3D volume rendering, isosurfaces, slicing (MPR), scalar coloring, glyphs, clipping, thresholding, time series — powered by VTK.js |
 | **Immersive / VR** | WebXR support (Quest 2 / Quest 3 browser); controller and hand tracking; VR wrist menu; fly and teleport navigation |
-| **Collaboration** | Synchronous multi-user sessions; shared cursor and camera presence via Y.js; voice communication via LiveKit |
+| **Collaboration** | Synchronous multi-user sessions; shared cursor and camera presence via Y.js; voice communication via LiveKit; 3D avatar presence in VR sessions |
 | **Data workflow** | Upload VTK/VTP datasets; server-side compute jobs (Python VTK worker); thumbnail generation |
 | **Architecture** | Server-authoritative state (REST + WebSocket); Y.js presence layer; React 18 frontend; Docker-based backend |
 
@@ -44,6 +44,38 @@ OpenCIVAN is an open-source platform for real-time, multi-user scientific data v
 | Job queue | BullMQ + Redis 7 |
 | Compute worker | Python 3 + VTK |
 | Auth | Keycloak (OIDC) or dev-bypass mode |
+| Avatar system | [`@pixiv/three-vrm`](https://github.com/pixiv/three-vrm) (VRM 0.x / 1.x) |
+
+---
+
+## Avatars
+
+The toolkit includes an open avatar subsystem for collaborative WebXR sessions. It supports lightweight procedural fallback avatars by default and can load VRM-compatible avatars through the `@pixiv/three-vrm` integration. Avatar pose, pointer state, and user metadata are synchronized through the Y.js collaboration layer rather than through a platform-specific avatar service. See **[docs/avatars.md](docs/avatars.md)** for full documentation.
+
+---
+
+## Sample VTP Datasets
+
+The application automatically lists datasets from `public/vtp_files/` in the left panel under **"Sample Datasets"**. No upload or backend connection is required.
+
+To add a new built-in dataset:
+
+1. Place the `.vtp` file in `public/vtp_files/`.
+2. Add an entry to `public/vtp_files/manifest.json`:
+   ```json
+   { "id": "builtin-mydata", "name": "My Dataset", "path": "/vtp_files/mydata.vtp", "description": "...", "sizeHint": "5 MB" }
+   ```
+3. Restart the dev server if needed.
+4. Open the app — the file appears in the Sample Datasets section immediately.
+
+## Uploading Local VTP Files
+
+Users can load their own `.vtp` files by clicking the upload button or dragging and dropping a file onto the Files panel.
+
+- **With backend running** (Docker): files are uploaded to the server and persist across sessions.
+- **Without backend**: files are loaded directly in the browser for the current session only. No data is sent to any server.
+
+Supported formats: `.vtp`, `.vtk`, `.vti`, `.obj`, `.stl`, `.ply`, `.csv`, `.nii`, `.dcm`.
 
 ---
 

@@ -17,15 +17,20 @@ npm run dev:full           # All of above + LiveKit token server + LiveKit
 npm run build              # Production bundle (also runs buildManifestRegistry.ts)
 npm run typecheck          # TypeScript/JSDoc check without emitting
 npm run clean:cache        # Clear Webpack filesystem cache
+npm run stop               # Kill dev ports (8081, 3000, 3001, 8000)
+npm run stop:all           # Kill all + LiveKit ports (7880, 7881)
+npm run docker:up          # Start Docker services (alt to ./scripts/start.sh)
+npm run docker:up:build    # Build + start Docker services
 ```
 
 ### Tests
 ```bash
 npm test                   # Vitest in watch mode
 npm run test:run           # Single run (CI)
+npm run test:run -- src/path/to/file.test.jsx  # Single test file
 npm run test:coverage      # Coverage report (v8, HTML output)
 ```
-Tests live in `src/**/*.test.{js,jsx,ts,tsx}`. jsdom environment. Coverage scope: `src/ui/react/components/`.
+Tests live in `src/**/*.test.{js,jsx,ts,tsx}`. jsdom environment. Coverage scope: `src/ui/react/components/`. Setup file: `src/test/setup.js` (browser API mocks). Note: `idGenerator.test.js` is excluded in `vitest.config.js`.
 
 ### Backend Services (Docker)
 ```bash
@@ -113,6 +118,7 @@ UI Components → Services → Managers → Core (EventBus, models) → Utils
 
 | Alias | Resolves to |
 |-------|------------|
+| `@` | `src/` |
 | `@UI` | `src/ui` |
 | `@Services` | `src/services` |
 | `@Utils` | `src/utils` |
@@ -120,9 +126,11 @@ UI Components → Services → Managers → Core (EventBus, models) → Utils
 | `@VTK` | `src/core/instances/types/vtk` |
 | `@Init` | `src/init` |
 | `@Algorithms` | `src/algorithms` |
+| `@Collaboration` | `src/collaboration` |
+| `@Config` | `src/config` |
 | `@VR` | `src/vr` |
 
-Vitest only has `@UI` and `@Utils` aliased — tests importing `@Core` or `@Services` need additional alias setup.
+**Vitest alias gap:** only `@UI` and `@Utils` are defined in `vitest.config.js`. Tests that import `@Core`, `@Services`, `@VR`, etc. will fail to resolve — add the alias manually to `vitest.config.js` `resolve.alias` before writing such tests.
 
 ## Key Import Patterns
 
@@ -130,6 +138,13 @@ Vitest only has `@UI` and `@Utils` aliased — tests importing `@Core` or `@Serv
 // Components — always use barrel, not deep paths
 import { Button, Badge, Icon, SearchInput } from '@UI/react/components';
 import { FloatingPanel } from '@UI/react/components/layout';
+
+// Hooks — 60+ hooks, always import from barrel (src/ui/react/hooks/index.js)
+import { useAsyncData, useAsyncMutation, useWebSocketEvents } from '@UI/react/hooks';
+import { useAuth, useCanvas, useViewport, useDatasets, useInstances } from '@UI/react/hooks';
+
+// Context providers — all exported from barrel (src/ui/react/context/index.js)
+import { useAdaptive, VGEditorContext, CanvasFocusContext, VRInteractionContext } from '@UI/react/context';
 
 // Services
 import { viewLifecycleService, authService, apiClient, eventBus, BUS_EVENTS } from '@Services';
@@ -141,7 +156,6 @@ import { logger } from '@Utils/logger.js';
 import { generateId } from '@Utils/idGenerator.js';
 
 // Theme colors (always from context, never hardcoded)
-import { useAdaptive } from '@UI/react/context/AdaptiveContext.jsx';
 const { colors } = useAdaptive();
 ```
 

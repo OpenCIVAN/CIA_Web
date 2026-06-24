@@ -7,7 +7,7 @@
  * const { files, starredFiles, handleStar, handleUpload } = useFilesTab({ workspaceId });
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { ui as log } from "@Utils/logger.js";
 import { useProjectFiles } from "@UI/react/hooks/useProjectFiles.js";
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
@@ -73,6 +73,12 @@ export function useFilesTab({
   // Upload drag state
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Built-in sample dataset state
+  const [builtInDatasets, setBuiltInDatasets] = useState([]);
+  const [loadingBuiltInId, setLoadingBuiltInId] = useState(null);
+  const [builtInLoadError, setBuiltInLoadError] = useState(null);
+  const [builtInUnavailable, setBuiltInUnavailable] = useState(false);
+
   // Optimistic star updates (for immediate UI feedback)
   const [optimisticStars, setOptimisticStars] = useState({});
 
@@ -110,6 +116,45 @@ export function useFilesTab({
 
   // DatasetManager for unloading
   const datasetManager = useDatasetManager();
+
+  // Subscribe to DatasetManager to track built-in datasets
+  useEffect(() => {
+    const refresh = () => {
+      if (!datasetManager) return;
+      const builtIns = datasetManager
+        .getAllDatasets()
+        .filter((d) => d.metadata?.isBuiltIn)
+        .map((d) => ({
+          id: d.id,
+          name: d.name || d.filename.replace(/\.vtp$/i, ''),
+          fileType: d.fileType,
+          description: d.metadata?.description || '',
+          sizeHint: d.metadata?.sizeHint || '',
+          path: d.publicPath,
+        }));
+      setBuiltInDatasets(builtIns);
+    };
+
+    refresh();
+
+    const onAdded = (dataset) => {
+      if (dataset?.metadata?.isBuiltIn) refresh();
+    };
+    const onRemoved = () => refresh();
+
+    datasetManager?.on?.('datasetAdded', onAdded);
+    datasetManager?.on?.('datasetRemoved', onRemoved);
+
+    // Listen for manifest load failure so UI can show a soft warning
+    const onUnavailable = () => setBuiltInUnavailable(true);
+    window.addEventListener('cia:builtin-datasets-unavailable', onUnavailable);
+
+    return () => {
+      datasetManager?.off?.('datasetAdded', onAdded);
+      datasetManager?.off?.('datasetRemoved', onRemoved);
+      window.removeEventListener('cia:builtin-datasets-unavailable', onUnavailable);
+    };
+  }, [datasetManager]);
 
   // Use mock data if provided
   const serverFiles = mockFiles ?? hookFiles;
@@ -472,6 +517,45 @@ export function useFilesTab({
     [submitJob, handleStar, loadedDatasets, datasetManager, addToWorkspace, removeFromWorkspace]
   );
 
+  // Trigger visualization of a built-in dataset by dispatching the standard
+  // cia:request-instance event (same path as double-click on a server file).
+  const handleLoadBuiltIn = useCallback(
+    (datasetId, datasetName) => {
+      setLoadingBuiltInId(datasetId);
+      setBuiltInLoadError(null);
+      window.dispatchEvent(
+        new CustomEvent('cia:request-instance', {
+          detail: { datasetId, fileId: datasetId, fileName: datasetName },
+        })
+      );
+      // Clear loading indicator after a brief delay — the actual render is async
+      setTimeout(() => setLoadingBuiltInId(null), 3000);
+    },
+    []
+  );
+
+  // Add a local File object as a dataset without uploading to server.
+  // Used as fallback when the server is offline.
+  const handleLocalFileDrop = useCallback(
+    (file) => {
+      if (!datasetManager) return;
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const supported = ['vtp', 'vtk', 'vti', 'obj', 'stl', 'ply', 'csv', 'nii', 'dcm'];
+      if (!supported.includes(ext)) {
+        log.warn(`Unsupported local file type: .${ext}`);
+        return;
+      }
+      const dataset = datasetManager.addLocalDataset(file);
+      // Immediately open a view for the just-dropped file
+      window.dispatchEvent(
+        new CustomEvent('cia:request-instance', {
+          detail: { datasetId: dataset.id, fileId: dataset.id, fileName: file.name },
+        })
+      );
+    },
+    [datasetManager]
+  );
+
   const handleUpload = useCallback(
     async (file) => {
       try {
@@ -479,10 +563,12 @@ export function useFilesTab({
         refetch();
         await datasetManager.syncDatasetsFromServer();
       } catch (err) {
-        log.error("Upload failed:", err);
+        log.warn('Server upload failed, loading file locally:', err.message);
+        // Fallback: visualize directly without server upload
+        handleLocalFileDrop(file);
       }
     },
-    [uploadFile, refetch, datasetManager]
+    [uploadFile, refetch, datasetManager, handleLocalFileDrop]
   );
 
   return {
@@ -523,6 +609,13 @@ export function useFilesTab({
     isDragOver,
     setIsDragOver,
     handleUpload,
+
+    // Built-in sample datasets
+    builtInDatasets,
+    builtInUnavailable,
+    loadingBuiltInId,
+    builtInLoadError,
+    handleLoadBuiltIn,
 
     // Files data
     files: filteredFiles,

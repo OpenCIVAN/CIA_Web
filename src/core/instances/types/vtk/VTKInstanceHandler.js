@@ -708,11 +708,51 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     } else {
       log.debug(`Parsing ${fileType.toUpperCase()} file...`);
 
-      // Get the raw file (DatasetManager handles fetching if needed)
-      const rawFile = await datasetManager.loadFile(dataset.id);
+      if (dataset.metadata?.isBuiltIn && dataset.publicPath) {
+        // ── BUILT-IN DATASET: load from public URL ─────────────────────────
+        // Resolve relative path against the CURRENT origin at load time.
+        // This is the only correct approach: resolving at registration time would
+        // bake in whichever host opened the page first (e.g., localhost), which
+        // would break when the next client opens via ngrok or a different host.
+        const resolvedUrl = new URL(
+          dataset.publicPath,
+          window.location.origin
+        ).toString();
 
-      // Parse the file with the appropriate reader
-      vtkData = await this.parseVTKFile(rawFile, fileType);
+        // Detect mixed-content before the fetch even starts
+        if (
+          window.location.protocol === 'https:' &&
+          resolvedUrl.startsWith('http:')
+        ) {
+          throw new Error(
+            `Dataset is being loaded over HTTP from an HTTPS page. ` +
+            `Use same-origin /vtp_files paths instead of absolute http:// URLs.`
+          );
+        }
+
+        log.debug('[vtp] loading built-in dataset:', {
+          id: dataset.id,
+          name: dataset.name || dataset.filename,
+          originalPath: dataset.publicPath,
+          origin: window.location.origin,
+          resolvedUrl,
+          source: 'builtin',
+          fileType,
+        });
+
+        vtkData = await this._loadVTPFromUrl(resolvedUrl, fileType);
+
+      } else {
+        // ── UPLOADED / SERVER DATASET: load from File/ArrayBuffer ──────────
+        log.debug('[vtp] loading uploaded/server dataset:', {
+          id: dataset.id,
+          name: dataset.name || dataset.filename,
+          source: dataset.metadata?.isLocal ? 'local' : 'server',
+          fileType,
+        });
+        const rawFile = await datasetManager.loadFile(dataset.id);
+        vtkData = await this.parseVTKFile(rawFile, fileType);
+      }
 
       // Extract metadata for caching
       const metadata = this._buildVTKMetadata(vtkData, fileType);
@@ -825,6 +865,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     if (dataInfo.isPolyData) {
       actor.setVisibility(true);
       mapper.setInputData(vtkData);
+      log.debug(`[vtp] actor added to renderer:`, renderer.getActors().includes(actor));
 
       // Check if data is point-only (no polygons/cells) and set visible point size
       const numPolys = vtkData.getPolys()?.getNumberOfCells() || 0;
@@ -962,6 +1003,73 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * Parse a VTK format file into a vtk.js dataset
    * This is VTK-specific logic that belongs in the VTK handler, not DatasetManager
    */
+  /**
+   * Load a built-in VTP file directly from a URL using VTK.js's internal HTTP reader.
+   * This avoids the fetch→blob→File→arrayBuffer chain and works correctly through
+   * ngrok, reverse proxies, or any origin since the URL is resolved at call time.
+   *
+   * @param {string} url - Absolute URL (already resolved against window.location.origin)
+   * @param {string} fileType - 'vtp' (others unsupported via URL path for now)
+   * @returns {Promise<vtkPolyData>}
+   */
+  async _loadVTPFromUrl(url, fileType) {
+    const ext = (fileType || 'vtp').toLowerCase();
+
+    if (ext !== 'vtp') {
+      // Fall back to fetch-based loading for non-VTP types
+      const response = await fetch(url);
+      if (!response.ok) {
+        const msg = response.status === 404
+          ? `Dataset file not found: ${url}`
+          : `Failed to fetch dataset from: ${url} — HTTP ${response.status} ${response.statusText}`;
+        throw new Error(msg);
+      }
+      const blob = await response.blob();
+      const file = new File([blob], url.split('/').pop(), { type: 'application/octet-stream' });
+      return this.parseVTKFile(file, ext);
+    }
+
+    // VTP: use vtkXMLPolyDataReader.setUrl() which fetches via VTK.js dataAccessHelper
+    const reader = vtkXMLPolyDataReader.newInstance();
+
+    try {
+      // setUrl() internally calls loadData() → fetchBinary() → parseAsArrayBuffer()
+      // Returns a Promise; the reader populates output after resolution.
+      await reader.setUrl(url);
+    } catch (fetchErr) {
+      const errMsg = fetchErr?.message || String(fetchErr);
+      if (errMsg.includes('404') || errMsg.includes('Not Found')) {
+        throw new Error(`Dataset file not found: ${url}`);
+      }
+      throw new Error(`Failed to fetch dataset from: ${url} — ${errMsg}`);
+    }
+
+    const output = reader.getOutputData(0);
+    if (!output) {
+      throw new Error('VTP parser returned no output.');
+    }
+
+    const pts = output.getPoints?.();
+    if (!pts || pts.getNumberOfPoints() === 0) {
+      throw new Error('VTP loaded but contains no points.');
+    }
+
+    const bounds = output.getBounds?.();
+    if (!bounds || bounds.some((v) => !isFinite(v))) {
+      throw new Error('VTP loaded but has invalid bounds.');
+    }
+
+    log.debug('[vtp] loaded from URL:', {
+      url,
+      points: pts.getNumberOfPoints(),
+      cells: output.getPolys?.()?.getNumberOfCells?.() ?? 0,
+      bounds,
+      actorReady: true,
+    });
+
+    return output;
+  }
+
   async parseVTKFile(file, fileType) {
     const extension = this._normalizeFileType(file, fileType);
 
@@ -972,7 +1080,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         reader.parseAsArrayBuffer(arrayBuffer);
         const output = reader.getOutputData(0);
         if (!output) {
-          throw new Error("Failed to parse VTP file - no output data");
+          throw new Error("VTP parser returned no output.");
+        }
+        const pts = output.getPoints?.();
+        if (!pts || pts.getNumberOfPoints() === 0) {
+          throw new Error("VTP loaded but contains no points.");
+        }
+        const bounds = output.getBounds?.();
+        if (!bounds || bounds.some((v) => !isFinite(v))) {
+          throw new Error("VTP loaded but has invalid bounds.");
         }
         return output;
       }

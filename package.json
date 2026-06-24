@@ -74,6 +74,7 @@
     "@kitware/vtk.js": "^34.16.2",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
+    "@pixiv/three-vrm": "^3.5.4",
     "@react-three/fiber": "^8.18.0",
     "@react-three/xr": "^5.7.1",
     "@tensorflow/tfjs": "^4.22.0",

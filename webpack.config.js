@@ -71,6 +71,22 @@ module.exports = {
     allowedHosts: "all",
     // Proxy API requests to the backend - eliminates CORS issues
     proxy: [
+      // Render server WebSocket (must be before /render-api to match /render-ws exactly)
+      {
+        context: ["/render-ws"],
+        target: "ws://localhost:7001",
+        ws: true,
+        changeOrigin: true,
+        pathRewrite: { "^/render-ws": "/ws" },
+      },
+      // Render server HTTP API
+      {
+        context: ["/render-api"],
+        target: "http://localhost:7001",
+        changeOrigin: true,
+        pathRewrite: { "^/render-api": "" },
+      },
+      // Node.js API server
       {
         context: ["/api"],
         target: "http://localhost:3001",
@@ -176,6 +192,16 @@ module.exports = {
       ),
       __DEV_BYPASS_AUTH__: JSON.stringify(
         process.env.DEV_BYPASS_AUTH === "true"
+      ),
+      // Server-side rendering
+      __RENDER_MODE__: JSON.stringify(
+        process.env.RENDER_MODE || "local"
+      ),
+      __RENDER_SERVER_URL__: JSON.stringify(
+        process.env.RENDER_SERVER_URL || "http://localhost:7000"
+      ),
+      __RENDER_WS_URL__: JSON.stringify(
+        process.env.RENDER_WS_URL || "/render-ws"
       ),
     }),
   ],

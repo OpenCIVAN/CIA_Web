@@ -111,6 +111,19 @@ export const config = Object.freeze({
 
   /** Dev bypass auth (skip Keycloak in development) */
   devBypassAuth: resolveValue("devBypassAuth", "__DEV_BYPASS_AUTH__", false),
+
+  // ---------------------------------------------------------------------------
+  // Server-Side Rendering
+  // ---------------------------------------------------------------------------
+
+  /** Rendering mode: 'server' | 'local' | 'hybrid' */
+  renderMode: resolveValue("renderMode", "__RENDER_MODE__", "local"),
+
+  /** Base HTTP URL of the Python VTK render server */
+  renderServerUrl: resolveValue("renderServerUrl", "__RENDER_SERVER_URL__", "http://localhost:7001"),
+
+  /** WebSocket URL for interactive frame streaming */
+  renderWsUrl: resolveValue("renderWsUrl", "__RENDER_WS_URL__", "/render-ws"),
 });
 
 // =============================================================================

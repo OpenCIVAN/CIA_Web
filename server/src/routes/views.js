@@ -154,17 +154,27 @@ router.post("/", async (req, res, next) => {
       return res.status(400).json({ error: "fileId is required" });
     }
 
-    // Verify file exists
-    const fileCheck = await pool.query(
-      "SELECT id, current_version_id FROM datasets WHERE id = $1 AND status = 'active'",
-      [fileId]
-    );
+    // Built-in client-side datasets (id starts with "builtin-") are not stored
+    // in the database — they are served as static files from public/vtp_files/.
+    // Skip the DB existence check for them and store null as dataset_id so the
+    // FK constraint is not violated. The client restores the builtin id from its
+    // own state after receiving the server response.
+    const isBuiltinDataset = fileId.startsWith("builtin-");
+    let fileVersionId = null;
 
-    if (fileCheck.rows.length === 0) {
-      return res.status(404).json({ error: "File not found" });
+    if (!isBuiltinDataset) {
+      // Verify file exists in database
+      const fileCheck = await pool.query(
+        "SELECT id, current_version_id FROM datasets WHERE id = $1 AND status = 'active'",
+        [fileId]
+      );
+
+      if (fileCheck.rows.length === 0) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      fileVersionId = fileCheck.rows[0].current_version_id;
     }
-
-    const fileVersionId = fileCheck.rows[0].current_version_id;
 
     // Insert view
     const result = await pool.query(
@@ -180,7 +190,7 @@ router.post("/", async (req, res, next) => {
       RETURNING *
     `,
       [
-        fileId,
+        isBuiltinDataset ? null : fileId,
         fileVersionId,
         branchId || null,
         name,

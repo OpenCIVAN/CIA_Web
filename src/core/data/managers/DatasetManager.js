@@ -320,6 +320,79 @@ export class DatasetManager extends BaseManager {
   // ==================== DATASET MANAGEMENT ====================
 
   /**
+   * Register a built-in sample dataset from public/vtp_files/.
+   * The file is NOT uploaded to the server; it is fetched on-demand from publicPath.
+   * Idempotent — calling twice with the same id is a no-op.
+   *
+   * @param {{ id: string, name: string, path: string, description?: string, sizeHint?: string }} info
+   * @returns {Dataset}
+   */
+  addBuiltInDataset(info) {
+    if (this._datasets.has(info.id)) {
+      return this._datasets.get(info.id);
+    }
+
+    // Keep path as the RELATIVE value from manifest (e.g., "/vtp_files/Bones.vtp").
+    // It must be resolved against window.location.origin at FETCH TIME — not at registration
+    // time — so it remains correct when the app is opened via ngrok, localhost, LAN IP,
+    // or any other host. Storing an absolute URL here would bake in the wrong origin if
+    // the app was initialized with one host but the file is fetched from another.
+    const dataset = new Dataset({
+      id: info.id,
+      filename: `${info.name}.vtp`,
+      name: info.name,
+      fileType: 'vtp',
+      publicPath: info.path,   // relative, e.g. "/vtp_files/Bones.vtp"
+      // cacheKey set to prevent DatasetManager from trying to upload to server
+      cacheKey: 'builtin',
+      metadata: {
+        fileSize: 0,
+        description: info.description || '',
+        sizeHint: info.sizeHint || '',
+        isBuiltIn: true,
+        uploadedAt: Date.now(),
+      },
+    });
+
+    this._datasets.set(dataset.id, dataset);
+    this._emit('datasetAdded', dataset);
+    log.debug(`Built-in dataset registered: ${dataset.id}`);
+    return dataset;
+  }
+
+  /**
+   * Add a local file as a dataset without uploading it to the server.
+   * Used when the server is unavailable (offline / no Docker) so drag-and-drop
+   * still works for immediate visualization.
+   *
+   * @param {File} file - Browser File object
+   * @returns {Dataset}
+   */
+  addLocalDataset(file) {
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const dataset = new Dataset({
+      id,
+      filename: file.name,
+      name: file.name,
+      fileType: ext,
+      rawFile: file,
+      cacheKey: 'local',
+      metadata: {
+        fileSize: file.size,
+        isLocal: true,
+        uploadedAt: Date.now(),
+      },
+    });
+
+    this._datasets.set(dataset.id, dataset);
+    this._emit('datasetAdded', dataset);
+    log.debug(`Local dataset added (no server): ${id} — ${file.name}`);
+    return dataset;
+  }
+
+  /**
    * Add a new dataset from a file (v2.0 SERVER-AUTHORITATIVE)
    *
    * This is the primary entry point for creating datasets. The flow uploads
@@ -873,7 +946,7 @@ export class DatasetManager extends BaseManager {
 
       // If dataset has a public path, we can fetch it
       if (dataset.publicPath) {
-        log.debug(`Fetching from: ${dataset.publicPath}`);
+        log.debug(`[fetch] URL: ${dataset.publicPath}`);
 
         try {
           // Update status to show we're fetching/loading
@@ -883,9 +956,20 @@ export class DatasetManager extends BaseManager {
 
           const response = await fetch(dataset.publicPath);
 
+          log.debug(
+            `[fetch] status=${response.status} ` +
+            `type=${response.headers.get('content-type') || 'unknown'} ` +
+            `size=${response.headers.get('content-length') || 'unknown'}`
+          );
+
           if (!response.ok) {
+            if (response.status === 404) {
+              throw new Error(
+                `Dataset file not found: ${dataset.publicPath}`
+              );
+            }
             throw new Error(
-              `Failed to fetch ${dataset.filename}: ${response.status} ${response.statusText}`
+              `Failed to fetch ${dataset.filename}: HTTP ${response.status} ${response.statusText}`
             );
           }
 

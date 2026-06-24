@@ -34,6 +34,7 @@ import { useFilesTab } from './hooks/useFilesTab';
 import { FileItemList, FileItemGrid } from './components/FileItem';
 import { FileContextMenu } from './components/FileContextMenu';
 import { UploadDropzone } from './components/UploadDropzone';
+import { SampleDatasetsSection } from './components/SampleDatasetsSection';
 import './FilesTab.scss';
 
 // =============================================================================
@@ -94,6 +95,13 @@ export function FilesPanelContent({
         isDragOver,
         setIsDragOver,
         handleUpload,
+
+        // Built-in sample datasets
+        builtInDatasets,
+        builtInUnavailable,
+        loadingBuiltInId,
+        builtInLoadError,
+        handleLoadBuiltIn,
 
         // Files data
         starredFiles,
@@ -297,6 +305,15 @@ export function FilesPanelContent({
                     />
                 </div>
             )}
+
+            {/* Sample Datasets — always visible, no backend required */}
+            <SampleDatasetsSection
+                datasets={builtInDatasets}
+                onLoad={handleLoadBuiltIn}
+                loadingId={loadingBuiltInId}
+                loadError={builtInLoadError}
+                unavailable={builtInUnavailable}
+            />
 
             {/* Resizable Sections */}
             <div className="files-tab__sections">
